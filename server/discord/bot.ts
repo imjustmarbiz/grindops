@@ -1,5 +1,6 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from "discord.js";
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials } from "discord.js";
 import { storage } from "../storage";
+import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate } from "./mgtWatcher";
 
 let client: Client | null = null;
 
@@ -363,7 +364,9 @@ export async function startDiscordBot() {
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
     ],
+    partials: [Partials.Message, Partials.Channel],
   });
 
   client.once("ready", async () => {
@@ -379,6 +382,25 @@ export async function startDiscordBot() {
       console.log("[discord] Slash commands registered globally");
     } catch (error) {
       console.error("Failed to register slash commands:", error);
+    }
+
+    console.log("[discord] MGT Bot watcher active - monitoring bid war and proposals channels");
+  });
+
+  client.on("messageCreate", async (message) => {
+    try {
+      await handleNewOrderMessage(message);
+      await handleProposalMessage(message);
+    } catch (error) {
+      console.error("[discord] Error in message handler:", error);
+    }
+  });
+
+  client.on("messageUpdate", async (oldMessage, newMessage) => {
+    try {
+      await handleMessageUpdate(oldMessage, newMessage);
+    } catch (error) {
+      console.error("[discord] Error in message update handler:", error);
     }
   });
 

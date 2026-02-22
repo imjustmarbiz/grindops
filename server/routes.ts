@@ -151,44 +151,12 @@ export async function registerRoutes(
 export async function seedDatabase() {
   const existingServices = await storage.getServices();
   if (existingServices.length === 0) {
-    // Seed Services
     const servicesData = [
-      { id: 'S1', name: 'VC Grinding 🪙', group: 'VC', defaultComplexity: 1, slaDays: 5 },
-      { id: 'S2', name: 'Badge Grinding 🎖️', group: 'Badges', defaultComplexity: 2, slaDays: 5 },
-      { id: 'S3', name: 'Rep Grinding ⚡', group: 'Rep', defaultComplexity: 5, slaDays: 7 },
+      { id: 'S1', name: 'VC Grinding', group: 'VC', defaultComplexity: 1, slaDays: 5 },
+      { id: 'S2', name: 'Badge Grinding', group: 'Badges', defaultComplexity: 2, slaDays: 5 },
+      { id: 'S3', name: 'Rep Grinding', group: 'Rep', defaultComplexity: 5, slaDays: 7 },
+      { id: 'S4', name: 'Build Services', group: 'Build', defaultComplexity: 3, slaDays: 3 },
     ];
     for (const s of servicesData) await storage.createService(s);
-
-    // Seed Grinders
-    const grindersData = [
-      { id: 'GRD-01', name: '7unds', tier: 'Regular', capacity: 3, activeOrders: 1 },
-      { id: 'GRD-02', name: '8fy1', tier: 'Regular', capacity: 3, activeOrders: 0 },
-      { id: 'GRD-03', name: 'comptomuch', tier: 'Elite', capacity: 5, activeOrders: 0 },
-    ];
-    for (const g of grindersData) await storage.createGrinder(g);
-
-    // Seed Orders
-    const now = new Date();
-    const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const ordersData = [
-      { id: 'O1001', serviceId: 'S1', customerPrice: "25.00", orderDueDate: futureDate, isRush: false, complexity: 1, location: 'Retail', status: 'Open' },
-      { id: 'O1002', serviceId: 'S2', customerPrice: "50.00", orderDueDate: futureDate, isRush: true, complexity: 2, location: 'Retail', status: 'Open' },
-      { id: 'O1003', serviceId: 'S3', customerPrice: "100.00", orderDueDate: futureDate, isRush: false, complexity: 5, location: 'Retail', status: 'Assigned' },
-    ];
-    for (const o of ordersData) await storage.createOrder(o);
-
-    // Seed Bids
-    const bidsData = [
-      { id: 'B2001', orderId: 'O1001', grinderId: 'GRD-01', bidAmount: "15.00", estDeliveryDate: futureDate, status: 'Pending' },
-      { id: 'B2002', orderId: 'O1001', grinderId: 'GRD-02', bidAmount: "18.00", estDeliveryDate: futureDate, status: 'Pending' },
-      { id: 'B2003', orderId: 'O1002', grinderId: 'GRD-03', bidAmount: "35.00", estDeliveryDate: futureDate, status: 'Pending' },
-    ];
-    for (const b of bidsData) await storage.createBid(b);
-
-    // Seed Assignments
-    const assignmentsData = [
-      { id: 'A1', grinderId: 'GRD-01', orderId: 'O1003', dueDateTime: futureDate, status: 'Active' },
-    ];
-    for (const a of assignmentsData) await storage.createAssignment(a);
   }
 }
