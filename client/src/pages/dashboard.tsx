@@ -11,10 +11,11 @@ function formatCurrency(val: number) {
 export default function Dashboard() {
   const { data: analytics, isLoading } = useQuery<AnalyticsSummary>({
     queryKey: ["/api/analytics/summary"],
+    refetchInterval: 10000,
   });
-  const { data: grindersList } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
-  const { data: auditLogs } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"] });
-  const { data: assignmentsList } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"] });
+  const { data: grindersList } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
+  const { data: auditLogs } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 10000 });
+  const { data: assignmentsList } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 10000 });
 
   if (isLoading) {
     return (

@@ -4,5 +4,6 @@ import type { DashboardStats } from "@shared/schema";
 export function useDashboardStats() {
   return useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
+    refetchInterval: 10000,
   });
 }
