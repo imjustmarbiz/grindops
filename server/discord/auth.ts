@@ -40,8 +40,12 @@ export function getSession() {
 }
 
 function getRedirectUri(req: any): string {
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-  return `${protocol}://${req.hostname}/api/auth/discord/callback`;
+  if (process.env.DISCORD_REDIRECT_URI) {
+    return process.env.DISCORD_REDIRECT_URI;
+  }
+  const host = req.get("host") || req.headers["x-forwarded-host"] || req.hostname;
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  return `${protocol}://${host}/api/auth/discord/callback`;
 }
 
 export function setupDiscordAuth(app: Express) {
@@ -56,7 +60,9 @@ export function setupDiscordAuth(app: Express) {
     const state = crypto.randomBytes(16).toString("hex");
     (req.session as any).oauthState = state;
     req.session.save(() => {
-      const redirectUri = encodeURIComponent(getRedirectUri(req));
+      const rawRedirectUri = getRedirectUri(req);
+      console.log("[discord-auth] Redirect URI:", rawRedirectUri);
+      const redirectUri = encodeURIComponent(rawRedirectUri);
       const scope = encodeURIComponent("identify guilds.members.read");
       const url = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
       res.redirect(url);
