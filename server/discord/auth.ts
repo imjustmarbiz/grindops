@@ -6,6 +6,7 @@ import { authStorage } from "../replit_integrations/auth/storage";
 import { getDiscordBotClient } from "./bot";
 
 const DISCORD_API = "https://discord.com/api/v10";
+const OWNER_ROLE = "1466369177043599514";
 const STAFF_ROLE = "1466369178729578663";
 const GRINDER_ROLE = "1466369179648004224";
 const ALL_GRINDER_ROLES = [
@@ -142,7 +143,9 @@ export function setupDiscordAuth(app: Express) {
             if (member) {
               guildRoleIds = Array.from(member.roles.cache.keys());
 
-              if (guildRoleIds.includes(STAFF_ROLE)) {
+              if (guildRoleIds.includes(OWNER_ROLE)) {
+                role = "owner";
+              } else if (guildRoleIds.includes(STAFF_ROLE)) {
                 role = "staff";
               } else if (guildRoleIds.some((r: string) => ALL_GRINDER_ROLES.includes(r))) {
                 role = "grinder";
@@ -228,15 +231,23 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
 export const requireStaff: RequestHandler = async (req, res, next) => {
   const userRole = (req as any).userRole;
-  if (userRole !== "staff") {
+  if (userRole !== "staff" && userRole !== "owner") {
     return res.status(403).json({ message: "Staff access required" });
+  }
+  next();
+};
+
+export const requireOwner: RequestHandler = async (req, res, next) => {
+  const userRole = (req as any).userRole;
+  if (userRole !== "owner") {
+    return res.status(403).json({ message: "Owner access required" });
   }
   next();
 };
 
 export const requireGrinderOrStaff: RequestHandler = async (req, res, next) => {
   const userRole = (req as any).userRole;
-  if (userRole !== "staff" && userRole !== "grinder") {
+  if (userRole !== "staff" && userRole !== "grinder" && userRole !== "owner") {
     return res.status(403).json({ message: "Access denied. You need a Staff or Grinder role in Discord." });
   }
   next();

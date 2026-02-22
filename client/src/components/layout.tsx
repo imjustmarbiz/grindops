@@ -36,10 +36,11 @@ function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
-  const isStaff = user?.role === "staff";
+  const isStaff = user?.role === "staff" || user?.role === "owner";
+  const isOwner = user?.role === "owner";
   const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
   const navItems = isStaff ? staffNavItems : grinderNavItems;
-  const roleBadge = isStaff ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
+  const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
 
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">

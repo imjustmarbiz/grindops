@@ -1,16 +1,52 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Loader2 } from "lucide-react";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
 export default function Bids() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const { data: bids, isLoading } = useQuery<Bid[]>({ queryKey: ["/api/bids"] });
   const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
+
+  const bidStatusMutation = useMutation({
+    mutationFn: async ({ bidId, status }: { bidId: string; status: string }) => {
+      const res = await apiRequest("PATCH", `/api/bids/${bidId}/status`, { status });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      toast({ title: "Bid status updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const bidOverrideMutation = useMutation({
+    mutationFn: async ({ bidId, status }: { bidId: string; status: string }) => {
+      const res = await apiRequest("PATCH", `/api/bids/${bidId}/override`, { status });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      toast({ title: "Owner override applied" });
+    },
+    onError: (e: any) => toast({ title: "Override failed", description: e.message, variant: "destructive" }),
+  });
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -63,11 +99,12 @@ export default function Bids() {
               <TableHead className="text-center">QS</TableHead>
               <TableHead>Submitted</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={12} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={13} className="text-center h-24">Loading...</TableCell></TableRow>
             ) : bids && bids.length > 0 ? bids.map((bid: Bid) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
               const order = (orders || []).find((o: Order) => o.id === bid.orderId);
@@ -137,11 +174,74 @@ export default function Bids() {
                       {bid.acceptedBy && <span className="text-[10px] text-muted-foreground">by {bid.acceptedBy}</span>}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {bid.status === "Pending" && (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-green-400"
+                            data-testid={`button-accept-bid-${bid.id}`}
+                            disabled={bidStatusMutation.isPending}
+                            onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" })}>
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-red-400"
+                            data-testid={`button-deny-bid-${bid.id}`}
+                            disabled={bidStatusMutation.isPending}
+                            onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Denied" })}>
+                            <XCircle className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      {isOwner && bid.status !== "Pending" && (
+                        <>
+                          {bid.status === "Denied" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-400"
+                                  data-testid={`button-override-accept-${bid.id}`}
+                                  disabled={bidOverrideMutation.isPending}
+                                  onClick={() => bidOverrideMutation.mutate({ bidId: bid.id, status: "Accepted" })}>
+                                  <Shield className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Owner Override: Accept</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {bid.status === "Accepted" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-400"
+                                  data-testid={`button-override-deny-${bid.id}`}
+                                  disabled={bidOverrideMutation.isPending}
+                                  onClick={() => bidOverrideMutation.mutate({ bidId: bid.id, status: "Denied" })}>
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Owner Override: Revoke & Deny</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </>
+                      )}
+                      {isOwner && bid.status !== "Pending" && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-blue-400"
+                              data-testid={`button-override-reset-${bid.id}`}
+                              disabled={bidOverrideMutation.isPending}
+                              onClick={() => bidOverrideMutation.mutate({ bidId: bid.id, status: "Pending" })}>
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Owner Override: Reset to Pending</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               );
             }) : (
               <TableRow>
-                <TableCell colSpan={12} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={13} className="text-center h-24 text-muted-foreground">
                   No bids yet. Proposals appear when grinders submit via MGT Bot.
                 </TableCell>
               </TableRow>

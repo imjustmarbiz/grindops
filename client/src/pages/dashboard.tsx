@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
@@ -91,6 +93,8 @@ function LastUpdated({ date }: { date: Date | null }) {
 export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const { data: analytics, isLoading, dataUpdatedAt } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 10000 });
   const { data: grindersList, dataUpdatedAt: grindersUpdatedAt } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
   const { data: auditLogs, dataUpdatedAt: logsUpdatedAt } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 10000 });
@@ -187,6 +191,12 @@ export default function Dashboard() {
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editProfileGrinder, setEditProfileGrinder] = useState<any>(null);
+  const [editProfileName, setEditProfileName] = useState("");
+  const [editProfileCategory, setEditProfileCategory] = useState("");
+  const [editProfileTier, setEditProfileTier] = useState("");
+  const [editProfileCapacity, setEditProfileCapacity] = useState("");
+  const [editProfileNotes, setEditProfileNotes] = useState("");
   const [manualOrderService, setManualOrderService] = useState("");
   const [manualOrderPrice, setManualOrderPrice] = useState("");
   const [manualOrderPlatform, setManualOrderPlatform] = useState("");
@@ -220,6 +230,19 @@ export default function Dashboard() {
     onError: (err: any) => {
       toast({ title: "Failed to create order", description: err.message || "Something went wrong", variant: "destructive" });
     },
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ grinderId, data }: { grinderId: string; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/grinders/${grinderId}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      setEditProfileGrinder(null);
+      toast({ title: "Grinder profile updated" });
+    },
+    onError: () => toast({ title: "Failed to update profile", variant: "destructive" }),
   });
 
   const updateLimitMutation = useMutation({
@@ -434,6 +457,7 @@ export default function Dashboard() {
                           <span className="text-muted-foreground">on {b.orderId.slice(0, 8)}</span>
                           <span className="text-emerald-400">${Number(b.bidAmount).toFixed(2)}</span>
                           <Badge variant="outline" className={`text-[10px] ${b.status === "Accepted" ? "text-green-400" : b.status === "Denied" ? "text-red-400" : "text-yellow-400"}`}>{b.status}</Badge>
+                          {b.acceptedBy && <span className="text-[10px] text-muted-foreground">by {b.acceptedBy}</span>}
                         </div>
                       );
                     })}
@@ -1494,6 +1518,123 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {isOwner && (
+        <Card className="border-amber-500/20" data-testid="card-owner-profiles">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Shield className="w-5 h-5 text-amber-400" />
+              Owner: Edit Grinder Profiles
+              <Badge className="bg-amber-500/20 text-amber-400 ml-auto">{allGrinders.length} grinders</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {allGrinders.map(g => (
+                <div key={g.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10" data-testid={`row-profile-${g.id}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{g.name}</span>
+                      <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{g.tier}</Badge>
+                      <span className="text-[10px] text-muted-foreground">
+                        {g.activeOrders}/{g.capacity} orders · {g.completedOrders} completed · {g.strikes} strikes
+                      </span>
+                    </div>
+                    {g.notes && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{g.notes}</p>}
+                  </div>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-400 text-xs"
+                    data-testid={`button-edit-profile-${g.id}`}
+                    onClick={() => {
+                      setEditProfileGrinder(g);
+                      setEditProfileName(g.name);
+                      setEditProfileCategory(g.category);
+                      setEditProfileTier(g.tier);
+                      setEditProfileCapacity(String(g.capacity));
+                      setEditProfileNotes(g.notes || "");
+                    }}>
+                    Edit
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={!!editProfileGrinder} onOpenChange={(open) => !open && setEditProfileGrinder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-amber-400" />
+              Edit Profile: {editProfileGrinder?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Name</label>
+              <Input value={editProfileName} onChange={(e) => setEditProfileName(e.target.value)} data-testid="input-profile-name" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Category</label>
+                <Select value={editProfileCategory} onValueChange={setEditProfileCategory}>
+                  <SelectTrigger data-testid="select-profile-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Grinder">Grinder</SelectItem>
+                    <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
+                    <SelectItem value="VC Grinder">VC Grinder</SelectItem>
+                    <SelectItem value="Event Grinder">Event Grinder</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Tier</label>
+                <Select value={editProfileTier} onValueChange={setEditProfileTier}>
+                  <SelectTrigger data-testid="select-profile-tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="New">New</SelectItem>
+                    <SelectItem value="Bronze">Bronze</SelectItem>
+                    <SelectItem value="Silver">Silver</SelectItem>
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Platinum">Platinum</SelectItem>
+                    <SelectItem value="Diamond">Diamond</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Order Limit</label>
+              <Input type="number" min="1" max="20" value={editProfileCapacity} onChange={(e) => setEditProfileCapacity(e.target.value)} data-testid="input-profile-capacity" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Notes</label>
+              <Textarea value={editProfileNotes} onChange={(e) => setEditProfileNotes(e.target.value)} placeholder="Owner notes about this grinder..." data-testid="input-profile-notes" />
+            </div>
+            <Button className="w-full bg-amber-600"
+              data-testid="button-save-profile"
+              disabled={updateProfileMutation.isPending}
+              onClick={() => {
+                const data: any = {};
+                if (editProfileName && editProfileName !== editProfileGrinder?.name) data.name = editProfileName;
+                if (editProfileCategory && editProfileCategory !== editProfileGrinder?.category) data.category = editProfileCategory;
+                if (editProfileTier && editProfileTier !== editProfileGrinder?.tier) data.tier = editProfileTier;
+                const capNum = parseInt(editProfileCapacity);
+                if (!isNaN(capNum) && capNum > 0 && capNum !== editProfileGrinder?.capacity) data.capacity = capNum;
+                if (editProfileNotes !== (editProfileGrinder?.notes || "")) data.notes = editProfileNotes;
+                if (Object.keys(data).length === 0) { toast({ title: "No changes to save" }); return; }
+                updateProfileMutation.mutate({ grinderId: editProfileGrinder.id, data });
+              }}>
+              {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
+              Save Profile Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Alert Composer */}
       <Card className="border-blue-500/20" data-testid="card-alert-composer">

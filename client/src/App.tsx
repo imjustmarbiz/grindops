@@ -34,7 +34,7 @@ function ProtectedRoute({ component: Component, staffOnly = false }: { component
     return <Redirect to="/login" />;
   }
 
-  if (staffOnly && user?.role !== "staff") {
+  if (staffOnly && user?.role !== "staff" && user?.role !== "owner") {
     return <Redirect to="/" />;
   }
 
@@ -79,7 +79,7 @@ function HomeRedirect() {
     );
   }
 
-  if (user?.role === "staff") {
+  if (user?.role === "staff" || user?.role === "owner") {
     return (
       <AppLayout>
         <Dashboard />

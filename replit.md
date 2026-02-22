@@ -86,10 +86,13 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
 ## Auth & Access Control
 - Discord OAuth2 login at /api/auth/discord/login
 - Bot checks user's guild roles after OAuth2 callback
-- Staff role → full dashboard, all API endpoints
-- Grinder role → personal profile page only, /api/grinder/me endpoint
+- Owner role (1466369177043599514) → full dashboard + profile editing + bid override
+- Staff role (1466369178729578663) → full dashboard, all API endpoints, can accept/deny bids
+- Grinder role (1466369179648004224) → personal profile page only, /api/grinder/me endpoint
 - No role → access denied page
-- All sensitive endpoints (orders, bids, assignments, analytics, audit logs, config, queue) require staff role
+- All sensitive endpoints (orders, bids, assignments, analytics, audit logs, config, queue) require staff or owner role
+- Owner-only endpoints: PATCH /api/bids/:id/override (bid acceptance override)
+- Staff+Owner endpoints: PATCH /api/bids/:id/status (accept/deny bids from dashboard)
 - Session stored in PostgreSQL with connect-pg-simple
 
 ## Key Files

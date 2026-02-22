@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupDiscordAuth, isAuthenticated, requireStaff, requireGrinderOrStaff } from "./discord/auth";
+import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireGrinderOrStaff } from "./discord/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 
 export async function registerRoutes(
@@ -353,6 +353,109 @@ export async function registerRoutes(
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
       }
       throw err;
+    }
+  });
+
+  app.patch("/api/bids/:id/status", requireStaff, async (req, res) => {
+    try {
+      const { status, acceptedBy } = req.body;
+      if (!status || !["Accepted", "Denied", "Pending"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const bid = await storage.getBid(req.params.id);
+      if (!bid) return res.status(404).json({ message: "Bid not found" });
+
+      const userId = (req as any).userId;
+      const dbUser = await authStorage.getUser(userId);
+      const actorName = acceptedBy || dbUser?.firstName || dbUser?.discordUsername || "Staff";
+
+      await storage.updateBidStatus(bid.id, status, actorName);
+
+      if (status === "Accepted") {
+        const order = await storage.getOrder(bid.orderId);
+        if (order) {
+          await storage.updateOrder(bid.orderId, { acceptedBidId: bid.id, status: "Assigned", assignedGrinderId: bid.grinderId });
+        }
+        const allBids = await storage.getBids();
+        const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
+        for (const ob of otherPending) {
+          await storage.updateBidStatus(ob.id, "Denied", actorName);
+        }
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "bid",
+        entityId: bid.id,
+        action: `bid_${status.toLowerCase()}_by_staff`,
+        actor: actorName,
+        details: JSON.stringify({ orderId: bid.orderId, grinderId: bid.grinderId, bidAmount: bid.bidAmount }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/bids/:id/override", requireOwner, async (req, res) => {
+    try {
+      const { status, acceptedBy } = req.body;
+      if (!status || !["Accepted", "Denied", "Pending"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const bid = await storage.getBid(req.params.id);
+      if (!bid) return res.status(404).json({ message: "Bid not found" });
+
+      const userId = (req as any).userId;
+      const dbUser = await authStorage.getUser(userId);
+      const actorName = acceptedBy || dbUser?.firstName || dbUser?.discordUsername || "Owner";
+      const previousStatus = bid.status;
+      const previousAcceptedBy = bid.acceptedBy;
+
+      await storage.updateBidStatus(bid.id, status, `${actorName} (override)`);
+
+      if (status === "Accepted") {
+        const order = await storage.getOrder(bid.orderId);
+        if (order) {
+          const prevAccepted = order.acceptedBidId;
+          if (prevAccepted && prevAccepted !== bid.id) {
+            await storage.updateBidStatus(prevAccepted, "Denied", `${actorName} (override)`);
+          }
+          await storage.updateOrder(bid.orderId, { acceptedBidId: bid.id, status: "Assigned", assignedGrinderId: bid.grinderId });
+        }
+        const allBids = await storage.getBids();
+        const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
+        for (const ob of otherPending) {
+          await storage.updateBidStatus(ob.id, "Denied", `${actorName} (override)`);
+        }
+      } else if (status === "Denied" || status === "Pending") {
+        const order = await storage.getOrder(bid.orderId);
+        if (order && order.acceptedBidId === bid.id) {
+          await storage.updateOrder(bid.orderId, { acceptedBidId: null, status: "Open", assignedGrinderId: null });
+        }
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "bid",
+        entityId: bid.id,
+        action: "owner_override_bid",
+        actor: actorName,
+        details: JSON.stringify({
+          orderId: bid.orderId,
+          grinderId: bid.grinderId,
+          previousStatus,
+          previousAcceptedBy,
+          newStatus: status,
+        }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
     }
   });
 

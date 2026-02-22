@@ -42,6 +42,7 @@ export interface IStorage {
   deleteOrder(id: string): Promise<boolean>;
 
   getBids(): Promise<Bid[]>;
+  getBid(id: string): Promise<Bid | undefined>;
   getBidByProposalId(mgtProposalId: number): Promise<Bid | undefined>;
   createBid(bid: InsertBid): Promise<Bid>;
   upsertBidByProposalId(mgtProposalId: number, data: Partial<InsertBid>): Promise<Bid>;
@@ -258,6 +259,11 @@ export class DatabaseStorage implements IStorage {
 
   async getBids(): Promise<Bid[]> {
     return await db.select().from(bids).orderBy(desc(bids.bidTime));
+  }
+
+  async getBid(id: string): Promise<Bid | undefined> {
+    const [bid] = await db.select().from(bids).where(eq(bids.id, id));
+    return bid;
   }
 
   async getBidByProposalId(mgtProposalId: number): Promise<Bid | undefined> {
