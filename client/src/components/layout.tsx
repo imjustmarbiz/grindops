@@ -1,0 +1,130 @@
+import { ReactNode } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Menu, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarGroupLabel, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem, 
+  SidebarProvider, 
+  SidebarTrigger 
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const navItems = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Priority Queue", url: "/queue", icon: Activity },
+  { title: "Orders", url: "/orders", icon: ListOrdered },
+  { title: "Grinders", url: "/grinders", icon: Users },
+  { title: "Bids", url: "/bids", icon: Gavel },
+  { title: "Assignments", url: "/assignments", icon: FileCheck },
+];
+
+function AppSidebar() {
+  const [location] = useLocation();
+  const { user, logout } = useAuth();
+
+  return (
+    <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
+      <SidebarContent>
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+            <Activity className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <span className="font-display font-bold text-xl tracking-tight text-glow">GrindOps</span>
+        </div>
+        
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-muted-foreground font-medium">MANAGEMENT</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const isActive = location === item.url;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link 
+                        href={item.url} 
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                          isActive 
+                            ? "bg-primary/10 text-primary font-medium shadow-sm shadow-primary/5" 
+                            : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
+                        }`}
+                      >
+                        <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : ""}`} />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <div className="mt-auto p-4">
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border border-primary/20">
+                <AvatarImage src={user?.profileImageUrl || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary">
+                  {user?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start gap-2 border-white/10 hover:bg-white/10 hover:text-destructive transition-colors hover-elevate" 
+              onClick={() => logout()}
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </SidebarContent>
+    </Sidebar>
+  );
+}
+
+export function AppLayout({ children }: { children: ReactNode }) {
+  const sidebarStyle = {
+    "--sidebar-width": "18rem",
+    "--sidebar-width-icon": "4rem",
+  } as React.CSSProperties;
+
+  return (
+    <SidebarProvider style={sidebarStyle}>
+      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 w-full relative">
+          {/* Subtle background ambient light */}
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+          
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/50 px-6 backdrop-blur-md bg-background/50 relative z-10">
+            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
+            <div className="ml-auto flex items-center gap-4">
+              {/* Could add notifications, etc here */}
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto p-6 md:p-8 relative z-10">
+            <div className="max-w-7xl mx-auto h-full">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
