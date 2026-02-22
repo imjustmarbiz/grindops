@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -19,7 +19,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const staffNavItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Overview", url: "/", icon: LayoutDashboard },
+  { title: "Operations", url: "/operations", icon: Wrench },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Payouts", url: "/payouts", icon: Wallet },
+  { title: "Admin", url: "/admin", icon: Settings },
   { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Orders", url: "/orders", icon: ListOrdered },
   { title: "Grinders", url: "/grinders", icon: Users },

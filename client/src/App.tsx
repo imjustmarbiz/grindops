@@ -9,7 +9,11 @@ import { AppLayout } from "@/components/layout";
 import { useEffect } from "react";
 
 import AuthPage from "@/pages/auth";
-import Dashboard from "@/pages/dashboard";
+import StaffOverview from "@/pages/staff/overview";
+import StaffOperations from "@/pages/staff/operations";
+import StaffAnalytics from "@/pages/staff/analytics";
+import StaffPayouts from "@/pages/staff/payouts";
+import StaffAdmin from "@/pages/staff/admin";
 import Queue from "@/pages/queue";
 import Orders from "@/pages/orders";
 import Grinders from "@/pages/grinders";
@@ -82,7 +86,7 @@ function HomeRedirect() {
   if (user?.role === "staff" || user?.role === "owner") {
     return (
       <AppLayout>
-        <Dashboard />
+        <StaffOverview />
       </AppLayout>
     );
   }
@@ -104,6 +108,10 @@ function Router() {
       </Route>
       
       <Route path="/" component={HomeRedirect} />
+      <Route path="/operations" component={() => <ProtectedRoute component={StaffOperations} staffOnly />} />
+      <Route path="/analytics" component={() => <ProtectedRoute component={StaffAnalytics} staffOnly />} />
+      <Route path="/payouts" component={() => <ProtectedRoute component={StaffPayouts} staffOnly />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={StaffAdmin} staffOnly />} />
       <Route path="/queue" component={() => <ProtectedRoute component={Queue} staffOnly />} />
       <Route path="/orders" component={() => <ProtectedRoute component={Orders} staffOnly />} />
       <Route path="/grinders" component={() => <ProtectedRoute component={Grinders} staffOnly />} />
