@@ -4,8 +4,38 @@ import { formatCurrency, formatCompact, AnimatedRing, MiniBar, LastUpdated, cate
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DollarSign, TrendingUp, Users, PieChart, Gauge, Percent, Crown, BarChart3, Award } from "lucide-react";
+import { DollarSign, TrendingUp, Users, PieChart, Gauge, Percent, Crown, BarChart3, Award, ArrowUpRight, ArrowDownRight, Target, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useLocation } from "wouter";
+
+function SplitBar({ segments, height = 10 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  if (total === 0) return <div className="w-full rounded-full bg-white/5" style={{ height }} />;
+  return (
+    <div className="w-full rounded-full bg-white/5 overflow-hidden flex" style={{ height }}>
+      {segments.filter(s => s.value > 0).map((seg, i) => (
+        <div key={i} className={`${seg.color} transition-all duration-700`} style={{ width: `${(seg.value / total) * 100}%` }} />
+      ))}
+    </div>
+  );
+}
+
+function MetricRow({ label, value, maxValue, color, suffix, icon: Icon }: {
+  label: string; value: number; maxValue: number; color: string; suffix: string; icon?: any;
+}) {
+  const pct = maxValue > 0 ? (value / maxValue) * 100 : 0;
+  return (
+    <div className="flex items-center gap-3">
+      {Icon && <Icon className={`w-3.5 h-3.5 ${color} flex-shrink-0`} />}
+      <span className="text-xs text-muted-foreground w-24 sm:w-28 truncate">{label}</span>
+      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700`} style={{ width: `${Math.min(100, pct)}%`, background: `var(--bar-color)` }} />
+      </div>
+      <span className="text-xs font-mono w-14 text-right font-medium" style={{ color: `var(--bar-color)` }}>
+        {value.toFixed(1)}{suffix}
+      </span>
+    </div>
+  );
+}
 
 export default function StaffAnalytics() {
   const { user } = useAuth();
@@ -42,6 +72,7 @@ export default function StaffAnalytics() {
   const payouts = analytics?.totalGrinderPayouts || 0;
   const profit = analytics?.totalCompanyProfit || 0;
   const profitMarginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const payoutPct = revenue > 0 ? (payouts / revenue) * 100 : 0;
 
   const completedAssignments = allAssignments.filter(a => a.status === "Completed");
   const onTimeCount = completedAssignments.filter(a => a.isOnTime === true).length;
@@ -53,9 +84,10 @@ export default function StaffAnalytics() {
     const count = svcOrders.length;
     const serviceRevenue = svcOrders.reduce((sum, o) => sum + Number(o.customerPrice || 0), 0);
     return { name: s.name, id: s.id, count, revenue: serviceRevenue };
-  }).sort((a, b) => b.count - a.count);
-  const maxServiceCount = Math.max(...serviceDistribution.map(s => s.count), 1);
-  const serviceColors = ["bg-primary", "bg-emerald-500", "bg-amber-500", "bg-purple-500", "bg-cyan-500", "bg-pink-500"];
+  }).sort((a, b) => b.revenue - a.revenue);
+  const maxServiceRevenue = Math.max(...serviceDistribution.map(s => s.revenue), 1);
+  const totalServiceRevenue = serviceDistribution.reduce((s, d) => s + d.revenue, 0);
+  const serviceColors = ["bg-emerald-500", "bg-blue-500", "bg-amber-500", "bg-purple-500", "bg-cyan-500", "bg-pink-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500", "bg-orange-500", "bg-lime-500"];
 
   const topEarners = [...allGrinders].sort((a, b) => Number(b.totalEarnings) - Number(a.totalEarnings)).slice(0, 5);
   const maxEarnings = topEarners.length > 0 ? Number(topEarners[0].totalEarnings) : 1;
@@ -65,79 +97,91 @@ export default function StaffAnalytics() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4 sm:space-y-6" data-testid="staff-analytics-page">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-analytics-title">
-              Analytics
-            </h1>
-            <p className="text-muted-foreground mt-1">Revenue, fleet, and performance metrics</p>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Live</span>
+      <div className="space-y-6" data-testid="staff-analytics-page">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-analytics-title">
+                Analytics
+              </h1>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+              </div>
             </div>
             <LastUpdated date={lastUpdatedDate} />
           </div>
+          <p className="text-sm text-muted-foreground">Revenue, fleet, and performance metrics</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="border-border/50" data-testid="card-revenue-split">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-emerald-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-revenue-split">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                  <PieChart className="w-4 h-4 text-emerald-400" />
+                </div>
                 Revenue Split
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-around">
-                <AnimatedRing percent={revenue > 0 ? (payouts / revenue) * 100 : 0} color="#60a5fa" label="Grinder Pay" value={formatCompact(payouts)} />
+            <CardContent className="space-y-5">
+              <div className="flex items-center justify-around gap-2">
+                <AnimatedRing percent={payoutPct} color="#60a5fa" label="Grinder Pay" value={formatCompact(payouts)} />
                 <AnimatedRing percent={profitMarginPct} color="#a78bfa" label="Company Profit" value={formatCompact(profit)} />
                 <AnimatedRing percent={100} color="#34d399" label="Total Revenue" value={formatCompact(revenue)} size={90} />
               </div>
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Grinder Share</span>
-                  <span className="text-blue-400 font-medium">{revenue > 0 ? ((payouts / revenue) * 100).toFixed(1) : 0}%</span>
-                </div>
-                <div className="h-3 rounded-full bg-white/5 overflow-hidden flex">
-                  <div className="h-full bg-blue-500 transition-all duration-700" style={{ width: `${revenue > 0 ? (payouts / revenue) * 100 : 0}%` }} />
-                  <div className="h-full bg-purple-500 transition-all duration-700" style={{ width: `${profitMarginPct}%` }} />
-                </div>
-                <div className="flex justify-between text-xs">
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /> Payouts</div>
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500" /> Profit</div>
+              <div className="space-y-3">
+                <SplitBar height={10} segments={[
+                  { value: payouts, color: "bg-blue-500", label: "Payouts" },
+                  { value: profit, color: "bg-purple-500", label: "Profit" },
+                ]} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Grinder Share</p>
+                    <p className="text-lg font-bold text-blue-400">{payoutPct.toFixed(1)}%</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Profit Margin</p>
+                    <p className="text-lg font-bold text-purple-400">{profitMarginPct.toFixed(1)}%</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border/50" data-testid="card-fleet-utilization">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Gauge className="w-5 h-5 text-cyan-400" />
+          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-fleet-utilization">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                  <Gauge className="w-4 h-4 text-cyan-400" />
+                </div>
                 Fleet Utilization
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-around mb-4">
-                <AnimatedRing percent={fleetUtilization} color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"} label="Limit Used" value={`${fleetUtilization.toFixed(0)}%`} size={90} />
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs text-muted-foreground">Available</span>
-                    <span className="text-sm font-bold ml-auto" data-testid="text-available-grinders">{availableGrinders}</span>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4 sm:gap-6">
+                <AnimatedRing percent={fleetUtilization} color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"} label="Limit Used" value={`${fleetUtilization.toFixed(0)}%`} size={90} stroke={10} />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs text-muted-foreground">Available</span>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-400" data-testid="text-available-grinders">{availableGrinders}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-400" />
-                    <span className="text-xs text-muted-foreground">At Limit</span>
-                    <span className="text-sm font-bold ml-auto" data-testid="text-at-capacity">{atCapacity}</span>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-400" />
+                      <span className="text-xs text-muted-foreground">At Limit</span>
+                    </div>
+                    <span className="text-sm font-bold text-red-400" data-testid="text-at-capacity">{atCapacity}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-400" />
-                    <span className="text-xs text-muted-foreground">Total Slots</span>
-                    <span className="text-sm font-bold ml-auto" data-testid="text-total-slots">{totalActive}/{totalCapacity}</span>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-400" />
+                      <span className="text-xs text-muted-foreground">Slots</span>
+                    </div>
+                    <span className="text-sm font-bold text-blue-400" data-testid="text-total-slots">{totalActive}/{totalCapacity}</span>
                   </div>
                 </div>
               </div>
@@ -160,89 +204,103 @@ export default function StaffAnalytics() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50" data-testid="card-bid-conversion">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Percent className="w-5 h-5 text-amber-400" />
+          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-bid-conversion">
+            <CardHeader className="pb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                    <Percent className="w-4 h-4 text-amber-400" />
+                  </div>
                   Bid Conversion
                 </CardTitle>
                 <LastUpdated date={bidsUpdatedAt ? new Date(bidsUpdatedAt) : null} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-around mb-4">
-                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={90} />
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-400" />
-                    <span className="text-xs text-muted-foreground">Pending</span>
-                    <span className="text-sm font-bold ml-auto" data-testid="text-pending-bids">{pendingBids}</span>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4 sm:gap-6">
+                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={90} stroke={10} />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3 h-3 text-yellow-400" />
+                      <span className="text-xs text-muted-foreground">Pending</span>
+                    </div>
+                    <span className="text-sm font-bold text-yellow-400" data-testid="text-pending-bids">{pendingBids}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs text-muted-foreground">Accepted</span>
-                    <span className="text-sm font-bold ml-auto" data-testid="text-accepted-bids">{acceptedBids}</span>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 text-emerald-400" />
+                      <span className="text-xs text-muted-foreground">Accepted</span>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-400" data-testid="text-accepted-bids">{acceptedBids}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-400" />
-                    <span className="text-xs text-muted-foreground">Rejected</span>
-                    <span className="text-sm font-bold ml-auto" data-testid="text-rejected-bids">{rejectedBids}</span>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/10">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-3 h-3 text-red-400" />
+                      <span className="text-xs text-muted-foreground">Rejected</span>
+                    </div>
+                    <span className="text-sm font-bold text-red-400" data-testid="text-rejected-bids">{rejectedBids}</span>
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <SplitBar height={10} segments={[
+                  { value: acceptedBids, color: "bg-emerald-500", label: "Accepted" },
+                  { value: rejectedBids, color: "bg-red-500", label: "Rejected" },
+                  { value: pendingBids, color: "bg-yellow-500", label: "Pending" },
+                ]} />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Total Bids: {totalBids}</span>
-                  <span>On-Time: {onTimeRate.toFixed(0)}%</span>
-                </div>
-                <div className="h-3 rounded-full bg-white/5 overflow-hidden flex">
-                  {totalBids > 0 && (
-                    <>
-                      <div className="h-full bg-emerald-500" style={{ width: `${(acceptedBids / totalBids) * 100}%` }} />
-                      <div className="h-full bg-red-500" style={{ width: `${(rejectedBids / totalBids) * 100}%` }} />
-                      <div className="h-full bg-blue-500" style={{ width: `${(pendingBids / totalBids) * 100}%` }} />
-                    </>
-                  )}
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-emerald-400">Accepted</span>
-                  <span className="text-red-400">Rejected</span>
-                  <span className="text-blue-400">Pending</span>
+                  <span className="flex items-center gap-1">
+                    <Target className="w-3 h-3" />
+                    On-Time: <span className={onTimeRate >= 80 ? "text-emerald-400" : "text-amber-400"}>{onTimeRate.toFixed(0)}%</span>
+                  </span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-border/50" data-testid="card-top-earners">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-top-earners">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-amber-400" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                  </div>
                   Top Earners
                 </CardTitle>
                 <LastUpdated date={grindersUpdatedAt ? new Date(grindersUpdatedAt) : null} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {topEarners.length === 0 && <p className="text-muted-foreground text-sm">No grinder data yet</p>}
+              <div className="space-y-2.5">
+                {topEarners.length === 0 && (
+                  <div className="flex flex-col items-center py-6 text-muted-foreground">
+                    <Crown className="w-8 h-8 mb-2 opacity-30" />
+                    <p className="text-sm">No grinder data yet</p>
+                  </div>
+                )}
                 {topEarners.map((g, i) => {
                   const earnings = Number(g.totalEarnings);
+                  const medalColors = [
+                    "bg-gradient-to-br from-amber-500/25 to-amber-600/15 text-amber-400 ring-1 ring-amber-500/30",
+                    "bg-gradient-to-br from-slate-400/25 to-slate-500/15 text-slate-300 ring-1 ring-slate-400/30",
+                    "bg-gradient-to-br from-orange-500/25 to-orange-600/15 text-orange-400 ring-1 ring-orange-500/30",
+                  ];
                   return (
-                    <div key={g.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/[0.07] transition-colors" data-testid={`card-top-earner-${i}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${i === 0 ? "bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30" : i === 1 ? "bg-gray-400/20 text-gray-300" : i === 2 ? "bg-orange-500/20 text-orange-400" : "bg-white/10 text-muted-foreground"}`}>
+                    <div key={g.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] sm:hover:bg-white/[0.05] transition-colors" data-testid={`card-top-earner-${i}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${i < 3 ? medalColors[i] : "bg-white/5 text-muted-foreground"}`}>
                         #{i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                           {categoryIcon(g.category)}
-                          <span className="font-medium text-sm truncate cursor-pointer text-primary hover:underline"
+                          <span className="font-medium text-sm truncate cursor-pointer hover:underline"
                             data-testid={`link-earner-${g.id}`}
                             onClick={() => navigate(`/grinders?scorecard=${g.id}`)}>{g.name}</span>
-                          <Badge variant="outline" className="text-[10px] h-4">{g.tier}</Badge>
+                          <Badge variant="outline" className="text-[9px] h-4">{g.tier}</Badge>
                         </div>
                         <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700" style={{ width: `${maxEarnings > 0 ? (earnings / maxEarnings) * 100 : 0}%` }} />
@@ -250,7 +308,7 @@ export default function StaffAnalytics() {
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-bold text-emerald-400 text-sm" data-testid={`text-earnings-${i}`}>{formatCurrency(earnings)}</p>
-                        <p className="text-[10px] text-muted-foreground">{g.completedOrders} done &middot; {g.totalOrders} total</p>
+                        <p className="text-[10px] text-muted-foreground">{g.completedOrders} done</p>
                       </div>
                     </div>
                   );
@@ -259,119 +317,139 @@ export default function StaffAnalytics() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50" data-testid="card-service-distribution">
+          <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-service-distribution">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-primary" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 text-primary" />
+                  </div>
                   Service Distribution
                 </CardTitle>
                 <LastUpdated date={ordersUpdatedAt ? new Date(ordersUpdatedAt) : null} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {serviceDistribution.length === 0 && <p className="text-muted-foreground text-sm">No order data yet</p>}
-                {serviceDistribution.map((s, i) => (
-                  <div key={s.id} className="space-y-1" data-testid={`service-dist-${s.id}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{s.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{s.count} orders</span>
-                        <span className="text-xs font-medium text-emerald-400">{formatCurrency(s.revenue)}</span>
-                      </div>
-                    </div>
-                    <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-700 ${serviceColors[i % serviceColors.length]}`} style={{ width: `${(s.count / maxServiceCount) * 100}%` }} />
-                    </div>
+              <div className="space-y-3 mb-4">
+                <SplitBar height={12} segments={serviceDistribution.map((s, i) => ({
+                  value: s.revenue,
+                  color: serviceColors[i % serviceColors.length],
+                  label: s.name,
+                }))} />
+              </div>
+              <div className="space-y-2">
+                {serviceDistribution.length === 0 && (
+                  <div className="flex flex-col items-center py-6 text-muted-foreground">
+                    <BarChart3 className="w-8 h-8 mb-2 opacity-30" />
+                    <p className="text-sm">No order data yet</p>
                   </div>
-                ))}
+                )}
+                {serviceDistribution.map((s, i) => {
+                  const revPct = totalServiceRevenue > 0 ? (s.revenue / totalServiceRevenue) * 100 : 0;
+                  return (
+                    <div key={s.id} className="flex items-center gap-3 p-2 rounded-lg sm:hover:bg-white/[0.03] transition-colors" data-testid={`service-dist-${s.id}`}>
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${serviceColors[i % serviceColors.length]}`} />
+                      <span className="text-sm font-medium flex-1 min-w-0 truncate">{s.name}</span>
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">{s.count} orders</span>
+                      <span className="text-xs font-medium text-emerald-400 flex-shrink-0 w-16 text-right">{formatCurrency(s.revenue)}</span>
+                      <span className="text-[10px] text-white/30 w-8 text-right flex-shrink-0">{revPct.toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="bg-gradient-to-r from-purple-500/5 to-amber-500/5 border-purple-500/20" data-testid="card-elite-vs-grinder">
+        <Card className="border-white/[0.06] bg-gradient-to-br from-purple-500/[0.04] via-transparent to-amber-500/[0.04] overflow-hidden" data-testid="card-elite-vs-grinder">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Award className="w-5 h-5 text-purple-400" />
-              Elite vs Grinder Performance Comparison
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                <Award className="w-4 h-4 text-purple-400" />
+              </div>
+              Elite vs Grinder Performance
             </CardTitle>
           </CardHeader>
           <CardContent>
             {eliteVsGrinderMetrics ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Crown className="w-4 h-4 text-amber-400" />
-                    <span className="text-sm font-bold text-amber-400">Elite Grinders</span>
-                    <Badge variant="outline" className="ml-auto text-[10px]">{eliteVsGrinderMetrics.elite?.count || 0}</Badge>
-                  </div>
-                  {[
-                    { label: "Avg Win Rate", value: eliteVsGrinderMetrics.elite?.avgWinRate, otherValue: eliteVsGrinderMetrics.grinders?.avgWinRate, suffix: "%" },
-                    { label: "Avg Quality", value: eliteVsGrinderMetrics.elite?.avgQuality, otherValue: eliteVsGrinderMetrics.grinders?.avgQuality, suffix: "%" },
-                    { label: "Avg On-Time", value: eliteVsGrinderMetrics.elite?.avgOnTime, otherValue: eliteVsGrinderMetrics.grinders?.avgOnTime, suffix: "%" },
-                    { label: "Avg Completion", value: eliteVsGrinderMetrics.elite?.avgCompletion, otherValue: eliteVsGrinderMetrics.grinders?.avgCompletion, suffix: "%" },
-                    { label: "Avg Turnaround", value: eliteVsGrinderMetrics.elite?.avgTurnaround, otherValue: eliteVsGrinderMetrics.grinders?.avgTurnaround, suffix: "h" },
-                    { label: "Avg Strikes", value: eliteVsGrinderMetrics.elite?.avgStrikes, otherValue: eliteVsGrinderMetrics.grinders?.avgStrikes, suffix: "", lowerBetter: true },
-                  ].map((metric) => {
-                    const val = Number(metric.value || 0);
-                    const other = Number(metric.otherValue || 0);
-                    const isBetter = metric.lowerBetter ? val <= other : val >= other;
-                    return (
-                      <div key={metric.label} className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-28 truncate">{metric.label}</span>
-                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-amber-500 transition-all duration-700" style={{ width: `${Math.min(100, val)}%` }} />
+                {[
+                  {
+                    label: "Elite Grinders",
+                    data: eliteVsGrinderMetrics.elite,
+                    other: eliteVsGrinderMetrics.grinders,
+                    icon: Crown,
+                    color: "#f59e0b",
+                    textColor: "text-amber-400",
+                    bgColor: "bg-amber-500/5",
+                    borderColor: "border-amber-500/10",
+                    barColor: "bg-amber-500",
+                  },
+                  {
+                    label: "Regular Grinders",
+                    data: eliteVsGrinderMetrics.grinders,
+                    other: eliteVsGrinderMetrics.elite,
+                    icon: Users,
+                    color: "#3b82f6",
+                    textColor: "text-blue-400",
+                    bgColor: "bg-blue-500/5",
+                    borderColor: "border-blue-500/10",
+                    barColor: "bg-blue-500",
+                  },
+                ].map((group) => {
+                  const GroupIcon = group.icon;
+                  const metrics = [
+                    { label: "Avg Win Rate", value: group.data?.avgWinRate, otherValue: group.other?.avgWinRate, suffix: "%", max: 100 },
+                    { label: "Avg Quality", value: group.data?.avgQuality, otherValue: group.other?.avgQuality, suffix: "%", max: 100 },
+                    { label: "Avg On-Time", value: group.data?.avgOnTime, otherValue: group.other?.avgOnTime, suffix: "%", max: 100 },
+                    { label: "Avg Completion", value: group.data?.avgCompletion, otherValue: group.other?.avgCompletion, suffix: "%", max: 100 },
+                    { label: "Avg Turnaround", value: group.data?.avgTurnaround, otherValue: group.other?.avgTurnaround, suffix: "h", max: Math.max(Number(group.data?.avgTurnaround || 1), Number(group.other?.avgTurnaround || 1)) * 1.2 },
+                    { label: "Avg Strikes", value: group.data?.avgStrikes, otherValue: group.other?.avgStrikes, suffix: "", max: 3, lowerBetter: true },
+                  ];
+                  return (
+                    <div key={group.label} className={`p-4 rounded-xl ${group.bgColor} border ${group.borderColor} space-y-3`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <GroupIcon className={`w-4 h-4 ${group.textColor}`} />
+                          <span className={`text-sm font-bold ${group.textColor}`}>{group.label}</span>
                         </div>
-                        <span className={`text-xs font-mono w-14 text-right ${isBetter ? "text-emerald-400" : "text-muted-foreground"}`}>
-                          {val.toFixed(1)}{metric.suffix}
+                        <Badge variant="outline" className="text-[10px]">{group.data?.count || 0}</Badge>
+                      </div>
+                      <div className="space-y-2.5">
+                        {metrics.map((m) => {
+                          const val = Number(m.value || 0);
+                          const other = Number(m.otherValue || 0);
+                          const isBetter = m.lowerBetter ? val <= other : val >= other;
+                          const pct = m.max > 0 ? Math.min(100, (val / m.max) * 100) : 0;
+                          return (
+                            <div key={m.label} className="flex items-center gap-2 sm:gap-3">
+                              <span className="text-[11px] text-muted-foreground w-24 sm:w-28 truncate">{m.label}</span>
+                              <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${group.barColor} transition-all duration-700`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className={`text-xs font-mono w-12 sm:w-14 text-right font-medium flex items-center justify-end gap-0.5 ${isBetter ? "text-emerald-400" : "text-muted-foreground"}`}>
+                                {isBetter && val !== other && <ArrowUpRight className="w-2.5 h-2.5" />}
+                                {val.toFixed(1)}{m.suffix}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+                        <span className="text-xs text-muted-foreground">Total Earnings</span>
+                        <span className={`text-sm font-bold ${group.textColor}`} data-testid={`text-${group.label.includes("Elite") ? "elite" : "grinder"}-earnings`}>
+                          {formatCurrency(Number(group.data?.totalEarnings || 0))}
                         </span>
                       </div>
-                    );
-                  })}
-                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <span className="text-xs text-muted-foreground">Total Earnings</span>
-                    <span className="text-sm font-bold text-amber-400" data-testid="text-elite-earnings">{formatCurrency(Number(eliteVsGrinderMetrics.elite?.totalEarnings || 0))}</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Users className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-bold text-blue-400">Regular Grinders</span>
-                    <Badge variant="outline" className="ml-auto text-[10px]">{eliteVsGrinderMetrics.grinders?.count || 0}</Badge>
-                  </div>
-                  {[
-                    { label: "Avg Win Rate", value: eliteVsGrinderMetrics.grinders?.avgWinRate, otherValue: eliteVsGrinderMetrics.elite?.avgWinRate, suffix: "%" },
-                    { label: "Avg Quality", value: eliteVsGrinderMetrics.grinders?.avgQuality, otherValue: eliteVsGrinderMetrics.elite?.avgQuality, suffix: "%" },
-                    { label: "Avg On-Time", value: eliteVsGrinderMetrics.grinders?.avgOnTime, otherValue: eliteVsGrinderMetrics.elite?.avgOnTime, suffix: "%" },
-                    { label: "Avg Completion", value: eliteVsGrinderMetrics.grinders?.avgCompletion, otherValue: eliteVsGrinderMetrics.elite?.avgCompletion, suffix: "%" },
-                    { label: "Avg Turnaround", value: eliteVsGrinderMetrics.grinders?.avgTurnaround, otherValue: eliteVsGrinderMetrics.elite?.avgTurnaround, suffix: "h" },
-                    { label: "Avg Strikes", value: eliteVsGrinderMetrics.grinders?.avgStrikes, otherValue: eliteVsGrinderMetrics.elite?.avgStrikes, suffix: "", lowerBetter: true },
-                  ].map((metric) => {
-                    const val = Number(metric.value || 0);
-                    const other = Number(metric.otherValue || 0);
-                    const isBetter = metric.lowerBetter ? val <= other : val >= other;
-                    return (
-                      <div key={metric.label} className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-28 truncate">{metric.label}</span>
-                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-blue-500 transition-all duration-700" style={{ width: `${Math.min(100, val)}%` }} />
-                        </div>
-                        <span className={`text-xs font-mono w-14 text-right ${isBetter ? "text-emerald-400" : "text-muted-foreground"}`}>
-                          {val.toFixed(1)}{metric.suffix}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <span className="text-xs text-muted-foreground">Total Earnings</span>
-                    <span className="text-sm font-bold text-blue-400" data-testid="text-grinder-earnings">{formatCurrency(Number(eliteVsGrinderMetrics.grinders?.totalEarnings || 0))}</span>
-                  </div>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">Loading metrics...</p>
+              <div className="flex flex-col items-center py-8 text-muted-foreground">
+                <Award className="w-8 h-8 mb-2 opacity-30" />
+                <p className="text-sm">Loading metrics...</p>
+              </div>
             )}
           </CardContent>
         </Card>
