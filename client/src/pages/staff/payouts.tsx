@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare } from "lucide-react";
+import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock } from "lucide-react";
 
 export default function StaffPayouts() {
   const { toast } = useToast();
@@ -44,73 +44,88 @@ export default function StaffPayouts() {
   const allGrinders = grinders || [];
 
   return (
-    <div className="space-y-4 sm:space-y-6" data-testid="page-staff-payouts">
-      <div>
-        <h1 className="text-xl sm:text-3xl font-display font-bold" data-testid="text-page-title">
-          Payout Management
-        </h1>
-        <p className="text-muted-foreground mt-1">Review and manage grinder payout requests</p>
+    <div className="space-y-5 sm:space-y-6" data-testid="page-staff-payouts">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+            Payout Management
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
+        </div>
+        {pendingPayouts.length > 0 && (
+          <Badge className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 gap-1 animate-pulse">
+            <Clock className="w-3 h-3" />
+            {pendingPayouts.length} pending review
+          </Badge>
+        )}
       </div>
 
-      <Card className="border-green-500/20" data-testid="card-payout-management">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: "Outstanding", value: formatCurrency(totalOwed), icon: Clock, gradient: "from-yellow-500/[0.08] via-background to-yellow-900/[0.04]", iconBg: "bg-yellow-500/15", textColor: "text-yellow-400", testId: "text-total-owed" },
+          { label: "Paid Out", value: formatCurrency(totalPaidOut), icon: CheckCircle, gradient: "from-emerald-500/[0.08] via-background to-emerald-900/[0.04]", iconBg: "bg-emerald-500/15", textColor: "text-emerald-400", testId: "text-total-paid" },
+          { label: "Total Requests", value: String(allPayoutReqs.length), icon: TrendingUp, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", textColor: "text-blue-400", testId: "text-total-requests" },
+        ].map(s => (
+          <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-white/50">{s.label}</p>
+                  <p className={`text-xl sm:text-2xl font-bold ${s.textColor} tracking-tight`} data-testid={s.testId}>{s.value}</p>
+                </div>
+                <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center`}>
+                  <s.icon className={`w-5 h-5 ${s.textColor}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-payout-management">
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-emerald-500/[0.03] -translate-y-16 translate-x-16" />
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Wallet className="w-5 h-5 text-green-400" />
-            Payout Management
-            {pendingPayouts.length > 0 && (
-              <Badge className="bg-yellow-500/20 text-yellow-400 ml-2">{pendingPayouts.length} pending</Badge>
-            )}
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-emerald-400" />
+            </div>
+            Active Payouts
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-xl font-bold text-yellow-400" data-testid="text-total-owed">{formatCurrency(totalOwed)}</p>
-              <p className="text-[10px] text-muted-foreground">Outstanding</p>
-            </div>
-            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-              <p className="text-xl font-bold text-green-400" data-testid="text-total-paid">{formatCurrency(totalPaidOut)}</p>
-              <p className="text-[10px] text-muted-foreground">Paid Out</p>
-            </div>
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-              <p className="text-xl font-bold text-blue-400" data-testid="text-total-requests">{allPayoutReqs.length}</p>
-              <p className="text-[10px] text-muted-foreground">Total Requests</p>
-            </div>
-          </div>
-
+        <CardContent className="space-y-4 relative">
           {[...pendingPayouts, ...approvedPayouts].length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Payouts</p>
               {[...pendingPayouts, ...approvedPayouts].map((p: any) => {
                 const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
                 return (
-                  <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/5" data-testid={`staff-payout-${p.id}`}>
+                  <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] sm:hover:bg-white/[0.05] transition-colors" data-testid={`staff-payout-${p.id}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{grinder?.name || p.grinderId}</span>
-                        <span className="text-green-400 font-bold">{formatCurrency(Number(p.amount))}</span>
-                        <Badge variant="outline" className={`text-[10px] ${p.status === "Approved" ? "text-blue-400 border-blue-500/30" : "text-yellow-400 border-yellow-500/30"}`}>{p.status}</Badge>
+                        <span className="font-medium">{grinder?.name || p.grinderId}</span>
+                        <span className="text-emerald-400 font-bold text-lg">{formatCurrency(Number(p.amount))}</span>
+                        <Badge variant="outline" className={`text-[10px] ${p.status === "Approved" ? "text-blue-400 border-blue-500/30 bg-blue-500/10" : "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"}`}>{p.status}</Badge>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <div className="flex items-center gap-2 flex-wrap mt-1.5">
                         {p.payoutPlatform && (
-                          <Badge variant="outline" className="text-[10px] border-border/50 gap-1">
+                          <Badge variant="outline" className="text-[10px] border-white/10 bg-white/[0.03] gap-1">
                             <CreditCard className="w-3 h-3" /> {p.payoutPlatform}: {p.payoutDetails || "N/A"}
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">Order {p.orderId?.slice(0, 10)}</span>
                         <span className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleDateString()}</span>
                       </div>
-                      {p.notes && <p className="text-xs text-muted-foreground mt-1">{p.notes}</p>}
+                      {p.notes && <p className="text-xs text-muted-foreground mt-1 italic">{p.notes}</p>}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {p.status === "Pending" && (
                         <>
-                          <Button size="sm" variant="outline" className="text-xs bg-blue-500/10 border-blue-500/30 text-blue-400" data-testid={`button-approve-payout-${p.id}`}
+                          <Button size="sm" className="text-xs bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/20" data-testid={`button-approve-payout-${p.id}`}
                             disabled={payoutMutation.isPending}
                             onClick={() => payoutMutation.mutate({ id: p.id, status: "Approved" })}>
                             <CheckCircle className="w-3 h-3 mr-1" /> Approve
                           </Button>
-                          <Button size="sm" variant="outline" className="text-xs bg-red-500/10 border-red-500/30 text-red-400" data-testid={`button-deny-payout-${p.id}`}
+                          <Button size="sm" className="text-xs bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/20" data-testid={`button-deny-payout-${p.id}`}
                             disabled={payoutMutation.isPending}
                             onClick={() => payoutMutation.mutate({ id: p.id, status: "Denied" })}>
                             <X className="w-3 h-3 mr-1" /> Deny
@@ -118,7 +133,7 @@ export default function StaffPayouts() {
                         </>
                       )}
                       {(p.status === "Approved" || p.status === "Pending") && (
-                        <Button size="sm" className="text-xs bg-green-600" data-testid={`button-mark-paid-${p.id}`}
+                        <Button size="sm" className="text-xs bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20" data-testid={`button-mark-paid-${p.id}`}
                           disabled={payoutMutation.isPending}
                           onClick={() => payoutMutation.mutate({ id: p.id, status: "Paid" })}>
                           <Banknote className="w-3 h-3 mr-1" /> Mark Paid
@@ -130,21 +145,24 @@ export default function StaffPayouts() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-pending">No pending payouts.</p>
+            <div className="py-8 text-center text-muted-foreground text-sm rounded-xl bg-white/[0.02]" data-testid="text-no-pending">
+              <Wallet className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              No pending payouts
+            </div>
           )}
 
           {paidPayouts.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recently Paid ({paidPayouts.length})</p>
               {paidPayouts.slice(0, 5).map((p: any) => {
                 const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
                 return (
-                  <div key={p.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 opacity-70 text-sm" data-testid={`staff-paid-${p.id}`}>
+                  <div key={p.id} className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-sm opacity-70" data-testid={`staff-paid-${p.id}`}>
                     <span className="font-medium">{grinder?.name || p.grinderId}</span>
-                    <span className="text-green-400">{formatCurrency(Number(p.amount))}</span>
+                    <span className="text-emerald-400 font-semibold">{formatCurrency(Number(p.amount))}</span>
                     {p.payoutPlatform && <span className="text-xs text-muted-foreground">via {p.payoutPlatform}</span>}
                     <span className="text-xs text-muted-foreground">Order {p.orderId}</span>
-                    <Badge className="bg-green-500/20 text-green-400 text-[10px]">Paid</Badge>
+                    <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">Paid</Badge>
                     {p.reviewedBy && <span className="text-xs text-muted-foreground">by {p.reviewedBy}</span>}
                     {p.paidAt && <span className="text-xs text-muted-foreground ml-auto">{new Date(p.paidAt).toLocaleDateString()}</span>}
                   </div>
@@ -156,24 +174,27 @@ export default function StaffPayouts() {
       </Card>
 
       {grinderUpdates && grinderUpdates.length > 0 && (
-        <Card className="border-blue-500/20" data-testid="card-grinder-updates">
+        <Card className="border-0 bg-gradient-to-br from-blue-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-grinder-updates">
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.03] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                <MessageSquare className="w-4 h-4 text-blue-400" />
+              </div>
               Grinder Order Updates
-              <Badge className="bg-blue-500/20 text-blue-400 ml-auto">{grinderUpdates.length}</Badge>
+              <Badge className="bg-blue-500/15 text-blue-400 border border-blue-500/20 ml-auto text-xs">{grinderUpdates.length}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {grinderUpdates.slice(0, 15).map((u: any) => {
                 const grinder = allGrinders.find((g: any) => g.id === u.grinderId);
                 return (
-                  <div key={u.id} className="p-3 rounded-lg bg-white/5 border border-white/10" data-testid={`card-grinder-update-${u.id}`}>
+                  <div key={u.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]" data-testid={`card-grinder-update-${u.id}`}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-blue-400">{grinder?.name || u.grinderId}</span>
-                        <Badge variant="outline" className="text-[10px]">{u.updateType}</Badge>
+                        <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{u.updateType}</Badge>
                       </div>
                       <span className="text-[10px] text-muted-foreground">{new Date(u.createdAt).toLocaleString()}</span>
                     </div>

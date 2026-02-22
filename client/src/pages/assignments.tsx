@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,7 +88,6 @@ export default function Assignments() {
   const replaced = (assignments || []).filter(a => a.wasReassigned);
   const totalGrinderPay = (assignments || []).reduce((sum, a) => sum + (Number(a.grinderEarnings) || 0), 0);
   const totalOriginalPay = (assignments || []).reduce((sum, a) => sum + (Number(a.originalGrinderPay) || 0), 0);
-  const totalReplacementPay = (assignments || []).reduce((sum, a) => sum + (Number(a.replacementGrinderPay) || 0), 0);
   const totalProfit = (assignments || []).reduce((sum, a) => sum + (Number(a.companyProfit) || 0), 0);
 
   const availableGrinders = (grinders || []).filter(g => {
@@ -98,66 +97,46 @@ export default function Assignments() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-assignments-title">
-          <FileCheck className="w-8 h-8 text-primary" /> Assignments
-        </h1>
-        <p className="text-muted-foreground mt-1">Auto-created when bids are accepted. Replace grinders with custom pay splits.</p>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-assignments-title">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <FileCheck className="w-5 h-5 text-primary" />
+            </div>
+            Assignments
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Auto-created when bids are accepted. Replace grinders with custom pay splits.</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Clock className="w-6 h-6 text-blue-400" />
-            <div>
-              <p className="text-xl font-bold" data-testid="text-active-assignments">{active.length}</p>
-              <p className="text-xs text-muted-foreground">Active</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle className="w-6 h-6 text-emerald-400" />
-            <div>
-              <p className="text-xl font-bold" data-testid="text-completed-assignments">{completed.length}</p>
-              <p className="text-xs text-muted-foreground">Completed</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Repeat className="w-6 h-6 text-amber-400" />
-            <div>
-              <p className="text-xl font-bold text-amber-400" data-testid="text-replaced-count">{replaced.length}</p>
-              <p className="text-xs text-muted-foreground">Replaced</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Users className="w-6 h-6 text-blue-400" />
-            <div>
-              <p className="text-xl font-bold text-blue-400" data-testid="text-total-grinder-pay">{formatCurrency(totalGrinderPay + totalOriginalPay)}</p>
-              <p className="text-xs text-muted-foreground">Grinder Pay</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <DollarSign className="w-6 h-6 text-emerald-400" />
-            <div>
-              <p className="text-xl font-bold text-emerald-400" data-testid="text-total-profit">{formatCurrency(totalProfit)}</p>
-              <p className="text-xs text-muted-foreground">Company Profit</p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: "Active", value: active.length, icon: Clock, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
+          { label: "Completed", value: completed.length, icon: CheckCircle, gradient: "from-emerald-500/[0.08] via-background to-emerald-900/[0.04]", iconBg: "bg-emerald-500/15", color: "text-emerald-400" },
+          { label: "Replaced", value: replaced.length, icon: Repeat, gradient: "from-amber-500/[0.08] via-background to-amber-900/[0.04]", iconBg: "bg-amber-500/15", color: "text-amber-400" },
+          { label: "Grinder Pay", value: formatCurrency(totalGrinderPay + totalOriginalPay), icon: Users, gradient: "from-blue-500/[0.06] via-background to-blue-900/[0.03]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
+          { label: "Company Profit", value: formatCurrency(totalProfit), icon: DollarSign, gradient: "from-emerald-500/[0.06] via-background to-emerald-900/[0.03]", iconBg: "bg-emerald-500/15", color: "text-emerald-400" },
+        ].map(s => (
+          <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-white/[0.02] -translate-y-5 translate-x-5" />
+            <CardContent className="p-4 flex items-center gap-3 relative">
+              <div className={`w-9 h-9 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+                <s.icon className={`w-4 h-4 ${s.color}`} />
+              </div>
+              <div>
+                <p className={`text-lg font-bold ${s.color} truncate`} data-testid={`text-${s.label.toLowerCase().replace(/\s+/g, "-")}`}>{s.value}</p>
+                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card className="border-border/50 overflow-hidden">
+      <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <Table>
-          <TableHeader className="bg-white/5">
-            <TableRow>
+          <TableHeader className="bg-white/[0.03]">
+            <TableRow className="border-white/[0.06]">
               <TableHead>ID</TableHead>
               <TableHead>Order</TableHead>
               <TableHead>Grinder</TableHead>
@@ -182,7 +161,7 @@ export default function Assignments() {
               const order = (orders || []).find((o: Order) => o.id === a.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId;
               return (
-                <TableRow key={a.id} className="hover:bg-white/[0.02]" data-testid={`row-assignment-${a.id}`}>
+                <TableRow key={a.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-assignment-${a.id}`}>
                   <TableCell className="font-mono text-sm text-muted-foreground">{a.id}</TableCell>
                   <TableCell className="font-bold text-primary">{orderRef}</TableCell>
                   <TableCell>
@@ -193,7 +172,7 @@ export default function Assignments() {
                         <Tooltip>
                           <TooltipTrigger>
                             <div className="flex items-center gap-1 mt-1">
-                              <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400 gap-0.5">
+                              <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 gap-0.5">
                                 <UserMinus className="w-2 h-2" />
                                 Replaced {originalGrinder.name}
                               </Badge>
@@ -217,7 +196,7 @@ export default function Assignments() {
                       <div className="flex flex-col">
                         <span className="text-sm">{format(new Date(a.deliveredDateTime), "MMM d, h:mm a")}</span>
                         {a.isOnTime !== null && a.isOnTime !== undefined && (
-                          <Badge variant="outline" className={`text-[10px] w-fit mt-0.5 ${a.isOnTime ? "border-green-500/30 text-green-400" : "border-red-500/30 text-red-400"}`}>
+                          <Badge variant="outline" className={`text-[10px] w-fit mt-0.5 border ${a.isOnTime ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-red-500/20 text-red-400 bg-red-500/10"}`}>
                             {a.isOnTime ? "On Time" : "Late"}
                           </Badge>
                         )}
@@ -269,11 +248,11 @@ export default function Assignments() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <Badge variant={a.status === "Active" ? "default" : "secondary"} className={a.status === "Active" ? "bg-primary/20 text-primary border-primary/30" : ""}>
+                      <Badge variant="outline" className={`border ${a.status === "Active" ? "bg-primary/15 text-primary border-primary/20" : "bg-white/[0.03]"}`}>
                         {a.status}
                       </Badge>
                       {a.wasReassigned && (
-                        <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400 w-fit">
+                        <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 w-fit">
                           <Repeat className="w-2 h-2 mr-0.5" />Replaced
                         </Badge>
                       )}
@@ -286,7 +265,7 @@ export default function Assignments() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 text-muted-foreground hover:text-amber-400"
+                            className="h-8 w-8 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
                             onClick={() => openReplaceDialog(a)}
                             data-testid={`button-replace-grinder-${a.id}`}
                           >
@@ -302,6 +281,7 @@ export default function Assignments() {
             }) : (
               <TableRow>
                 <TableCell colSpan={13} className="text-center h-24 text-muted-foreground">
+                  <FileCheck className="w-8 h-8 mx-auto mb-2 opacity-20" />
                   No assignments yet. Assignments are auto-created when staff accepts bids in Discord.
                 </TableCell>
               </TableRow>
@@ -311,17 +291,19 @@ export default function Assignments() {
       </Card>
 
       <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
-        <DialogContent className="border-border/50 sm:max-w-[520px]">
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
-              <UserMinus className="w-5 h-5 text-amber-400" />
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                <UserMinus className="w-4 h-4 text-amber-400" />
+              </div>
               Replace Grinder
             </DialogTitle>
           </DialogHeader>
 
           {selectedAssignment && (
             <div className="space-y-5 mt-2">
-              <div className="p-3 rounded-lg bg-white/5 border border-border/50">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Assignment</span>
                   <span className="font-mono text-sm">{selectedAssignment.id}</span>
@@ -347,7 +329,7 @@ export default function Assignments() {
               <div>
                 <Label className="text-sm font-medium">Replacement Grinder</Label>
                 <Select value={replacementGrinderId} onValueChange={setReplacementGrinderId}>
-                  <SelectTrigger className="mt-1.5 bg-background/50" data-testid="select-replacement-grinder">
+                  <SelectTrigger className="mt-1.5 bg-background/50 border-white/10" data-testid="select-replacement-grinder">
                     <SelectValue placeholder="Select a grinder to take over..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -385,7 +367,7 @@ export default function Assignments() {
                           const orig = parseFloat(v) || 0;
                           setReplacementPay(Math.max(0, totalPay - orig).toFixed(2));
                         }}
-                        className="pl-7 bg-background/50"
+                        className="pl-7 bg-background/50 border-white/10"
                         data-testid="input-original-pay"
                       />
                     </div>
@@ -408,7 +390,7 @@ export default function Assignments() {
                           const repl = parseFloat(v) || 0;
                           setOriginalPay(Math.max(0, totalPay - repl).toFixed(2));
                         }}
-                        className="pl-7 bg-background/50"
+                        className="pl-7 bg-background/50 border-white/10"
                         data-testid="input-replacement-pay"
                       />
                     </div>
@@ -434,7 +416,7 @@ export default function Assignments() {
                 </div>
 
                 {totalSplit > totalPay && (
-                  <div className="p-2 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
                     <AlertTriangle className="w-3 h-3" />
                     Split exceeds total grinder pay by {formatCurrency(totalSplit - totalPay)}
                   </div>
@@ -446,32 +428,20 @@ export default function Assignments() {
                 <Textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g. Grinder unavailable, performance issue, scheduling conflict..."
-                  className="mt-1 bg-background/50 resize-none"
-                  rows={2}
+                  placeholder="Why is this grinder being replaced?"
+                  className="mt-1 resize-none bg-background/50 border-white/10"
                   data-testid="input-replacement-reason"
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setReplaceDialogOpen(false)}
-                  data-testid="button-cancel-replace"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-black gap-2"
-                  disabled={!replacementGrinderId || replaceMutation.isPending || totalSplit > totalPay || origPayNum < 0 || replPayNum < 0}
-                  onClick={handleReplace}
-                  data-testid="button-confirm-replace"
-                >
-                  <Repeat className="w-4 h-4" />
-                  {replaceMutation.isPending ? "Replacing..." : "Replace Grinder"}
-                </Button>
-              </div>
+              <Button
+                className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/20"
+                disabled={!replacementGrinderId || replaceMutation.isPending}
+                onClick={handleReplace}
+                data-testid="button-confirm-replace"
+              >
+                {replaceMutation.isPending ? "Replacing..." : "Confirm Replacement"}
+              </Button>
             </div>
           )}
         </DialogContent>

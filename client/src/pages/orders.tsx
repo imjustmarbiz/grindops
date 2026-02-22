@@ -4,13 +4,13 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, MapPin, StickyNote, Gauge } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, MapPin, StickyNote, Gauge, Package, Clock, TrendingUp } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,7 +60,7 @@ function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
           ref={inputRef}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          className="h-7 text-sm bg-background/50 w-28"
+          className="h-7 text-sm bg-background/50 border-white/10 w-28"
           data-testid={`input-edit-${field}-${orderId}`}
           onKeyDown={(e) => {
             if (e.key === "Enter") save();
@@ -113,7 +113,7 @@ function InlineDateEdit({ value, orderId, onSave }: {
         type="datetime-local"
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
-        className="text-sm bg-background/50 w-44"
+        className="text-sm bg-background/50 border-white/10 w-44"
         data-testid={`input-edit-duedate-${orderId}`}
         onKeyDown={(e) => {
           if (e.key === "Enter") save();
@@ -251,26 +251,39 @@ export default function Orders() {
     return "text-red-400";
   };
 
+  const openCount = (orders || []).filter(o => o.status === "Open").length;
+  const assignedCount = (orders || []).filter(o => o.status === "Assigned").length;
+  const completedCount = (orders || []).filter(o => o.status === "Completed").length;
+  const totalRevenue = (orders || []).reduce((s, o) => s + Number(o.customerPrice || 0), 0);
+
   return (
     <TooltipProvider>
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-orders-title">
-            <ListOrdered className="w-8 h-8 text-primary" /> Order Management
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-orders-title">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <ListOrdered className="w-5 h-5 text-primary" />
+            </div>
+            Order Management
           </h1>
-          <p className="text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
+          <p className="text-sm text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-order" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button data-testid="button-create-order" className="gap-2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 sm:hover:-translate-y-0.5 transition-all duration-300">
               <Plus className="w-4 h-4" /> Create Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="border-border/50 sm:max-w-[500px]">
+          <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle className="font-display text-xl">New Order</DialogTitle>
+              <DialogTitle className="font-display text-xl flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-primary" />
+                </div>
+                New Order
+              </DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
@@ -278,7 +291,7 @@ export default function Orders() {
                   <FormField control={form.control} name="id" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Order ID</FormLabel>
-                      <FormControl><Input {...field} className="bg-background/50" data-testid="input-order-id" /></FormControl>
+                      <FormControl><Input {...field} className="bg-background/50 border-white/10" data-testid="input-order-id" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -287,7 +300,7 @@ export default function Orders() {
                       <FormLabel>Service</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="bg-background/50" data-testid="select-service"><SelectValue placeholder="Select service" /></SelectTrigger>
+                          <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-service"><SelectValue placeholder="Select service" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {(services || []).map((s: Service) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -302,14 +315,14 @@ export default function Orders() {
                   <FormField control={form.control} name="customerPrice" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Price ($)</FormLabel>
-                      <FormControl><Input type="number" step="0.01" {...field} className="bg-background/50" data-testid="input-price" /></FormControl>
+                      <FormControl><Input type="number" step="0.01" {...field} className="bg-background/50 border-white/10" data-testid="input-price" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="orderDueDate" render={({ field: { value, ...field } }) => (
                     <FormItem>
                       <FormLabel>Due Date</FormLabel>
-                      <FormControl><Input type="datetime-local" {...field} value={value instanceof Date ? value.toISOString().slice(0, 16) : (value || "")} className="bg-background/50" data-testid="input-due-date" /></FormControl>
+                      <FormControl><Input type="datetime-local" {...field} value={value instanceof Date ? value.toISOString().slice(0, 16) : (value || "")} className="bg-background/50 border-white/10" data-testid="input-due-date" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -319,17 +332,17 @@ export default function Orders() {
                   <FormField control={form.control} name="complexity" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Complexity</FormLabel>
-                      <FormControl><Input type="number" min="1" max="5" {...field} className="bg-background/50" /></FormControl>
+                      <FormControl><Input type="number" min="1" max="5" {...field} className="bg-background/50 border-white/10" /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="isRush" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 p-3 pt-4">
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-white/10 p-3 pt-4">
                       <FormLabel className="text-sm">Rush</FormLabel>
                       <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="isEmergency" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 p-3 pt-4">
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-white/10 p-3 pt-4">
                       <FormLabel className="text-sm">Emergency</FormLabel>
                       <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     </FormItem>
@@ -339,11 +352,11 @@ export default function Orders() {
                 <FormField control={form.control} name="location" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Location</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g. Retail, Online" className="bg-background/50" data-testid="input-location" /></FormControl>
+                    <FormControl><Input {...field} placeholder="e.g. Retail, Online" className="bg-background/50 border-white/10" data-testid="input-location" /></FormControl>
                   </FormItem>
                 )} />
 
-                <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4 bg-primary hover:bg-primary/90" data-testid="button-submit-order">
+                <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20" data-testid="button-submit-order">
                   {createMutation.isPending ? "Creating..." : "Create Order"}
                 </Button>
               </form>
@@ -352,10 +365,32 @@ export default function Orders() {
         </Dialog>
       </div>
 
-      <Card className="border-border/50 overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Open", value: openCount, icon: Package, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", textColor: "text-blue-400" },
+          { label: "Assigned", value: assignedCount, icon: User, gradient: "from-amber-500/[0.08] via-background to-amber-900/[0.04]", iconBg: "bg-amber-500/15", textColor: "text-amber-400" },
+          { label: "Completed", value: completedCount, icon: Check, gradient: "from-emerald-500/[0.08] via-background to-emerald-900/[0.04]", iconBg: "bg-emerald-500/15", textColor: "text-emerald-400" },
+          { label: "Total Revenue", value: `$${totalRevenue.toFixed(0)}`, icon: TrendingUp, gradient: "from-purple-500/[0.08] via-background to-purple-900/[0.04]", iconBg: "bg-purple-500/15", textColor: "text-purple-400" },
+        ].map(s => (
+          <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 flex items-center gap-3 relative">
+              <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+                <s.icon className={`w-5 h-5 ${s.textColor}`} />
+              </div>
+              <div>
+                <p className={`text-xl font-bold ${s.textColor}`}>{s.value}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <Table>
-          <TableHeader className="bg-white/5">
-            <TableRow>
+          <TableHeader className="bg-white/[0.03]">
+            <TableRow className="border-white/[0.06]">
               <TableHead>MGT #</TableHead>
               <TableHead>Service</TableHead>
               <TableHead>Platform</TableHead>
@@ -376,7 +411,7 @@ export default function Orders() {
               const service = (services || []).find((s: Service) => s.id === order.serviceId);
               const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
               return (
-                <TableRow key={order.id} className="hover:bg-white/[0.02]" data-testid={`row-order-${order.id}`}>
+                <TableRow key={order.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-order-${order.id}`}>
                   <TableCell className="font-mono font-medium" data-testid={`text-order-id-${order.id}`}>
                     <div className="flex flex-col">
                       <span>{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
@@ -389,7 +424,7 @@ export default function Orders() {
                         value={order.serviceId}
                         onValueChange={(val) => saveField(order.id, { serviceId: val })}
                       >
-                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-border/50 hover:bg-white/5 w-auto min-w-[100px] -mx-1 transition-colors" data-testid={`select-edit-service-${order.id}`}>
+                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 w-auto min-w-[100px] -mx-1 transition-colors" data-testid={`select-edit-service-${order.id}`}>
                           <SelectValue>{service?.name || order.serviceId}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
@@ -436,7 +471,7 @@ export default function Orders() {
                       value={String(order.complexity)}
                       onValueChange={(val) => saveField(order.id, { complexity: Number(val) })}
                     >
-                      <SelectTrigger className={`h-7 w-14 text-sm bg-transparent border-transparent hover:border-border/50 hover:bg-white/5 mx-auto transition-colors font-mono font-bold ${complexityColor(order.complexity)}`} data-testid={`select-edit-complexity-${order.id}`}>
+                      <SelectTrigger className={`h-7 w-14 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 mx-auto transition-colors font-mono font-bold ${complexityColor(order.complexity)}`} data-testid={`select-edit-complexity-${order.id}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -470,7 +505,7 @@ export default function Orders() {
                           step="0.01"
                           value={editPriceValue}
                           onChange={(e) => setEditPriceValue(e.target.value)}
-                          className="w-24 h-7 text-sm text-right bg-background/50"
+                          className="w-24 h-7 text-sm text-right bg-background/50 border-white/10"
                           data-testid={`input-edit-price-${order.id}`}
                           autoFocus
                           onKeyDown={(e) => {
@@ -493,75 +528,72 @@ export default function Orders() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-6 w-6 text-red-400 hover:text-red-300"
+                          className="h-6 w-6 text-muted-foreground"
                           onClick={() => setEditingPriceId(null)}
-                          data-testid={`button-cancel-price-${order.id}`}
                         >
                           <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-end gap-1 group">
-                        <span className="font-bold text-green-400" data-testid={`text-price-${order.id}`}>
-                          ${order.customerPrice}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-white"
-                          onClick={() => { setEditingPriceId(order.id); setEditPriceValue(String(order.customerPrice)); }}
-                          data-testid={`button-edit-price-${order.id}`}
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </Button>
+                      <div
+                        className="group flex items-center justify-end gap-1 cursor-pointer rounded px-1 hover:bg-white/5 transition-colors"
+                        onClick={() => { setEditingPriceId(order.id); setEditPriceValue(order.customerPrice); }}
+                        data-testid={`editable-price-${order.id}`}
+                      >
+                        <span className="text-emerald-400 font-semibold">${order.customerPrice}</span>
+                        <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
                     {order.companyProfit ? (
-                      <span className="font-medium text-emerald-400"><DollarSign className="w-3 h-3 inline" />{Number(order.companyProfit).toFixed(2)}</span>
+                      <span className="font-semibold text-emerald-400">${order.companyProfit}</span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell>
                     <Select
-                      defaultValue={order.status}
+                      value={order.status}
                       onValueChange={(val) => statusMutation.mutate({ id: order.id, status: val })}
-                      disabled={statusMutation.isPending}
                     >
-                      <SelectTrigger className="w-[120px] h-8 text-xs bg-background/50 border-white/10" data-testid={`select-status-${order.id}`}>
+                      <SelectTrigger className={`h-7 text-xs bg-transparent border-transparent w-auto min-w-[90px] ${
+                        order.status === "Open" ? "text-blue-400" :
+                        order.status === "Assigned" ? "text-amber-400" :
+                        order.status === "Completed" ? "text-emerald-400" :
+                        order.status === "Cancelled" ? "text-red-400" :
+                        "text-muted-foreground"
+                      }`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Assigned">Assigned</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        {["Open", "Assigned", "In Progress", "Completed", "Cancelled", "Bidding Closed"].map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-muted-foreground hover:text-red-400"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => {
-                        if (confirm(`Delete order ${order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}? This will also remove its bids and assignments.`)) {
-                          deleteMutation.mutate(order.id);
-                        }
-                      }}
-                      data-testid={`button-delete-order-${order.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                          onClick={() => deleteMutation.mutate(order.id)}
+                          data-testid={`button-delete-order-${order.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete order</TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );
             }) : (
               <TableRow>
                 <TableCell colSpan={11} className="text-center h-24 text-muted-foreground">
-                  No orders yet. Orders will appear when MGT Bot posts in the bid war channel.
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                  No orders yet. Orders are auto-imported from MGT Bot.
                 </TableCell>
               </TableRow>
             )}

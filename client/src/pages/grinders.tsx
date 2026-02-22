@@ -77,26 +77,38 @@ export default function Grinders() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-grinders-title">
-          <Users className="w-8 h-8 text-primary" /> Grinder Roster
-        </h1>
-        <p className="text-muted-foreground mt-1">Auto-imported from MGT Bot. Click a grinder to view their scorecard.</p>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-grinders-title">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            Grinder Roster
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Auto-imported from MGT Bot. Click a grinder to view their scorecard.</p>
+        </div>
+        <Badge className="bg-primary/15 text-primary border border-primary/20 gap-1">
+          <Users className="w-3 h-3" />
+          {(grinders || []).length} total
+        </Badge>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Grinder", count: filterGrinders("Grinder").length, icon: Users, color: "text-blue-400" },
-          { label: "Elite", count: filterGrinders("Elite Grinder").length, icon: Crown, color: "text-yellow-400" },
-          { label: "VC", count: filterGrinders("VC Grinder").length, icon: Zap, color: "text-cyan-400" },
-          { label: "Event", count: filterGrinders("Event Grinder").length, icon: Shield, color: "text-purple-400" },
+          { label: "Grinder", count: filterGrinders("Grinder").length, icon: Users, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
+          { label: "Elite", count: filterGrinders("Elite Grinder").length, icon: Crown, gradient: "from-yellow-500/[0.08] via-background to-yellow-900/[0.04]", iconBg: "bg-yellow-500/15", color: "text-yellow-400" },
+          { label: "VC", count: filterGrinders("VC Grinder").length, icon: Zap, gradient: "from-cyan-500/[0.08] via-background to-cyan-900/[0.04]", iconBg: "bg-cyan-500/15", color: "text-cyan-400" },
+          { label: "Event", count: filterGrinders("Event Grinder").length, icon: Shield, gradient: "from-purple-500/[0.08] via-background to-purple-900/[0.04]", iconBg: "bg-purple-500/15", color: "text-purple-400" },
         ].map(s => (
-          <Card key={s.label} className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-3">
-              <s.icon className={`w-6 h-6 ${s.color}`} />
+          <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 flex items-center gap-3 relative">
+              <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+                <s.icon className={`w-5 h-5 ${s.color}`} />
+              </div>
               <div>
-                <p className="text-xl font-bold">{s.count}</p>
+                <p className={`text-xl font-bold ${s.color}`}>{s.count}</p>
                 <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             </CardContent>
@@ -105,7 +117,7 @@ export default function Grinders() {
       </div>
 
       <Tabs defaultValue="All">
-        <TabsList className="bg-white/5 border border-border/50">
+        <TabsList className="bg-white/[0.03] border border-white/[0.06]">
           {categories.map(cat => (
             <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary" data-testid={`tab-${cat.toLowerCase().replace(/\s/g, "-")}`}>
               {cat}
@@ -115,10 +127,10 @@ export default function Grinders() {
 
         {categories.map(cat => (
           <TabsContent key={cat} value={cat}>
-            <Card className="border-border/50 overflow-hidden">
+            <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
               <Table>
-                <TableHeader className="bg-white/5">
-                  <TableRow>
+                <TableHeader className="bg-white/[0.03]">
+                  <TableRow className="border-white/[0.06]">
                     <TableHead>Grinder</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Tier</TableHead>
@@ -137,7 +149,7 @@ export default function Grinders() {
                   ) : filterGrinders(cat).length > 0 ? filterGrinders(cat).map(g => {
                     const winRateNum = g.winRate ? Number(g.winRate) : null;
                     return (
-                      <TableRow key={g.id} className="hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+                      <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {categoryIcon(categorize(g))}
@@ -148,10 +160,10 @@ export default function Grinders() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">{categorize(g)}</Badge>
+                          <Badge variant="outline" className="text-xs bg-white/[0.03]">{categorize(g)}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`text-xs ${g.tier === "New" ? "border-cyan-500/30 text-cyan-400" : g.tier === "Pro" ? "border-yellow-500/30 text-yellow-400" : g.tier === "Elite" ? "border-purple-500/30 text-purple-400" : ""}`}>
+                          <Badge variant="outline" className={`text-xs ${g.tier === "New" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : g.tier === "Pro" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : g.tier === "Elite" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "bg-white/[0.03]"}`}>
                             {g.tier}
                           </Badge>
                         </TableCell>
@@ -206,7 +218,7 @@ export default function Grinders() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="text-xs" onClick={(e) => { e.stopPropagation(); setSelectedGrinder(g); }} data-testid={`button-scorecard-${g.id}`}>
+                          <Button variant="outline" size="sm" className="text-xs bg-white/[0.03] border-white/10 hover:bg-white/10 hover:text-primary" onClick={(e) => { e.stopPropagation(); setSelectedGrinder(g); }} data-testid={`button-scorecard-${g.id}`}>
                             Scorecard
                           </Button>
                         </TableCell>
@@ -215,6 +227,7 @@ export default function Grinders() {
                   }) : (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
                         No grinders in this category
                       </TableCell>
                     </TableRow>
@@ -227,7 +240,7 @@ export default function Grinders() {
       </Tabs>
 
       <Dialog open={!!selectedGrinder} onOpenChange={() => setSelectedGrinder(null)}>
-        <DialogContent className="sm:max-w-[600px] border-border/50">
+        <DialogContent className="sm:max-w-[600px] border-white/10 bg-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
               {selectedGrinder && categoryIcon(categorize(selectedGrinder))}
@@ -237,32 +250,26 @@ export default function Grinders() {
           {selectedGrinder && (
             <div className="space-y-4 mt-2">
               <div className="grid grid-cols-3 gap-3">
-                <Card className="border-border/50">
-                  <CardContent className="p-3 text-center">
-                    <DollarSign className="w-5 h-5 mx-auto mb-1 text-emerald-400" />
-                    <p className="text-lg font-bold text-emerald-400">{formatCurrency(Number(selectedGrinder.totalEarnings))}</p>
-                    <p className="text-xs text-muted-foreground">Total Earned</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/50">
-                  <CardContent className="p-3 text-center">
-                    <Target className="w-5 h-5 mx-auto mb-1 text-blue-400" />
-                    <p className="text-lg font-bold">{selectedGrinder.completedOrders}/{selectedGrinder.totalOrders}</p>
-                    <p className="text-xs text-muted-foreground">Completed</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/50">
-                  <CardContent className="p-3 text-center">
-                    <Trophy className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
-                    <p className="text-lg font-bold">{selectedGrinder.winRate ? Number(selectedGrinder.winRate).toFixed(0) + "%" : "N/A"}</p>
-                    <p className="text-xs text-muted-foreground">Win Rate</p>
-                  </CardContent>
-                </Card>
+                {[
+                  { icon: DollarSign, value: formatCurrency(Number(selectedGrinder.totalEarnings)), label: "Total Earned", color: "text-emerald-400", bg: "bg-emerald-500/15" },
+                  { icon: Target, value: `${selectedGrinder.completedOrders}/${selectedGrinder.totalOrders}`, label: "Completed", color: "text-blue-400", bg: "bg-blue-500/15" },
+                  { icon: Trophy, value: selectedGrinder.winRate ? Number(selectedGrinder.winRate).toFixed(0) + "%" : "N/A", label: "Win Rate", color: "text-yellow-400", bg: "bg-yellow-500/15" },
+                ].map(s => (
+                  <Card key={s.label} className="border-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01]">
+                    <CardContent className="p-3 text-center">
+                      <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-1`}>
+                        <s.icon className={`w-4 h-4 ${s.color}`} />
+                      </div>
+                      <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
+                      <p className="text-xs text-muted-foreground">{s.label}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
-              <div className="space-y-3 p-4 rounded-xl bg-white/5">
+              <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: "Category", value: categorize(selectedGrinder) },
                     { label: "Tier", value: selectedGrinder.tier },
@@ -278,7 +285,7 @@ export default function Grinders() {
                     { label: "Reassignments", value: String(selectedGrinder.reassignmentCount) },
                     { label: "Cancel Rate", value: selectedGrinder.cancelRate ? `${Number(selectedGrinder.cancelRate).toFixed(0)}%` : "N/A" },
                   ].map(m => (
-                    <div key={m.label} className="flex justify-between p-2 rounded bg-white/5">
+                    <div key={m.label} className="flex justify-between p-2 rounded-lg bg-white/[0.03]">
                       <span className="text-xs text-muted-foreground">{m.label}</span>
                       <span className="text-sm font-medium">{m.value}</span>
                     </div>
@@ -286,13 +293,13 @@ export default function Grinders() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                 <div>
                   <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Strikes</h3>
                   <p className="text-xs text-muted-foreground mt-1">More strikes = lower AI suggestion score</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleStrikeChange(selectedGrinder, -1)} disabled={selectedGrinder.strikes <= 0}>
+                  <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(selectedGrinder, -1)} disabled={selectedGrinder.strikes <= 0}>
                     <Minus className="w-4 h-4" />
                   </Button>
                   <div className="flex gap-2">
@@ -301,14 +308,14 @@ export default function Grinders() {
                     ))}
                   </div>
                   <span className="text-lg font-bold ml-2">{selectedGrinder.strikes}/3</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleStrikeChange(selectedGrinder, 1)} disabled={selectedGrinder.strikes >= 3}>
+                  <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(selectedGrinder, 1)} disabled={selectedGrinder.strikes >= 3}>
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
               {selectedGrinder.notes && (
-                <div className="p-3 rounded-xl bg-white/5">
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-1">Notes</h3>
                   <p className="text-sm">{selectedGrinder.notes}</p>
                 </div>

@@ -11,10 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
-  CheckCircle, X, CreditCard,
+  CheckCircle, X, CreditCard, Package, Zap, AlertTriangle,
 } from "lucide-react";
 
 export default function StaffOperations() {
@@ -132,27 +131,42 @@ export default function StaffOperations() {
   const selectedGrinder = allGrinders.find(g => g.id === assignGrinderId);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-          Operations
-        </h1>
-        <p className="text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+            Operations
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
+            <Package className="w-3 h-3" />
+            {allOrders.length} orders
+          </Badge>
+          <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
+            <Target className="w-3 h-3" />
+            {assignableOrders.length} assignable
+          </Badge>
+        </div>
       </div>
 
-      <Card className="glass-panel border-amber-500/20" data-testid="card-create-manual-order">
+      <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-create-manual-order">
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Plus className="w-5 h-5 text-amber-400" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+              <Plus className="w-4 h-4 text-amber-400" />
+            </div>
             Create Manual Order
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 relative">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Service</label>
               <Select value={manualOrderService} onValueChange={setManualOrderService}>
-                <SelectTrigger data-testid="select-manual-service">
+                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-manual-service">
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,12 +178,12 @@ export default function StaffOperations() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Customer Price ($)</label>
-              <Input type="number" step="0.01" min="0" placeholder="Price" value={manualOrderPrice} onChange={(e) => setManualOrderPrice(e.target.value)} data-testid="input-manual-price" />
+              <Input type="number" step="0.01" min="0" placeholder="Price" value={manualOrderPrice} onChange={(e) => setManualOrderPrice(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-manual-price" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Platform</label>
               <Select value={manualOrderPlatform} onValueChange={setManualOrderPlatform}>
-                <SelectTrigger data-testid="select-manual-platform">
+                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-manual-platform">
                   <SelectValue placeholder="Select platform" />
                 </SelectTrigger>
                 <SelectContent>
@@ -183,16 +197,16 @@ export default function StaffOperations() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Gamertag</label>
-              <Input placeholder="Customer gamertag" value={manualOrderGamertag} onChange={(e) => setManualOrderGamertag(e.target.value)} data-testid="input-manual-gamertag" />
+              <Input placeholder="Customer gamertag" value={manualOrderGamertag} onChange={(e) => setManualOrderGamertag(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-manual-gamertag" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Due in (days)</label>
-              <Input type="number" min="1" placeholder="3" value={manualOrderDueDays} onChange={(e) => setManualOrderDueDays(e.target.value)} data-testid="input-manual-due" />
+              <Input type="number" min="1" placeholder="3" value={manualOrderDueDays} onChange={(e) => setManualOrderDueDays(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-manual-due" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Complexity (1-5)</label>
               <Select value={manualOrderComplexity} onValueChange={setManualOrderComplexity}>
-                <SelectTrigger data-testid="select-manual-complexity">
+                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-manual-complexity">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,9 +219,9 @@ export default function StaffOperations() {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground font-medium">Notes (optional)</label>
-            <Input placeholder="Additional details..." value={manualOrderNotes} onChange={(e) => setManualOrderNotes(e.target.value)} data-testid="input-manual-notes" />
+            <Input placeholder="Additional details..." value={manualOrderNotes} onChange={(e) => setManualOrderNotes(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-manual-notes" />
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
             <div className="flex items-center gap-2 flex-1">
               <button
                 type="button"
@@ -234,12 +248,13 @@ export default function StaffOperations() {
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input type="checkbox" checked={manualOrderIsRush} onChange={(e) => setManualOrderIsRush(e.target.checked)} className="rounded" data-testid="checkbox-manual-rush" />
+                <Zap className="w-3 h-3 text-red-400" />
                 Rush
               </label>
             </div>
           </div>
           <Button
-            className="w-full bg-amber-600"
+            className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
             disabled={!manualOrderService || !manualOrderPrice || createManualOrderMutation.isPending}
             data-testid="button-create-manual-order"
             onClick={() => {
@@ -269,21 +284,24 @@ export default function StaffOperations() {
       </Card>
 
       {assignableOrders.length > 0 && (
-        <Card className="glass-panel border-cyan-500/20" data-testid="card-staff-assign">
+        <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-staff-assign">
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Target className="w-5 h-5 text-cyan-400" />
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                <Target className="w-4 h-4 text-cyan-400" />
+              </div>
               Staff Override Assign
-              <Badge className="bg-cyan-500/20 text-cyan-400 ml-auto">{assignableOrders.length} assignable</Badge>
+              <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 ml-auto text-xs">{assignableOrders.length} assignable</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="space-y-3">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <label className="text-xs text-muted-foreground font-medium">Select Order</label>
                   <Select value={assignOrderId} onValueChange={(v) => { setAssignOrderId(v); setAssignGrinderId(""); setAssignBidAmount(""); }}>
-                    <SelectTrigger data-testid="select-assign-order">
+                    <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-assign-order">
                       <SelectValue placeholder="Choose an order to assign" />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,7 +323,7 @@ export default function StaffOperations() {
                     const existingBid = orderBids.find(b => b.grinderId === v && b.status === "Pending");
                     if (existingBid) setAssignBidAmount(existingBid.bidAmount);
                   }}>
-                    <SelectTrigger data-testid="select-assign-grinder">
+                    <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-assign-grinder">
                       <SelectValue placeholder="Choose a grinder" />
                     </SelectTrigger>
                     <SelectContent>
@@ -323,34 +341,34 @@ export default function StaffOperations() {
               </div>
 
               {selectedOrder && (
-                <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs text-muted-foreground">Order Details</span>
+                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Order Details</span>
                     <Badge variant="outline" className="text-[10px]">{selectedOrder.status}</Badge>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                    <div>
+                    <div className="p-2 rounded-lg bg-white/[0.03]">
                       <span className="text-muted-foreground">Price: </span>
-                      <span className="text-emerald-400 font-medium">{formatCurrency(Number(selectedOrder.customerPrice))}</span>
+                      <span className="text-emerald-400 font-semibold">{formatCurrency(Number(selectedOrder.customerPrice))}</span>
                     </div>
-                    <div>
+                    <div className="p-2 rounded-lg bg-white/[0.03]">
                       <span className="text-muted-foreground">Platform: </span>
                       <span>{selectedOrder.platform || "N/A"}</span>
                     </div>
-                    <div>
+                    <div className="p-2 rounded-lg bg-white/[0.03]">
                       <span className="text-muted-foreground">Bids: </span>
-                      <span className="text-blue-400">{orderBids.length}</span>
+                      <span className="text-blue-400 font-semibold">{orderBids.length}</span>
                     </div>
                   </div>
                   {orderBids.length > 0 && (
                     <div className="space-y-1 mt-1">
-                      <span className="text-[10px] text-muted-foreground">Existing bids:</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Existing bids:</span>
                       {orderBids.filter(b => b.status === "Pending").map(b => {
                         const bidGrinder = allGrinders.find(g => g.id === b.grinderId);
                         return (
-                          <div key={b.id} className="flex items-center justify-between flex-wrap gap-2 text-xs p-1.5 rounded bg-white/5" data-testid={`bid-option-${b.id}`}>
-                            <span>{bidGrinder?.name || b.grinderId}</span>
-                            <span className="text-emerald-400">{formatCurrency(Number(b.bidAmount))}</span>
+                          <div key={b.id} className="flex items-center justify-between flex-wrap gap-2 text-xs p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]" data-testid={`bid-option-${b.id}`}>
+                            <span className="font-medium">{bidGrinder?.name || b.grinderId}</span>
+                            <span className="text-emerald-400 font-semibold">{formatCurrency(Number(b.bidAmount))}</span>
                           </div>
                         );
                       })}
@@ -369,11 +387,12 @@ export default function StaffOperations() {
                     placeholder="Amount to pay grinder"
                     value={assignBidAmount}
                     onChange={(e) => setAssignBidAmount(e.target.value)}
+                    className="bg-background/50 border-white/10"
                     data-testid="input-assign-amount"
                   />
                   {selectedOrder && assignBidAmount && (
                     <div className="text-[10px] text-muted-foreground">
-                      Margin: <span className={Number(selectedOrder.customerPrice) - Number(assignBidAmount) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                      Margin: <span className={Number(selectedOrder.customerPrice) - Number(assignBidAmount) >= 0 ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
                         {formatCurrency(Number(selectedOrder.customerPrice) - Number(assignBidAmount))}
                       </span>
                       {" "}({Number(selectedOrder.customerPrice) > 0 ? (((Number(selectedOrder.customerPrice) - Number(assignBidAmount)) / Number(selectedOrder.customerPrice)) * 100).toFixed(1) : 0}%)
@@ -386,6 +405,7 @@ export default function StaffOperations() {
                     placeholder="Reason for override assignment"
                     value={assignNotes}
                     onChange={(e) => setAssignNotes(e.target.value)}
+                    className="bg-background/50 border-white/10"
                     data-testid="input-assign-notes"
                   />
                 </div>
@@ -393,9 +413,8 @@ export default function StaffOperations() {
 
               <div className="flex items-center gap-3 flex-wrap">
                 <Button
-                  size="sm"
-                  variant="default"
                   data-testid="button-staff-assign"
+                  className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white shadow-lg shadow-cyan-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
                   disabled={!assignOrderId || !assignGrinderId || !assignBidAmount || staffAssignMutation.isPending}
                   onClick={() => {
                     staffAssignMutation.mutate({
@@ -421,32 +440,36 @@ export default function StaffOperations() {
         </Card>
       )}
 
-      <Card className="glass-panel border-blue-500/20" data-testid="card-alert-composer">
+      <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-900/[0.04] overflow-hidden relative" data-testid="card-alert-composer">
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.04] -translate-y-12 translate-x-12" />
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Bell className="w-5 h-5 text-blue-400" />
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+              <Bell className="w-4 h-4 text-blue-400" />
+            </div>
             Alert Composer
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-3">
               <Input
                 placeholder="Alert title"
                 value={alertTitle}
                 onChange={(e) => setAlertTitle(e.target.value)}
+                className="bg-background/50 border-white/10"
                 data-testid="input-alert-title"
               />
               <Textarea
                 placeholder="Alert message"
                 value={alertMessage}
                 onChange={(e) => setAlertMessage(e.target.value)}
-                className="resize-none"
+                className="resize-none bg-background/50 border-white/10 min-h-[80px]"
                 data-testid="input-alert-message"
               />
               <div className="flex items-center gap-2 flex-wrap">
                 <Select value={alertSeverity} onValueChange={setAlertSeverity}>
-                  <SelectTrigger className="w-32" data-testid="select-alert-severity">
+                  <SelectTrigger className="w-32 bg-background/50 border-white/10" data-testid="select-alert-severity">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -457,7 +480,7 @@ export default function StaffOperations() {
                   </SelectContent>
                 </Select>
                 <Select value={alertTarget} onValueChange={setAlertTarget}>
-                  <SelectTrigger className="w-40" data-testid="select-alert-target">
+                  <SelectTrigger className="w-40 bg-background/50 border-white/10" data-testid="select-alert-target">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -467,7 +490,7 @@ export default function StaffOperations() {
                 </Select>
                 {alertTarget === "individual" && (
                   <Select value={alertGrinderId} onValueChange={setAlertGrinderId}>
-                    <SelectTrigger className="w-40" data-testid="select-alert-grinder">
+                    <SelectTrigger className="w-40 bg-background/50 border-white/10" data-testid="select-alert-grinder">
                       <SelectValue placeholder="Select grinder" />
                     </SelectTrigger>
                     <SelectContent>
@@ -477,46 +500,69 @@ export default function StaffOperations() {
                     </SelectContent>
                   </Select>
                 )}
-                <Button size="sm" className="bg-blue-600 gap-1"
-                  data-testid="button-send-alert"
-                  disabled={!alertTitle || !alertMessage || alertMutation.isPending}
-                  onClick={() => {
-                    alertMutation.mutate({
-                      targetType: alertTarget,
-                      grinderId: alertTarget === "individual" ? alertGrinderId : undefined,
-                      title: alertTitle,
-                      message: alertMessage,
-                      severity: alertSeverity,
-                    });
-                    setAlertTitle("");
-                    setAlertMessage("");
-                  }}>
-                  <Send className="w-3 h-3" /> Send
-                </Button>
               </div>
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
+                disabled={!alertTitle || !alertMessage || alertMutation.isPending}
+                data-testid="button-send-alert"
+                onClick={() => {
+                  alertMutation.mutate({
+                    targetType: alertTarget,
+                    grinderId: alertTarget === "individual" ? alertGrinderId : undefined,
+                    title: alertTitle,
+                    message: alertMessage,
+                    severity: alertSeverity,
+                  });
+                  setAlertTitle("");
+                  setAlertMessage("");
+                }}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send Alert
+              </Button>
             </div>
-            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-              {(!staffAlertsList || staffAlertsList.length === 0) && <p className="text-muted-foreground text-sm" data-testid="text-no-alerts">No alerts sent</p>}
-              {(staffAlertsList || []).slice(0, 10).map((alert: any) => (
-                <div key={alert.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5" data-testid={`card-alert-${alert.id}`}>
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    alert.severity === "danger" ? "bg-red-400" :
-                    alert.severity === "warning" ? "bg-amber-400" :
-                    alert.severity === "success" ? "bg-emerald-400" :
-                    "bg-blue-400"
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{alert.title}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{alert.message}</p>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sent Alerts</p>
+                <Badge variant="outline" className="text-[10px]">{(staffAlertsList || []).length}</Badge>
+              </div>
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {(!staffAlertsList || staffAlertsList.length === 0) && (
+                  <div className="p-6 text-center text-muted-foreground text-sm rounded-xl bg-white/[0.02]">
+                    No alerts sent yet
                   </div>
-                  <Badge variant="outline" className="text-[10px]">{alert.readCount ?? 0} read</Badge>
-                  <Button size="icon" variant="ghost" data-testid={`button-delete-alert-${alert.id}`}
-                    disabled={deleteAlertMutation.isPending}
-                    onClick={() => deleteAlertMutation.mutate(alert.id)}>
-                    <Trash2 className="w-3 h-3 text-red-400" />
-                  </Button>
-                </div>
-              ))}
+                )}
+                {(staffAlertsList || []).slice(0, 10).map((a: any) => (
+                  <div key={a.id} className="flex items-start gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] group" data-testid={`card-alert-${a.id}`}>
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                      a.severity === "danger" ? "bg-red-400" :
+                      a.severity === "warning" ? "bg-amber-400" :
+                      a.severity === "success" ? "bg-emerald-400" :
+                      "bg-blue-400"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{a.title}</span>
+                        <Badge variant="outline" className="text-[9px] shrink-0">{a.severity}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.message}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {a.targetType === "all" ? "All grinders" : "Individual"} · {new Date(a.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all flex-shrink-0"
+                      onClick={() => deleteAlertMutation.mutate(a.id)}
+                      data-testid={`button-delete-alert-${a.id}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>
