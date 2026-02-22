@@ -98,10 +98,15 @@ function AppSidebar() {
                 </span>
                 <Badge 
                   variant={isStaff ? "default" : "secondary"} 
-                  className={`w-fit text-[10px] px-1.5 py-0 ${isStaff ? "bg-primary/20 text-primary" : isElite ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/30" : "bg-muted text-muted-foreground"}`}
+                  className={`w-fit text-[10px] px-1.5 py-0 ${
+                    isOwner ? "bg-[#fd853f]/20 text-[#fd853f] border-[#fd853f]/30" :
+                    user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
+                    isElite ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/30" :
+                    "bg-muted text-muted-foreground"
+                  }`}
                   data-testid="text-user-role"
                 >
-                  {isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
+                  {isOwner ? <Crown className="w-3 h-3 mr-1" /> : isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
                   {roleBadge}
                 </Badge>
               </div>
@@ -123,6 +128,8 @@ function AppSidebar() {
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : "";
   const sidebarStyle = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",
@@ -130,7 +137,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30">
+      <div className={`flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30 ${themeClass}`}>
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full relative">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />

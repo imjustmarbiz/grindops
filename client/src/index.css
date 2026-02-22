@@ -58,6 +58,20 @@
     --elevate-2: rgba(255, 255, 255, 0.08);
   }
 
+  .theme-owner {
+    --primary: 26 98% 61%;
+    --ring: 26 98% 61%;
+    --sidebar-primary: 26 98% 61%;
+    --sidebar-ring: 26 98% 61%;
+  }
+
+  .theme-staff {
+    --primary: 196 60% 55%;
+    --ring: 196 60% 55%;
+    --sidebar-primary: 196 60% 55%;
+    --sidebar-ring: 196 60% 55%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-family: var(--font-sans);

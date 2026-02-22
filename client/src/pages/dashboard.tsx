@@ -350,7 +350,9 @@ export default function Dashboard() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">GrindOps Command Center</h1>
+          <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+            {isOwner ? "Owner Command Center" : "Staff Command Center"}
+          </h1>
           <p className="text-muted-foreground mt-1">Real-time analytics and operations overview</p>
         </div>
         <div className="flex flex-col items-end gap-1">
