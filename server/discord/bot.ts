@@ -73,7 +73,7 @@ const commands = [
 async function handleQueue(interaction: ChatInputCommandInteraction) {
   const items = await storage.getTopQueueItems();
   if (items.length === 0) {
-    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Priority Queue").setDescription("No items in queue.").setColor(0x5865F2)] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Priority Queue").setDescription("No items in queue.").setColor(0x5865F2)], ephemeral: true });
     return;
   }
 
@@ -91,7 +91,7 @@ async function handleQueue(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function handleDashboard(interaction: ChatInputCommandInteraction) {
@@ -113,7 +113,7 @@ async function handleDashboard(interaction: ChatInputCommandInteraction) {
     .setFooter({ text: "Data sourced from MGT Bot activity" })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function handleOrders(interaction: ChatInputCommandInteraction) {
@@ -122,7 +122,7 @@ async function handleOrders(interaction: ChatInputCommandInteraction) {
   const openOrders = allOrders.filter(o => o.status === "Open");
 
   if (openOrders.length === 0) {
-    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Open Orders").setDescription("No open orders.").setColor(0xFEE75C)] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Open Orders").setDescription("No open orders.").setColor(0xFEE75C)], ephemeral: true });
     return;
   }
 
@@ -145,14 +145,14 @@ async function handleOrders(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function handleGrinders(interaction: ChatInputCommandInteraction) {
   const allGrinders = await storage.getGrinders();
 
   if (allGrinders.length === 0) {
-    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Grinders").setDescription("No grinders registered.").setColor(0xED4245)] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Grinders").setDescription("No grinders registered.").setColor(0xED4245)], ephemeral: true });
     return;
   }
 
@@ -174,7 +174,7 @@ async function handleGrinders(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function handleBids(interaction: ChatInputCommandInteraction) {
@@ -183,7 +183,7 @@ async function handleBids(interaction: ChatInputCommandInteraction) {
   const pendingBids = allBids.filter(b => b.status === "Pending");
 
   if (pendingBids.length === 0) {
-    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Pending Bids").setDescription("No pending bids.").setColor(0x5865F2)] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Pending Bids").setDescription("No pending bids.").setColor(0x5865F2)], ephemeral: true });
     return;
   }
 
@@ -208,7 +208,7 @@ async function handleBids(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function handleAssignments(interaction: ChatInputCommandInteraction) {
@@ -217,7 +217,7 @@ async function handleAssignments(interaction: ChatInputCommandInteraction) {
   const active = allAssignments.filter(a => a.status === "Active");
 
   if (active.length === 0) {
-    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Active Assignments").setDescription("No active assignments.").setColor(0x57F287)] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setTitle("Active Assignments").setDescription("No active assignments.").setColor(0x57F287)], ephemeral: true });
     return;
   }
 
@@ -238,7 +238,7 @@ async function handleAssignments(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function handleNewOrder(interaction: ChatInputCommandInteraction) {
@@ -283,7 +283,7 @@ async function handleNewOrder(interaction: ChatInputCommandInteraction) {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   } catch (error: any) {
     await interaction.reply({ content: `Failed to create order: ${error.message}`, ephemeral: true });
   }
@@ -332,7 +332,7 @@ async function handleSetPrice(interaction: ChatInputCommandInteraction) {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   } catch (error: any) {
     await interaction.reply({ content: `Failed to update price: ${error.message}`, ephemeral: true });
   }
@@ -382,7 +382,7 @@ async function handlePlaceBid(interaction: ChatInputCommandInteraction) {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   } catch (error: any) {
     await interaction.reply({ content: `Failed to place bid: ${error.message}`, ephemeral: true });
   }
@@ -434,7 +434,7 @@ async function handleAssign(interaction: ChatInputCommandInteraction) {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   } catch (error: any) {
     await interaction.reply({ content: `Failed to create assignment: ${error.message}`, ephemeral: true });
   }
