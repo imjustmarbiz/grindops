@@ -6,13 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus } from "lucide-react";
+import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Grinder } from "@shared/schema";
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
+}
+
+function daysAgo(date: string | Date | null | undefined): { label: string; days: number | null } {
+  if (!date) return { label: "Never", days: null };
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return { label: "Today", days: 0 };
+  if (diffDays === 1) return { label: "1 day ago", days: 1 };
+  return { label: `${diffDays}d ago`, days: diffDays };
 }
 
 export default function Grinders() {
@@ -102,13 +113,14 @@ export default function Grinders() {
                     <TableHead className="text-center">Orders</TableHead>
                     <TableHead className="text-right">Earnings</TableHead>
                     <TableHead className="text-center">Win Rate</TableHead>
+                    <TableHead className="text-center">Last Order</TableHead>
                     <TableHead className="text-center">Strikes</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
                   ) : filterGrinders(cat).length > 0 ? filterGrinders(cat).map(g => {
                     const winRateNum = g.winRate ? Number(g.winRate) * 100 : null;
                     return (
@@ -147,6 +159,20 @@ export default function Grinders() {
                           ) : <span className="text-muted-foreground">N/A</span>}
                         </TableCell>
                         <TableCell className="text-center">
+                          {(() => {
+                            const info = daysAgo(g.lastAssigned);
+                            const colorClass = info.days === null ? "text-muted-foreground" : info.days <= 3 ? "text-green-400" : info.days <= 7 ? "text-yellow-400" : "text-red-400";
+                            return (
+                              <div className="flex flex-col items-center">
+                                <span className={`text-sm font-medium ${colorClass}`}>{info.label}</span>
+                                {g.lastAssigned && (
+                                  <span className="text-[10px] text-muted-foreground">{new Date(g.lastAssigned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, -1)} disabled={g.strikes <= 0} data-testid={`button-strike-minus-${g.id}`}>
                               <Minus className="w-3 h-3" />
@@ -170,7 +196,7 @@ export default function Grinders() {
                     );
                   }) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
                         No grinders in this category
                       </TableCell>
                     </TableRow>
@@ -226,6 +252,7 @@ export default function Grinders() {
                     { label: "On-Time Rate", value: selectedGrinder.onTimeRate ? `${(Number(selectedGrinder.onTimeRate) * 100).toFixed(0)}%` : "N/A" },
                     { label: "Completion Rate", value: selectedGrinder.completionRate ? `${(Number(selectedGrinder.completionRate) * 100).toFixed(0)}%` : "N/A" },
                     { label: "Quality Rating", value: selectedGrinder.avgQualityRating ? `${Number(selectedGrinder.avgQualityRating).toFixed(1)}/5` : "N/A" },
+                    { label: "Last Order", value: (() => { const info = daysAgo(selectedGrinder.lastAssigned); return selectedGrinder.lastAssigned ? `${new Date(selectedGrinder.lastAssigned).toLocaleDateString()} (${info.label})` : "Never"; })() },
                     { label: "Reassignments", value: String(selectedGrinder.reassignmentCount) },
                     { label: "Cancel Rate", value: selectedGrinder.cancelRate ? `${(Number(selectedGrinder.cancelRate) * 100).toFixed(0)}%` : "N/A" },
                   ].map(m => (
