@@ -197,6 +197,48 @@ export function setupDiscordAuth(app: Express) {
       if (!user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+
+      const lastRoleCheck = (req.session as any).lastRoleCheck || 0;
+      const now = Date.now();
+      if (user.discordId && now - lastRoleCheck > 60_000) {
+        const botClient = getDiscordBotClient();
+        if (botClient) {
+          const guilds = Array.from(botClient.guilds.cache.values());
+          for (const guild of guilds) {
+            try {
+              const member = await guild.members.fetch(user.discordId);
+              if (member) {
+                const guildRoleIds: string[] = Array.from(member.roles.cache.keys());
+                let newRole = "none";
+                if (guildRoleIds.includes(OWNER_ROLE)) {
+                  newRole = "owner";
+                } else if (guildRoleIds.includes(STAFF_ROLE)) {
+                  newRole = "staff";
+                } else if (guildRoleIds.some((r) => ALL_GRINDER_ROLES.includes(r))) {
+                  newRole = "grinder";
+                }
+
+                const currentRoles = (user.discordRoles as string[] || []).slice().sort();
+                const newRoles = guildRoleIds.slice().sort();
+                if (newRole !== user.role || JSON.stringify(newRoles) !== JSON.stringify(currentRoles)) {
+                  const updated = await authStorage.upsertUser({
+                    ...user,
+                    role: newRole,
+                    discordRoles: guildRoleIds,
+                  });
+                  (req.session as any).userRole = newRole;
+                  (req.session as any).lastRoleCheck = now;
+                  return res.json(updated);
+                }
+
+                (req.session as any).lastRoleCheck = now;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
