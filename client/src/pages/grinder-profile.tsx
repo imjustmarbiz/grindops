@@ -393,7 +393,7 @@ export default function GrinderProfile() {
                 <h3 className="font-semibold text-amber-400">Rules Not Accepted</h3>
                 <p className="text-sm text-muted-foreground">
                   You must accept the Grinder Rules & Guidelines before you can place bids on orders. 
-                  Use the <span className="font-mono text-amber-400">/grinder rules</span> slash command in any Discord text channel to view and accept the rules.
+                  Use the <span className="font-mono text-amber-400">/grinder rules</span> command from the MGT Bot in any Discord text channel to view and accept the rules.
                 </p>
               </div>
             </div>

@@ -6,6 +6,54 @@ const MGT_BOT_USER_ID = "1466336342521937930";
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
 const BID_PROPOSALS_CHANNEL_ID = "1467929083366084800";
 
+export async function handleRulesAcceptance(message: Message): Promise<void> {
+  if (message.author.id !== MGT_BOT_USER_ID) return;
+
+  try {
+    for (const embed of message.embeds) {
+      const title = embed.title || "";
+      const desc = embed.description || "";
+      const fullText = `${title} ${desc}`;
+      const fullTextLower = fullText.toLowerCase();
+
+      if (!fullTextLower.includes("rules") && !fullTextLower.includes("guidelines")) continue;
+      if (!fullTextLower.includes("accepted") && !fullText.includes("✅")) continue;
+
+      const mentionMatch = embed.description?.match(/<@!?(\d+)>/);
+      const footerMatch = embed.footer?.text?.match(/(\d+)/);
+      const discordUserId = mentionMatch?.[1] || footerMatch?.[1];
+
+      if (!discordUserId) {
+        if (message.interaction?.user?.id) {
+          const userId = message.interaction.user.id;
+          const allGrinders = await storage.getGrinders();
+          const grinder = allGrinders.find((g: any) => g.discordUserId === userId);
+          if (grinder && !grinder.rulesAccepted) {
+            await storage.updateGrinder(grinder.id, {
+              rulesAccepted: true,
+              rulesAcceptedAt: new Date(),
+            });
+            console.log(`[mgt-watcher] Rules accepted by ${grinder.name} (${grinder.id}) via MGT Bot interaction`);
+          }
+        }
+        continue;
+      }
+
+      const allGrinders = await storage.getGrinders();
+      const grinder = allGrinders.find((g: any) => g.discordUserId === discordUserId);
+      if (grinder && !grinder.rulesAccepted) {
+        await storage.updateGrinder(grinder.id, {
+          rulesAccepted: true,
+          rulesAcceptedAt: new Date(),
+        });
+        console.log(`[mgt-watcher] Rules accepted by ${grinder.name} (${grinder.id}) via MGT Bot embed`);
+      }
+    }
+  } catch (error) {
+    console.error("[mgt-watcher] Error handling rules acceptance:", error);
+  }
+}
+
 function extractNumber(text: string): number | null {
   const match = text.match(/\$?([\d,]+\.?\d*)/);
   if (!match) return null;

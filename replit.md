@@ -44,7 +44,8 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Grinders see alerts inbox with read/unread tracking
 - 2026-02-22: Added Grinder Rules & Guidelines acceptance system
   - Grinders must accept rules before placing any bids (dashboard or Discord)
-  - `/grinder rules` Discord slash command to view and accept rules
+  - Rules accepted via `/grinder rules` MGT Bot slash command in any Discord text channel
+  - Grinder Bot watches for MGT Bot embeds confirming rules acceptance and auto-updates database
   - Amber banner on grinder dashboard when rules not accepted
   - "Rules Pending" badge on staff dashboard grinder list
   - Backend enforcement: POST /api/grinder/me/bids returns 403 if rules not accepted
