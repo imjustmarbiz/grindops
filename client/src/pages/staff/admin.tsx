@@ -170,9 +170,9 @@ export default function StaffAdmin() {
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 text-[10px] text-muted-foreground mb-2">
                       <div className="text-center"><p className="font-bold text-foreground">{req.completedOrders ?? grinder?.completedOrders ?? 0}</p>Orders</div>
-                      <div className="text-center"><p className="font-bold text-foreground">{req.winRate ?? grinder?.winRate ?? 0}%</p>Win Rate</div>
-                      <div className="text-center"><p className="font-bold text-foreground">{req.avgQuality ?? (grinder as any)?.qualityScore ?? 0}</p>Quality</div>
-                      <div className="text-center"><p className="font-bold text-foreground">{req.onTimeRate ?? 0}%</p>On-Time</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{Number(req.winRate ?? grinder?.winRate ?? 0).toFixed(0)}%</p>Win Rate</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{req.avgQualityRating ? (Number(req.avgQualityRating) / 20).toFixed(1) : "N/A"}/5</p>Quality</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{Number(req.onTimeRate ?? 0).toFixed(0)}%</p>On-Time</div>
                       <div className="text-center"><p className="font-bold text-foreground">{req.strikes ?? grinder?.strikes ?? 0}</p>Strikes</div>
                     </div>
                     {req.decisionNotes && <p className="text-xs text-muted-foreground italic mb-2">{req.decisionNotes}</p>}

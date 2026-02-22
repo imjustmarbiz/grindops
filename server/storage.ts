@@ -553,15 +553,15 @@ export class DatabaseStorage implements IStorage {
 
       const newGrinderScore = g.completedOrders === 0 ? 1 : 0;
 
-      const onTimeRate = Number(g.onTimeRate) || 0;
-      const completionRate = Number(g.completionRate) || 1;
+      const onTimeRate = (Number(g.onTimeRate) || 0) / 100;
+      const completionRate = (Number(g.completionRate) || 100) / 100;
       const reassignPenalty = g.reassignmentCount > 0 ? Math.max(0, 1 - (g.reassignmentCount * 0.2)) : 1;
       const reliabilityScore = (onTimeRate * 0.4 + completionRate * 0.4 + reassignPenalty * 0.2);
 
-      const qualityScore = Number(g.avgQualityRating) ? Number(g.avgQualityRating) / 5 : 0.5;
+      const qualityScore = Number(g.avgQualityRating) ? Number(g.avgQualityRating) / 100 : 0.5;
 
       const strikePenalty = g.strikes / 3;
-      const cancelPenalty = Number(g.cancelRate) || 0;
+      const cancelPenalty = (Number(g.cancelRate) || 0) / 100;
       const riskScore = Math.max(0, 1 - strikePenalty - cancelPenalty * 0.5);
 
       const w = {

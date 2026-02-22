@@ -677,7 +677,7 @@ export async function registerRoutes(
     if (myGrinder.completedOrders === 0) {
       aiTips.push("Complete your first order to build reputation. Consider bidding on simpler tasks to get started.");
     }
-    if (Number(myGrinder.onTimeRate || 1) < 0.8 && myGrinder.completedOrders > 0) {
+    if (Number(myGrinder.onTimeRate || 100) < 80 && myGrinder.completedOrders > 0) {
       aiTips.push("Focus on meeting deadlines. Your on-time rate could use improvement - consider requesting more time if needed.");
     }
     if (myGrinder.activeOrders >= myGrinder.capacity - 1 && myGrinder.capacity > 1) {
@@ -686,7 +686,7 @@ export async function registerRoutes(
     if (lostBids.length > 2) {
       aiTips.push("You've lost several recent bids. Try offering faster delivery times or better quality guarantees.");
     }
-    if (myGrinder.avgQualityRating && Number(myGrinder.avgQualityRating) < 3.5) {
+    if (myGrinder.avgQualityRating && Number(myGrinder.avgQualityRating) < 70) {
       aiTips.push("Your quality score could be higher. Ask for feedback on completed orders and focus on thoroughness.");
     }
     if (completedAssignments.length >= 5 && winRate > 0.5) {
@@ -711,16 +711,16 @@ export async function registerRoutes(
 
       const tips: string[] = [];
       if (myWinRate < eliteAvgWinRate * 0.8) {
-        tips.push(`Boost your win rate to ${(eliteAvgWinRate * 100).toFixed(0)}%+ (elite average). Focus on quality proposals and quick response times.`);
+        tips.push(`Boost your win rate to ${eliteAvgWinRate.toFixed(0)}%+ (elite average). Focus on quality proposals and quick response times.`);
       }
       if (myQuality < eliteAvgQuality * 0.8 && eliteAvgQuality > 0) {
-        tips.push(`Raise your quality rating to ${eliteAvgQuality.toFixed(1)}+ (elite avg). Pay extra attention to detail and communication.`);
+        tips.push(`Raise your quality rating to ${(eliteAvgQuality / 20).toFixed(1)}/5+ (elite avg). Pay extra attention to detail and communication.`);
       }
       if (myOnTime < eliteAvgOnTime * 0.8 && eliteAvgOnTime > 0) {
-        tips.push(`Improve your on-time delivery to ${(eliteAvgOnTime * 100).toFixed(0)}%+ (elite avg). Set realistic deadlines and communicate delays early.`);
+        tips.push(`Improve your on-time delivery to ${eliteAvgOnTime.toFixed(0)}%+ (elite avg). Set realistic deadlines and communicate delays early.`);
       }
       if (myCompletion < eliteAvgCompletion * 0.8 && eliteAvgCompletion > 0) {
-        tips.push(`Increase completion rate to ${(eliteAvgCompletion * 100).toFixed(0)}%+ (elite avg). Avoid cancelling orders once accepted.`);
+        tips.push(`Increase completion rate to ${eliteAvgCompletion.toFixed(0)}%+ (elite avg). Avoid cancelling orders once accepted.`);
       }
       if (myTurnaround > eliteAvgTurnaround * 1.3 && eliteAvgTurnaround > 0) {
         tips.push(`Reduce turnaround time to ${eliteAvgTurnaround.toFixed(1)} days or less (elite avg). Faster delivery builds trust.`);
@@ -1111,6 +1111,20 @@ export async function registerRoutes(
       deliveredDateTime: now,
       isOnTime,
     });
+
+    const newCompleted = (myGrinder.completedOrders || 0) + 1;
+    const newActive = Math.max(0, (myGrinder.activeOrders || 0) - 1);
+    const grinderEarnings = Number(assignment.grinderEarnings) || Number(assignment.bidAmount) || 0;
+    const newEarnings = (Number(myGrinder.totalEarnings || 0) + grinderEarnings).toFixed(2);
+    await storage.updateGrinder(myGrinder.id, {
+      completedOrders: newCompleted,
+      activeOrders: newActive,
+      totalEarnings: newEarnings,
+    });
+
+    if (assignment.orderId) {
+      await storage.updateOrderStatus(assignment.orderId, "Completed");
+    }
 
     await storage.createAuditLog({
       id: `AL-${Date.now().toString(36)}`,
