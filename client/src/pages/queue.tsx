@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Activity, Clock, Crown, TrendingUp } from "lucide-react";
+import { Activity, Clock, Crown, TrendingUp, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 
@@ -18,7 +18,7 @@ export default function Queue() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold flex items-center gap-3 tracking-tight">
+          <h1 className="text-3xl font-display font-bold flex items-center gap-3 tracking-tight" data-testid="text-queue-title">
             Priority Queue <Badge variant="secondary" className="bg-primary/20 text-primary font-bold border-primary/30">LIVE</Badge>
           </h1>
           <p className="text-muted-foreground mt-1">Algorithmically sorted assignments based on fairness, profit, and delivery.</p>
@@ -52,32 +52,33 @@ export default function Queue() {
                   <TableRow 
                     key={item.id} 
                     className={`transition-colors hover:bg-white/[0.04] ${index === 0 ? 'bg-primary/[0.03]' : ''}`}
+                    data-testid={`row-queue-${item.id}`}
                   >
                     <TableCell className="text-center">
                       <Badge variant="outline" className={`font-display font-bold text-sm border-white/10 ${
                         item.finalPriorityScore >= 80 ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                         item.finalPriorityScore >= 50 ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                         'bg-white/5 text-muted-foreground'
-                      }`}>
+                      }`} data-testid={`badge-score-${item.id}`}>
                         {item.finalPriorityScore.toFixed(0)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono font-medium">{item.orderId}</TableCell>
+                    <TableCell className="font-mono font-medium" data-testid={`text-queue-order-${item.id}`}>{item.orderId}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Activity className="w-4 h-4 text-accent" />
-                        <span className="font-medium">{item.serviceName}</span>
+                        <span className="font-medium" data-testid={`text-queue-service-${item.id}`}>{item.serviceName}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {item.tier === 'Elite' ? <Crown className="w-4 h-4 text-yellow-500" /> : <Users className="w-4 h-4 text-muted-foreground" />}
-                        <span className={item.tier === 'Elite' ? 'font-bold text-yellow-500' : 'font-medium text-foreground'}>{item.grinderName}</span>
+                        <span className={item.tier === 'Elite' ? 'font-bold text-yellow-500' : 'font-medium text-foreground'} data-testid={`text-queue-grinder-${item.id}`}>{item.grinderName}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
-                        <span className="font-bold text-green-400">${item.bidAmount}</span>
+                        <span className="font-bold text-green-400" data-testid={`text-queue-bid-${item.id}`}>${item.bidAmount}</span>
                         <span className="text-xs text-muted-foreground line-through">${item.customerPrice}</span>
                       </div>
                     </TableCell>
@@ -100,7 +101,7 @@ export default function Queue() {
                   <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Activity className="w-8 h-8 opacity-20" />
-                      <p>Queue is empty. No active bids to rank.</p>
+                      <p>Queue is empty. Waiting for MGT Bot orders and bids.</p>
                     </div>
                   </TableCell>
                 </TableRow>

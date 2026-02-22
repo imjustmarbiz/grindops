@@ -58,15 +58,15 @@ export default function Assignments() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold flex items-center gap-3">
+          <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-assignments-title">
             <FileCheck className="w-8 h-8 text-primary" /> Assignments
           </h1>
-          <p className="text-muted-foreground mt-1">Manage awarded orders and track fulfillment.</p>
+          <p className="text-muted-foreground mt-1">Auto-created when staff accepts bids via MGT Bot.</p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-primary hover:bg-primary/90 hover-elevate">
+            <Button className="gap-2 bg-primary hover:bg-primary/90 hover-elevate" data-testid="button-force-assign">
               <Plus className="w-4 h-4" /> Force Assign
             </Button>
           </DialogTrigger>
@@ -88,7 +88,11 @@ export default function Assignments() {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl><SelectTrigger className="bg-background/50"><SelectValue placeholder="Select order" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {orders?.filter(o => o.status !== 'Completed').map(o => <SelectItem key={o.id} value={o.id}>{o.id}</SelectItem>)}
+                        {orders?.filter(o => o.status !== 'Completed').map(o => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -106,14 +110,14 @@ export default function Assignments() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="dueDateTime" render={({ field }) => (
+                <FormField control={form.control} name="dueDateTime" render={({ field: { value, ...field } }) => (
                   <FormItem>
                     <FormLabel>Due Date/Time</FormLabel>
-                    <FormControl><Input type="datetime-local" {...field} className="bg-background/50" /></FormControl>
+                    <FormControl><Input type="datetime-local" {...field} value={value instanceof Date ? value.toISOString().slice(0, 16) : (value || "")} className="bg-background/50" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4">
+                <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4" data-testid="button-submit-assignment">
                   {createMutation.isPending ? "Assigning..." : "Assign"}
                 </Button>
               </form>
@@ -131,37 +135,45 @@ export default function Assignments() {
               <TableHead>Grinder</TableHead>
               <TableHead>Assigned</TableHead>
               <TableHead>Due Date</TableHead>
-              <TableHead>Margin</TableHead>
+              <TableHead className="text-right">Margin</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : assignments?.map(a => {
+            ) : assignments && assignments.length > 0 ? assignments.map(a => {
               const grinder = grinders?.find(g => g.id === a.grinderId);
+              const order = orders?.find(o => o.id === a.orderId);
+              const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId;
               return (
-                <TableRow key={a.id} className="hover:bg-white/[0.02]">
-                  <TableCell className="font-mono text-muted-foreground">{a.id}</TableCell>
-                  <TableCell className="font-bold text-primary">{a.orderId}</TableCell>
-                  <TableCell className="font-medium">{grinder?.name || a.grinderId}</TableCell>
+                <TableRow key={a.id} className="hover:bg-white/[0.02]" data-testid={`row-assignment-${a.id}`}>
+                  <TableCell className="font-mono text-muted-foreground" data-testid={`text-assignment-id-${a.id}`}>{a.id}</TableCell>
+                  <TableCell className="font-bold text-primary" data-testid={`text-assignment-order-${a.id}`}>{orderRef}</TableCell>
+                  <TableCell className="font-medium" data-testid={`text-assignment-grinder-${a.id}`}>{grinder?.name || a.grinderId}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{format(new Date(a.assignedDateTime), "MMM d, h:mm a")}</TableCell>
                   <TableCell className="text-orange-400 font-medium">{format(new Date(a.dueDateTime), "MMM d, h:mm a")}</TableCell>
-                  <TableCell>
-                    {a.marginPct ? (
-                      <Badge variant="outline" className="border-accent/30 text-accent">
-                        {(Number(a.marginPct) * 100).toFixed(0)}%
-                      </Badge>
-                    ) : "-"}
+                  <TableCell className="text-right">
+                    {a.margin ? (
+                      <span className="text-accent font-medium" data-testid={`text-assignment-margin-${a.id}`}>
+                        ${a.margin} ({a.marginPct}%)
+                      </span>
+                    ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={a.status === 'Active' ? 'default' : 'secondary'} className={a.status === 'Active' ? 'bg-primary/20 text-primary border-primary/30' : ''}>
+                    <Badge variant={a.status === 'Active' ? 'default' : 'secondary'} className={a.status === 'Active' ? 'bg-primary/20 text-primary border-primary/30' : ''} data-testid={`badge-assignment-status-${a.id}`}>
                       {a.status}
                     </Badge>
                   </TableCell>
                 </TableRow>
               );
-            })}
+            }) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                  No assignments yet. Assignments are auto-created when staff accepts bids in Discord.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Card>

@@ -45,7 +45,7 @@ const commands = [
     .setName("placebid")
     .setDescription("Place a bid on an order")
     .addStringOption(opt =>
-      opt.setName("order").setDescription("Order ID (e.g. O1001)").setRequired(true))
+      opt.setName("order").setDescription("Order ID (e.g. MGT-168)").setRequired(true))
     .addStringOption(opt =>
       opt.setName("grinder").setDescription("Grinder ID (e.g. GRD-01)").setRequired(true))
     .addNumberOption(opt =>
@@ -75,9 +75,10 @@ async function handleQueue(interaction: ChatInputCommandInteraction) {
     .setTimestamp();
 
   for (const item of items.slice(0, 5)) {
+    const margin = (Number(item.customerPrice) - Number(item.bidAmount)).toFixed(2);
     embed.addFields({
       name: `${item.orderId} - ${item.serviceName}`,
-      value: `Grinder: **${item.grinderName}** (${item.tier})\nBid: $${item.bidAmount} | Price: $${item.customerPrice}\nScore: ${item.finalPriorityScore.toFixed(2)}`,
+      value: `Grinder: **${item.grinderName}** (${item.tier})\nBid: $${item.bidAmount} | Price: $${item.customerPrice} | Margin: $${margin}\nScore: ${item.finalPriorityScore.toFixed(2)}`,
       inline: false,
     });
   }
@@ -87,6 +88,9 @@ async function handleQueue(interaction: ChatInputCommandInteraction) {
 
 async function handleDashboard(interaction: ChatInputCommandInteraction) {
   const stats = await storage.getDashboardStats();
+  const allBids = await storage.getBids();
+  const pendingBids = allBids.filter(b => b.status === "Pending").length;
+  const acceptedBids = allBids.filter(b => b.status === "Accepted").length;
 
   const embed = new EmbedBuilder()
     .setTitle("Dashboard Overview")
@@ -94,8 +98,11 @@ async function handleDashboard(interaction: ChatInputCommandInteraction) {
     .addFields(
       { name: "Active Orders", value: String(stats.activeOrders), inline: true },
       { name: "Completed", value: String(stats.completedToday), inline: true },
-      { name: "Available Grinders", value: `${stats.availableGrinders} / ${stats.totalGrinders}`, inline: true },
+      { name: "Grinders", value: `${stats.availableGrinders} avail / ${stats.totalGrinders} total`, inline: true },
+      { name: "Pending Bids", value: String(pendingBids), inline: true },
+      { name: "Accepted Bids", value: String(acceptedBids), inline: true },
     )
+    .setFooter({ text: "Data sourced from MGT Bot activity" })
     .setTimestamp();
 
   await interaction.reply({ embeds: [embed] });
@@ -103,6 +110,7 @@ async function handleDashboard(interaction: ChatInputCommandInteraction) {
 
 async function handleOrders(interaction: ChatInputCommandInteraction) {
   const allOrders = await storage.getOrders();
+  const services = await storage.getServices();
   const openOrders = allOrders.filter(o => o.status === "Open");
 
   if (openOrders.length === 0) {
@@ -116,10 +124,15 @@ async function handleOrders(interaction: ChatInputCommandInteraction) {
     .setTimestamp();
 
   for (const order of openOrders.slice(0, 10)) {
-    const rush = order.isRush ? " RUSH" : "";
+    const service = services.find(s => s.id === order.serviceId);
+    const mgtRef = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id;
+    const platformInfo = order.platform ? ` | ${order.platform}` : "";
+    const gamertagInfo = order.gamertag ? `\nGamertag: ${order.gamertag}` : "";
+    const rush = order.isRush ? " [RUSH]" : "";
+
     embed.addFields({
-      name: `${order.id}${rush}`,
-      value: `Price: $${order.customerPrice} | Complexity: ${order.complexity}/5\nDue: ${order.orderDueDate ? new Date(order.orderDueDate).toLocaleDateString() : "N/A"}\nStatus: ${order.status}`,
+      name: `${mgtRef}${rush} - ${service?.name || order.serviceId}`,
+      value: `Price: $${order.customerPrice}${platformInfo}${gamertagInfo}\nDue: ${order.orderDueDate ? new Date(order.orderDueDate).toLocaleDateString() : "N/A"}`,
       inline: true,
     });
   }
@@ -136,16 +149,19 @@ async function handleGrinders(interaction: ChatInputCommandInteraction) {
   }
 
   const embed = new EmbedBuilder()
-    .setTitle(`Grinders (${allGrinders.length})`)
+    .setTitle(`Grinder Roster (${allGrinders.length})`)
     .setColor(0xEB459E)
     .setTimestamp();
 
   for (const g of allGrinders.slice(0, 10)) {
     const available = Number(g.activeOrders) < g.capacity;
     const statusLabel = available ? "[AVAILABLE]" : "[FULL]";
+    const winRateStr = g.winRate ? `${(Number(g.winRate) * 100).toFixed(0)}%` : "N/A";
+    const discordName = g.discordUsername ? ` (@${g.discordUsername})` : "";
+
     embed.addFields({
-      name: `${statusLabel} ${g.name} (${g.id})`,
-      value: `Tier: ${g.tier} | Capacity: ${g.activeOrders}/${g.capacity}\nStrikes: ${g.strikes} | Utilization: ${(Number(g.utilization) * 100).toFixed(0)}%`,
+      name: `${statusLabel} ${g.name}${discordName}`,
+      value: `Tier: ${g.tier} | Orders: ${g.totalOrders} | Win Rate: ${winRateStr}\nCapacity: ${g.activeOrders}/${g.capacity} | Strikes: ${g.strikes}`,
       inline: true,
     });
   }
@@ -155,6 +171,7 @@ async function handleGrinders(interaction: ChatInputCommandInteraction) {
 
 async function handleBids(interaction: ChatInputCommandInteraction) {
   const allBids = await storage.getBids();
+  const allGrinders = await storage.getGrinders();
   const pendingBids = allBids.filter(b => b.status === "Pending");
 
   if (pendingBids.length === 0) {
@@ -168,10 +185,18 @@ async function handleBids(interaction: ChatInputCommandInteraction) {
     .setTimestamp();
 
   for (const b of pendingBids.slice(0, 10)) {
+    const grinder = allGrinders.find(g => g.id === b.grinderId);
+    const grinderName = grinder?.name || b.grinderId;
+    const proposalRef = b.mgtProposalId ? `P${b.mgtProposalId}` : b.id;
+    const timelineStr = b.timeline ? ` | ETA: ${b.timeline}` : "";
+    const canStartStr = b.canStart ? ` | Start: ${b.canStart}` : "";
+    const marginStr = b.margin ? `\nMargin: $${b.margin} (${b.marginPct}%)` : "";
+    const qualityStr = b.qualityScore ? ` | QS: ${b.qualityScore}` : "";
+
     embed.addFields({
-      name: `${b.id} - Order ${b.orderId}`,
-      value: `Grinder: ${b.grinderId} | Amount: $${b.bidAmount}\nEst. Delivery: ${b.estDeliveryDate ? new Date(b.estDeliveryDate).toLocaleDateString() : "N/A"}`,
-      inline: true,
+      name: `${proposalRef} - Order ${b.orderId}`,
+      value: `Grinder: ${grinderName} | Bid: $${b.bidAmount}${timelineStr}${canStartStr}${marginStr}${qualityStr}`,
+      inline: false,
     });
   }
 
@@ -180,6 +205,7 @@ async function handleBids(interaction: ChatInputCommandInteraction) {
 
 async function handleAssignments(interaction: ChatInputCommandInteraction) {
   const allAssignments = await storage.getAssignments();
+  const allGrinders = await storage.getGrinders();
   const active = allAssignments.filter(a => a.status === "Active");
 
   if (active.length === 0) {
@@ -193,9 +219,13 @@ async function handleAssignments(interaction: ChatInputCommandInteraction) {
     .setTimestamp();
 
   for (const a of active.slice(0, 10)) {
+    const grinder = allGrinders.find(g => g.id === a.grinderId);
+    const grinderName = grinder?.name || a.grinderId;
+    const marginStr = a.margin ? ` | Margin: $${a.margin} (${a.marginPct}%)` : "";
+
     embed.addFields({
       name: `${a.id} - Order ${a.orderId}`,
-      value: `Grinder: ${a.grinderId} | Status: ${a.status}\nDue: ${a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "N/A"}`,
+      value: `Grinder: ${grinderName}${marginStr}\nDue: ${a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "N/A"}`,
       inline: true,
     });
   }
