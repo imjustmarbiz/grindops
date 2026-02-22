@@ -56,7 +56,7 @@ function PipelineStep({ label, count, total, color, icon: Icon, isLast }: { labe
   const pct = total > 0 ? ((count / total) * 100).toFixed(0) : "0";
   return (
     <div className="flex items-center gap-2 flex-1">
-      <div className={`flex flex-col items-center p-3 rounded-xl border flex-1 ${color} transition-all hover:scale-[1.02]`}>
+      <div className={`flex flex-col items-center p-3 rounded-xl border flex-1 ${color} transition-all hover:scale-[1.02]`} data-testid={`pipeline-${label.toLowerCase().replace(/\s+/g, "-")}`}>
         <Icon className="w-5 h-5 mb-1" />
         <span className="text-2xl font-bold">{count}</span>
         <span className="text-[10px] uppercase tracking-wider opacity-70">{label}</span>
@@ -423,7 +423,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {serviceDistribution.length === 0 && <p className="text-muted-foreground text-sm">No order data yet</p>}
               {serviceDistribution.map((s, i) => (
-                <div key={s.id} className="space-y-1">
+                <div key={s.id} className="space-y-1" data-testid={`service-dist-${s.id}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{s.name}</span>
                     <div className="flex items-center gap-2">
