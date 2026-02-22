@@ -35,6 +35,14 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Auto-closes bidding when timer expires (status: "Bidding Closed")
   - Inline countdown badges on order cards in grinder dashboard
   - Server-side scheduler checks every 15 seconds for timer milestones
+- 2026-02-22: Added Staff Override Assign feature
+  - Staff can manually assign any grinder to an Open or Bidding Closed order
+  - Syncs everything: order status → Assigned, creates assignment, closes bidding timer
+  - Auto-accepts grinder's bid if they had one, denies all other pending bids
+  - Updates grinder stats (activeOrders, totalOrders, lastAssigned)
+  - Creates audit log with staff_override_assign action
+  - Shows existing bids on selected order, auto-fills bid amount when selecting a grinder with existing bid
+  - Live margin calculation preview before assigning
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui, dark mode professional theme

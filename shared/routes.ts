@@ -89,6 +89,15 @@ export const api = {
       method: 'DELETE' as const,
       path: '/api/orders/:id' as const,
     },
+    staffAssign: {
+      method: 'POST' as const,
+      path: '/api/orders/:id/assign' as const,
+      input: z.object({
+        grinderId: z.string().min(1, "Grinder is required"),
+        bidAmount: z.string().min(1, "Bid/pay amount is required"),
+        notes: z.string().optional(),
+      }),
+    },
     suggestions: {
       method: 'GET' as const,
       path: '/api/orders/:id/suggestions' as const,

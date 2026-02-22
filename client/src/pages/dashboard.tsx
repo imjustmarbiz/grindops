@@ -143,6 +143,34 @@ export default function Dashboard() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/alerts"] }); toast({ title: "Alert deleted" }); },
   });
 
+  const staffAssignMutation = useMutation({
+    mutationFn: async (data: { orderId: string; grinderId: string; bidAmount: string; notes?: string }) => {
+      const res = await apiRequest("POST", `/api/orders/${data.orderId}/assign`, {
+        grinderId: data.grinderId,
+        bidAmount: data.bidAmount,
+        notes: data.notes,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bidding-timers"] });
+      setAssignOrderId("");
+      setAssignGrinderId("");
+      setAssignBidAmount("");
+      setAssignNotes("");
+      toast({ title: "Grinder assigned successfully", description: "Order status, bids, and timers have been synced." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Assignment failed", description: err.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+
   const [strikeGrinderId, setStrikeGrinderId] = useState("");
   const [strikeReason, setStrikeReason] = useState("");
   const [alertTitle, setAlertTitle] = useState("");
@@ -150,6 +178,10 @@ export default function Dashboard() {
   const [alertSeverity, setAlertSeverity] = useState("info");
   const [alertTarget, setAlertTarget] = useState("all");
   const [alertGrinderId, setAlertGrinderId] = useState("");
+  const [assignOrderId, setAssignOrderId] = useState("");
+  const [assignGrinderId, setAssignGrinderId] = useState("");
+  const [assignBidAmount, setAssignBidAmount] = useState("");
+  const [assignNotes, setAssignNotes] = useState("");
 
   const latestUpdate = Math.max(dataUpdatedAt || 0, grindersUpdatedAt || 0, logsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
@@ -308,6 +340,166 @@ export default function Dashboard() {
       </div>
 
       <BiddingCountdownPanel />
+
+      {(() => {
+        const assignableOrders = allOrders.filter(o => o.status === "Open" || o.status === "Bidding Closed");
+        const selectedOrder = assignableOrders.find(o => o.id === assignOrderId);
+        const orderBids = (bidsList || []).filter(b => b.orderId === assignOrderId);
+        const selectedGrinder = allGrinders.find(g => g.id === assignGrinderId);
+
+        return assignableOrders.length > 0 ? (
+          <Card className="border-cyan-500/20" data-testid="card-staff-assign">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="w-5 h-5 text-cyan-400" />
+                Staff Override Assign
+                <Badge className="bg-cyan-500/20 text-cyan-400 ml-auto">{assignableOrders.length} assignable</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground font-medium">Select Order</label>
+                    <Select value={assignOrderId} onValueChange={(v) => { setAssignOrderId(v); setAssignGrinderId(""); setAssignBidAmount(""); }}>
+                      <SelectTrigger data-testid="select-assign-order">
+                        <SelectValue placeholder="Choose an order to assign" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assignableOrders.map(o => {
+                          const svc = (servicesList || []).find(s => s.id === o.serviceId);
+                          return (
+                            <SelectItem key={o.id} value={o.id}>
+                              {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {svc?.name || o.serviceId} ({o.status})
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground font-medium">Assign To Grinder</label>
+                    <Select value={assignGrinderId} onValueChange={(v) => {
+                      setAssignGrinderId(v);
+                      const existingBid = orderBids.find(b => b.grinderId === v && b.status === "Pending");
+                      if (existingBid) setAssignBidAmount(existingBid.bidAmount);
+                    }}>
+                      <SelectTrigger data-testid="select-assign-grinder">
+                        <SelectValue placeholder="Choose a grinder" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allGrinders.map(g => {
+                          const hasBid = orderBids.some(b => b.grinderId === g.id && b.status === "Pending");
+                          return (
+                            <SelectItem key={g.id} value={g.id}>
+                              {g.name} ({g.activeOrders}/{g.capacity}){hasBid ? " - has bid" : ""}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {selectedOrder && (
+                  <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Order Details</span>
+                      <Badge variant="outline" className="text-[10px]">{selectedOrder.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Price: </span>
+                        <span className="text-emerald-400 font-medium">{formatCurrency(Number(selectedOrder.customerPrice))}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Platform: </span>
+                        <span>{selectedOrder.platform || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Bids: </span>
+                        <span className="text-blue-400">{orderBids.length}</span>
+                      </div>
+                    </div>
+                    {orderBids.length > 0 && (
+                      <div className="space-y-1 mt-1">
+                        <span className="text-[10px] text-muted-foreground">Existing bids:</span>
+                        {orderBids.filter(b => b.status === "Pending").map(b => {
+                          const bidGrinder = allGrinders.find(g => g.id === b.grinderId);
+                          return (
+                            <div key={b.id} className="flex items-center justify-between text-xs p-1.5 rounded bg-white/5" data-testid={`bid-option-${b.id}`}>
+                              <span>{bidGrinder?.name || b.grinderId}</span>
+                              <span className="text-emerald-400">{formatCurrency(Number(b.bidAmount))}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground font-medium">Grinder Pay Amount ($)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Amount to pay grinder"
+                      value={assignBidAmount}
+                      onChange={(e) => setAssignBidAmount(e.target.value)}
+                      data-testid="input-assign-amount"
+                    />
+                    {selectedOrder && assignBidAmount && (
+                      <div className="text-[10px] text-muted-foreground">
+                        Margin: <span className={Number(selectedOrder.customerPrice) - Number(assignBidAmount) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                          {formatCurrency(Number(selectedOrder.customerPrice) - Number(assignBidAmount))}
+                        </span>
+                        {" "}({Number(selectedOrder.customerPrice) > 0 ? (((Number(selectedOrder.customerPrice) - Number(assignBidAmount)) / Number(selectedOrder.customerPrice)) * 100).toFixed(1) : 0}%)
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground font-medium">Notes (optional)</label>
+                    <Input
+                      placeholder="Reason for override assignment"
+                      value={assignNotes}
+                      onChange={(e) => setAssignNotes(e.target.value)}
+                      data-testid="input-assign-notes"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    data-testid="button-staff-assign"
+                    disabled={!assignOrderId || !assignGrinderId || !assignBidAmount || staffAssignMutation.isPending}
+                    onClick={() => {
+                      staffAssignMutation.mutate({
+                        orderId: assignOrderId,
+                        grinderId: assignGrinderId,
+                        bidAmount: assignBidAmount,
+                        notes: assignNotes || undefined,
+                      });
+                    }}
+                  >
+                    {staffAssignMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Target className="w-3 h-3 mr-1" />}
+                    Assign Grinder
+                  </Button>
+                  {selectedGrinder && (
+                    <span className="text-xs text-muted-foreground">
+                      Assigning <span className="text-cyan-400 font-medium">{selectedGrinder.name}</span> to order{" "}
+                      <span className="text-cyan-400 font-medium">{selectedOrder?.mgtOrderNumber ? `#${selectedOrder.mgtOrderNumber}` : assignOrderId}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null;
+      })()}
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">

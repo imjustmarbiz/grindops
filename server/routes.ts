@@ -124,6 +124,128 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.orders.staffAssign.path, requireStaff, async (req, res) => {
+    try {
+      const input = api.orders.staffAssign.input.parse(req.body);
+      const orderId = req.params.id;
+
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.status !== "Open" && order.status !== "Bidding Closed") {
+        return res.status(400).json({ message: `Cannot assign order with status "${order.status}". Order must be Open or Bidding Closed.` });
+      }
+      if (order.assignedGrinderId) {
+        return res.status(400).json({ message: "Order already has a grinder assigned" });
+      }
+
+      const grinder = await storage.getGrinder(input.grinderId);
+      if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+
+      const bidAmount = parseFloat(input.bidAmount);
+      if (isNaN(bidAmount) || bidAmount < 0) return res.status(400).json({ message: "Invalid bid/pay amount" });
+
+      const customerPrice = Number(order.customerPrice || 0);
+      const margin = customerPrice - bidAmount;
+      const marginPct = customerPrice > 0 ? (margin / customerPrice) * 100 : 0;
+      const companyProfit = margin;
+      const now = new Date();
+
+      const { db } = await import("./db");
+      const { orders: ordersTable } = await import("@shared/schema");
+      const { eq, sql, and } = await import("drizzle-orm");
+
+      const [lockedOrder] = await db.update(ordersTable).set({
+        status: "Assigned",
+        assignedGrinderId: input.grinderId,
+        companyProfit: companyProfit.toFixed(2),
+      }).where(
+        and(
+          eq(ordersTable.id, orderId),
+          sql`${ordersTable.status} IN ('Open', 'Bidding Closed')`,
+          sql`${ordersTable.assignedGrinderId} IS NULL`
+        )
+      ).returning();
+
+      if (!lockedOrder) {
+        return res.status(409).json({ message: "Order was already assigned by another action. Please refresh and try again." });
+      }
+
+      const assignmentId = `ASN-${Date.now().toString(36)}`;
+      const assignment = await storage.createAssignment({
+        id: assignmentId,
+        grinderId: input.grinderId,
+        orderId: orderId,
+        assignedDateTime: now,
+        status: "Active",
+        bidAmount: input.bidAmount,
+        orderPrice: order.customerPrice,
+        margin: margin.toFixed(2),
+        marginPct: marginPct.toFixed(2),
+        companyProfit: companyProfit.toFixed(2),
+        grinderEarnings: input.bidAmount,
+        dueDateTime: order.orderDueDate,
+        notes: input.notes || "Staff override assignment",
+      });
+
+      if (order.firstBidAt && order.biddingClosesAt && new Date(order.biddingClosesAt) > now) {
+        const existingStages = (order.biddingNotifiedStages as string[]) || [];
+        const updatedStages = existingStages.includes("closed") ? existingStages : [...existingStages, "closed"];
+        await storage.updateOrder(orderId, {
+          biddingClosesAt: now,
+          biddingNotifiedStages: updatedStages,
+        } as any);
+      }
+
+      const allBids = await storage.getBids();
+      const orderBids = allBids.filter(b => b.orderId === orderId);
+      let acceptedBidId: string | null = null;
+      for (const bid of orderBids) {
+        if (bid.grinderId === input.grinderId && bid.status === "Pending") {
+          await storage.updateBidStatus(bid.id, "Accepted", "staff_override");
+          acceptedBidId = bid.id;
+        } else if (bid.status === "Pending") {
+          await storage.updateBidStatus(bid.id, "Denied");
+        }
+      }
+      if (acceptedBidId) {
+        await storage.updateOrder(orderId, { acceptedBidId });
+      }
+
+      await storage.updateGrinder(input.grinderId, {
+        activeOrders: (grinder.activeOrders || 0) + 1,
+        totalOrders: (grinder.totalOrders || 0) + 1,
+        lastAssigned: now,
+      });
+
+      const user = (req as any).user;
+      const actorName = user?.discordUsername || user?.firstName || "staff";
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "assignment",
+        entityId: assignmentId,
+        action: "staff_override_assign",
+        actor: actorName,
+        details: JSON.stringify({
+          orderId,
+          grinderId: input.grinderId,
+          grinderName: grinder.name,
+          bidAmount: input.bidAmount,
+          customerPrice: order.customerPrice,
+          margin: margin.toFixed(2),
+          notes: input.notes,
+        }),
+      });
+
+      res.status(201).json(assignment);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      console.error("[staff-assign] Error:", err);
+      res.status(500).json({ message: "Failed to assign grinder" });
+    }
+  });
+
   app.patch(api.orders.updatePrice.path, requireStaff, async (req, res) => {
     try {
       const { customerPrice } = api.orders.updatePrice.input.parse(req.body);
