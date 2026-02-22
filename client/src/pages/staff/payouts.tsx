@@ -140,6 +140,7 @@ export default function StaffPayouts() {
                     <span className="font-medium">{grinder?.name || p.grinderId}</span>
                     <span className="text-green-400">{formatCurrency(Number(p.amount))}</span>
                     {p.payoutPlatform && <span className="text-xs text-muted-foreground">via {p.payoutPlatform}</span>}
+                    <span className="text-xs text-muted-foreground">Order {p.orderId}</span>
                     <Badge className="bg-green-500/20 text-green-400 text-[10px]">Paid</Badge>
                     {p.paidAt && <span className="text-xs text-muted-foreground ml-auto">{new Date(p.paidAt).toLocaleDateString()}</span>}
                   </div>
