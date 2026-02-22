@@ -30,13 +30,13 @@ function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textCo
   label: string; value: string; subtitle: string; icon: any; gradient: string; iconBg: string; textColor: string; trend?: string; trendUp?: boolean;
 }) {
   return (
-    <Card className={`${gradient} border-0 overflow-hidden relative group hover:scale-[1.02] transition-transform duration-300`}>
+    <Card className={`${gradient} border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300`}>
       <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.03] -translate-y-8 translate-x-8" />
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-white/50">{label}</p>
-            <p className={`text-2xl sm:text-3xl font-bold ${textColor} tracking-tight`} data-testid={`text-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
+            <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${textColor} tracking-tight truncate`} data-testid={`text-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
             <div className="flex items-center gap-2">
               <p className="text-xs text-white/40">{subtitle}</p>
               {trend && (
@@ -124,20 +124,20 @@ export default function StaffOverview() {
   return (
     <TooltipProvider>
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-page-title">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-page-title">
               {isOwner ? "Owner Command Center" : "Staff Command Center"}
             </h1>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Real-time analytics and operations overview</p>
+          <LastUpdated date={lastUpdatedDate} />
         </div>
-        <LastUpdated date={lastUpdatedDate} />
+        <p className="text-sm text-muted-foreground">Real-time analytics and operations overview</p>
       </div>
 
       <div className="relative">
@@ -263,25 +263,21 @@ export default function StaffOverview() {
 
       <Card className="border-white/[0.06] bg-white/[0.02]">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
               Order Pipeline
             </CardTitle>
-            <div className="flex items-center gap-3">
-              {(rushOrders > 0 || emergencyOrders > 0) && (
-                <div className="flex items-center gap-2">
-                  {rushOrders > 0 && (
-                    <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1 text-[10px]">
-                      <Flame className="w-3 h-3" /> {rushOrders} Rush
-                    </Badge>
-                  )}
-                  {emergencyOrders > 0 && (
-                    <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1 text-[10px]">
-                      <Zap className="w-3 h-3" /> {emergencyOrders} Emergency
-                    </Badge>
-                  )}
-                </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {rushOrders > 0 && (
+                <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1 text-[10px]">
+                  <Flame className="w-3 h-3" /> {rushOrders} Rush
+                </Badge>
+              )}
+              {emergencyOrders > 0 && (
+                <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1 text-[10px]">
+                  <Zap className="w-3 h-3" /> {emergencyOrders} Emergency
+                </Badge>
               )}
               <LastUpdated date={ordersUpdatedAt ? new Date(ordersUpdatedAt) : null} />
             </div>
@@ -294,7 +290,7 @@ export default function StaffOverview() {
               const pct = totalOrders > 0 ? ((p.count / totalOrders) * 100).toFixed(0) : "0";
               const Icon = p.icon;
               return (
-                <div key={p.label} className={`relative flex flex-col items-center p-4 rounded-xl border ${p.border} ${p.bg} transition-all hover:scale-[1.03] cursor-default group`} data-testid={`pipeline-${p.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                <div key={p.label} className={`relative flex flex-col items-center p-3 sm:p-4 rounded-xl border ${p.border} ${p.bg} transition-all sm:hover:scale-[1.03] cursor-default group`} data-testid={`pipeline-${p.label.toLowerCase().replace(/\s+/g, "-")}`}>
                   <div className={`w-8 h-8 rounded-lg ${p.bg} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
                     <Icon className={`w-4 h-4 ${p.color}`} />
                   </div>
@@ -349,7 +345,7 @@ export default function StaffOverview() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="text-center p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10 cursor-default">
-                    <p className="text-lg font-bold text-blue-400" data-testid="text-total-slots">{totalActive}<span className="text-white/30">/{totalCapacity}</span></p>
+                    <p className="text-base sm:text-lg font-bold text-blue-400" data-testid="text-total-slots">{totalActive}<span className="text-white/30">/{totalCapacity}</span></p>
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Slots</p>
                   </div>
                 </TooltipTrigger>
@@ -435,7 +431,7 @@ export default function StaffOverview() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
               <p className="text-2xl font-bold text-amber-400" data-testid="text-grinders-with-strikes">{grindersWithStrikes.length}</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">With Strikes</p>
