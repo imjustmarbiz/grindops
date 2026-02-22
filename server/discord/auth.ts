@@ -213,9 +213,17 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  (req as any).userId = userId;
-  (req as any).userRole = (req.session as any)?.userRole || "none";
-  next();
+  try {
+    const user = await authStorage.getUser(userId);
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    (req as any).userId = userId;
+    (req as any).userRole = user.role || "none";
+    next();
+  } catch {
+    return res.status(500).json({ message: "Auth check failed" });
+  }
 };
 
 export const requireStaff: RequestHandler = async (req, res, next) => {
