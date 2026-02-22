@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -10,12 +11,14 @@ import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, Mess
 
 export default function StaffPayouts() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { payoutReqs, grinders, grinderUpdates, analyticsLoading } = useStaffData();
 
   const payoutMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy: "staff" });
+      const reviewedBy = user?.username || user?.discordUsername || "staff";
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy });
       return res.json();
     },
     onSuccess: () => {
@@ -142,6 +145,7 @@ export default function StaffPayouts() {
                     {p.payoutPlatform && <span className="text-xs text-muted-foreground">via {p.payoutPlatform}</span>}
                     <span className="text-xs text-muted-foreground">Order {p.orderId}</span>
                     <Badge className="bg-green-500/20 text-green-400 text-[10px]">Paid</Badge>
+                    {p.reviewedBy && <span className="text-xs text-muted-foreground">by {p.reviewedBy}</span>}
                     {p.paidAt && <span className="text-xs text-muted-foreground ml-auto">{new Date(p.paidAt).toLocaleDateString()}</span>}
                   </div>
                 );
