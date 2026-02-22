@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DollarSign, TrendingUp, Users, PieChart, Gauge, Percent, Crown, BarChart3, Award } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function StaffAnalytics() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const {
     analytics,
     analyticsLoading,
@@ -235,7 +237,9 @@ export default function StaffAnalytics() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           {categoryIcon(g.category)}
-                          <span className="font-medium text-sm truncate">{g.name}</span>
+                          <span className="font-medium text-sm truncate cursor-pointer text-primary hover:underline"
+                            data-testid={`link-earner-${g.id}`}
+                            onClick={() => navigate(`/grinders?scorecard=${g.id}`)}>{g.name}</span>
                           <Badge variant="outline" className="text-[10px] h-4">{g.tier}</Badge>
                         </div>
                         <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">

@@ -605,27 +605,27 @@ export default function GrinderProfile() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground">Quality Score</span>
-                      <span className="font-medium">{Number(grinder.avgQualityRating).toFixed(1)}/5</span>
+                      <span className="font-medium">{(Number(grinder.avgQualityRating) / 20).toFixed(1)}/5</span>
                     </div>
-                    <Progress value={Number(grinder.avgQualityRating) / 5 * 100} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
+                    <Progress value={Number(grinder.avgQualityRating)} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
                   </div>
                 )}
                 {grinder.onTimeRate != null && (
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground">On-Time Rate</span>
-                      <span className="font-medium">{(Number(grinder.onTimeRate) * 100).toFixed(0)}%</span>
+                      <span className="font-medium">{Number(grinder.onTimeRate).toFixed(0)}%</span>
                     </div>
-                    <Progress value={Number(grinder.onTimeRate) * 100} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
+                    <Progress value={Number(grinder.onTimeRate)} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
                   </div>
                 )}
                 {grinder.completionRate != null && (
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground">Completion Rate</span>
-                      <span className="font-medium">{(Number(grinder.completionRate) * 100).toFixed(0)}%</span>
+                      <span className="font-medium">{Number(grinder.completionRate).toFixed(0)}%</span>
                     </div>
-                    <Progress value={Number(grinder.completionRate) * 100} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
+                    <Progress value={Number(grinder.completionRate)} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
                   </div>
                 )}
               </CardContent>

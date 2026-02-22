@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,17 @@ export default function Grinders() {
   const { data: grinders, isLoading } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
   const [selectedGrinder, setSelectedGrinder] = useState<Grinder | null>(null);
   const { toast } = useToast();
+  const searchString = useSearch();
+
+  useEffect(() => {
+    if (!grinders) return;
+    const params = new URLSearchParams(searchString);
+    const scorecardId = params.get("scorecard");
+    if (scorecardId) {
+      const g = grinders.find(gr => gr.id === scorecardId);
+      if (g) setSelectedGrinder(g);
+    }
+  }, [grinders, searchString]);
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -123,7 +135,7 @@ export default function Grinders() {
                   {isLoading ? (
                     <TableRow><TableCell colSpan={10} className="text-center h-24">Loading...</TableCell></TableRow>
                   ) : filterGrinders(cat).length > 0 ? filterGrinders(cat).map(g => {
-                    const winRateNum = g.winRate ? Number(g.winRate) * 100 : null;
+                    const winRateNum = g.winRate ? Number(g.winRate) : null;
                     return (
                       <TableRow key={g.id} className="hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                         <TableCell>
@@ -242,7 +254,7 @@ export default function Grinders() {
                 <Card className="border-border/50">
                   <CardContent className="p-3 text-center">
                     <Trophy className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
-                    <p className="text-lg font-bold">{selectedGrinder.winRate ? (Number(selectedGrinder.winRate) * 100).toFixed(0) + "%" : "N/A"}</p>
+                    <p className="text-lg font-bold">{selectedGrinder.winRate ? Number(selectedGrinder.winRate).toFixed(0) + "%" : "N/A"}</p>
                     <p className="text-xs text-muted-foreground">Win Rate</p>
                   </CardContent>
                 </Card>
@@ -255,16 +267,16 @@ export default function Grinders() {
                     { label: "Category", value: categorize(selectedGrinder) },
                     { label: "Tier", value: selectedGrinder.tier },
                     { label: "Capacity", value: `${selectedGrinder.activeOrders}/${selectedGrinder.capacity}` },
-                    { label: "Utilization", value: selectedGrinder.utilization ? `${(Number(selectedGrinder.utilization) * 100).toFixed(0)}%` : "0%" },
+                    { label: "Utilization", value: selectedGrinder.utilization ? `${Number(selectedGrinder.utilization).toFixed(0)}%` : "0%" },
                     { label: "Orders (Last 7d)", value: String(selectedGrinder.ordersAssignedL7D) },
                     { label: "Total Reviews", value: String(selectedGrinder.totalReviews) },
-                    { label: "On-Time Rate", value: selectedGrinder.onTimeRate ? `${(Number(selectedGrinder.onTimeRate) * 100).toFixed(0)}%` : "N/A" },
-                    { label: "Completion Rate", value: selectedGrinder.completionRate ? `${(Number(selectedGrinder.completionRate) * 100).toFixed(0)}%` : "N/A" },
-                    { label: "Quality Rating", value: selectedGrinder.avgQualityRating ? `${Number(selectedGrinder.avgQualityRating).toFixed(1)}/5` : "N/A" },
+                    { label: "On-Time Rate", value: selectedGrinder.onTimeRate ? `${Number(selectedGrinder.onTimeRate).toFixed(0)}%` : "N/A" },
+                    { label: "Completion Rate", value: selectedGrinder.completionRate ? `${Number(selectedGrinder.completionRate).toFixed(0)}%` : "N/A" },
+                    { label: "Quality Rating", value: selectedGrinder.avgQualityRating ? `${(Number(selectedGrinder.avgQualityRating) / 20).toFixed(1)}/5` : "N/A" },
                     { label: "Avg Turnaround", value: selectedGrinder.avgTurnaroundDays ? `${Number(selectedGrinder.avgTurnaroundDays).toFixed(1)} days` : "N/A" },
                     { label: "Last Order", value: (() => { const info = daysAgo(selectedGrinder.lastAssigned); return selectedGrinder.lastAssigned ? `${new Date(selectedGrinder.lastAssigned).toLocaleDateString()} (${info.label})` : "Never"; })() },
                     { label: "Reassignments", value: String(selectedGrinder.reassignmentCount) },
-                    { label: "Cancel Rate", value: selectedGrinder.cancelRate ? `${(Number(selectedGrinder.cancelRate) * 100).toFixed(0)}%` : "N/A" },
+                    { label: "Cancel Rate", value: selectedGrinder.cancelRate ? `${Number(selectedGrinder.cancelRate).toFixed(0)}%` : "N/A" },
                   ].map(m => (
                     <div key={m.label} className="flex justify-between p-2 rounded bg-white/5">
                       <span className="text-xs text-muted-foreground">{m.label}</span>
