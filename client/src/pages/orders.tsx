@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,6 +29,112 @@ const formSchema = z.object({
   isEmergency: z.boolean().default(false),
   location: z.string().optional(),
 });
+
+function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
+  value: string | null;
+  orderId: string;
+  field: string;
+  placeholder?: string;
+  onSave: (id: string, data: Record<string, any>) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value || "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  const save = () => {
+    const newVal = editValue.trim() || null;
+    if (newVal !== (value || null)) {
+      onSave(orderId, { [field]: newVal });
+    }
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          ref={inputRef}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="h-7 text-sm bg-background/50 w-28"
+          data-testid={`input-edit-${field}-${orderId}`}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") { setEditValue(value || ""); setEditing(false); }
+          }}
+          onBlur={save}
+          placeholder={placeholder}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="group flex items-center gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
+      onClick={() => { setEditValue(value || ""); setEditing(true); }}
+      data-testid={`editable-${field}-${orderId}`}
+    >
+      <span className="text-sm">{value || <span className="text-muted-foreground italic text-xs">{placeholder || "—"}</span>}</span>
+      <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+    </div>
+  );
+}
+
+function InlineDateEdit({ value, orderId, onSave }: {
+  value: Date | string | null;
+  orderId: string;
+  onSave: (id: string, data: Record<string, any>) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const dateStr = value ? new Date(value).toISOString().slice(0, 16) : "";
+  const [editValue, setEditValue] = useState(dateStr);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  const save = () => {
+    if (editValue && editValue !== dateStr) {
+      onSave(orderId, { orderDueDate: new Date(editValue).toISOString() });
+    }
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        type="datetime-local"
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        className="text-sm bg-background/50 w-44"
+        data-testid={`input-edit-duedate-${orderId}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") { setEditValue(dateStr); setEditing(false); }
+        }}
+        onBlur={save}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="group flex items-center gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
+      onClick={() => { setEditValue(dateStr); setEditing(true); }}
+      data-testid={`editable-duedate-${orderId}`}
+    >
+      <span className="text-sm">{value ? format(new Date(value), "MMM d, yyyy") : "N/A"}</span>
+      <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+    </div>
+  );
+}
 
 export default function Orders() {
   const queryClient = useQueryClient();
@@ -88,12 +194,31 @@ export default function Orders() {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
       setEditingPriceId(null);
-      toast({ title: "Price updated successfully" });
+      toast({ title: "Price updated" });
     },
     onError: (err: Error) => {
       toast({ title: "Failed to update price", description: err.message, variant: "destructive" });
     },
   });
+
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
+      const res = await apiRequest("PATCH", `/api/orders/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      toast({ title: "Order updated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const saveField = (id: string, data: Record<string, any>) => {
+    updateFieldMutation.mutate({ id, data });
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -134,7 +259,7 @@ export default function Orders() {
           <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-orders-title">
             <ListOrdered className="w-8 h-8 text-primary" /> Order Management
           </h1>
-          <p className="text-muted-foreground mt-1">Track customer orders from MGT Bot and manually created.</p>
+          <p className="text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -260,27 +385,68 @@ export default function Orders() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="font-medium">{service?.name || order.serviceId}</span>
-                      <div className="flex gap-1">
-                        {order.isRush && <Badge variant="destructive" className="text-[10px] h-4">RUSH</Badge>}
-                        {order.isEmergency && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] h-4"><AlertTriangle className="w-2 h-2 mr-0.5" />EMERGENCY</Badge>}
-                        {order.location && <Badge variant="outline" className="text-[10px] h-4 border-white/10"><MapPin className="w-2 h-2 mr-0.5" />{order.location}</Badge>}
+                      <Select
+                        value={order.serviceId}
+                        onValueChange={(val) => saveField(order.id, { serviceId: val })}
+                      >
+                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-border/50 hover:bg-white/5 w-auto min-w-[100px] -mx-1 transition-colors" data-testid={`select-edit-service-${order.id}`}>
+                          <SelectValue>{service?.name || order.serviceId}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(services || []).map((s: Service) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex gap-1 items-center">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${order.isRush ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
+                              onClick={() => saveField(order.id, { isRush: !order.isRush })}
+                              data-testid={`toggle-rush-${order.id}`}
+                            >
+                              {order.isRush ? "RUSH" : "rush"}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Click to toggle rush</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${order.isEmergency ? "bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
+                              onClick={() => saveField(order.id, { isEmergency: !order.isEmergency })}
+                              data-testid={`toggle-emergency-${order.id}`}
+                            >
+                              {order.isEmergency ? "EMRG" : "emrg"}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Click to toggle emergency</TooltipContent>
+                        </Tooltip>
+                        <InlineTextEdit value={order.location} orderId={order.id} field="location" placeholder="loc" onSave={saveField} />
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {order.platform ? (
-                      <Badge variant="outline" className="border-blue-500/30 text-blue-400">{order.platform}</Badge>
-                    ) : <span className="text-muted-foreground">-</span>}
+                    <InlineTextEdit value={order.platform} orderId={order.id} field="platform" placeholder="Platform" onSave={saveField} />
                   </TableCell>
-                  <TableCell className="text-sm">{order.gamertag || <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell>
+                    <InlineTextEdit value={order.gamertag} orderId={order.id} field="gamertag" placeholder="Gamertag" onSave={saveField} />
+                  </TableCell>
                   <TableCell className="text-center">
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <span className={`font-mono font-bold ${complexityColor(order.complexity)}`}>{order.complexity}</span>
-                      </TooltipTrigger>
-                      <TooltipContent>Complexity {order.complexity}/5</TooltipContent>
-                    </Tooltip>
+                    <Select
+                      value={String(order.complexity)}
+                      onValueChange={(val) => saveField(order.id, { complexity: Number(val) })}
+                    >
+                      <SelectTrigger className={`h-7 w-14 text-sm bg-transparent border-transparent hover:border-border/50 hover:bg-white/5 mx-auto transition-colors font-mono font-bold ${complexityColor(order.complexity)}`} data-testid={`select-edit-complexity-${order.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map(c => (
+                          <SelectItem key={c} value={String(c)}>
+                            <span className={complexityColor(c)}>{c}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     {assignedGrinder ? (
@@ -292,7 +458,9 @@ export default function Orders() {
                       <span className="text-xs text-muted-foreground">{order.assignedGrinderId}</span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell className="text-sm">{order.orderDueDate ? format(new Date(order.orderDueDate), "MMM d, yyyy") : "N/A"}</TableCell>
+                  <TableCell>
+                    <InlineDateEdit value={order.orderDueDate} orderId={order.id} onSave={saveField} />
+                  </TableCell>
                   <TableCell className="text-right">
                     {editingPriceId === order.id ? (
                       <div className="flex items-center justify-end gap-1">

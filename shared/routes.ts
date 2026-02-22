@@ -70,6 +70,21 @@ export const api = {
       path: '/api/orders/:id/price' as const,
       input: z.object({ customerPrice: z.string() }),
     },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/orders/:id' as const,
+      input: z.object({
+        serviceId: z.string().optional(),
+        platform: z.string().nullable().optional(),
+        gamertag: z.string().nullable().optional(),
+        orderDueDate: z.string().optional(),
+        isRush: z.boolean().optional(),
+        isEmergency: z.boolean().optional(),
+        complexity: z.number().min(1).max(5).optional(),
+        location: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }),
+    },
     delete: {
       method: 'DELETE' as const,
       path: '/api/orders/:id' as const,

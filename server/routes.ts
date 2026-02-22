@@ -147,6 +147,33 @@ export async function registerRoutes(
     }
   });
 
+  app.patch(api.orders.update.path, async (req, res) => {
+    try {
+      const input = api.orders.update.input.parse(req.body);
+      const updateData: any = { ...input };
+      if (input.orderDueDate) {
+        updateData.orderDueDate = new Date(input.orderDueDate);
+      }
+      const result = await storage.updateOrder(req.params.id, updateData);
+      if (!result) return res.status(404).json({ message: "Order not found" });
+      const changedFields = Object.keys(input).join(", ");
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "fields_updated",
+        actor: "admin",
+        details: JSON.stringify(input),
+      });
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.get(api.orders.suggestions.path, async (req, res) => {
     const suggestions = await storage.getSuggestionsForOrder(req.params.id);
     res.json(suggestions);
