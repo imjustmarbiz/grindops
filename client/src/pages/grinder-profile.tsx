@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { BiddingCountdownPanel, InlineCountdown } from "@/components/bidding-countdown";
 import {
   Loader2, FileCheck, Gavel, TrendingUp, Clock, CheckCircle, AlertCircle,
   ExternalLink, X, DollarSign, Star, Zap, Send, CalendarClock,
@@ -290,6 +291,8 @@ export default function GrinderProfile() {
         </Card>
       )}
 
+      <BiddingCountdownPanel variant="compact" />
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`grid w-full grid-cols-6 ${isElite ? "bg-amber-500/5" : "bg-muted/50"}`}>
           <TabsTrigger value="overview" data-testid="tab-overview" className={isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}>
@@ -459,6 +462,7 @@ export default function GrinderProfile() {
                           <span className="font-bold text-lg">
                             {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
                           </span>
+                          <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
                           {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
                           {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
                           <Badge variant="outline" className="text-muted-foreground">{serviceName(order.serviceId)}</Badge>

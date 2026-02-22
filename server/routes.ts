@@ -178,6 +178,35 @@ export async function registerRoutes(
     res.json(suggestions);
   });
 
+  app.get("/api/bidding-timers", async (req, res) => {
+    const allOrders = await storage.getOrders();
+    const activeTimers = allOrders
+      .filter(o => o.status === "Open" && o.biddingClosesAt)
+      .map(o => ({
+        orderId: o.id,
+        mgtOrderNumber: o.mgtOrderNumber,
+        status: o.status,
+        firstBidAt: o.firstBidAt,
+        biddingClosesAt: o.biddingClosesAt,
+        createdAt: o.createdAt,
+      }));
+    const recentlyClosed = allOrders
+      .filter(o => o.status === "Bidding Closed" && o.biddingClosesAt)
+      .filter(o => {
+        const closedTime = new Date(o.biddingClosesAt!).getTime();
+        return Date.now() - closedTime < 5 * 60 * 1000;
+      })
+      .map(o => ({
+        orderId: o.id,
+        mgtOrderNumber: o.mgtOrderNumber,
+        status: o.status,
+        firstBidAt: o.firstBidAt,
+        biddingClosesAt: o.biddingClosesAt,
+        createdAt: o.createdAt,
+      }));
+    res.json({ activeTimers, recentlyClosed, serverTime: new Date().toISOString() });
+  });
+
   app.get(api.bids.list.path, requireStaff, async (req, res) => {
     const results = await storage.getBids();
     res.json(results);
@@ -315,6 +344,8 @@ export async function registerRoutes(
         status: o.status,
         discordMessageId: o.discordMessageId,
         createdAt: o.createdAt,
+        firstBidAt: o.firstBidAt,
+        biddingClosesAt: o.biddingClosesAt,
         totalBids: orderBids.length,
         hasBid: !!myBidOnOrder,
         myBidId: myBidOnOrder?.id || null,

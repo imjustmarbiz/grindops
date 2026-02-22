@@ -28,6 +28,13 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Severity levels: info, warning, success, danger
   - Grinders see alerts inbox with read/unread tracking
 - New DB tables: elite_requests, staff_alerts, strike_logs
+- 2026-02-22: Added Live Bidding Countdown Timer system
+  - 10-minute countdown starts when first bid is placed on an order
+  - Live countdown clock on both staff and grinder dashboards
+  - Discord notifications at: order open, first bid, 5 min, 2 min, 1 min
+  - Auto-closes bidding when timer expires (status: "Bidding Closed")
+  - Inline countdown badges on order cards in grinder dashboard
+  - Server-side scheduler checks every 15 seconds for timer milestones
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui, dark mode professional theme
@@ -56,6 +63,8 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
 - `server/discord/mgtWatcher.ts` - MGT Bot embed parsers and message handlers
 - `server/index.ts` - Server entry point (starts both web server and Discord bot)
 - `client/src/pages/grinder-profile.tsx` - Grinder personal dashboard (no sensitive data)
+- `server/discord/biddingTimer.ts` - Bidding countdown scheduler + Discord notifications
+- `client/src/components/bidding-countdown.tsx` - Live countdown UI components
 
 ## Discord Integration
 ### MGT Bot Monitoring

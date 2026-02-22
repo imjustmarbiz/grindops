@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
@@ -305,6 +306,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <BiddingCountdownPanel />
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">

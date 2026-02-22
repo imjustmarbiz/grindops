@@ -86,6 +86,29 @@ export interface IStorage {
   acknowledgeStrike(id: string): Promise<void>;
 }
 
+const BIDDING_WINDOW_MS = 10 * 60 * 1000;
+
+export async function startBiddingTimerIfFirst(orderId: string): Promise<boolean> {
+  const now = new Date();
+  const closesAt = new Date(now.getTime() + BIDDING_WINDOW_MS);
+  const result = await db.update(orders).set({
+    firstBidAt: now,
+    biddingClosesAt: closesAt,
+  }).where(
+    and(
+      eq(orders.id, orderId),
+      eq(orders.status, "Open"),
+      sql`${orders.firstBidAt} IS NULL`
+    )
+  ).returning();
+
+  if (result.length > 0) {
+    console.log(`[bidding-timer] Started 10-min countdown for order ${orderId}, closes at ${closesAt.toISOString()}`);
+    return true;
+  }
+  return false;
+}
+
 export class DatabaseStorage implements IStorage {
   async getServices(): Promise<Service[]> {
     return await db.select().from(services);
@@ -243,6 +266,7 @@ export class DatabaseStorage implements IStorage {
 
   async createBid(bid: InsertBid): Promise<Bid> {
     const [created] = await db.insert(bids).values(bid).returning();
+    await startBiddingTimerIfFirst(created.orderId);
     return created;
   }
 
@@ -277,6 +301,9 @@ export class DatabaseStorage implements IStorage {
       status: "Pending",
       ...data,
     }).returning();
+    if (created.orderId !== "UNKNOWN") {
+      await startBiddingTimerIfFirst(created.orderId);
+    }
     return created;
   }
 
