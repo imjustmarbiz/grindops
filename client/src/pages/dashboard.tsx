@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -67,14 +68,27 @@ function PipelineStep({ label, count, total, color, icon: Icon, isLast }: { labe
   );
 }
 
+function LastUpdated({ date }: { date: Date | null }) {
+  if (!date) return null;
+  const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true }).format(date);
+  return (
+    <span className="text-[10px] text-muted-foreground font-mono" data-testid="text-last-updated">
+      Last updated {fmt}
+    </span>
+  );
+}
+
 export default function Dashboard() {
-  const { data: analytics, isLoading } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 10000 });
-  const { data: grindersList } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
-  const { data: auditLogs } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 10000 });
-  const { data: assignmentsList } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 10000 });
-  const { data: ordersList } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
-  const { data: bidsList } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 10000 });
+  const { data: analytics, isLoading, dataUpdatedAt } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 10000 });
+  const { data: grindersList, dataUpdatedAt: grindersUpdatedAt } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
+  const { data: auditLogs, dataUpdatedAt: logsUpdatedAt } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 10000 });
+  const { data: assignmentsList, dataUpdatedAt: assignmentsUpdatedAt } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 10000 });
+  const { data: ordersList, dataUpdatedAt: ordersUpdatedAt } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
+  const { data: bidsList, dataUpdatedAt: bidsUpdatedAt } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 10000 });
   const { data: servicesList } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 10000 });
+
+  const latestUpdate = Math.max(dataUpdatedAt || 0, grindersUpdatedAt || 0, logsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
+  const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
 
   if (isLoading) {
     return (
@@ -158,9 +172,12 @@ export default function Dashboard() {
           <h1 className="text-3xl font-display font-bold text-glow" data-testid="text-page-title">GrindOps Command Center</h1>
           <p className="text-muted-foreground mt-1">Real-time analytics and operations overview</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-muted-foreground">Live</span>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs text-muted-foreground">Live</span>
+          </div>
+          <LastUpdated date={lastUpdatedDate} />
         </div>
       </div>
 
@@ -228,10 +245,13 @@ export default function Dashboard() {
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Activity className="w-5 h-5 text-primary" />
-            Order Pipeline
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Order Pipeline
+            </CardTitle>
+            <LastUpdated date={ordersUpdatedAt ? new Date(ordersUpdatedAt) : null} />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-1">
@@ -330,10 +350,13 @@ export default function Dashboard() {
 
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Percent className="w-5 h-5 text-amber-400" />
-              Bid Conversion
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Percent className="w-5 h-5 text-amber-400" />
+                Bid Conversion
+              </CardTitle>
+              <LastUpdated date={bidsUpdatedAt ? new Date(bidsUpdatedAt) : null} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-around mb-4">
@@ -383,10 +406,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Crown className="w-5 h-5 text-amber-400" />
-              Top Earners
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Crown className="w-5 h-5 text-amber-400" />
+                Top Earners
+              </CardTitle>
+              <LastUpdated date={grindersUpdatedAt ? new Date(grindersUpdatedAt) : null} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -421,10 +447,13 @@ export default function Dashboard() {
 
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              Service Distribution
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Service Distribution
+              </CardTitle>
+              <LastUpdated date={ordersUpdatedAt ? new Date(ordersUpdatedAt) : null} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -451,10 +480,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-400" />
-              Recent Activity
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-400" />
+                Recent Activity
+              </CardTitle>
+              <LastUpdated date={logsUpdatedAt ? new Date(logsUpdatedAt) : null} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
@@ -486,10 +518,13 @@ export default function Dashboard() {
 
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
-              Risk & Alerts
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                Risk & Alerts
+              </CardTitle>
+              <LastUpdated date={grindersUpdatedAt ? new Date(grindersUpdatedAt) : null} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -552,10 +587,13 @@ export default function Dashboard() {
       {replacedAssignments.length > 0 && (
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Repeat className="w-5 h-5 text-amber-400" />
-              Replacement Tracker
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Repeat className="w-5 h-5 text-amber-400" />
+                Replacement Tracker
+              </CardTitle>
+              <LastUpdated date={assignmentsUpdatedAt ? new Date(assignmentsUpdatedAt) : null} />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
