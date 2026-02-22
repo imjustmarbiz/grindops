@@ -1118,7 +1118,7 @@ export default function GrinderProfile() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Crown className={`w-5 h-5 ${isElite ? "text-cyan-400" : eliteAccent}`} />
-                {isElite ? "Elite Status" : "Elite Path Coaching"}
+                {isElite ? "Elite Status" : "Elite Grinder Role"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
