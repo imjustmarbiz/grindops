@@ -71,6 +71,14 @@ app.use((req, res, next) => {
     console.error("Failed to seed database:", error);
   }
 
+  // Start Discord bot
+  try {
+    const { startDiscordBot } = await import("./discord/bot");
+    await startDiscordBot();
+  } catch (error) {
+    console.error("Failed to start Discord bot:", error);
+  }
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
