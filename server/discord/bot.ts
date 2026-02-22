@@ -510,6 +510,22 @@ export async function startDiscordBot() {
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
+    const STAFF_ROLE_ID = "1466369178729578663";
+    const OWNER_ROLE_ID = "1466369177043599514";
+    const member = interaction.member;
+    const roles = member && "cache" in (member.roles as any)
+      ? (member.roles as any).cache
+      : member?.roles;
+    const hasAccess = roles && (
+      (typeof roles.has === "function" && (roles.has(STAFF_ROLE_ID) || roles.has(OWNER_ROLE_ID))) ||
+      (Array.isArray(roles) && (roles.includes(STAFF_ROLE_ID) || roles.includes(OWNER_ROLE_ID)))
+    );
+
+    if (!hasAccess) {
+      await interaction.reply({ content: "You don't have permission to use this command. Staff or Owner role required.", ephemeral: true });
+      return;
+    }
+
     try {
       switch (interaction.commandName) {
         case "queue": await handleQueue(interaction); break;
