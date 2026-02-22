@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
-  orderUpdates, payoutRequests,
+  orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -11,6 +11,9 @@ import {
   type AuditLog, type InsertAuditLog,
   type OrderUpdate, type InsertOrderUpdate,
   type PayoutRequest, type InsertPayoutRequest,
+  type EliteRequest, type InsertEliteRequest,
+  type StaffAlert, type InsertStaffAlert,
+  type StrikeLog, type InsertStrikeLog,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -68,6 +71,19 @@ export interface IStorage {
   updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date }>): Promise<PayoutRequest | undefined>;
 
   updateBid(id: string, data: Partial<InsertBid>): Promise<Bid | undefined>;
+
+  getEliteRequests(grinderId?: string): Promise<EliteRequest[]>;
+  createEliteRequest(request: InsertEliteRequest): Promise<EliteRequest>;
+  updateEliteRequest(id: string, data: Partial<EliteRequest>): Promise<EliteRequest | undefined>;
+
+  getStaffAlerts(grinderId?: string): Promise<StaffAlert[]>;
+  createStaffAlert(alert: InsertStaffAlert): Promise<StaffAlert>;
+  markAlertRead(alertId: string, grinderId: string): Promise<void>;
+  deleteStaffAlert(id: string): Promise<boolean>;
+
+  getStrikeLogs(grinderId?: string): Promise<StrikeLog[]>;
+  createStrikeLog(log: InsertStrikeLog): Promise<StrikeLog>;
+  acknowledgeStrike(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -604,6 +620,62 @@ export class DatabaseStorage implements IStorage {
   async updateBid(id: string, data: Partial<InsertBid>): Promise<Bid | undefined> {
     const [updated] = await db.update(bids).set(data).where(eq(bids.id, id)).returning();
     return updated;
+  }
+
+  async getEliteRequests(grinderId?: string): Promise<EliteRequest[]> {
+    if (grinderId) {
+      return await db.select().from(eliteRequests).where(eq(eliteRequests.grinderId, grinderId)).orderBy(desc(eliteRequests.requestedAt));
+    }
+    return await db.select().from(eliteRequests).orderBy(desc(eliteRequests.requestedAt));
+  }
+
+  async createEliteRequest(request: InsertEliteRequest): Promise<EliteRequest> {
+    const [created] = await db.insert(eliteRequests).values(request).returning();
+    return created;
+  }
+
+  async updateEliteRequest(id: string, data: Partial<EliteRequest>): Promise<EliteRequest | undefined> {
+    const [updated] = await db.update(eliteRequests).set(data).where(eq(eliteRequests.id, id)).returning();
+    return updated;
+  }
+
+  async getStaffAlerts(grinderId?: string): Promise<StaffAlert[]> {
+    if (grinderId) {
+      return await db.select().from(staffAlerts)
+        .where(or(eq(staffAlerts.targetType, "all"), eq(staffAlerts.grinderId, grinderId)))
+        .orderBy(desc(staffAlerts.createdAt));
+    }
+    return await db.select().from(staffAlerts).orderBy(desc(staffAlerts.createdAt));
+  }
+
+  async createStaffAlert(alert: InsertStaffAlert): Promise<StaffAlert> {
+    const [created] = await db.insert(staffAlerts).values(alert).returning();
+    return created;
+  }
+
+  async markAlertRead(alertId: string, grinderId: string): Promise<void> {
+    await db.execute(sql`UPDATE staff_alerts SET read_by = read_by || ${JSON.stringify([grinderId])}::jsonb WHERE id = ${alertId} AND NOT read_by @> ${JSON.stringify([grinderId])}::jsonb`);
+  }
+
+  async deleteStaffAlert(id: string): Promise<boolean> {
+    const result = await db.delete(staffAlerts).where(eq(staffAlerts.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getStrikeLogs(grinderId?: string): Promise<StrikeLog[]> {
+    if (grinderId) {
+      return await db.select().from(strikeLogs).where(eq(strikeLogs.grinderId, grinderId)).orderBy(desc(strikeLogs.createdAt));
+    }
+    return await db.select().from(strikeLogs).orderBy(desc(strikeLogs.createdAt));
+  }
+
+  async createStrikeLog(log: InsertStrikeLog): Promise<StrikeLog> {
+    const [created] = await db.insert(strikeLogs).values(log).returning();
+    return created;
+  }
+
+  async acknowledgeStrike(id: string): Promise<void> {
+    await db.update(strikeLogs).set({ acknowledgedAt: new Date() }).where(eq(strikeLogs.id, id));
   }
 
   async getTopQueueItems() {

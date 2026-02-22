@@ -14,6 +14,20 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - All sensitive API endpoints protected with requireStaff middleware
   - OAuth2 flow includes CSRF state parameter protection
   - Grinder personal endpoint at /api/grinder/me strips sensitive data
+- 2026-02-22: Enhanced grinder dashboard with order viewing, bidding, updates, payouts, AI coaching
+- 2026-02-22: Added Elite Path Coaching system
+  - AI compares grinder metrics vs elite grinder averages, gives actionable tips
+  - Grinders can request elite status; staff reviews/approves from dashboard
+  - Elite vs Regular grinder performance comparison on staff dashboard
+- 2026-02-22: Added Strike Management system
+  - Staff can add/remove strikes with reasons from dashboard
+  - Strike logs with full history, grinder notifications
+  - Grinders see strike status/history in their dashboard with acknowledge flow
+- 2026-02-22: Added Staff Alert Messaging system
+  - Staff can send custom alerts to all grinders or individual grinders
+  - Severity levels: info, warning, success, danger
+  - Grinders see alerts inbox with read/unread tracking
+- New DB tables: elite_requests, staff_alerts, strike_logs
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui, dark mode professional theme

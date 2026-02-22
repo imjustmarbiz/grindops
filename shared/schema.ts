@@ -171,6 +171,41 @@ export const payoutRequests = pgTable("payout_requests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const eliteRequests = pgTable("elite_requests", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  status: text("status").notNull().default("Pending"),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  decisionNotes: text("decision_notes"),
+});
+
+export const staffAlerts = pgTable("staff_alerts", {
+  id: varchar("id").primaryKey(),
+  targetType: text("target_type").notNull().default("all"),
+  grinderId: varchar("grinder_id"),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  severity: text("severity").notNull().default("info"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+  readBy: jsonb("read_by").notNull().default([]),
+});
+
+export const strikeLogs = pgTable("strike_logs", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  action: text("action").notNull(),
+  reason: text("reason").notNull(),
+  delta: integer("delta").notNull(),
+  resultingStrikes: integer("resulting_strikes").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey(),
   entityType: text("entity_type").notNull(),
@@ -220,6 +255,9 @@ export const insertAssignmentSchema = createInsertSchema(assignments);
 export const insertQueueConfigSchema = createInsertSchema(queueConfig);
 export const insertOrderUpdateSchema = createInsertSchema(orderUpdates).omit({ createdAt: true });
 export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({ createdAt: true, reviewedAt: true });
+export const insertEliteRequestSchema = createInsertSchema(eliteRequests).omit({ requestedAt: true, reviewedAt: true });
+export const insertStaffAlertSchema = createInsertSchema(staffAlerts).omit({ createdAt: true });
+export const insertStrikeLogSchema = createInsertSchema(strikeLogs).omit({ createdAt: true, acknowledgedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ createdAt: true });
 
 export type Service = typeof services.$inferSelect;
@@ -238,6 +276,12 @@ export type OrderUpdate = typeof orderUpdates.$inferSelect;
 export type InsertOrderUpdate = z.infer<typeof insertOrderUpdateSchema>;
 export type PayoutRequest = typeof payoutRequests.$inferSelect;
 export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
+export type EliteRequest = typeof eliteRequests.$inferSelect;
+export type InsertEliteRequest = z.infer<typeof insertEliteRequestSchema>;
+export type StaffAlert = typeof staffAlerts.$inferSelect;
+export type InsertStaffAlert = z.infer<typeof insertStaffAlertSchema>;
+export type StrikeLog = typeof strikeLogs.$inferSelect;
+export type InsertStrikeLog = z.infer<typeof insertStrikeLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 

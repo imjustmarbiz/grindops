@@ -292,9 +292,11 @@ export async function registerRoutes(
     const allOrders = await storage.getOrders();
     const myOrderUpdates = await storage.getOrderUpdates(myGrinder.id);
     const myPayoutRequests = await storage.getPayoutRequests(myGrinder.id);
+    const myStrikeLogs = await storage.getStrikeLogs(myGrinder.id);
+    const myAlerts = await storage.getStaffAlerts(myGrinder.id);
+    const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
     const openOrders = allOrders.filter((o: any) => o.status === "Open");
-    const myBidOrderIds = myBids.map((b: any) => b.orderId);
 
     const availableOrders = openOrders.map((o: any) => {
       const orderBids = allBids.filter((b: any) => b.orderId === o.id);
@@ -359,6 +361,62 @@ export async function registerRoutes(
 
     const isElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder";
 
+    const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder");
+    let eliteCoaching: any = null;
+    if (!isElite && eliteGrinders.length > 0) {
+      const eliteAvgWinRate = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.winRate) || 0), 0) / eliteGrinders.length;
+      const eliteAvgQuality = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.avgQualityRating) || 0), 0) / eliteGrinders.length;
+      const eliteAvgOnTime = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.onTimeRate) || 0), 0) / eliteGrinders.length;
+      const eliteAvgCompletion = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.completionRate) || 0), 0) / eliteGrinders.length;
+      const eliteAvgTurnaround = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.avgTurnaroundDays) || 0), 0) / eliteGrinders.length;
+      const eliteAvgCompleted = eliteGrinders.reduce((s: number, g: any) => s + (g.completedOrders || 0), 0) / eliteGrinders.length;
+
+      const myWinRate = Number(myGrinder.winRate) || 0;
+      const myQuality = Number(myGrinder.avgQualityRating) || 0;
+      const myOnTime = Number(myGrinder.onTimeRate) || 0;
+      const myCompletion = Number(myGrinder.completionRate) || 0;
+      const myTurnaround = Number(myGrinder.avgTurnaroundDays) || 0;
+
+      const tips: string[] = [];
+      if (myWinRate < eliteAvgWinRate * 0.8) {
+        tips.push(`Boost your win rate to ${(eliteAvgWinRate * 100).toFixed(0)}%+ (elite average). Focus on quality proposals and quick response times.`);
+      }
+      if (myQuality < eliteAvgQuality * 0.8 && eliteAvgQuality > 0) {
+        tips.push(`Raise your quality rating to ${eliteAvgQuality.toFixed(1)}+ (elite avg). Pay extra attention to detail and communication.`);
+      }
+      if (myOnTime < eliteAvgOnTime * 0.8 && eliteAvgOnTime > 0) {
+        tips.push(`Improve your on-time delivery to ${(eliteAvgOnTime * 100).toFixed(0)}%+ (elite avg). Set realistic deadlines and communicate delays early.`);
+      }
+      if (myCompletion < eliteAvgCompletion * 0.8 && eliteAvgCompletion > 0) {
+        tips.push(`Increase completion rate to ${(eliteAvgCompletion * 100).toFixed(0)}%+ (elite avg). Avoid cancelling orders once accepted.`);
+      }
+      if (myTurnaround > eliteAvgTurnaround * 1.3 && eliteAvgTurnaround > 0) {
+        tips.push(`Reduce turnaround time to ${eliteAvgTurnaround.toFixed(1)} days or less (elite avg). Faster delivery builds trust.`);
+      }
+      if (myGrinder.completedOrders < Math.round(eliteAvgCompleted * 0.5)) {
+        tips.push(`Complete more orders (elite avg: ${Math.round(eliteAvgCompleted)} completed). Volume + consistency unlocks elite consideration.`);
+      }
+      if (myGrinder.strikes > 0) {
+        tips.push("Clear your strikes first. Elite grinders maintain a clean record with zero strikes.");
+      }
+      if (tips.length === 0) {
+        tips.push("You're performing at elite levels! Consider requesting Elite status from the dashboard.");
+      }
+
+      eliteCoaching = {
+        yourMetrics: { winRate: myWinRate, quality: myQuality, onTime: myOnTime, completion: myCompletion, turnaround: myTurnaround, completed: myGrinder.completedOrders, strikes: myGrinder.strikes },
+        eliteAverages: { winRate: eliteAvgWinRate, quality: eliteAvgQuality, onTime: eliteAvgOnTime, completion: eliteAvgCompletion, turnaround: eliteAvgTurnaround, completed: Math.round(eliteAvgCompleted) },
+        tips,
+        readiness: tips.length <= 1 && myGrinder.strikes === 0 ? "ready" : tips.length <= 3 ? "close" : "developing",
+      };
+    }
+
+    const unreadAlerts = myAlerts.filter((a: any) => {
+      const readByArr = Array.isArray(a.readBy) ? a.readBy : [];
+      return !readByArr.includes(myGrinder.id);
+    });
+    const unackedStrikes = myStrikeLogs.filter((s: any) => !s.acknowledgedAt);
+
     const safeGrinder = {
       id: myGrinder.id,
       name: myGrinder.name,
@@ -418,6 +476,15 @@ export async function registerRoutes(
       })),
       orderUpdates: myOrderUpdates,
       payoutRequests: myPayoutRequests,
+      strikeLogs: myStrikeLogs,
+      alerts: myAlerts.map((a: any) => ({
+        ...a,
+        isRead: Array.isArray(a.readBy) ? a.readBy.includes(myGrinder.id) : false,
+      })),
+      eliteRequests: myEliteRequests,
+      eliteCoaching,
+      unreadAlertCount: unreadAlerts.length,
+      unackedStrikeCount: unackedStrikes.length,
       stats: {
         totalAssignments: myAssignments.length,
         activeAssignments: myAssignments.filter((a: any) => a.status === "Active").length,
@@ -612,6 +679,209 @@ export async function registerRoutes(
     });
 
     res.json(updated);
+  });
+
+  app.post("/api/grinder/me/elite-request", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+
+    const existing = await storage.getEliteRequests(myGrinder.id);
+    const pending = existing.find((e: any) => e.status === "Pending");
+    if (pending) return res.status(400).json({ message: "You already have a pending elite request" });
+
+    const request = await storage.createEliteRequest({
+      id: `ER-${Date.now().toString(36)}`,
+      grinderId: myGrinder.id,
+      status: "Pending",
+    });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "elite_request",
+      entityId: request.id,
+      action: "created",
+      actor: myGrinder.name,
+    });
+
+    res.status(201).json(request);
+  });
+
+  app.post("/api/grinder/me/alerts/:alertId/read", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+
+    await storage.markAlertRead(req.params.alertId as string, myGrinder.id);
+    res.json({ success: true });
+  });
+
+  app.post("/api/grinder/me/strikes/:strikeId/ack", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+
+    await storage.acknowledgeStrike(req.params.strikeId as string);
+    res.json({ success: true });
+  });
+
+  app.get("/api/staff/elite-requests", requireStaff, async (req, res) => {
+    const requests = await storage.getEliteRequests();
+    const allGrinders = await storage.getGrinders();
+    const enriched = requests.map((r: any) => {
+      const grinder = allGrinders.find((g: any) => g.id === r.grinderId);
+      return { ...r, grinderName: grinder?.name || r.grinderId, grinderTier: grinder?.tier, grinderCategory: grinder?.category, completedOrders: grinder?.completedOrders || 0, winRate: grinder?.winRate, avgQualityRating: grinder?.avgQualityRating, onTimeRate: grinder?.onTimeRate, strikes: grinder?.strikes || 0 };
+    });
+    res.json(enriched);
+  });
+
+  app.patch("/api/staff/elite-requests/:id", requireStaff, async (req, res) => {
+    const { status, reviewedBy, decisionNotes } = req.body;
+    const updated = await storage.updateEliteRequest(req.params.id as string, {
+      status,
+      reviewedBy: reviewedBy || "staff",
+      reviewedAt: new Date(),
+      decisionNotes,
+    });
+    if (!updated) return res.status(404).json({ message: "Elite request not found" });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "elite_request",
+      entityId: req.params.id as string,
+      action: `elite_${status.toLowerCase()}`,
+      actor: reviewedBy || "staff",
+      details: decisionNotes,
+    });
+
+    res.json(updated);
+  });
+
+  app.get("/api/staff/alerts", requireStaff, async (req, res) => {
+    const alerts = await storage.getStaffAlerts();
+    res.json(alerts);
+  });
+
+  app.post("/api/staff/alerts", requireStaff, async (req, res) => {
+    const { targetType, grinderId, title, message, severity, createdBy } = req.body;
+    const alert = await storage.createStaffAlert({
+      id: `SA-${Date.now().toString(36)}`,
+      targetType: targetType || "all",
+      grinderId: grinderId || null,
+      title,
+      message,
+      severity: severity || "info",
+      createdBy: createdBy || "staff",
+      readBy: [],
+    });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "staff_alert",
+      entityId: alert.id,
+      action: "alert_sent",
+      actor: createdBy || "staff",
+      details: `Target: ${targetType || "all"}, Title: ${title}`,
+    });
+
+    res.status(201).json(alert);
+  });
+
+  app.delete("/api/staff/alerts/:id", requireStaff, async (req, res) => {
+    const deleted = await storage.deleteStaffAlert(req.params.id as string);
+    if (!deleted) return res.status(404).json({ message: "Alert not found" });
+    res.json({ success: true });
+  });
+
+  app.post("/api/staff/strikes", requireStaff, async (req, res) => {
+    const { grinderId, action, reason, createdBy } = req.body;
+    if (!grinderId || !action || !reason) {
+      return res.status(400).json({ message: "grinderId, action, and reason are required" });
+    }
+
+    const grinder = await storage.getGrinder(grinderId);
+    if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+
+    const delta = action === "add" ? 1 : -1;
+    const newStrikes = Math.max(0, grinder.strikes + delta);
+
+    await storage.updateGrinder(grinderId, { strikes: newStrikes });
+
+    const strikeLog = await storage.createStrikeLog({
+      id: `SL-${Date.now().toString(36)}`,
+      grinderId,
+      action,
+      reason,
+      delta,
+      resultingStrikes: newStrikes,
+      createdBy: createdBy || "staff",
+    });
+
+    await storage.createStaffAlert({
+      id: `SA-${Date.now().toString(36)}s`,
+      targetType: "grinder",
+      grinderId,
+      title: action === "add" ? "Strike Added" : "Strike Removed",
+      message: `${action === "add" ? "A strike has been added to" : "A strike has been removed from"} your profile. Reason: ${reason}. You now have ${newStrikes} strike${newStrikes !== 1 ? "s" : ""}.`,
+      severity: action === "add" ? "warning" : "success",
+      createdBy: createdBy || "staff",
+      readBy: [],
+    });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "grinder",
+      entityId: grinderId,
+      action: `strike_${action}`,
+      actor: createdBy || "staff",
+      details: JSON.stringify({ reason, delta, resultingStrikes: newStrikes }),
+    });
+
+    res.status(201).json({ strikeLog, newStrikes });
+  });
+
+  app.get("/api/staff/strike-logs", requireStaff, async (req, res) => {
+    const logs = await storage.getStrikeLogs();
+    res.json(logs);
+  });
+
+  app.get("/api/staff/elite-vs-grinder-metrics", requireStaff, async (req, res) => {
+    const allGrinders = await storage.getGrinders();
+    const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder");
+    const regularGrinders = allGrinders.filter((g: any) => !(g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder"));
+
+    const computeAvg = (arr: any[], field: string) => {
+      const vals = arr.map(g => Number(g[field]) || 0);
+      return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+    };
+
+    res.json({
+      elite: {
+        count: eliteGrinders.length,
+        avgWinRate: computeAvg(eliteGrinders, "winRate"),
+        avgQuality: computeAvg(eliteGrinders, "avgQualityRating"),
+        avgOnTime: computeAvg(eliteGrinders, "onTimeRate"),
+        avgCompletion: computeAvg(eliteGrinders, "completionRate"),
+        avgTurnaround: computeAvg(eliteGrinders, "avgTurnaroundDays"),
+        avgCompletedOrders: computeAvg(eliteGrinders, "completedOrders"),
+        avgStrikes: computeAvg(eliteGrinders, "strikes"),
+        totalEarnings: eliteGrinders.reduce((s: number, g: any) => s + (Number(g.totalEarnings) || 0), 0),
+      },
+      grinders: {
+        count: regularGrinders.length,
+        avgWinRate: computeAvg(regularGrinders, "winRate"),
+        avgQuality: computeAvg(regularGrinders, "avgQualityRating"),
+        avgOnTime: computeAvg(regularGrinders, "onTimeRate"),
+        avgCompletion: computeAvg(regularGrinders, "completionRate"),
+        avgTurnaround: computeAvg(regularGrinders, "avgTurnaroundDays"),
+        avgCompletedOrders: computeAvg(regularGrinders, "completedOrders"),
+        avgStrikes: computeAvg(regularGrinders, "strikes"),
+        totalEarnings: regularGrinders.reduce((s: number, g: any) => s + (Number(g.totalEarnings) || 0), 0),
+      },
+    });
   });
 
   app.get(api.analytics.summary.path, requireStaff, async (req, res) => {

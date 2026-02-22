@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
   BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
-  MessageSquare, Banknote,
+  MessageSquare, Banknote, Bell, Send, Trash2, Award,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 
@@ -94,6 +97,10 @@ export default function Dashboard() {
   const { data: servicesList } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 10000 });
   const { data: grinderUpdates } = useQuery<any[]>({ queryKey: ["/api/staff/order-updates"], refetchInterval: 10000 });
   const { data: payoutReqs } = useQuery<any[]>({ queryKey: ["/api/staff/payout-requests"], refetchInterval: 10000 });
+  const { data: eliteVsGrinderMetrics } = useQuery<any>({ queryKey: ["/api/staff/elite-vs-grinder-metrics"], refetchInterval: 10000 });
+  const { data: eliteRequestsList } = useQuery<any[]>({ queryKey: ["/api/staff/elite-requests"], refetchInterval: 10000 });
+  const { data: staffAlertsList } = useQuery<any[]>({ queryKey: ["/api/staff/alerts"], refetchInterval: 10000 });
+  const { data: strikeLogsList } = useQuery<any[]>({ queryKey: ["/api/staff/strike-logs"], refetchInterval: 10000 });
 
   const payoutMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -105,6 +112,43 @@ export default function Dashboard() {
       toast({ title: "Payout request updated" });
     },
   });
+
+  const eliteReqMutation = useMutation({
+    mutationFn: async ({ id, status, decisionNotes }: { id: string; status: string; decisionNotes?: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/elite-requests/${id}`, { status, reviewedBy: "staff", decisionNotes });
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/elite-requests"] }); toast({ title: "Elite request updated" }); },
+  });
+
+  const strikeMutation = useMutation({
+    mutationFn: async (data: { grinderId: string; action: string; reason: string }) => {
+      const res = await apiRequest("POST", "/api/staff/strikes", { ...data, createdBy: "staff" });
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/strike-logs"] }); queryClient.invalidateQueries({ queryKey: ["/api/grinders"] }); toast({ title: "Strike updated" }); },
+  });
+
+  const alertMutation = useMutation({
+    mutationFn: async (data: { targetType: string; grinderId?: string; title: string; message: string; severity: string }) => {
+      const res = await apiRequest("POST", "/api/staff/alerts", { ...data, createdBy: "staff" });
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/alerts"] }); toast({ title: "Alert sent" }); },
+  });
+
+  const deleteAlertMutation = useMutation({
+    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/staff/alerts/${id}`); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/alerts"] }); toast({ title: "Alert deleted" }); },
+  });
+
+  const [strikeGrinderId, setStrikeGrinderId] = useState("");
+  const [strikeReason, setStrikeReason] = useState("");
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertSeverity, setAlertSeverity] = useState("info");
+  const [alertTarget, setAlertTarget] = useState("all");
+  const [alertGrinderId, setAlertGrinderId] = useState("");
 
   const latestUpdate = Math.max(dataUpdatedAt || 0, grindersUpdatedAt || 0, logsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
@@ -688,6 +732,310 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+
+      {/* Elite vs Grinder Performance Comparison */}
+      <Card className="bg-gradient-to-r from-purple-500/5 to-amber-500/5 border-purple-500/20" data-testid="card-elite-vs-grinder">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Award className="w-5 h-5 text-purple-400" />
+            Elite vs Grinder Performance Comparison
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {eliteVsGrinderMetrics ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-bold text-amber-400">Elite Grinders</span>
+                  <Badge variant="outline" className="ml-auto text-[10px]">{eliteVsGrinderMetrics.elite?.count || 0}</Badge>
+                </div>
+                {[
+                  { label: "Avg Win Rate", value: eliteVsGrinderMetrics.elite?.avgWinRate, otherValue: eliteVsGrinderMetrics.grinders?.avgWinRate, suffix: "%" },
+                  { label: "Avg Quality", value: eliteVsGrinderMetrics.elite?.avgQuality, otherValue: eliteVsGrinderMetrics.grinders?.avgQuality, suffix: "%" },
+                  { label: "Avg On-Time", value: eliteVsGrinderMetrics.elite?.avgOnTime, otherValue: eliteVsGrinderMetrics.grinders?.avgOnTime, suffix: "%" },
+                  { label: "Avg Completion", value: eliteVsGrinderMetrics.elite?.avgCompletion, otherValue: eliteVsGrinderMetrics.grinders?.avgCompletion, suffix: "%" },
+                  { label: "Avg Turnaround", value: eliteVsGrinderMetrics.elite?.avgTurnaround, otherValue: eliteVsGrinderMetrics.grinders?.avgTurnaround, suffix: "h" },
+                  { label: "Avg Strikes", value: eliteVsGrinderMetrics.elite?.avgStrikes, otherValue: eliteVsGrinderMetrics.grinders?.avgStrikes, suffix: "", lowerBetter: true },
+                ].map((metric) => {
+                  const val = Number(metric.value || 0);
+                  const other = Number(metric.otherValue || 0);
+                  const isBetter = metric.lowerBetter ? val <= other : val >= other;
+                  return (
+                    <div key={metric.label} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-28 truncate">{metric.label}</span>
+                      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-amber-500 transition-all duration-700" style={{ width: `${Math.min(100, val)}%` }} />
+                      </div>
+                      <span className={`text-xs font-mono w-14 text-right ${isBetter ? "text-emerald-400" : "text-muted-foreground"}`}>
+                        {val.toFixed(1)}{metric.suffix}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  <span className="text-xs text-muted-foreground">Total Earnings</span>
+                  <span className="text-sm font-bold text-amber-400">{formatCurrency(Number(eliteVsGrinderMetrics.elite?.totalEarnings || 0))}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-bold text-blue-400">Regular Grinders</span>
+                  <Badge variant="outline" className="ml-auto text-[10px]">{eliteVsGrinderMetrics.grinders?.count || 0}</Badge>
+                </div>
+                {[
+                  { label: "Avg Win Rate", value: eliteVsGrinderMetrics.grinders?.avgWinRate, otherValue: eliteVsGrinderMetrics.elite?.avgWinRate, suffix: "%" },
+                  { label: "Avg Quality", value: eliteVsGrinderMetrics.grinders?.avgQuality, otherValue: eliteVsGrinderMetrics.elite?.avgQuality, suffix: "%" },
+                  { label: "Avg On-Time", value: eliteVsGrinderMetrics.grinders?.avgOnTime, otherValue: eliteVsGrinderMetrics.elite?.avgOnTime, suffix: "%" },
+                  { label: "Avg Completion", value: eliteVsGrinderMetrics.grinders?.avgCompletion, otherValue: eliteVsGrinderMetrics.elite?.avgCompletion, suffix: "%" },
+                  { label: "Avg Turnaround", value: eliteVsGrinderMetrics.grinders?.avgTurnaround, otherValue: eliteVsGrinderMetrics.elite?.avgTurnaround, suffix: "h" },
+                  { label: "Avg Strikes", value: eliteVsGrinderMetrics.grinders?.avgStrikes, otherValue: eliteVsGrinderMetrics.elite?.avgStrikes, suffix: "", lowerBetter: true },
+                ].map((metric) => {
+                  const val = Number(metric.value || 0);
+                  const other = Number(metric.otherValue || 0);
+                  const isBetter = metric.lowerBetter ? val <= other : val >= other;
+                  return (
+                    <div key={metric.label} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-28 truncate">{metric.label}</span>
+                      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-blue-500 transition-all duration-700" style={{ width: `${Math.min(100, val)}%` }} />
+                      </div>
+                      <span className={`text-xs font-mono w-14 text-right ${isBetter ? "text-emerald-400" : "text-muted-foreground"}`}>
+                        {val.toFixed(1)}{metric.suffix}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  <span className="text-xs text-muted-foreground">Total Earnings</span>
+                  <span className="text-sm font-bold text-blue-400">{formatCurrency(Number(eliteVsGrinderMetrics.grinders?.totalEarnings || 0))}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">Loading metrics...</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Elite Requests + Strike Management */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-amber-500/20" data-testid="card-elite-requests">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Crown className="w-5 h-5 text-amber-400" />
+              Elite Requests Review
+              {eliteRequestsList && <Badge className="bg-amber-500/20 text-amber-400 ml-auto">{eliteRequestsList.filter((r: any) => r.status === "Pending").length} pending</Badge>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {(!eliteRequestsList || eliteRequestsList.length === 0) && <p className="text-muted-foreground text-sm">No elite requests</p>}
+              {(eliteRequestsList || []).map((req: any) => {
+                const grinder = allGrinders.find(g => g.id === req.grinderId);
+                return (
+                  <div key={req.id} className={`p-3 rounded-lg bg-white/5 border ${req.status === "Pending" ? "border-amber-500/30" : "border-white/10"}`} data-testid={`card-elite-req-${req.id}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">{grinder?.name || req.grinderId}</span>
+                      <Badge className={
+                        req.status === "Approved" ? "bg-emerald-500/20 text-emerald-400" :
+                        req.status === "Denied" ? "bg-red-500/20 text-red-400" :
+                        "bg-amber-500/20 text-amber-400"
+                      }>{req.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1 text-[10px] text-muted-foreground mb-2">
+                      <div className="text-center"><p className="font-bold text-foreground">{req.completedOrders ?? grinder?.completedOrders ?? 0}</p>Orders</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{req.winRate ?? grinder?.winRate ?? 0}%</p>Win Rate</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{req.avgQuality ?? grinder?.qualityScore ?? 0}</p>Quality</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{req.onTimeRate ?? 0}%</p>On-Time</div>
+                      <div className="text-center"><p className="font-bold text-foreground">{req.strikes ?? grinder?.strikes ?? 0}</p>Strikes</div>
+                    </div>
+                    {req.decisionNotes && <p className="text-xs text-muted-foreground italic mb-2">{req.decisionNotes}</p>}
+                    {req.status === "Pending" && (
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" className="text-xs bg-emerald-600" data-testid={`button-approve-elite-${req.id}`}
+                          disabled={eliteReqMutation.isPending}
+                          onClick={() => eliteReqMutation.mutate({ id: req.id, status: "Approved" })}>
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs border-red-500/30 text-red-400" data-testid={`button-deny-elite-${req.id}`}
+                          disabled={eliteReqMutation.isPending}
+                          onClick={() => eliteReqMutation.mutate({ id: req.id, status: "Denied" })}>
+                          Deny
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-500/20" data-testid="card-strike-management">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+              Strike Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Select value={strikeGrinderId} onValueChange={setStrikeGrinderId}>
+                  <SelectTrigger data-testid="select-strike-grinder">
+                    <SelectValue placeholder="Select grinder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allGrinders.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name} ({g.strikes} strikes)</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Reason for strike action"
+                  value={strikeReason}
+                  onChange={(e) => setStrikeReason(e.target.value)}
+                  data-testid="input-strike-reason"
+                />
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="destructive" className="text-xs"
+                    data-testid="button-add-strike"
+                    disabled={!strikeGrinderId || !strikeReason || strikeMutation.isPending}
+                    onClick={() => { strikeMutation.mutate({ grinderId: strikeGrinderId, action: "add", reason: strikeReason }); setStrikeReason(""); }}>
+                    Add Strike
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs"
+                    data-testid="button-remove-strike"
+                    disabled={!strikeGrinderId || !strikeReason || strikeMutation.isPending}
+                    onClick={() => { strikeMutation.mutate({ grinderId: strikeGrinderId, action: "remove", reason: strikeReason }); setStrikeReason(""); }}>
+                    Remove Strike
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {(!strikeLogsList || strikeLogsList.length === 0) && <p className="text-muted-foreground text-xs">No strike logs</p>}
+                {(strikeLogsList || []).slice(0, 10).map((log: any) => {
+                  const grinder = allGrinders.find(g => g.id === log.grinderId);
+                  return (
+                    <div key={log.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 text-xs" data-testid={`card-strike-${log.id}`}>
+                      <Badge className={log.action === "add" ? "bg-red-500/20 text-red-400" : "bg-emerald-500/20 text-emerald-400"} variant="outline">
+                        {log.action === "add" ? "+" : "-"}
+                      </Badge>
+                      <span className="font-medium flex-1 truncate">{grinder?.name || log.grinderId}</span>
+                      <span className="text-muted-foreground truncate max-w-[120px]">{log.reason}</span>
+                      <span className="text-muted-foreground text-[10px]">{new Date(log.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alert Composer */}
+      <Card className="border-blue-500/20" data-testid="card-alert-composer">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Bell className="w-5 h-5 text-blue-400" />
+            Alert Composer
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Input
+                placeholder="Alert title"
+                value={alertTitle}
+                onChange={(e) => setAlertTitle(e.target.value)}
+                data-testid="input-alert-title"
+              />
+              <Textarea
+                placeholder="Alert message"
+                value={alertMessage}
+                onChange={(e) => setAlertMessage(e.target.value)}
+                className="resize-none"
+                data-testid="input-alert-message"
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={alertSeverity} onValueChange={setAlertSeverity}>
+                  <SelectTrigger className="w-32" data-testid="select-alert-severity">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="success">Success</SelectItem>
+                    <SelectItem value="danger">Danger</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={alertTarget} onValueChange={setAlertTarget}>
+                  <SelectTrigger className="w-40" data-testid="select-alert-target">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grinders</SelectItem>
+                    <SelectItem value="individual">Individual</SelectItem>
+                  </SelectContent>
+                </Select>
+                {alertTarget === "individual" && (
+                  <Select value={alertGrinderId} onValueChange={setAlertGrinderId}>
+                    <SelectTrigger className="w-40" data-testid="select-alert-grinder">
+                      <SelectValue placeholder="Select grinder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allGrinders.map(g => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Button size="sm" className="bg-blue-600 gap-1"
+                  data-testid="button-send-alert"
+                  disabled={!alertTitle || !alertMessage || alertMutation.isPending}
+                  onClick={() => {
+                    alertMutation.mutate({
+                      targetType: alertTarget,
+                      grinderId: alertTarget === "individual" ? alertGrinderId : undefined,
+                      title: alertTitle,
+                      message: alertMessage,
+                      severity: alertSeverity,
+                    });
+                    setAlertTitle("");
+                    setAlertMessage("");
+                  }}>
+                  <Send className="w-3 h-3" /> Send
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {(!staffAlertsList || staffAlertsList.length === 0) && <p className="text-muted-foreground text-sm">No alerts sent</p>}
+              {(staffAlertsList || []).slice(0, 10).map((alert: any) => (
+                <div key={alert.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5" data-testid={`card-alert-${alert.id}`}>
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    alert.severity === "danger" ? "bg-red-400" :
+                    alert.severity === "warning" ? "bg-amber-400" :
+                    alert.severity === "success" ? "bg-emerald-400" :
+                    "bg-blue-400"
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{alert.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{alert.message}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">{alert.readCount ?? 0} read</Badge>
+                  <Button size="icon" variant="ghost" data-testid={`button-delete-alert-${alert.id}`}
+                    disabled={deleteAlertMutation.isPending}
+                    onClick={() => deleteAlertMutation.mutate(alert.id)}>
+                    <Trash2 className="w-3 h-3 text-red-400" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {replacedAssignments.length > 0 && (
         <Card className="border-border/50">
