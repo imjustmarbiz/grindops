@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency, formatCompact, AnimatedRing, PipelineStep, LastUpdated, categoryIcon } from "@/lib/staff-utils";
@@ -14,6 +15,7 @@ import {
 
 export default function StaffOverview() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const isOwner = user?.role === "owner";
   const {
     analytics, analyticsLoading,
@@ -133,7 +135,7 @@ export default function StaffOverview() {
                     {matchedOrders.map(o => {
                       const svc = allServices.find(s => s.id === o.serviceId);
                       return (
-                        <div key={o.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-order-${o.id}`}>
+                        <div key={o.id} onClick={() => { setSearchQuery(""); navigate("/orders"); }} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm cursor-pointer hover:bg-white/10 transition-colors" data-testid={`search-order-${o.id}`}>
                           <span className="font-medium">{o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id.slice(0, 8)}</span>
                           <span className="text-muted-foreground">{svc?.name || o.serviceId}</span>
                           {o.gamertag && <span className="text-xs text-muted-foreground">({o.gamertag})</span>}
@@ -150,7 +152,7 @@ export default function StaffOverview() {
                   <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Grinders ({matchedGrinders.length})</p>
                   <div className="space-y-1.5">
                     {matchedGrinders.map(g => (
-                      <div key={g.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-grinder-${g.id}`}>
+                      <div key={g.id} onClick={() => { setSearchQuery(""); navigate("/grinders"); }} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm cursor-pointer hover:bg-white/10 transition-colors" data-testid={`search-grinder-${g.id}`}>
                         {categoryIcon(g.category)}
                         <span className="font-medium">{g.name}</span>
                         {g.discordUsername && <span className="text-xs text-muted-foreground">@{g.discordUsername}</span>}
@@ -168,7 +170,7 @@ export default function StaffOverview() {
                     {matchedBids.map(b => {
                       const grinder = allGrinders.find(g => g.id === b.grinderId);
                       return (
-                        <div key={b.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-bid-${b.id}`}>
+                        <div key={b.id} onClick={() => { setSearchQuery(""); navigate("/bids"); }} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm cursor-pointer hover:bg-white/10 transition-colors" data-testid={`search-bid-${b.id}`}>
                           <span className="font-medium">{grinder?.name || b.grinderId.slice(0, 8)}</span>
                           <span className="text-muted-foreground">on {b.orderId.slice(0, 8)}</span>
                           <span className="text-emerald-400">${Number(b.bidAmount).toFixed(2)}</span>
