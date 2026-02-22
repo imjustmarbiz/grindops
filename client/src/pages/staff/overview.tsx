@@ -56,7 +56,8 @@ export default function StaffOverview() {
   const payouts = analytics?.totalGrinderPayouts || 0;
   const profit = analytics?.totalCompanyProfit || 0;
   const profitMarginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
-  const avgOrderValue = totalOrders > 0 ? allOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0) / totalOrders : 0;
+  const nonCancelledOrders = allOrders.filter(o => o.status !== "Cancelled");
+  const avgOrderValue = nonCancelledOrders.length > 0 ? nonCancelledOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0) / nonCancelledOrders.length : 0;
 
   const grindersWithStrikes = allGrinders.filter(g => g.strikes > 0).sort((a, b) => b.strikes - a.strikes);
   const atCapacity = allGrinders.filter(g => g.activeOrders >= g.capacity).length;

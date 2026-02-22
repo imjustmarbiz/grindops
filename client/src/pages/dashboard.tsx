@@ -314,9 +314,11 @@ export default function Dashboard() {
   const profit = analytics?.totalCompanyProfit || 0;
   const profitMarginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
 
+  const nonCancelledOrders = allOrders.filter(o => o.status !== "Cancelled");
   const serviceDistribution = allServices.map(s => {
-    const count = allOrders.filter(o => o.serviceId === s.id).length;
-    const serviceRevenue = allOrders.filter(o => o.serviceId === s.id).reduce((sum, o) => sum + Number(o.customerPrice || 0), 0);
+    const svcOrders = nonCancelledOrders.filter(o => o.serviceId === s.id);
+    const count = svcOrders.length;
+    const serviceRevenue = svcOrders.reduce((sum, o) => sum + Number(o.customerPrice || 0), 0);
     return { name: s.name, id: s.id, count, revenue: serviceRevenue };
   }).sort((a, b) => b.count - a.count);
   const maxServiceCount = Math.max(...serviceDistribution.map(s => s.count), 1);
@@ -330,7 +332,7 @@ export default function Dashboard() {
   const rushOrders = allOrders.filter(o => o.isRush && (o.status === "Open" || o.status === "Assigned" || o.status === "In Progress")).length;
   const emergencyOrders = allOrders.filter(o => o.isEmergency && (o.status === "Open" || o.status === "Assigned" || o.status === "In Progress")).length;
 
-  const avgOrderValue = totalOrders > 0 ? allOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0) / totalOrders : 0;
+  const avgOrderValue = nonCancelledOrders.length > 0 ? nonCancelledOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0) / nonCancelledOrders.length : 0;
 
   const completedAssignments = allAssignments.filter(a => a.status === "Completed");
   const onTimeCount = completedAssignments.filter(a => a.isOnTime === true).length;

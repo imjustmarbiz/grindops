@@ -47,9 +47,11 @@ export default function StaffAnalytics() {
   const onTimeCount = completedAssignments.filter(a => a.isOnTime === true).length;
   const onTimeRate = completedAssignments.length > 0 ? (onTimeCount / completedAssignments.length) * 100 : 0;
 
+  const nonCancelledOrders = allOrders.filter(o => o.status !== "Cancelled");
   const serviceDistribution = allServices.map(s => {
-    const count = allOrders.filter(o => o.serviceId === s.id).length;
-    const serviceRevenue = allOrders.filter(o => o.serviceId === s.id).reduce((sum, o) => sum + Number(o.customerPrice || 0), 0);
+    const svcOrders = nonCancelledOrders.filter(o => o.serviceId === s.id);
+    const count = svcOrders.length;
+    const serviceRevenue = svcOrders.reduce((sum, o) => sum + Number(o.customerPrice || 0), 0);
     return { name: s.name, id: s.id, count, revenue: serviceRevenue };
   }).sort((a, b) => b.count - a.count);
   const maxServiceCount = Math.max(...serviceDistribution.map(s => s.count), 1);
