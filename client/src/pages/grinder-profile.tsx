@@ -390,23 +390,42 @@ export default function GrinderProfile() {
                 <ScrollText className="w-5 h-5 text-amber-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-amber-400">Rules Not Accepted</h3>
+                <h3 className="font-semibold text-amber-400">Accept Rules to Start Bidding</h3>
                 <p className="text-sm text-muted-foreground">
                   You must accept the Grinder Rules & Guidelines before you can place bids on orders. 
-                  Use the <span className="font-mono text-amber-400">/grinder rules</span> command from the MGT Bot in any Discord text channel to view and accept the rules.
+                  Read the rules below and click "I Accept" to continue.
                 </p>
               </div>
             </div>
             <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Grinder Rules & Guidelines</p>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <p>1. <span className="font-medium">Privacy</span> - Never discuss customer prices with anyone</p>
-                <p>2. <span className="font-medium">Quality</span> - Complete all orders to the highest standard</p>
-                <p>3. <span className="font-medium">Communication</span> - Stay responsive during active orders</p>
-                <p>4. <span className="font-medium">Honesty</span> - Only bid on orders you can realistically complete</p>
-                <p>5. <span className="font-medium">Timeliness</span> - Meet your quoted timelines</p>
-                <p>6. <span className="font-medium">Professionalism</span> - Represent the team professionally</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">📜 Grinder Rules & Guidelines</p>
+              <p className="text-xs text-muted-foreground mb-2">By working as a grinder, you agree to:</p>
+              <div className="space-y-1.5 text-xs text-muted-foreground">
+                <p><span className="text-amber-400 font-bold">1️⃣</span> <span className="font-medium">Privacy</span> — Never discuss customer prices with anyone</p>
+                <p><span className="text-amber-400 font-bold">2️⃣</span> <span className="font-medium">Quality</span> — Complete all orders to the highest standard</p>
+                <p><span className="text-amber-400 font-bold">3️⃣</span> <span className="font-medium">Communication</span> — Stay responsive during active orders</p>
+                <p><span className="text-amber-400 font-bold">4️⃣</span> <span className="font-medium">Honesty</span> — Only bid on orders you can realistically complete</p>
+                <p><span className="text-amber-400 font-bold">5️⃣</span> <span className="font-medium">Timeliness</span> — Meet your quoted timelines</p>
+                <p><span className="text-amber-400 font-bold">6️⃣</span> <span className="font-medium">Professionalism</span> — Represent the team professionally</p>
               </div>
+              <p className="text-xs text-muted-foreground mt-2 italic">Violations may result in strikes or removal.</p>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <Button
+                className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                data-testid="button-accept-rules"
+                onClick={() => {
+                  apiRequest("POST", "/api/grinder/me/accept-rules").then(() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+                    toast({ title: "Rules Accepted", description: "You can now place bids on orders!" });
+                  }).catch(() => {
+                    toast({ title: "Error", description: "Failed to accept rules. Please try again.", variant: "destructive" });
+                  });
+                }}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                I Accept the Rules
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -937,6 +937,28 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.post("/api/grinder/me/accept-rules", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+
+      if (myGrinder.rulesAccepted) {
+        return res.json({ message: "Rules already accepted", rulesAccepted: true });
+      }
+
+      await storage.updateGrinder(myGrinder.id, {
+        rulesAccepted: true,
+        rulesAcceptedAt: new Date(),
+      });
+
+      res.json({ message: "Rules accepted successfully", rulesAccepted: true });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   app.post("/api/grinder/me/bids", async (req, res) => {
     try {
       const userId = (req as any).userId;
