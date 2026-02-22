@@ -70,6 +70,7 @@ export interface IStorage {
   createOrderUpdate(update: InsertOrderUpdate): Promise<OrderUpdate>;
 
   getPayoutRequests(grinderId?: string): Promise<PayoutRequest[]>;
+  getPayoutRequest(id: string): Promise<PayoutRequest | undefined>;
   createPayoutRequest(request: InsertPayoutRequest): Promise<PayoutRequest>;
   updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date }>): Promise<PayoutRequest | undefined>;
 
@@ -650,6 +651,11 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(payoutRequests).where(eq(payoutRequests.grinderId, grinderId)).orderBy(desc(payoutRequests.createdAt));
     }
     return await db.select().from(payoutRequests).orderBy(desc(payoutRequests.createdAt));
+  }
+
+  async getPayoutRequest(id: string): Promise<PayoutRequest | undefined> {
+    const [result] = await db.select().from(payoutRequests).where(eq(payoutRequests.id, id));
+    return result;
   }
 
   async createPayoutRequest(request: InsertPayoutRequest): Promise<PayoutRequest> {

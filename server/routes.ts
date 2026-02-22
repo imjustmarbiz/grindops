@@ -1114,12 +1114,9 @@ export async function registerRoutes(
 
     const newCompleted = (myGrinder.completedOrders || 0) + 1;
     const newActive = Math.max(0, (myGrinder.activeOrders || 0) - 1);
-    const grinderEarnings = Number(assignment.grinderEarnings) || Number(assignment.bidAmount) || 0;
-    const newEarnings = (Number(myGrinder.totalEarnings || 0) + grinderEarnings).toFixed(2);
     await storage.updateGrinder(myGrinder.id, {
       completedOrders: newCompleted,
       activeOrders: newActive,
-      totalEarnings: newEarnings,
     });
 
     if (assignment.orderId) {
@@ -1158,8 +1155,21 @@ export async function registerRoutes(
     if (status === "Paid") {
       updateData.paidAt = new Date();
     }
+
+    const payoutReq = await storage.getPayoutRequest(req.params.id);
+    if (!payoutReq) return res.status(404).json({ message: "Payout request not found" });
+
     const updated = await storage.updatePayoutRequest(req.params.id, updateData);
     if (!updated) return res.status(404).json({ message: "Payout request not found" });
+
+    if (status === "Paid" && payoutReq.grinderId) {
+      const grinder = await storage.getGrinder(payoutReq.grinderId);
+      if (grinder) {
+        const payoutAmount = Number(payoutReq.amount) || 0;
+        const newEarnings = (Number(grinder.totalEarnings || 0) + payoutAmount).toFixed(2);
+        await storage.updateGrinder(grinder.id, { totalEarnings: newEarnings });
+      }
+    }
 
     await storage.createAuditLog({
       id: `AL-${Date.now().toString(36)}`,
@@ -1167,7 +1177,7 @@ export async function registerRoutes(
       entityId: req.params.id,
       action: `payout_${status.toLowerCase()}`,
       actor: reviewedBy || "staff",
-      details: JSON.stringify({ status }),
+      details: JSON.stringify({ status, grinderId: payoutReq.grinderId, amount: payoutReq.amount }),
     });
 
     res.json(updated);
