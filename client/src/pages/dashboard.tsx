@@ -1557,12 +1557,12 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {isOwner && (
+      {(isOwner || user?.role === "staff") && (
         <Card className="border-amber-500/20" data-testid="card-owner-profiles">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Shield className="w-5 h-5 text-amber-400" />
-              Owner: Edit Grinder Profiles
+              Edit Grinder Profiles
               <Badge className="bg-amber-500/20 text-amber-400 ml-auto">{allGrinders.length} grinders</Badge>
             </CardTitle>
           </CardHeader>
