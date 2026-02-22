@@ -139,9 +139,10 @@ export function setupDiscordAuth(app: Express) {
         const guilds = Array.from(botClient.guilds.cache.values());
         for (const guild of guilds) {
           try {
-            const member = await guild.members.fetch(discordUser.id);
+            const member = await guild.members.fetch({ user: discordUser.id, force: true });
             if (member) {
               guildRoleIds = Array.from(member.roles.cache.keys());
+              console.log(`[discord-auth] Login role check for ${discordUser.username} (${discordUser.id}): roles=${JSON.stringify(guildRoleIds)}`);
 
               if (guildRoleIds.includes(OWNER_ROLE)) {
                 role = "owner";
@@ -150,6 +151,7 @@ export function setupDiscordAuth(app: Express) {
               } else if (guildRoleIds.some((r: string) => ALL_GRINDER_ROLES.includes(r))) {
                 role = "grinder";
               }
+              console.log(`[discord-auth] Assigned role: ${role}`);
               break;
             }
           } catch {
@@ -206,9 +208,10 @@ export function setupDiscordAuth(app: Express) {
           const guilds = Array.from(botClient.guilds.cache.values());
           for (const guild of guilds) {
             try {
-              const member = await guild.members.fetch(user.discordId);
+              const member = await guild.members.fetch({ user: user.discordId, force: true });
               if (member) {
                 const guildRoleIds: string[] = Array.from(member.roles.cache.keys());
+                console.log(`[discord-auth] Role refresh for ${user.discordUsername || user.discordId}: roles=${JSON.stringify(guildRoleIds)}`);
                 let newRole = "none";
                 if (guildRoleIds.includes(OWNER_ROLE)) {
                   newRole = "owner";
@@ -221,6 +224,7 @@ export function setupDiscordAuth(app: Express) {
                 const currentRoles = (user.discordRoles as string[] || []).slice().sort();
                 const newRoles = guildRoleIds.slice().sort();
                 if (newRole !== user.role || JSON.stringify(newRoles) !== JSON.stringify(currentRoles)) {
+                  console.log(`[discord-auth] Updating role for ${user.discordUsername}: ${user.role} -> ${newRole}`);
                   const updated = await authStorage.upsertUser({
                     ...user,
                     role: newRole,
