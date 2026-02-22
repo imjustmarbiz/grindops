@@ -61,18 +61,18 @@ function MiniBar({ value, max, color, label }: { value: number; max: number; col
   );
 }
 
-function PipelineStep({ label, count, total, color, icon: Icon, isLast }: { label: string; count: number; total: number; color: string; icon: any; isLast?: boolean }) {
+function PipelineStep({ label, count, total, color, icon: Icon, isLast, hideArrow }: { label: string; count: number; total: number; color: string; icon: any; isLast?: boolean; hideArrow?: boolean }) {
   const pct = total > 0 ? ((count / total) * 100).toFixed(0) : "0";
   return (
-    <div className="flex items-center gap-2 flex-1">
-      <div className={`flex flex-col items-center p-3 rounded-xl border flex-1 ${color} transition-all hover:scale-[1.02]`} data-testid={`pipeline-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+    <>
+      <div className={`flex flex-col items-center p-3 rounded-xl border ${color} transition-all hover:scale-[1.02]`} data-testid={`pipeline-${label.toLowerCase().replace(/\s+/g, "-")}`}>
         <Icon className="w-5 h-5 mb-1" />
         <span className="text-2xl font-bold">{count}</span>
         <span className="text-[10px] uppercase tracking-wider opacity-70">{label}</span>
         <span className="text-[10px] opacity-50">{pct}%</span>
       </div>
-      {!isLast && <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
-    </div>
+      {!isLast && <ArrowRight className={`w-4 h-4 text-muted-foreground flex-shrink-0 ${hideArrow ? "hidden lg:block" : ""}`} />}
+    </>
   );
 }
 
@@ -280,10 +280,10 @@ export default function Dashboard() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-display font-bold text-glow" data-testid="text-page-title">GrindOps Command Center</h1>
+          <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">GrindOps Command Center</h1>
           <p className="text-muted-foreground mt-1">Real-time analytics and operations overview</p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -425,7 +425,7 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground">Order Details</span>
                       <Badge variant="outline" className="text-[10px]">{selectedOrder.status}</Badge>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                       <div>
                         <span className="text-muted-foreground">Price: </span>
                         <span className="text-emerald-400 font-medium">{formatCurrency(Number(selectedOrder.customerPrice))}</span>
@@ -530,12 +530,12 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-1">
-            <PipelineStep label="Open" count={openOrders} total={totalOrders} color="border-blue-500/30 bg-blue-500/5 text-blue-400" icon={Clock} />
-            <PipelineStep label="Assigned" count={assignedOrders} total={totalOrders} color="border-amber-500/30 bg-amber-500/5 text-amber-400" icon={Target} />
-            <PipelineStep label="In Progress" count={inProgressOrders} total={totalOrders} color="border-purple-500/30 bg-purple-500/5 text-purple-400" icon={Timer} />
-            <PipelineStep label="Completed" count={completedOrders} total={totalOrders} color="border-emerald-500/30 bg-emerald-500/5 text-emerald-400" icon={CheckCircle} />
-            <PipelineStep label="Cancelled" count={cancelledOrders} total={totalOrders} color="border-red-500/30 bg-red-500/5 text-red-400" icon={AlertTriangle} isLast />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <PipelineStep label="Open" count={openOrders} total={totalOrders} color="border-blue-500/30 bg-blue-500/5 text-blue-400" icon={Clock} hideArrow />
+            <PipelineStep label="Assigned" count={assignedOrders} total={totalOrders} color="border-amber-500/30 bg-amber-500/5 text-amber-400" icon={Target} hideArrow />
+            <PipelineStep label="In Progress" count={inProgressOrders} total={totalOrders} color="border-purple-500/30 bg-purple-500/5 text-purple-400" icon={Timer} hideArrow />
+            <PipelineStep label="Completed" count={completedOrders} total={totalOrders} color="border-emerald-500/30 bg-emerald-500/5 text-emerald-400" icon={CheckCircle} hideArrow />
+            <PipelineStep label="Cancelled" count={cancelledOrders} total={totalOrders} color="border-red-500/30 bg-red-500/5 text-red-400" icon={AlertTriangle} isLast hideArrow />
           </div>
           {(rushOrders > 0 || emergencyOrders > 0) && (
             <div className="flex gap-3 mt-3 pt-3 border-t border-border/50">
@@ -804,7 +804,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="p-3 rounded-lg bg-white/5 text-center">
                   <p className="text-lg font-bold text-amber-400">{grindersWithStrikes.length}</p>
                   <p className="text-[10px] text-muted-foreground">With Strikes</p>
@@ -1057,7 +1057,7 @@ export default function Dashboard() {
                         "bg-amber-500/20 text-amber-400"
                       }>{req.status}</Badge>
                     </div>
-                    <div className="grid grid-cols-5 gap-1 text-[10px] text-muted-foreground mb-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 text-[10px] text-muted-foreground mb-2">
                       <div className="text-center"><p className="font-bold text-foreground">{req.completedOrders ?? grinder?.completedOrders ?? 0}</p>Orders</div>
                       <div className="text-center"><p className="font-bold text-foreground">{req.winRate ?? grinder?.winRate ?? 0}%</p>Win Rate</div>
                       <div className="text-center"><p className="font-bold text-foreground">{req.avgQuality ?? grinder?.qualityScore ?? 0}</p>Quality</div>
@@ -1358,8 +1358,8 @@ export default function Dashboard() {
                 const repl = allGrinders.find(g => g.id === a.replacementGrinderId);
                 const order = allOrders.find(o => o.id === a.orderId);
                 return (
-                  <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5" data-testid={`row-replacement-${a.id}`}>
-                    <div className="flex items-center gap-1.5 text-sm flex-1">
+                  <div key={a.id} className="flex flex-wrap items-center gap-3 p-2.5 rounded-lg bg-white/5" data-testid={`row-replacement-${a.id}`}>
+                    <div className="flex items-center gap-1.5 text-sm flex-1 min-w-[140px]">
                       <span className="text-red-400 font-medium">{orig?.name || "Unknown"}</span>
                       <ArrowRight className="w-3 h-3 text-muted-foreground" />
                       <span className="text-blue-400 font-medium">{repl?.name || "Unknown"}</span>

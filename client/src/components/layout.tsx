@@ -135,12 +135,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
           
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/50 px-6 backdrop-blur-md bg-background/50 relative z-10">
+          <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-6 backdrop-blur-md bg-background/50 relative z-10">
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
             <div className="ml-auto flex items-center gap-4">
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-6 md:p-8 relative z-10">
+          <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 relative z-10">
             <div className="max-w-7xl mx-auto h-full">
               {children}
             </div>

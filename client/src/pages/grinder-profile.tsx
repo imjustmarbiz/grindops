@@ -193,14 +193,14 @@ export default function GrinderProfile() {
   const eliteAccent = isElite ? "text-cyan-400" : "text-[#5865F2]";
 
   return (
-    <div className="space-y-6">
-      <div className={`relative rounded-2xl bg-gradient-to-r ${eliteGradient} border ${eliteBorder} p-6 ${eliteGlow} overflow-hidden`}>
+    <div className="space-y-4 sm:space-y-6">
+      <div className={`relative rounded-2xl bg-gradient-to-r ${eliteGradient} border ${eliteBorder} p-4 sm:p-6 ${eliteGlow} overflow-hidden`}>
         {isElite && (
           <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/5 rounded-full blur-3xl pointer-events-none" />
         )}
-        <div className="flex items-center gap-6 relative z-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 relative z-10">
           <div className="relative">
-            <Avatar className={`h-20 w-20 border-2 ${isElite ? "border-cyan-500/50 ring-2 ring-cyan-400/20" : "border-[#5865F2]/30"}`}>
+            <Avatar className={`h-14 w-14 sm:h-20 sm:w-20 border-2 ${isElite ? "border-cyan-500/50 ring-2 ring-cyan-400/20" : "border-[#5865F2]/30"}`}>
               <AvatarImage src={user?.profileImageUrl || undefined} />
               <AvatarFallback className={`${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} text-2xl`}>
                 {grinder.name?.charAt(0) || "G"}
@@ -214,7 +214,7 @@ export default function GrinderProfile() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className={`text-3xl font-display font-bold ${isElite ? "bg-gradient-to-r from-cyan-300 to-teal-400 bg-clip-text text-transparent" : ""}`} data-testid="text-grinder-name">
+              <h1 className={`text-xl sm:text-3xl font-display font-bold ${isElite ? "bg-gradient-to-r from-cyan-300 to-teal-400 bg-clip-text text-transparent" : ""}`} data-testid="text-grinder-name">
                 {grinder.name}
               </h1>
               {isElite && <Sparkles className="w-6 h-6 text-cyan-400 animate-pulse" />}
@@ -352,23 +352,23 @@ export default function GrinderProfile() {
       <BiddingCountdownPanel variant="compact" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full grid-cols-6 ${isElite ? "bg-cyan-500/5" : "bg-muted/50"}`}>
-          <TabsTrigger value="overview" data-testid="tab-overview" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
+        <TabsList className={`flex w-full overflow-x-auto ${isElite ? "bg-cyan-500/5" : "bg-muted/50"}`}>
+          <TabsTrigger value="overview" data-testid="tab-overview" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             Overview
           </TabsTrigger>
-          <TabsTrigger value="orders" data-testid="tab-orders" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
+          <TabsTrigger value="orders" data-testid="tab-orders" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             Available Orders
           </TabsTrigger>
-          <TabsTrigger value="assignments" data-testid="tab-assignments" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
+          <TabsTrigger value="assignments" data-testid="tab-assignments" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             My Work
           </TabsTrigger>
-          <TabsTrigger value="bids" data-testid="tab-bids" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
+          <TabsTrigger value="bids" data-testid="tab-bids" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             My Bids
           </TabsTrigger>
-          <TabsTrigger value="payouts" data-testid="tab-payouts" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
+          <TabsTrigger value="payouts" data-testid="tab-payouts" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             Payouts
           </TabsTrigger>
-          <TabsTrigger value="status" data-testid="tab-status" className={`relative ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
+          <TabsTrigger value="status" data-testid="tab-status" className={`flex-shrink-0 text-xs sm:text-sm relative ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             Status
             {(unreadAlertCount > 0 || unackedStrikeCount > 0) && (
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
@@ -514,9 +514,9 @@ export default function GrinderProfile() {
               {availableOrders.map((order: any) => (
                 <Card key={order.id} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-cyan-500/30" : "hover:border-[#5865F2]/30"} transition-all`} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <span className="font-bold text-lg">
                             {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
                           </span>
@@ -533,7 +533,7 @@ export default function GrinderProfile() {
                           <span>{order.totalBids} bid{order.totalBids !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ml-0 sm:ml-4">
                         {order.hasBid ? (
                           <div className="flex items-center gap-2">
                             <Badge className="bg-blue-500/20 text-blue-400">
@@ -586,10 +586,10 @@ export default function GrinderProfile() {
               {assignments.map((a: any) => (
                 <Card key={a.id} className={`glass-panel ${eliteBorder}`} data-testid={`card-work-assignment-${a.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
                       <div>
                         <span className="font-bold text-lg">Order {a.orderId}</span>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                           <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
                           <span>Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</span>
                           {a.grinderEarnings && <span className="text-green-400">${Number(a.grinderEarnings).toFixed(2)}</span>}
@@ -691,12 +691,12 @@ export default function GrinderProfile() {
                 return (
                   <Card key={b.id} className={`glass-panel ${isLost ? "border-red-500/20" : eliteBorder}`} data-testid={`card-bid-${b.id}`}>
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
                           {isLost && <X className="w-5 h-5 text-red-500" />}
                           <div>
                             <p className="font-medium">Order {b.orderId}</p>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
                               <span>Bid: ${b.bidAmount}</span>
                               {b.timeline && <span>Timeline: {b.timeline}</span>}
                               {b.canStart && <span>Can Start: {b.canStart}</span>}
@@ -751,7 +751,7 @@ export default function GrinderProfile() {
               {payoutRequests.map((p: any) => (
                 <Card key={p.id} className={`glass-panel ${eliteBorder}`} data-testid={`card-payout-${p.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div>
                         <p className="font-medium">Order {p.orderId}</p>
                         <p className="text-sm text-muted-foreground">
