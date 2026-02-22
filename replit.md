@@ -14,6 +14,10 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - All sensitive API endpoints protected with requireStaff middleware
   - OAuth2 flow includes CSRF state parameter protection
   - Grinder personal endpoint at /api/grinder/me strips sensitive data
+- 2026-02-22: Added onboarding preview + dashboard guides
+  - Grinders with no profile see rich onboarding page: welcome hero, 4-step getting started guide, 9 dashboard feature preview cards, CTA to Discord
+  - Grinder dashboard has "Guide" tab with 8-step usage instructions and 6 tips for success
+  - Staff dashboard has "How to Use the Command Center" card with 10-step guide and pro tip
 - 2026-02-22: Enhanced grinder dashboard with order viewing, bidding, updates, payouts, AI coaching
 - 2026-02-22: Added Elite Path Coaching system
   - AI compares grinder metrics vs elite grinder averages, gives actionable tips
