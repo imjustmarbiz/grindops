@@ -475,19 +475,15 @@ export class DatabaseStorage implements IStorage {
     let totalGrinderPayouts = 0;
     let totalCompanyProfit = 0;
 
-    for (const a of completedAssignments) {
-      const orderPrice = Number(a.orderPrice) || 0;
-      const grinderEarnings = Number(a.grinderEarnings) || Number(a.bidAmount) || 0;
-      totalRevenue += orderPrice;
-      totalGrinderPayouts += grinderEarnings;
-      totalCompanyProfit += Number(a.companyProfit) || (orderPrice - grinderEarnings);
+    const nonCancelledOrders = allOrders.filter(o => o.status !== "Cancelled");
+    for (const o of nonCancelledOrders) {
+      totalRevenue += Number(o.customerPrice) || 0;
     }
 
-    for (const a of activeAssignments) {
-      const orderPrice = Number(a.orderPrice) || 0;
+    for (const a of [...completedAssignments, ...activeAssignments]) {
       const grinderEarnings = Number(a.grinderEarnings) || Number(a.bidAmount) || 0;
-      totalRevenue += orderPrice;
       totalGrinderPayouts += grinderEarnings;
+      const orderPrice = Number(a.orderPrice) || 0;
       totalCompanyProfit += Number(a.companyProfit) || (orderPrice - grinderEarnings);
     }
 
