@@ -159,12 +159,98 @@ export default function GrinderProfile() {
 
   if (!profile) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-center" data-testid="text-no-profile">
-        <AlertCircle className="w-16 h-16 text-muted-foreground" />
-        <h2 className="text-2xl font-display font-bold">No Grinder Profile Found</h2>
-        <p className="text-muted-foreground max-w-md">
-          Your Discord account isn't linked to a grinder profile yet. Submit a bid through the MGT Bot to get started.
-        </p>
+      <div className="space-y-4 sm:space-y-6" data-testid="text-no-profile">
+        <div className="relative rounded-2xl bg-gradient-to-r from-[#5865F2]/20 via-[#5865F2]/10 to-[#5865F2]/5 border border-[#5865F2]/30 p-4 sm:p-6 overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#5865F2]/20 border-2 border-[#5865F2]/40 flex items-center justify-center">
+              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-[#5865F2]" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-3xl font-display font-bold" data-testid="text-welcome-title">Welcome to GrindOps</h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Your grinder profile hasn't been created yet. Here's how to get started and what your dashboard will look like.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-4 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Target className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-amber-400" data-testid="text-get-started-title">How to Get Started</h2>
+              <p className="text-muted-foreground text-sm mt-1 mb-4">Follow these steps to create your grinder profile and start receiving orders:</p>
+              <div className="space-y-3">
+                {[
+                  { step: 1, icon: ExternalLink, title: "Join the Discord Server", desc: "Make sure you have the Grinder role in the Discord server. If you don't have it, ask a staff member to assign it." },
+                  { step: 2, icon: Eye, title: "Watch the Bid War Channel", desc: "New orders are posted in the Bid War channel. Keep an eye out for orders that match your skills and availability." },
+                  { step: 3, icon: Gavel, title: "Submit Your First Bid", desc: "When you see an order you want, submit a bid through the MGT Bot in the Bid Proposals channel. This automatically creates your grinder profile." },
+                  { step: 4, icon: CheckCircle, title: "Get Assigned & Start Working", desc: "Once staff accepts your bid, you'll be assigned the order. Track progress, submit updates, and request payouts right from this dashboard." },
+                ].map(({ step, icon: StepIcon, title, desc }) => (
+                  <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
+                    <div className="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-amber-400 text-sm font-bold">{step}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <StepIcon className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                        <span className="font-semibold text-sm">{title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+            <Eye className="w-5 h-5 text-[#5865F2]" />
+            Dashboard Preview
+          </h2>
+          <p className="text-muted-foreground text-sm mb-4">Once your profile is created, your dashboard will include all of these features:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { icon: BarChart3, title: "Performance Stats", desc: "Track your win rate, completed orders, and earnings over time.", color: "from-blue-500/10 to-blue-500/5 border-blue-500/20", iconColor: "text-blue-400" },
+              { icon: FileCheck, title: "Available Orders", desc: "Browse open orders and submit competitive bids to win work.", color: "from-emerald-500/10 to-emerald-500/5 border-emerald-500/20", iconColor: "text-emerald-400" },
+              { icon: Gavel, title: "Bid Management", desc: "View, edit, and track all your pending and past bids.", color: "from-purple-500/10 to-purple-500/5 border-purple-500/20", iconColor: "text-purple-400" },
+              { icon: Clock, title: "Active Assignments", desc: "Manage your current orders with progress updates and deadlines.", color: "from-orange-500/10 to-orange-500/5 border-orange-500/20", iconColor: "text-orange-400" },
+              { icon: DollarSign, title: "Payout Tracking", desc: "Request payouts for completed work and track payment history.", color: "from-green-500/10 to-green-500/5 border-green-500/20", iconColor: "text-green-400" },
+              { icon: Lightbulb, title: "AI Coaching", desc: "Get personalized tips to improve your performance and win more bids.", color: "from-yellow-500/10 to-yellow-500/5 border-yellow-500/20", iconColor: "text-yellow-400" },
+              { icon: Crown, title: "Elite Path", desc: "Track your progress toward Elite Grinder status with better order limits.", color: "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20", iconColor: "text-cyan-400" },
+              { icon: Bell, title: "Alerts & Notifications", desc: "Receive staff announcements and important updates in real time.", color: "from-pink-500/10 to-pink-500/5 border-pink-500/20", iconColor: "text-pink-400" },
+              { icon: Signal, title: "Availability Status", desc: "Set your availability so staff knows when you're ready for work.", color: "from-indigo-500/10 to-indigo-500/5 border-indigo-500/20", iconColor: "text-indigo-400" },
+            ].map(({ icon: CardIcon, title, desc, color, iconColor }) => (
+              <Card key={title} className={`bg-gradient-to-br ${color} opacity-80`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0`}>
+                      <CardIcon className={`w-5 h-5 ${iconColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm">{title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <Card className="border-[#5865F2]/20 bg-[#5865F2]/5">
+          <CardContent className="p-4 sm:p-6 text-center">
+            <Zap className="w-8 h-8 text-[#5865F2] mx-auto mb-2" />
+            <p className="font-semibold">Ready to get started?</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">Head over to Discord and submit your first bid to unlock your full dashboard.</p>
+            <a href={getBidWarLink()} target="_blank" rel="noopener noreferrer">
+              <Button className="bg-[#5865F2]" data-testid="button-go-to-discord">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open Bid War Channel
+              </Button>
+            </a>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -373,6 +459,9 @@ export default function GrinderProfile() {
             {(unreadAlertCount > 0 || unackedStrikeCount > 0) && (
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
             )}
+          </TabsTrigger>
+          <TabsTrigger value="guide" data-testid="tab-guide" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
+            Guide
           </TabsTrigger>
         </TabsList>
 
@@ -995,6 +1084,66 @@ export default function GrinderProfile() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="guide" className="space-y-4 mt-6">
+          <Card className={`glass-panel ${eliteBorder}`}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Target className={`w-5 h-5 ${eliteAccent}`} />
+                How to Use Your Dashboard
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { step: 1, icon: Eye, title: "Check Available Orders", desc: "Go to the 'Available Orders' tab to see all open orders you can bid on. Each card shows the service type, platform, and when bidding closes." },
+                { step: 2, icon: Gavel, title: "Place Your Bids", desc: "Click 'Place Bid' on any available order. Enter your bid amount, timeline, and when you can start. Lower bids with faster timelines tend to win." },
+                { step: 3, icon: Clock, title: "Watch the Countdown", desc: "Once the first bid is placed, a 10-minute countdown begins. You can edit your bid before time runs out. After the timer expires, bidding closes." },
+                { step: 4, icon: FileCheck, title: "Manage Your Work", desc: "When your bid is accepted, the order appears in 'My Work'. Send progress updates to staff, update deadlines, and mark orders complete when finished." },
+                { step: 5, icon: DollarSign, title: "Request Payouts", desc: "After completing an order, go to 'Payouts' to request payment. Enter the amount and any notes. Staff will review and process your payout." },
+                { step: 6, icon: Signal, title: "Set Your Availability", desc: "Use the availability dropdown at the top of your dashboard to let staff know when you're available, busy, away, or offline." },
+                { step: 7, icon: Bell, title: "Check Alerts & Strikes", desc: "The 'Status' tab shows your alerts from staff and any strikes. Make sure to acknowledge new strikes and read important alerts." },
+                { step: 8, icon: Crown, title: "Aim for Elite Status", desc: "In the Overview tab, you can request Elite status. Elite grinders get a higher order limit (5 vs 3), a special cyan theme, and priority consideration." },
+              ].map(({ step, icon: StepIcon, title, desc }) => (
+                <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5" data-testid={`guide-step-${step}`}>
+                  <div className={`w-7 h-7 rounded-full ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} flex items-center justify-center flex-shrink-0 text-sm font-bold`}>{step}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <StepIcon className={`w-4 h-4 ${eliteAccent} flex-shrink-0`} />
+                      <span className="font-semibold text-sm">{title}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className={`glass-panel ${eliteBorder}`}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Lightbulb className={`w-5 h-5 ${eliteAccent}`} />
+                Tips for Success
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { icon: TrendingUp, tip: "Maintain a high completion rate to build your reputation and win more bids." },
+                  { icon: CalendarClock, tip: "Submit realistic timelines. Missing deadlines can result in strikes." },
+                  { icon: Send, tip: "Send regular progress updates on active orders to keep staff informed." },
+                  { icon: Star, tip: "Quality matters. Consistently great work is the fastest path to Elite status." },
+                  { icon: Zap, tip: "Bid quickly when new orders drop. The 10-minute countdown starts with the first bid." },
+                  { icon: ArrowUpCircle, tip: "Keep your availability status updated so you get considered for direct assignments." },
+                ].map(({ icon: TipIcon, tip }, i) => (
+                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/5" data-testid={`tip-${i}`}>
+                    <TipIcon className={`w-4 h-4 mt-0.5 ${eliteAccent} flex-shrink-0`} />
+                    <p className="text-xs text-muted-foreground">{tip}</p>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -15,7 +15,8 @@ import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
   BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
-  MessageSquare, Banknote, Bell, Send, Trash2, Award,
+  MessageSquare, Banknote, Bell, Send, Trash2, Award, Eye,
+  Gavel, FileCheck, Lightbulb, HelpCircle, Settings, UserCheck,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 
@@ -1382,6 +1383,49 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+      <Card className="glass-panel border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <HelpCircle className="w-5 h-5 text-primary" />
+            How to Use the Command Center
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { step: 1, icon: Eye, title: "Monitor the Pipeline", desc: "The pipeline at the top shows order flow from Open to Delivered. Click any stage to see orders at that step." },
+              { step: 2, icon: Gavel, title: "Review Bids & Assign", desc: "Check the Pending Bids section to review grinder proposals. Accept or deny bids to move orders forward." },
+              { step: 3, icon: UserCheck, title: "Override Assign", desc: "Use Staff Override to manually assign any grinder to an order, bypassing the bidding process when needed." },
+              { step: 4, icon: Settings, title: "Manage Order Limits", desc: "Adjust individual grinder order limits in the Order Limits card. Default is 3 for regular grinders, 5 for elite." },
+              { step: 5, icon: Bell, title: "Send Alerts", desc: "Use Staff Alerts to broadcast messages to all grinders or target individual grinders with different severity levels." },
+              { step: 6, icon: Shield, title: "Manage Strikes", desc: "Add or remove strikes from grinders with documented reasons. Grinders must acknowledge strikes on their dashboard." },
+              { step: 7, icon: Crown, title: "Review Elite Requests", desc: "When grinders apply for Elite status, review their performance metrics and approve or deny from the Elite section." },
+              { step: 8, icon: FileCheck, title: "Process Updates & Payouts", desc: "Review grinder progress updates and payout requests. Approve payouts once work is verified complete." },
+              { step: 9, icon: BarChart3, title: "Track Analytics", desc: "Use revenue, margin, and performance cards to monitor business health. The system auto-calculates profit margins." },
+              { step: 10, icon: Activity, title: "Audit Trail", desc: "Every action is logged in the Audit Trail. Review who did what and when for full accountability." },
+            ].map(({ step, icon: StepIcon, title, desc }) => (
+              <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5" data-testid={`staff-guide-step-${step}`}>
+                <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 text-sm font-bold">{step}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <StepIcon className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="font-semibold text-sm">{title}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+            <div className="flex items-start gap-2">
+              <Lightbulb className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                <span className="text-blue-400 font-medium">Pro tip:</span> The dashboard auto-refreshes every 10 seconds. New orders from the MGT Bot in Discord are automatically imported. Keep this dashboard open alongside Discord for the best workflow.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
     </TooltipProvider>
   );
