@@ -64,6 +64,8 @@ export const grinders = pgTable("grinders", {
   cancelRate: numeric("cancel_rate"),
   reassignmentCount: integer("reassignment_count").notNull().default(0),
   avgTurnaroundDays: numeric("avg_turnaround_days"),
+  rulesAccepted: boolean("rules_accepted").notNull().default(false),
+  rulesAcceptedAt: timestamp("rules_accepted_at"),
   strikes: integer("strikes").notNull().default(0),
   suspended: boolean("suspended").notNull().default(false),
   outstandingFine: numeric("outstanding_fine").notNull().default("0"),
