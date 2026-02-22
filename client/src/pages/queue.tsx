@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield } from "lucide-react";
+import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, DollarSign } from "lucide-react";
 import type { Order, SuggestionResult } from "@shared/schema";
 
 function ScoreBar({ label, value, color }: { label: string; value: number; color: string }) {
@@ -29,6 +29,7 @@ export default function Queue() {
   });
 
   const openOrders = (orders || []).filter(o => o.status === "Open");
+  const selectedOrder = openOrders.find(o => o.id === selectedOrderId);
 
   const categoryIcon = (cat: string) => {
     if (cat === "Elite Grinder") return <Crown className="w-4 h-4 text-yellow-500" />;
@@ -99,6 +100,16 @@ export default function Queue() {
                         </div>
                         <Badge variant="outline" className="text-xs">{s.category}</Badge>
                         {s.bidAmount && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Bid: ${s.bidAmount}</Badge>}
+                        {s.bidAmount && selectedOrder && (() => {
+                          const profit = parseFloat(selectedOrder.customerPrice as string) - parseFloat(s.bidAmount!);
+                          const margin = parseFloat(selectedOrder.customerPrice as string) > 0 ? (profit / parseFloat(selectedOrder.customerPrice as string)) * 100 : 0;
+                          return (
+                            <Badge className={`${profit >= 0 ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"}`} data-testid={`badge-profit-${s.grinderId}`}>
+                              <DollarSign className="w-3 h-3 mr-0.5" />
+                              Profit: ${profit.toFixed(2)} ({margin.toFixed(0)}%)
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-primary">{(s.scores.finalScore * 100).toFixed(0)}</p>
