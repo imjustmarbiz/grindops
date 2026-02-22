@@ -43,6 +43,11 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Creates audit log with staff_override_assign action
   - Shows existing bids on selected order, auto-fills bid amount when selecting a grinder with existing bid
   - Live margin calculation preview before assigning
+- 2026-02-22: Updated order limits and terminology
+  - Grinder role default order limit: 3 (was 5)
+  - Elite Grinder role default order limit: 5 (was 3)
+  - Renamed "capacity" → "order limit" across all dashboards and Discord bot
+  - Staff can override individual grinder order limits from dashboard
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui, dark mode professional theme

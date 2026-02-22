@@ -182,6 +182,24 @@ export default function Dashboard() {
   const [assignGrinderId, setAssignGrinderId] = useState("");
   const [assignBidAmount, setAssignBidAmount] = useState("");
   const [assignNotes, setAssignNotes] = useState("");
+  const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
+  const [editLimitValue, setEditLimitValue] = useState("");
+
+  const updateLimitMutation = useMutation({
+    mutationFn: async ({ grinderId, capacity }: { grinderId: string; capacity: number }) => {
+      const res = await apiRequest("PATCH", `/api/grinders/${grinderId}`, { capacity });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      setEditLimitGrinderId("");
+      setEditLimitValue("");
+      toast({ title: "Order limit updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update order limit", variant: "destructive" });
+    },
+  });
 
   const latestUpdate = Math.max(dataUpdatedAt || 0, grindersUpdatedAt || 0, logsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
@@ -568,7 +586,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-around mb-4">
-              <AnimatedRing percent={fleetUtilization} color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"} label="Capacity Used" value={`${fleetUtilization.toFixed(0)}%`} size={90} />
+              <AnimatedRing percent={fleetUtilization} color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"} label="Limit Used" value={`${fleetUtilization.toFixed(0)}%`} size={90} />
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -577,7 +595,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-red-400" />
-                  <span className="text-xs text-muted-foreground">At Capacity</span>
+                  <span className="text-xs text-muted-foreground">At Limit</span>
                   <span className="text-sm font-bold ml-auto">{atCapacity}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -599,7 +617,7 @@ export default function Dashboard() {
                       <span className="text-[10px] font-mono w-6 text-right">{g.activeOrders}/{g.capacity}</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>{g.name}: {g.activeOrders}/{g.capacity} slots used ({g.category})</TooltipContent>
+                  <TooltipContent>{g.name}: {g.activeOrders}/{g.capacity} orders ({g.category})</TooltipContent>
                 </Tooltip>
               ))}
             </div>
@@ -827,7 +845,7 @@ export default function Dashboard() {
               {atCapacity > 0 && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
                   <Gauge className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm text-amber-400">{atCapacity} grinder{atCapacity > 1 ? "s" : ""} at maximum capacity</span>
+                  <span className="text-sm text-amber-400">{atCapacity} grinder{atCapacity > 1 ? "s" : ""} at order limit</span>
                 </div>
               )}
 
@@ -1129,6 +1147,63 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-purple-500/20" data-testid="card-order-limits">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="w-5 h-5 text-purple-400" />
+            Grinder Order Limits
+            <Badge className="bg-purple-500/20 text-purple-400 ml-auto">{allGrinders.length} grinders</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {allGrinders.map(g => (
+              <div key={g.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10" data-testid={`row-limit-${g.id}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">{g.name}</span>
+                    <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{g.activeOrders} active / {g.capacity} limit</span>
+                </div>
+                {editLimitGrinderId === g.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="20"
+                      className="w-16 h-7 text-xs"
+                      value={editLimitValue}
+                      onChange={(e) => setEditLimitValue(e.target.value)}
+                      data-testid={`input-limit-${g.id}`}
+                    />
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                      data-testid={`button-save-limit-${g.id}`}
+                      disabled={!editLimitValue || updateLimitMutation.isPending}
+                      onClick={() => updateLimitMutation.mutate({ grinderId: g.id, capacity: parseInt(editLimitValue) })}>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                      onClick={() => { setEditLimitGrinderId(""); setEditLimitValue(""); }}>
+                      <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${g.activeOrders >= g.capacity ? "text-red-400" : "text-emerald-400"}`}>{g.capacity}</span>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground"
+                      data-testid={`button-edit-limit-${g.id}`}
+                      onClick={() => { setEditLimitGrinderId(g.id); setEditLimitValue(String(g.capacity)); }}>
+                      Edit
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Alert Composer */}
       <Card className="border-blue-500/20" data-testid="card-alert-composer">

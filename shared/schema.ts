@@ -14,11 +14,11 @@ export const GRINDER_ROLES = {
 } as const;
 
 export const ROLE_CAPACITY: Record<string, number> = {
-  [GRINDER_ROLES.GRINDER]: 5,
-  [GRINDER_ROLES.ELITE]: 3,
-  [GRINDER_ROLES.VC_1]: 5,
-  [GRINDER_ROLES.VC_2]: 5,
-  [GRINDER_ROLES.EVENT]: 5,
+  [GRINDER_ROLES.GRINDER]: 3,
+  [GRINDER_ROLES.ELITE]: 5,
+  [GRINDER_ROLES.VC_1]: 3,
+  [GRINDER_ROLES.VC_2]: 3,
+  [GRINDER_ROLES.EVENT]: 3,
 };
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -46,7 +46,7 @@ export const grinders = pgTable("grinders", {
   discordRoleId: varchar("discord_role_id"),
   category: text("category").notNull().default("Grinder"),
   tier: text("tier").notNull().default("New"),
-  capacity: integer("capacity").notNull().default(5),
+  capacity: integer("capacity").notNull().default(3),
   activeOrders: integer("active_orders").notNull().default(0),
   completedOrders: integer("completed_orders").notNull().default(0),
   ordersAssignedL7D: integer("orders_assigned_l7d").notNull().default(0),

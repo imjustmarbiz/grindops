@@ -173,7 +173,7 @@ async function handleGrinders(interaction: ChatInputCommandInteraction) {
 
     embed.addFields({
       name: `${statusLabel} ${g.name}${discordName}`,
-      value: `Tier: ${g.tier} | Orders: ${g.totalOrders} | Win Rate: ${winRateStr}\nCapacity: ${g.activeOrders}/${g.capacity} | Strikes: ${g.strikes}`,
+      value: `Tier: ${g.tier} | Orders: ${g.totalOrders} | Win Rate: ${winRateStr}\nOrder Limit: ${g.activeOrders}/${g.capacity} | Strikes: ${g.strikes}`,
       inline: true,
     });
   }
@@ -410,7 +410,7 @@ async function handleAssign(interaction: ChatInputCommandInteraction) {
     }
 
     if (Number(grinder.activeOrders) >= grinder.capacity) {
-      await interaction.reply({ content: `Grinder "${grinder.name}" is at full capacity (${grinder.activeOrders}/${grinder.capacity}).`, ephemeral: true });
+      await interaction.reply({ content: `Grinder "${grinder.name}" is at their order limit (${grinder.activeOrders}/${grinder.capacity}).`, ephemeral: true });
       return;
     }
 

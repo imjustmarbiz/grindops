@@ -210,7 +210,7 @@ export default function GrinderProfile() {
               </Badge>
               <Badge variant={grinder.activeOrders < grinder.capacity ? "default" : "secondary"}
                 className={grinder.activeOrders < grinder.capacity ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"} data-testid="text-grinder-status">
-                {grinder.activeOrders < grinder.capacity ? "Available" : "At Capacity"}
+                {grinder.activeOrders < grinder.capacity ? "Available" : "At Order Limit"}
               </Badge>
               {grinder.strikes > 0 && (
                 <Badge variant="destructive" className="bg-red-500/20 text-red-400">
@@ -254,7 +254,7 @@ export default function GrinderProfile() {
           { label: "Completed", value: stats.completedAssignments, icon: CheckCircle, color: "green" },
           { label: "Total Bids", value: stats.totalBids, icon: Gavel, color: "purple" },
           { label: "Pending Bids", value: stats.pendingBids, icon: Target, color: "blue" },
-          { label: "Capacity", value: `${grinder.activeOrders}/${grinder.capacity}`, icon: BarChart3, color: "cyan" },
+          { label: "Order Limit", value: `${grinder.activeOrders}/${grinder.capacity}`, icon: BarChart3, color: "cyan" },
         ].map((stat, i) => (
           <Card key={i} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-amber-500/40" : "hover:border-primary/30"} transition-all`}>
             <CardContent className="p-4 flex items-center gap-3">
