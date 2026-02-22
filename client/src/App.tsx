@@ -16,6 +16,7 @@ import Orders from "@/pages/orders";
 import Grinders from "@/pages/grinders";
 import Bids from "@/pages/bids";
 import Assignments from "@/pages/assignments";
+import AuditLogPage from "@/pages/audit-log";
 import { Loader2 } from "lucide-react";
 
 // Protected Route Wrapper
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/grinders" component={() => <ProtectedRoute component={Grinders} />} />
       <Route path="/bids" component={() => <ProtectedRoute component={Bids} />} />
       <Route path="/assignments" component={() => <ProtectedRoute component={Assignments} />} />
+      <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLogPage} />} />
       
       <Route component={NotFound} />
     </Switch>

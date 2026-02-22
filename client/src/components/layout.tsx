@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Menu, Activity } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Menu, Activity, Brain, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Sidebar, 
@@ -19,11 +19,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Priority Queue", url: "/queue", icon: Activity },
+  { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Orders", url: "/orders", icon: ListOrdered },
   { title: "Grinders", url: "/grinders", icon: Users },
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Assignments", url: "/assignments", icon: FileCheck },
+  { title: "Audit Log", url: "/audit-log", icon: ScrollText },
 ];
 
 function AppSidebar() {

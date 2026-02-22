@@ -1,15 +1,17 @@
 import { db } from "./db";
 import { 
-  services, grinders, orders, bids, assignments, queueConfig,
+  services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
   type Bid, type InsertBid,
   type Assignment, type InsertAssignment,
   type QueueConfig, type InsertQueueConfig,
-  type QueueItem, type DashboardStats
+  type AuditLog, type InsertAuditLog,
+  type AnalyticsSummary, type SuggestionResult, type DashboardStats,
+  GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc, and, or, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   getServices(): Promise<Service[]>;
@@ -20,6 +22,7 @@ export interface IStorage {
   getGrinder(id: string): Promise<Grinder | undefined>;
   getGrinderByDiscordId(discordUserId: string): Promise<Grinder | undefined>;
   createGrinder(grinder: InsertGrinder): Promise<Grinder>;
+  updateGrinder(id: string, data: Partial<InsertGrinder>): Promise<Grinder | undefined>;
   upsertGrinderByDiscordId(discordUserId: string, data: Partial<InsertGrinder>): Promise<Grinder>;
 
   getOrders(): Promise<Order[]>;
@@ -28,6 +31,7 @@ export interface IStorage {
   createOrder(order: InsertOrder): Promise<Order>;
   upsertOrderByMgtNumber(mgtOrderNumber: number, data: Partial<InsertOrder>): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  updateOrder(id: string, data: Partial<InsertOrder>): Promise<Order | undefined>;
 
   getBids(): Promise<Bid[]>;
   getBidByProposalId(mgtProposalId: number): Promise<Bid | undefined>;
@@ -37,9 +41,18 @@ export interface IStorage {
 
   getAssignments(): Promise<Assignment[]>;
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
+  updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment | undefined>;
+
+  getQueueConfig(): Promise<QueueConfig | undefined>;
+  upsertQueueConfig(config: InsertQueueConfig): Promise<QueueConfig>;
+
+  getAuditLogs(limit?: number, entityType?: string): Promise<AuditLog[]>;
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
 
   getDashboardStats(): Promise<DashboardStats>;
-  getTopQueueItems(): Promise<QueueItem[]>;
+  getAnalyticsSummary(): Promise<AnalyticsSummary>;
+  getSuggestionsForOrder(orderId: string): Promise<SuggestionResult[]>;
+  getEmergencyQueue(): Promise<SuggestionResult[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -76,6 +89,11 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async updateGrinder(id: string, data: Partial<InsertGrinder>): Promise<Grinder | undefined> {
+    const [updated] = await db.update(grinders).set(data).where(eq(grinders.id, id)).returning();
+    return updated;
+  }
+
   async upsertGrinderByDiscordId(discordUserId: string, data: Partial<InsertGrinder>): Promise<Grinder> {
     const existing = await this.getGrinderByDiscordId(discordUserId);
     if (existing) {
@@ -83,6 +101,9 @@ export class DatabaseStorage implements IStorage {
       if (data.name) updateData.name = data.name;
       if (data.discordUsername) updateData.discordUsername = data.discordUsername;
       if (data.tier) updateData.tier = data.tier;
+      if (data.discordRoleId) updateData.discordRoleId = data.discordRoleId;
+      if (data.category) updateData.category = data.category;
+      if (data.capacity !== undefined) updateData.capacity = data.capacity;
       if (data.totalOrders !== undefined) updateData.totalOrders = data.totalOrders;
       if (data.totalReviews !== undefined) updateData.totalReviews = data.totalReviews;
       if (data.winRate !== undefined) updateData.winRate = data.winRate;
@@ -100,17 +121,19 @@ export class DatabaseStorage implements IStorage {
       name: data.name || "Unknown",
       discordUserId,
       discordUsername: data.discordUsername,
+      discordRoleId: data.discordRoleId,
+      category: data.category || "Grinder",
       tier: data.tier || "New",
+      capacity: data.capacity ?? 5,
       totalOrders: data.totalOrders ?? 0,
       totalReviews: data.totalReviews ?? 0,
       winRate: data.winRate,
-      ...data,
     }).returning();
     return created;
   }
 
   async getOrders(): Promise<Order[]> {
-    return await db.select().from(orders);
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
@@ -138,6 +161,8 @@ export class DatabaseStorage implements IStorage {
       if (data.status) updateData.status = data.status;
       if (data.notes) updateData.notes = data.notes;
       if (data.discordMessageId) updateData.discordMessageId = data.discordMessageId;
+      if (data.serviceId) updateData.serviceId = data.serviceId;
+      if (data.isEmergency !== undefined) updateData.isEmergency = data.isEmergency;
 
       if (Object.keys(updateData).length > 0) {
         const [updated] = await db.update(orders).set(updateData).where(eq(orders.id, existing.id)).returning();
@@ -160,15 +185,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
-    const [updated] = await db.update(orders)
-      .set({ status })
-      .where(eq(orders.id, id))
-      .returning();
+    const [updated] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    return updated;
+  }
+
+  async updateOrder(id: string, data: Partial<InsertOrder>): Promise<Order | undefined> {
+    const [updated] = await db.update(orders).set(data).where(eq(orders.id, id)).returning();
     return updated;
   }
 
   async getBids(): Promise<Bid[]> {
-    return await db.select().from(bids);
+    return await db.select().from(bids).orderBy(desc(bids.bidTime));
   }
 
   async getBidByProposalId(mgtProposalId: number): Promise<Bid | undefined> {
@@ -223,11 +250,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssignments(): Promise<Assignment[]> {
-    return await db.select().from(assignments);
+    return await db.select().from(assignments).orderBy(desc(assignments.assignedDateTime));
   }
 
   async createAssignment(assignment: InsertAssignment): Promise<Assignment> {
     const [created] = await db.insert(assignments).values(assignment).returning();
+    return created;
+  }
+
+  async updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment | undefined> {
+    const [updated] = await db.update(assignments).set(data).where(eq(assignments.id, id)).returning();
+    return updated;
+  }
+
+  async getQueueConfig(): Promise<QueueConfig | undefined> {
+    const results = await db.select().from(queueConfig);
+    if (results.length === 0) {
+      const [created] = await db.insert(queueConfig).values({
+        id: "default",
+        marginWeight: "0.20",
+        capacityWeight: "0.15",
+        tierWeight: "0.10",
+        fairnessWeight: "0.15",
+        newGrinderWeight: "0.10",
+        reliabilityWeight: "0.10",
+        qualityWeight: "0.10",
+        riskWeight: "0.10",
+        emergencyBoost: "0.25",
+        largeOrderThreshold: "500",
+        largeOrderEliteBoost: "0.15",
+      }).returning();
+      return created;
+    }
+    return results[0];
+  }
+
+  async upsertQueueConfig(config: InsertQueueConfig): Promise<QueueConfig> {
+    const existing = await this.getQueueConfig();
+    if (existing) {
+      const [updated] = await db.update(queueConfig).set(config).where(eq(queueConfig.id, existing.id)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(queueConfig).values({ id: "default", ...config }).returning();
+    return created;
+  }
+
+  async getAuditLogs(limit = 100, entityType?: string): Promise<AuditLog[]> {
+    if (entityType) {
+      return await db.select().from(auditLogs)
+        .where(eq(auditLogs.entityType, entityType))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(limit);
+    }
+    return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit);
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db.insert(auditLogs).values(log).returning();
     return created;
   }
 
@@ -245,7 +324,182 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getTopQueueItems(): Promise<QueueItem[]> {
+  async getAnalyticsSummary(): Promise<AnalyticsSummary> {
+    const allOrders = await db.select().from(orders);
+    const allAssignments = await db.select().from(assignments);
+    const allGrinders = await db.select().from(grinders);
+    const allBids = await db.select().from(bids);
+
+    const completedAssignments = allAssignments.filter(a => a.status === "Completed");
+    const activeAssignments = allAssignments.filter(a => a.status === "Active");
+
+    let totalRevenue = 0;
+    let totalGrinderPayouts = 0;
+    let totalCompanyProfit = 0;
+
+    for (const a of completedAssignments) {
+      const orderPrice = Number(a.orderPrice) || 0;
+      const grinderEarnings = Number(a.grinderEarnings) || Number(a.bidAmount) || 0;
+      totalRevenue += orderPrice;
+      totalGrinderPayouts += grinderEarnings;
+      totalCompanyProfit += Number(a.companyProfit) || (orderPrice - grinderEarnings);
+    }
+
+    for (const a of activeAssignments) {
+      const orderPrice = Number(a.orderPrice) || 0;
+      const grinderEarnings = Number(a.grinderEarnings) || Number(a.bidAmount) || 0;
+      totalRevenue += orderPrice;
+      totalGrinderPayouts += grinderEarnings;
+      totalCompanyProfit += Number(a.companyProfit) || (orderPrice - grinderEarnings);
+    }
+
+    const avgMargin = totalRevenue > 0 ? (totalCompanyProfit / totalRevenue) * 100 : 0;
+
+    return {
+      totalRevenue,
+      totalGrinderPayouts,
+      totalCompanyProfit,
+      avgMargin,
+      totalOrders: allOrders.length,
+      completedOrders: allOrders.filter(o => o.status === "Completed").length,
+      activeOrders: allOrders.filter(o => o.status === "Assigned" || o.status === "In Progress").length,
+      openOrders: allOrders.filter(o => o.status === "Open").length,
+      totalGrinders: allGrinders.length,
+      availableGrinders: allGrinders.filter(g => g.activeOrders < g.capacity).length,
+      pendingBids: allBids.filter(b => b.status === "Pending").length,
+      acceptedBids: allBids.filter(b => b.status === "Accepted").length,
+      activeAssignments: activeAssignments.length,
+      completedAssignments: completedAssignments.length,
+    };
+  }
+
+  async getSuggestionsForOrder(orderId: string): Promise<SuggestionResult[]> {
+    const order = await this.getOrder(orderId);
+    if (!order) return [];
+
+    const config = await this.getQueueConfig();
+    if (!config) return [];
+
+    const allGrinders = await this.getGrinders();
+    const allBids = await this.getBids();
+    const orderBids = allBids.filter(b => b.orderId === orderId && b.status === "Pending");
+
+    const availableGrinders = allGrinders.filter(g => g.activeOrders < g.capacity && g.strikes < 3);
+    
+    const orderPrice = Number(order.customerPrice) || 0;
+    const isEmergency = order.isEmergency;
+    const isLargeOrder = orderPrice >= Number(config.largeOrderThreshold);
+
+    const results: SuggestionResult[] = [];
+
+    for (const g of availableGrinders) {
+      const grinderBid = orderBids.find(b => b.grinderId === g.id);
+      const bidAmount = grinderBid ? Number(grinderBid.bidAmount) : 0;
+
+      const marginScore = bidAmount > 0 && orderPrice > 0 
+        ? Math.min(1, (orderPrice - bidAmount) / orderPrice) 
+        : 0;
+
+      const capacityScore = 1 - (g.activeOrders / g.capacity);
+
+      let tierScore = 0;
+      if (g.category === "Elite Grinder" || g.tier === "Elite") tierScore = 1;
+      else if (g.category === "VC Grinder") tierScore = 0.6;
+      else if (g.category === "Event Grinder") tierScore = 0.5;
+      else tierScore = 0.3;
+
+      const now = Date.now();
+      const lastAssigned = g.lastAssigned ? new Date(g.lastAssigned).getTime() : 0;
+      const daysSinceAssigned = lastAssigned > 0 ? (now - lastAssigned) / (1000 * 60 * 60 * 24) : 30;
+      const fairnessScore = Math.min(1, daysSinceAssigned / 14);
+
+      const newGrinderScore = g.completedOrders === 0 ? 1 : 0;
+
+      const onTimeRate = Number(g.onTimeRate) || 0;
+      const completionRate = Number(g.completionRate) || 1;
+      const reassignPenalty = g.reassignmentCount > 0 ? Math.max(0, 1 - (g.reassignmentCount * 0.2)) : 1;
+      const reliabilityScore = (onTimeRate * 0.4 + completionRate * 0.4 + reassignPenalty * 0.2);
+
+      const qualityScore = Number(g.avgQualityRating) ? Number(g.avgQualityRating) / 5 : 0.5;
+
+      const strikePenalty = g.strikes / 3;
+      const cancelPenalty = Number(g.cancelRate) || 0;
+      const riskScore = Math.max(0, 1 - strikePenalty - cancelPenalty * 0.5);
+
+      const w = {
+        margin: Number(config.marginWeight),
+        capacity: Number(config.capacityWeight),
+        tier: Number(config.tierWeight),
+        fairness: Number(config.fairnessWeight),
+        newGrinder: Number(config.newGrinderWeight),
+        reliability: Number(config.reliabilityWeight),
+        quality: Number(config.qualityWeight),
+        risk: Number(config.riskWeight),
+      };
+
+      const totalWeighted = 
+        marginScore * w.margin +
+        capacityScore * w.capacity +
+        tierScore * w.tier +
+        fairnessScore * w.fairness +
+        newGrinderScore * w.newGrinder +
+        reliabilityScore * w.reliability +
+        qualityScore * w.quality +
+        riskScore * w.risk;
+
+      let finalScore = totalWeighted;
+      if (isEmergency) finalScore *= (1 + Number(config.emergencyBoost));
+      if (isLargeOrder && (g.category === "Elite Grinder" || g.tier === "Elite")) {
+        finalScore *= (1 + Number(config.largeOrderEliteBoost));
+      }
+
+      results.push({
+        grinderId: g.id,
+        grinderName: g.name,
+        category: g.category,
+        tier: g.tier,
+        scores: {
+          margin: Math.round(marginScore * 100) / 100,
+          capacity: Math.round(capacityScore * 100) / 100,
+          tier: Math.round(tierScore * 100) / 100,
+          fairness: Math.round(fairnessScore * 100) / 100,
+          newGrinder: Math.round(newGrinderScore * 100) / 100,
+          reliability: Math.round(reliabilityScore * 100) / 100,
+          quality: Math.round(qualityScore * 100) / 100,
+          risk: Math.round(riskScore * 100) / 100,
+          total: Math.round(totalWeighted * 100) / 100,
+          finalScore: Math.round(finalScore * 100) / 100,
+        },
+        bidId: grinderBid?.id,
+        bidAmount: grinderBid?.bidAmount,
+        activeOrders: g.activeOrders,
+        capacity: g.capacity,
+        strikes: g.strikes,
+      });
+    }
+
+    results.sort((a, b) => b.scores.finalScore - a.scores.finalScore);
+    return results;
+  }
+
+  async getEmergencyQueue(): Promise<SuggestionResult[]> {
+    const openOrders = (await this.getOrders()).filter(o => o.status === "Open");
+    if (openOrders.length === 0) return [];
+
+    const allSuggestions: SuggestionResult[] = [];
+    
+    for (const order of openOrders) {
+      const suggestions = await this.getSuggestionsForOrder(order.id);
+      if (suggestions.length > 0) {
+        allSuggestions.push(suggestions[0]);
+      }
+    }
+
+    allSuggestions.sort((a, b) => b.scores.finalScore - a.scores.finalScore);
+    return allSuggestions.slice(0, 20);
+  }
+
+  async getTopQueueItems() {
     const result = await db.execute(sql`
       SELECT 
         b.id,

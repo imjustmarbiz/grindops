@@ -1,5 +1,6 @@
-import { type Message, type PartialMessage } from "discord.js";
+import { type Message, type PartialMessage, type GuildMember } from "discord.js";
 import { storage } from "../storage";
+import { GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS } from "@shared/schema";
 
 const MGT_BOT_USER_ID = "1466336342521937930";
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
@@ -9,6 +10,26 @@ function extractNumber(text: string): number | null {
   const match = text.match(/\$?([\d,]+\.?\d*)/);
   if (!match) return null;
   return parseFloat(match[1].replace(/,/g, ""));
+}
+
+function detectGrinderRole(member: GuildMember | null): { roleId: string; category: string; capacity: number } {
+  if (!member) return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5 };
+  
+  const roleIds = member.roles.cache.map(r => r.id);
+  
+  if (roleIds.includes(GRINDER_ROLES.ELITE)) {
+    return { roleId: GRINDER_ROLES.ELITE, category: "Elite Grinder", capacity: 3 };
+  }
+  if (roleIds.includes(GRINDER_ROLES.VC_1) || roleIds.includes(GRINDER_ROLES.VC_2)) {
+    return { roleId: GRINDER_ROLES.VC_1, category: "VC Grinder", capacity: 5 };
+  }
+  if (roleIds.includes(GRINDER_ROLES.EVENT)) {
+    return { roleId: GRINDER_ROLES.EVENT, category: "Event Grinder", capacity: 5 };
+  }
+  if (roleIds.includes(GRINDER_ROLES.GRINDER)) {
+    return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5 };
+  }
+  return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5 };
 }
 
 async function findOrCreateService(serviceName: string): Promise<string> {
@@ -74,28 +95,17 @@ export async function handleNewOrderMessage(message: Message) {
         const numMatch = value.match(/#?(\d+)/);
         if (numMatch) orderNumber = parseInt(numMatch[1], 10);
       }
-      if (name.includes("service")) {
-        serviceName = value;
-      }
-      if (name.includes("platform")) {
-        platform = value;
-      }
-      if (name.includes("gamertag")) {
-        gamertag = value;
-      }
-      if (name.includes("order notes") || name.includes("notes")) {
-        orderNotes = value;
-      }
-      if (name.includes("customer price") || name.includes("price")) {
-        customerPrice = extractNumber(value);
-      }
+      if (name.includes("service")) serviceName = value;
+      if (name.includes("platform")) platform = value;
+      if (name.includes("gamertag")) gamertag = value;
+      if (name.includes("order notes") || name.includes("notes")) orderNotes = value;
+      if (name.includes("customer price") || name.includes("price")) customerPrice = extractNumber(value);
     }
 
     if (!orderNumber) {
       const titleMatch = title.match(/#(\d+)/) || description.match(/#(\d+)/);
       if (titleMatch) orderNumber = parseInt(titleMatch[1], 10);
     }
-
     if (!orderNumber) {
       const orderMatch = (title + " " + description).match(/Order\s*#?(\d+)/i);
       if (orderMatch) orderNumber = parseInt(orderMatch[1], 10);
@@ -107,7 +117,6 @@ export async function handleNewOrderMessage(message: Message) {
     }
 
     const serviceId = serviceName ? await findOrCreateService(serviceName) : "S1";
-
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 3);
 
@@ -120,6 +129,15 @@ export async function handleNewOrderMessage(message: Message) {
       orderDueDate: dueDate,
       discordMessageId: message.id,
       status: "Open",
+    });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "order",
+      entityId: order.id,
+      action: "imported_from_mgt",
+      actor: "mgt-bot",
+      details: JSON.stringify({ orderNumber, customerPrice, serviceName, platform }),
     });
 
     console.log(`[mgt-watcher] Tracked order #${orderNumber} -> ${order.id} (service: ${serviceId})`);
@@ -240,10 +258,24 @@ export async function handleProposalMessage(message: Message) {
 
     let grinderId: string | null = null;
     if (grinderDiscordId) {
+      let roleInfo = { roleId: GRINDER_ROLES.GRINDER as string, category: "Grinder", capacity: 5 };
+      try {
+        const guild = message.guild;
+        if (guild) {
+          const member = await guild.members.fetch(grinderDiscordId).catch(() => null);
+          if (member) {
+            roleInfo = detectGrinderRole(member);
+          }
+        }
+      } catch (e) {}
+
       const grinder = await storage.upsertGrinderByDiscordId(grinderDiscordId, {
         name: grinderName || "Unknown",
         discordUsername: grinderName || undefined,
         tier: grinderTier,
+        discordRoleId: roleInfo.roleId,
+        category: roleInfo.category,
+        capacity: roleInfo.capacity,
         totalOrders,
         totalReviews,
         winRate: winRate || undefined,
@@ -323,20 +355,63 @@ export async function handleProposalMessage(message: Message) {
       acceptedBy,
     });
 
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      entityType: "bid",
+      entityId: bid.id,
+      action: `proposal_${status.toLowerCase()}`,
+      actor: "mgt-bot",
+      details: JSON.stringify({ proposalId, orderNumber, grinderId, bidAmount, status }),
+    });
+
     console.log(`[mgt-watcher] Tracked proposal #${proposalId} for order #${orderNumber} -> ${bid.id} (${status})`);
 
     if (status === "Accepted" && order.status === "Open") {
       await storage.updateOrderStatus(order.id, "Assigned");
       const assignmentId = `A${Date.now().toString(36).toUpperCase()}`;
+      const orderPrice = Number(order.customerPrice) || 0;
+      const grinderEarnings = bidAmount || 0;
+      const companyProfit = orderPrice - grinderEarnings;
+
       await storage.createAssignment({
         id: assignmentId,
         grinderId,
         orderId: order.id,
         dueDateTime: order.orderDueDate,
         status: "Active",
-        margin: margin ? margin.toFixed(2) : undefined,
-        marginPct: marginPct ? marginPct.toFixed(2) : undefined,
+        bidAmount: bidAmount ? bidAmount.toFixed(2) : undefined,
+        orderPrice: orderPrice.toFixed(2),
+        margin: margin ? margin.toFixed(2) : companyProfit.toFixed(2),
+        marginPct: marginPct ? marginPct.toFixed(2) : (orderPrice > 0 ? ((companyProfit / orderPrice) * 100).toFixed(2) : "0"),
+        companyProfit: companyProfit.toFixed(2),
+        grinderEarnings: grinderEarnings.toFixed(2),
       });
+
+      await storage.updateOrder(order.id, {
+        assignedGrinderId: grinderId,
+        acceptedBidId: bid.id,
+        companyProfit: companyProfit.toFixed(2),
+      });
+
+      const grinder = await storage.getGrinder(grinderId);
+      if (grinder) {
+        const newEarnings = Number(grinder.totalEarnings) + grinderEarnings;
+        await storage.updateGrinder(grinderId, {
+          activeOrders: grinder.activeOrders + 1,
+          totalEarnings: newEarnings.toFixed(2),
+          lastAssigned: new Date(),
+        });
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-asgn`,
+        entityType: "assignment",
+        entityId: assignmentId,
+        action: "auto_created",
+        actor: "mgt-bot",
+        details: JSON.stringify({ grinderId, orderId: order.id, grinderEarnings, companyProfit }),
+      });
+
       console.log(`[mgt-watcher] Auto-created assignment ${assignmentId} for accepted proposal`);
     }
   } catch (error) {
@@ -392,6 +467,16 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
 
     if (newStatus !== existingBid.status) {
       await storage.updateBidStatus(existingBid.id, newStatus, acceptedBy);
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-upd`,
+        entityType: "bid",
+        entityId: existingBid.id,
+        action: `status_changed_to_${newStatus.toLowerCase()}`,
+        actor: "mgt-bot",
+        details: JSON.stringify({ proposalId, oldStatus: existingBid.status, newStatus }),
+      });
+
       console.log(`[mgt-watcher] Updated proposal #${proposalId} status: ${existingBid.status} -> ${newStatus}`);
 
       if (newStatus === "Accepted") {
@@ -399,15 +484,49 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
         if (order && order.status === "Open") {
           await storage.updateOrderStatus(order.id, "Assigned");
           const assignmentId = `A${Date.now().toString(36).toUpperCase()}`;
+          const orderPrice = Number(order.customerPrice) || 0;
+          const grinderEarnings = Number(existingBid.bidAmount) || 0;
+          const companyProfit = orderPrice - grinderEarnings;
+
           await storage.createAssignment({
             id: assignmentId,
             grinderId: existingBid.grinderId,
             orderId: existingBid.orderId,
             dueDateTime: order.orderDueDate,
             status: "Active",
-            margin: existingBid.margin || undefined,
-            marginPct: existingBid.marginPct || undefined,
+            bidAmount: existingBid.bidAmount,
+            orderPrice: orderPrice.toFixed(2),
+            margin: existingBid.margin || companyProfit.toFixed(2),
+            marginPct: existingBid.marginPct || (orderPrice > 0 ? ((companyProfit / orderPrice) * 100).toFixed(2) : "0"),
+            companyProfit: companyProfit.toFixed(2),
+            grinderEarnings: grinderEarnings.toFixed(2),
           });
+
+          await storage.updateOrder(order.id, {
+            assignedGrinderId: existingBid.grinderId,
+            acceptedBidId: existingBid.id,
+            companyProfit: companyProfit.toFixed(2),
+          });
+
+          const grinder = await storage.getGrinder(existingBid.grinderId);
+          if (grinder) {
+            const newEarnings = Number(grinder.totalEarnings) + grinderEarnings;
+            await storage.updateGrinder(existingBid.grinderId, {
+              activeOrders: grinder.activeOrders + 1,
+              totalEarnings: newEarnings.toFixed(2),
+              lastAssigned: new Date(),
+            });
+          }
+
+          await storage.createAuditLog({
+            id: `AL-${Date.now().toString(36)}-asgn2`,
+            entityType: "assignment",
+            entityId: assignmentId,
+            action: "auto_created_from_update",
+            actor: "mgt-bot",
+            details: JSON.stringify({ grinderId: existingBid.grinderId, orderId: order.id, companyProfit, grinderEarnings }),
+          });
+
           console.log(`[mgt-watcher] Auto-created assignment ${assignmentId} for accepted bid`);
         }
       }

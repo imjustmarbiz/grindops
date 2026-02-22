@@ -1,11 +1,33 @@
-import { pgTable, text, varchar, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 export * from "./models/auth";
 
-// === TABLE DEFINITIONS ===
+export const GRINDER_ROLES = {
+  GRINDER: "1466369179648004224",
+  ELITE: "1466370965016412316",
+  VC_1: "1468501279478255708",
+  VC_2: "1468501106916065363",
+  EVENT: "1468796147136073922",
+} as const;
+
+export const ROLE_CAPACITY: Record<string, number> = {
+  [GRINDER_ROLES.GRINDER]: 5,
+  [GRINDER_ROLES.ELITE]: 3,
+  [GRINDER_ROLES.VC_1]: 5,
+  [GRINDER_ROLES.VC_2]: 5,
+  [GRINDER_ROLES.EVENT]: 5,
+};
+
+export const ROLE_LABELS: Record<string, string> = {
+  [GRINDER_ROLES.GRINDER]: "Grinder",
+  [GRINDER_ROLES.ELITE]: "Elite Grinder",
+  [GRINDER_ROLES.VC_1]: "VC Grinder",
+  [GRINDER_ROLES.VC_2]: "VC Grinder",
+  [GRINDER_ROLES.EVENT]: "Event Grinder",
+};
 
 export const services = pgTable("services", {
   id: varchar("id").primaryKey(),
@@ -21,21 +43,27 @@ export const grinders = pgTable("grinders", {
   name: text("name").notNull(),
   discordUserId: varchar("discord_user_id"),
   discordUsername: text("discord_username"),
+  discordRoleId: varchar("discord_role_id"),
+  category: text("category").notNull().default("Grinder"),
   tier: text("tier").notNull().default("New"),
-  capacity: integer("capacity").notNull().default(3),
+  capacity: integer("capacity").notNull().default(5),
   activeOrders: integer("active_orders").notNull().default(0),
+  completedOrders: integer("completed_orders").notNull().default(0),
   ordersAssignedL7D: integer("orders_assigned_l7d").notNull().default(0),
   totalOrders: integer("total_orders").notNull().default(0),
   totalReviews: integer("total_reviews").notNull().default(0),
+  totalEarnings: numeric("total_earnings").notNull().default("0"),
   winRate: numeric("win_rate"),
   lastAssigned: timestamp("last_assigned"),
   utilization: numeric("utilization").notNull().default("0"),
   avgQualityRating: numeric("avg_quality_rating"),
   onTimeRate: numeric("on_time_rate"),
+  completionRate: numeric("completion_rate"),
   cancelRate: numeric("cancel_rate"),
+  reassignmentCount: integer("reassignment_count").notNull().default(0),
   avgTurnaroundDays: numeric("avg_turnaround_days"),
-  notes: text("notes"),
   strikes: integer("strikes").notNull().default(0),
+  notes: text("notes"),
 });
 
 export const orders = pgTable("orders", {
@@ -48,9 +76,13 @@ export const orders = pgTable("orders", {
   gamertag: text("gamertag"),
   orderDueDate: timestamp("order_due_date").notNull(),
   isRush: boolean("is_rush").notNull().default(false),
+  isEmergency: boolean("is_emergency").notNull().default(false),
   complexity: integer("complexity").notNull().default(1),
   location: text("location"),
   status: text("status").notNull().default("Open"),
+  assignedGrinderId: varchar("assigned_grinder_id"),
+  acceptedBidId: varchar("accepted_bid_id"),
+  companyProfit: numeric("company_profit"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -80,27 +112,44 @@ export const assignments = pgTable("assignments", {
   orderId: varchar("order_id").references(() => orders.id).notNull(),
   assignedDateTime: timestamp("assigned_date_time").defaultNow().notNull(),
   status: text("status").notNull().default("Active"),
+  bidAmount: numeric("bid_amount"),
+  orderPrice: numeric("order_price"),
   margin: numeric("margin"),
   marginPct: numeric("margin_pct"),
+  companyProfit: numeric("company_profit"),
+  grinderEarnings: numeric("grinder_earnings"),
   dueDateTime: timestamp("due_date_time").notNull(),
   deliveredDateTime: timestamp("delivered_date_time"),
   isOnTime: boolean("is_on_time"),
   qualityRating: integer("quality_rating"),
+  wasReassigned: boolean("was_reassigned").notNull().default(false),
   notes: text("notes"),
 });
 
 export const queueConfig = pgTable("queue_config", {
   id: varchar("id").primaryKey(),
-  profitWeight: numeric("profit_weight").notNull().default("0.40"),
-  fairnessWeight: numeric("fairness_weight").notNull().default("0.36"),
-  tierWeight: numeric("tier_weight").notNull().default("0.04"),
-  deliveryWeight: numeric("delivery_weight").notNull().default("0.15"),
-  qualityWeight: numeric("quality_weight").notNull().default("0.05"),
-  reliabilityWeight: numeric("reliability_weight").notNull().default("0.00"),
-  riskWeight: numeric("risk_weight").notNull().default("0.00"),
+  marginWeight: numeric("margin_weight").notNull().default("0.20"),
+  capacityWeight: numeric("capacity_weight").notNull().default("0.15"),
+  tierWeight: numeric("tier_weight").notNull().default("0.10"),
+  fairnessWeight: numeric("fairness_weight").notNull().default("0.15"),
+  newGrinderWeight: numeric("new_grinder_weight").notNull().default("0.10"),
+  reliabilityWeight: numeric("reliability_weight").notNull().default("0.10"),
+  qualityWeight: numeric("quality_weight").notNull().default("0.10"),
+  riskWeight: numeric("risk_weight").notNull().default("0.10"),
+  emergencyBoost: numeric("emergency_boost").notNull().default("0.25"),
+  largeOrderThreshold: numeric("large_order_threshold").notNull().default("500"),
+  largeOrderEliteBoost: numeric("large_order_elite_boost").notNull().default("0.15"),
 });
 
-// === RELATIONS ===
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey(),
+  entityType: text("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  action: text("action").notNull(),
+  actor: text("actor").notNull().default("system"),
+  details: text("details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
@@ -133,14 +182,13 @@ export const assignmentsRelations = relations(assignments, ({ one }) => ({
   }),
 }));
 
-// === EXPLICIT API CONTRACT TYPES ===
-
 export const insertServiceSchema = createInsertSchema(services);
 export const insertGrinderSchema = createInsertSchema(grinders);
 export const insertOrderSchema = createInsertSchema(orders).omit({ createdAt: true });
 export const insertBidSchema = createInsertSchema(bids);
 export const insertAssignmentSchema = createInsertSchema(assignments);
 export const insertQueueConfigSchema = createInsertSchema(queueConfig);
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ createdAt: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -154,18 +202,66 @@ export type Assignment = typeof assignments.$inferSelect;
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type QueueConfig = typeof queueConfig.$inferSelect;
 export type InsertQueueConfig = z.infer<typeof insertQueueConfigSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
-export type QueueItem = {
-  id: string;
-  orderId: string;
-  serviceName: string;
-  customerPrice: string;
-  dueDateTime: Date;
+export type GrinderScorecard = {
+  grinder: Grinder;
+  scores: {
+    margin: number;
+    capacity: number;
+    tier: number;
+    fairness: number;
+    newGrinder: number;
+    reliability: number;
+    quality: number;
+    risk: number;
+    total: number;
+    finalScore: number;
+  };
+  earnings: number;
+  companyProfit: number;
+};
+
+export type SuggestionResult = {
+  grinderId: string;
   grinderName: string;
+  category: string;
   tier: string;
-  bidAmount: string;
-  estDeliveryDateTime: Date;
-  finalPriorityScore: number;
+  scores: {
+    margin: number;
+    capacity: number;
+    tier: number;
+    fairness: number;
+    newGrinder: number;
+    reliability: number;
+    quality: number;
+    risk: number;
+    total: number;
+    finalScore: number;
+  };
+  bidId?: string;
+  bidAmount?: string;
+  activeOrders: number;
+  capacity: number;
+  strikes: number;
+};
+
+export type AnalyticsSummary = {
+  totalRevenue: number;
+  totalGrinderPayouts: number;
+  totalCompanyProfit: number;
+  avgMargin: number;
+  totalOrders: number;
+  completedOrders: number;
+  activeOrders: number;
+  openOrders: number;
+  totalGrinders: number;
+  availableGrinders: number;
+  pendingBids: number;
+  acceptedBids: number;
+  activeAssignments: number;
+  completedAssignments: number;
 };
 
 export type DashboardStats = {

@@ -1,59 +1,14 @@
-import { useState } from "react";
-import { useBids, useCreateBid } from "@/hooks/use-bids";
-import { useOrders } from "@/hooks/use-orders";
-import { useGrinders } from "@/hooks/use-grinders";
-import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Gavel, Plus, Clock, Zap } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
-
-const formSchema = z.object({
-  id: z.string().min(1, "ID is required"),
-  orderId: z.string().min(1, "Order is required"),
-  grinderId: z.string().min(1, "Grinder is required"),
-  bidAmount: z.coerce.number().min(1).transform(String),
-  estDeliveryDate: z.string().min(1).transform(str => new Date(str)),
-  status: z.string().default("Pending"),
-});
+import { Gavel, Clock, Zap, DollarSign } from "lucide-react";
+import type { Bid, Order, Grinder } from "@shared/schema";
 
 export default function Bids() {
-  const { data: bids, isLoading } = useBids();
-  const { data: orders } = useOrders();
-  const { data: grinders } = useGrinders();
-  const createMutation = useCreateBid();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { toast } = useToast();
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      id: `B${Math.floor(Math.random() * 10000)}`,
-      status: "Pending",
-    },
-  });
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createMutation.mutate(values, {
-      onSuccess: () => {
-        setIsDialogOpen(false);
-        form.reset();
-        toast({ title: "Bid placed successfully" });
-      },
-      onError: (err) => {
-        toast({ title: "Failed to place bid", description: err.message, variant: "destructive" });
-      }
-    });
-  };
+  const { data: bids, isLoading } = useQuery<Bid[]>({ queryKey: ["/api/bids"] });
+  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
+  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -66,84 +21,30 @@ export default function Bids() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-bids-title">
-            <Gavel className="w-8 h-8 text-primary" /> Proposals & Bids
-          </h1>
-          <p className="text-muted-foreground mt-1">Review grinder proposals imported from MGT Bot.</p>
-        </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 bg-primary hover:bg-primary/90 hover-elevate" data-testid="button-place-bid">
-              <Plus className="w-4 h-4" /> Place Bid
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="glass-panel border-border/50">
-            <DialogHeader>
-              <DialogTitle className="font-display">Place New Bid</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-                <FormField control={form.control} name="id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bid ID</FormLabel>
-                    <FormControl><Input {...field} className="bg-background/50" /></FormControl>
-                  </FormItem>
-                )} />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="orderId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Order</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger className="bg-background/50"><SelectValue placeholder="Select order" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {orders?.filter(o => o.status === 'Open').map(o => <SelectItem key={o.id} value={o.id}>{o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} - ${o.customerPrice}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="grinderId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Grinder</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger className="bg-background/50"><SelectValue placeholder="Select grinder" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {grinders?.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="bidAmount" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bid Amount ($)</FormLabel>
-                      <FormControl><Input type="number" step="0.01" {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="estDeliveryDate" render={({ field: { value, ...field } }) => (
-                    <FormItem>
-                      <FormLabel>Est. Delivery</FormLabel>
-                      <FormControl><Input type="datetime-local" {...field} value={value instanceof Date ? value.toISOString().slice(0, 16) : (value || "")} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-                <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4" data-testid="button-submit-bid">
-                  {createMutation.isPending ? "Submitting..." : "Submit Bid"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-bids-title">
+          <Gavel className="w-8 h-8 text-primary" /> Proposals & Bids
+        </h1>
+        <p className="text-muted-foreground mt-1">Grinder proposals imported from MGT Bot.</p>
       </div>
 
-      <Card className="glass-panel border-border/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Total", value: bids?.length || 0, color: "text-foreground" },
+          { label: "Pending", value: bids?.filter(b => b.status === "Pending").length || 0, color: "text-blue-400" },
+          { label: "Accepted", value: bids?.filter(b => b.status === "Accepted").length || 0, color: "text-green-400" },
+          { label: "Rejected", value: bids?.filter(b => b.status === "Rejected").length || 0, color: "text-red-400" },
+        ].map(s => (
+          <Card key={s.label} className="border-border/50">
+            <div className="p-4 text-center">
+              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-border/50 overflow-hidden">
         <Table>
           <TableHeader className="bg-white/5">
             <TableRow>
@@ -151,9 +52,9 @@ export default function Bids() {
               <TableHead>Order</TableHead>
               <TableHead>Grinder</TableHead>
               <TableHead className="text-right">Bid</TableHead>
-              <TableHead>Timeline</TableHead>
-              <TableHead>Can Start</TableHead>
+              <TableHead className="text-right">Order Price</TableHead>
               <TableHead className="text-right">Margin</TableHead>
+              <TableHead>Timeline</TableHead>
               <TableHead className="text-center">QS</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -161,56 +62,47 @@ export default function Bids() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : bids && bids.length > 0 ? bids.map(bid => {
-              const grinder = grinders?.find(g => g.id === bid.grinderId);
-              const order = orders?.find(o => o.id === bid.orderId);
+            ) : bids && bids.length > 0 ? bids.map((bid: Bid) => {
+              const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
+              const order = (orders || []).find((o: Order) => o.id === bid.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
               return (
                 <TableRow key={bid.id} className="hover:bg-white/[0.02]" data-testid={`row-bid-${bid.id}`}>
-                  <TableCell className="font-mono text-sm" data-testid={`text-proposal-${bid.id}`}>
-                    {bid.mgtProposalId ? `P${bid.mgtProposalId}` : bid.id}
+                  <TableCell className="font-mono text-sm">{bid.mgtProposalId ? `P${bid.mgtProposalId}` : bid.id}</TableCell>
+                  <TableCell className="font-medium text-primary">{orderRef}</TableCell>
+                  <TableCell>
+                    <div>
+                      <span className="font-medium">{grinder?.name || bid.grinderId}</span>
+                      {grinder && <p className="text-xs text-muted-foreground">{grinder.category}</p>}
+                    </div>
                   </TableCell>
-                  <TableCell className="font-medium text-primary" data-testid={`text-bid-order-${bid.id}`}>{orderRef}</TableCell>
-                  <TableCell className="font-medium" data-testid={`text-bid-grinder-${bid.id}`}>{grinder?.name || bid.grinderId}</TableCell>
-                  <TableCell className="text-right font-bold text-green-400" data-testid={`text-bid-amount-${bid.id}`}>${bid.bidAmount}</TableCell>
+                  <TableCell className="text-right font-bold text-green-400">${bid.bidAmount}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{order ? `$${order.customerPrice}` : "-"}</TableCell>
+                  <TableCell className="text-right">
+                    {bid.margin ? (
+                      <span className="font-medium text-emerald-400">
+                        <DollarSign className="w-3 h-3 inline" />{bid.margin}
+                        {bid.marginPct && <span className="text-xs text-muted-foreground ml-1">({bid.marginPct}%)</span>}
+                      </span>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell>
                     {bid.timeline ? (
                       <div className="flex items-center gap-1 text-sm">
                         <Clock className="w-3 h-3 text-muted-foreground" />
-                        <span data-testid={`text-timeline-${bid.id}`}>{bid.timeline}</span>
+                        <span>{bid.timeline}</span>
                       </div>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell>
-                    {bid.canStart ? (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Zap className="w-3 h-3 text-yellow-500" />
-                        <span data-testid={`text-canstart-${bid.id}`}>{bid.canStart}</span>
-                      </div>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {bid.margin ? (
-                      <span className="text-accent font-medium" data-testid={`text-margin-${bid.id}`}>
-                        ${bid.margin} ({bid.marginPct}%)
-                      </span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell className="text-center">
                     {bid.qualityScore ? (
-                      <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-xs" data-testid={`badge-qs-${bid.id}`}>
-                        {bid.qualityScore}
-                      </Badge>
+                      <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-xs">{bid.qualityScore}</Badge>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <Badge variant="outline" className={statusColor(bid.status)} data-testid={`badge-status-${bid.id}`}>
-                        {bid.status}
-                      </Badge>
-                      {bid.acceptedBy && (
-                        <span className="text-[10px] text-muted-foreground">by {bid.acceptedBy}</span>
-                      )}
+                      <Badge variant="outline" className={statusColor(bid.status)}>{bid.status}</Badge>
+                      {bid.acceptedBy && <span className="text-[10px] text-muted-foreground">by {bid.acceptedBy}</span>}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -218,7 +110,7 @@ export default function Bids() {
             }) : (
               <TableRow>
                 <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
-                  No bids yet. Proposals will appear when grinders submit bids via MGT Bot.
+                  No bids yet. Proposals appear when grinders submit via MGT Bot.
                 </TableCell>
               </TableRow>
             )}
