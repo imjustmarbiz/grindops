@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, ListOrdered, DollarSign, AlertTriangle } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +34,8 @@ export default function Orders() {
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState("");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -55,6 +57,22 @@ export default function Orders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+    },
+  });
+
+  const priceMutation = useMutation({
+    mutationFn: async ({ id, customerPrice }: { id: string; customerPrice: string }) => {
+      const res = await apiRequest("PATCH", `/api/orders/${id}/price`, { customerPrice });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      setEditingPriceId(null);
+      toast({ title: "Price updated successfully" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update price", description: err.message, variant: "destructive" });
     },
   });
 
@@ -214,7 +232,62 @@ export default function Orders() {
                   </TableCell>
                   <TableCell className="text-sm">{order.gamertag || <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell className="text-sm">{order.orderDueDate ? format(new Date(order.orderDueDate), "MMM d, yyyy") : "N/A"}</TableCell>
-                  <TableCell className="text-right font-bold text-green-400">${order.customerPrice}</TableCell>
+                  <TableCell className="text-right">
+                    {editingPriceId === order.id ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editPriceValue}
+                          onChange={(e) => setEditPriceValue(e.target.value)}
+                          className="w-24 h-7 text-sm text-right bg-background/50"
+                          data-testid={`input-edit-price-${order.id}`}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && editPriceValue) {
+                              priceMutation.mutate({ id: order.id, customerPrice: parseFloat(editPriceValue).toFixed(2) });
+                            }
+                            if (e.key === "Escape") setEditingPriceId(null);
+                          }}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-emerald-400 hover:text-emerald-300"
+                          disabled={priceMutation.isPending || !editPriceValue}
+                          onClick={() => priceMutation.mutate({ id: order.id, customerPrice: parseFloat(editPriceValue).toFixed(2) })}
+                          data-testid={`button-save-price-${order.id}`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-red-400 hover:text-red-300"
+                          onClick={() => setEditingPriceId(null)}
+                          data-testid={`button-cancel-price-${order.id}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1 group">
+                        <span className="font-bold text-green-400" data-testid={`text-price-${order.id}`}>
+                          ${order.customerPrice}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-white"
+                          onClick={() => { setEditingPriceId(order.id); setEditPriceValue(String(order.customerPrice)); }}
+                          data-testid={`button-edit-price-${order.id}`}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     {order.companyProfit ? (
                       <span className="font-medium text-emerald-400"><DollarSign className="w-3 h-3 inline" />{Number(order.companyProfit).toFixed(2)}</span>

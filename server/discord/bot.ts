@@ -42,6 +42,14 @@ const commands = [
       opt.setName("rush").setDescription("Is this a rush order?").setRequired(false)),
 
   new SlashCommandBuilder()
+    .setName("setprice")
+    .setDescription("Set or update the price on an order")
+    .addStringOption(opt =>
+      opt.setName("order").setDescription("Order ID (e.g. O-abc123 or MGT order number like 168)").setRequired(true))
+    .addNumberOption(opt =>
+      opt.setName("price").setDescription("New customer price").setRequired(true)),
+
+  new SlashCommandBuilder()
     .setName("placebid")
     .setDescription("Place a bid on an order")
     .addStringOption(opt =>
@@ -281,6 +289,55 @@ async function handleNewOrder(interaction: ChatInputCommandInteraction) {
   }
 }
 
+async function handleSetPrice(interaction: ChatInputCommandInteraction) {
+  const orderInput = interaction.options.getString("order", true);
+  const price = interaction.options.getNumber("price", true);
+
+  try {
+    const allOrders = await storage.getOrders();
+    let order = allOrders.find(o => o.id === orderInput);
+    if (!order) {
+      const mgtNum = parseInt(orderInput.replace(/\D/g, ""));
+      if (!isNaN(mgtNum)) {
+        order = allOrders.find(o => o.mgtOrderNumber === mgtNum);
+      }
+    }
+
+    if (!order) {
+      await interaction.reply({ content: `Order "${orderInput}" not found. Use the order ID or MGT order number.`, ephemeral: true });
+      return;
+    }
+
+    const oldPrice = order.customerPrice;
+    const updated = await storage.updateOrder(order.id, { customerPrice: price.toFixed(2) });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "order",
+      entityId: order.id,
+      action: "price_updated",
+      actor: interaction.user.tag,
+      details: JSON.stringify({ oldPrice, newPrice: price.toFixed(2) }),
+    });
+
+    const mgtRef = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id;
+    const embed = new EmbedBuilder()
+      .setTitle("Order Price Updated")
+      .setColor(0x57F287)
+      .addFields(
+        { name: "Order", value: mgtRef, inline: true },
+        { name: "Old Price", value: `$${oldPrice}`, inline: true },
+        { name: "New Price", value: `$${price.toFixed(2)}`, inline: true },
+        { name: "Updated By", value: interaction.user.tag, inline: true },
+      )
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+  } catch (error: any) {
+    await interaction.reply({ content: `Failed to update price: ${error.message}`, ephemeral: true });
+  }
+}
+
 async function handlePlaceBid(interaction: ChatInputCommandInteraction) {
   const orderId = interaction.options.getString("order", true);
   const grinderId = interaction.options.getString("grinder", true);
@@ -446,6 +503,7 @@ export async function startDiscordBot() {
         case "bids": await handleBids(interaction); break;
         case "assignments": await handleAssignments(interaction); break;
         case "neworder": await handleNewOrder(interaction); break;
+        case "setprice": await handleSetPrice(interaction); break;
         case "placebid": await handlePlaceBid(interaction); break;
         case "assign": await handleAssign(interaction); break;
         default:

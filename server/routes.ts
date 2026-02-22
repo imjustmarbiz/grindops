@@ -107,6 +107,28 @@ export async function registerRoutes(
     }
   });
 
+  app.patch(api.orders.updatePrice.path, async (req, res) => {
+    try {
+      const { customerPrice } = api.orders.updatePrice.input.parse(req.body);
+      const result = await storage.updateOrder(req.params.id, { customerPrice });
+      if (!result) return res.status(404).json({ message: "Order not found" });
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "price_updated",
+        actor: "admin",
+        details: JSON.stringify({ newPrice: customerPrice }),
+      });
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   app.get(api.orders.suggestions.path, async (req, res) => {
     const suggestions = await storage.getSuggestionsForOrder(req.params.id);
     res.json(suggestions);

@@ -65,6 +65,11 @@ export const api = {
       path: '/api/orders/:id/status' as const,
       input: z.object({ status: z.string() }),
     },
+    updatePrice: {
+      method: 'PATCH' as const,
+      path: '/api/orders/:id/price' as const,
+      input: z.object({ customerPrice: z.string() }),
+    },
     suggestions: {
       method: 'GET' as const,
       path: '/api/orders/:id/suggestions' as const,
