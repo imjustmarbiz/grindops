@@ -109,6 +109,7 @@ export default function Grinders() {
                   <TableRow>
                     <TableHead>Grinder</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Tier</TableHead>
                     <TableHead className="text-center">Capacity</TableHead>
                     <TableHead className="text-center">Orders</TableHead>
                     <TableHead className="text-right">Earnings</TableHead>
@@ -120,7 +121,7 @@ export default function Grinders() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center h-24">Loading...</TableCell></TableRow>
                   ) : filterGrinders(cat).length > 0 ? filterGrinders(cat).map(g => {
                     const winRateNum = g.winRate ? Number(g.winRate) * 100 : null;
                     return (
@@ -136,6 +137,11 @@ export default function Grinders() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">{categorize(g)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-xs ${g.tier === "New" ? "border-cyan-500/30 text-cyan-400" : g.tier === "Pro" ? "border-yellow-500/30 text-yellow-400" : g.tier === "Elite" ? "border-purple-500/30 text-purple-400" : ""}`}>
+                            {g.tier}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <span className={g.activeOrders >= g.capacity ? "text-red-400 font-bold" : "text-muted-foreground"}>
@@ -196,7 +202,7 @@ export default function Grinders() {
                     );
                   }) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
                         No grinders in this category
                       </TableCell>
                     </TableRow>
@@ -249,9 +255,13 @@ export default function Grinders() {
                     { label: "Category", value: categorize(selectedGrinder) },
                     { label: "Tier", value: selectedGrinder.tier },
                     { label: "Capacity", value: `${selectedGrinder.activeOrders}/${selectedGrinder.capacity}` },
+                    { label: "Utilization", value: selectedGrinder.utilization ? `${(Number(selectedGrinder.utilization) * 100).toFixed(0)}%` : "0%" },
+                    { label: "Orders (Last 7d)", value: String(selectedGrinder.ordersAssignedL7D) },
+                    { label: "Total Reviews", value: String(selectedGrinder.totalReviews) },
                     { label: "On-Time Rate", value: selectedGrinder.onTimeRate ? `${(Number(selectedGrinder.onTimeRate) * 100).toFixed(0)}%` : "N/A" },
                     { label: "Completion Rate", value: selectedGrinder.completionRate ? `${(Number(selectedGrinder.completionRate) * 100).toFixed(0)}%` : "N/A" },
                     { label: "Quality Rating", value: selectedGrinder.avgQualityRating ? `${Number(selectedGrinder.avgQualityRating).toFixed(1)}/5` : "N/A" },
+                    { label: "Avg Turnaround", value: selectedGrinder.avgTurnaroundDays ? `${Number(selectedGrinder.avgTurnaroundDays).toFixed(1)} days` : "N/A" },
                     { label: "Last Order", value: (() => { const info = daysAgo(selectedGrinder.lastAssigned); return selectedGrinder.lastAssigned ? `${new Date(selectedGrinder.lastAssigned).toLocaleDateString()} (${info.label})` : "Never"; })() },
                     { label: "Reassignments", value: String(selectedGrinder.reassignmentCount) },
                     { label: "Cancel Rate", value: selectedGrinder.cancelRate ? `${(Number(selectedGrinder.cancelRate) * 100).toFixed(0)}%` : "N/A" },

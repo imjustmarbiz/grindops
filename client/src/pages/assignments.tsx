@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileCheck, DollarSign, Users, CheckCircle, Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle } from "lucide-react";
 import type { Assignment, Order, Grinder } from "@shared/schema";
 
 function formatCurrency(val: number) {
@@ -21,6 +22,7 @@ export default function Assignments() {
   const totalProfit = (assignments || []).reduce((sum, a) => sum + (Number(a.companyProfit) || 0), 0);
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-assignments-title">
@@ -77,15 +79,18 @@ export default function Assignments() {
               <TableHead>Grinder</TableHead>
               <TableHead>Assigned</TableHead>
               <TableHead>Due</TableHead>
+              <TableHead>Delivered</TableHead>
               <TableHead className="text-right">Order Price</TableHead>
               <TableHead className="text-right">Grinder Pay</TableHead>
+              <TableHead className="text-right">Margin</TableHead>
               <TableHead className="text-right">Profit</TableHead>
+              <TableHead className="text-center">Quality</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={12} className="text-center h-24">Loading...</TableCell></TableRow>
             ) : assignments && assignments.length > 0 ? assignments.map((a: Assignment) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === a.grinderId);
               const order = (orders || []).find((o: Order) => o.id === a.orderId);
@@ -102,20 +107,59 @@ export default function Assignments() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{format(new Date(a.assignedDateTime), "MMM d, h:mm a")}</TableCell>
                   <TableCell className="text-sm text-orange-400">{format(new Date(a.dueDateTime), "MMM d, h:mm a")}</TableCell>
+                  <TableCell>
+                    {a.deliveredDateTime ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm">{format(new Date(a.deliveredDateTime), "MMM d, h:mm a")}</span>
+                        {a.isOnTime !== null && a.isOnTime !== undefined && (
+                          <Badge variant="outline" className={`text-[10px] w-fit mt-0.5 ${a.isOnTime ? "border-green-500/30 text-green-400" : "border-red-500/30 text-red-400"}`}>
+                            {a.isOnTime ? "On Time" : "Late"}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell className="text-right text-muted-foreground">{a.orderPrice ? `$${a.orderPrice}` : "-"}</TableCell>
                   <TableCell className="text-right font-medium text-blue-400">{a.grinderEarnings ? `$${a.grinderEarnings}` : a.bidAmount ? `$${a.bidAmount}` : "-"}</TableCell>
-                  <TableCell className="text-right font-bold text-emerald-400">{a.companyProfit ? `$${a.companyProfit}` : a.margin ? `$${a.margin}` : "-"}</TableCell>
+                  <TableCell className="text-right">
+                    {a.margin ? (
+                      <span className="font-medium text-emerald-400">
+                        ${a.margin}
+                        {a.marginPct && <span className="text-xs text-muted-foreground ml-1">({a.marginPct}%)</span>}
+                      </span>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-emerald-400">{a.companyProfit ? `$${a.companyProfit}` : "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {a.qualityRating ? (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            <span className="font-medium text-yellow-400">{a.qualityRating}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>Quality rating: {a.qualityRating}/5</TooltipContent>
+                      </Tooltip>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell>
-                    <Badge variant={a.status === "Active" ? "default" : "secondary"} className={a.status === "Active" ? "bg-primary/20 text-primary border-primary/30" : ""}>
-                      {a.status}
-                      {a.wasReassigned && " (Re)"}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={a.status === "Active" ? "default" : "secondary"} className={a.status === "Active" ? "bg-primary/20 text-primary border-primary/30" : ""}>
+                        {a.status}
+                      </Badge>
+                      {a.wasReassigned && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400 w-fit">
+                          <AlertTriangle className="w-2 h-2 mr-0.5" />Reassigned
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
             }) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center h-24 text-muted-foreground">
                   No assignments yet. Assignments are auto-created when staff accepts bids in Discord.
                 </TableCell>
               </TableRow>
@@ -124,5 +168,6 @@ export default function Assignments() {
         </Table>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

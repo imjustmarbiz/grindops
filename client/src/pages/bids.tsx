@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Gavel, Clock, Zap, DollarSign } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play } from "lucide-react";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
 export default function Bids() {
@@ -20,6 +22,7 @@ export default function Bids() {
   };
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-display font-bold flex items-center gap-3" data-testid="text-bids-title">
@@ -55,13 +58,16 @@ export default function Bids() {
               <TableHead className="text-right">Order Price</TableHead>
               <TableHead className="text-right">Margin</TableHead>
               <TableHead>Timeline</TableHead>
+              <TableHead>Can Start</TableHead>
+              <TableHead>Est. Delivery</TableHead>
               <TableHead className="text-center">QS</TableHead>
+              <TableHead>Submitted</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={12} className="text-center h-24">Loading...</TableCell></TableRow>
             ) : bids && bids.length > 0 ? bids.map((bid: Bid) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
               const order = (orders || []).find((o: Order) => o.id === bid.orderId);
@@ -94,9 +100,35 @@ export default function Bids() {
                       </div>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
+                  <TableCell>
+                    {bid.canStart ? (
+                      <div className="flex items-center gap-1 text-sm">
+                        <Play className="w-3 h-3 text-cyan-400" />
+                        <span className="text-cyan-300">{bid.canStart}</span>
+                      </div>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    {bid.estDeliveryDate ? (
+                      <div className="flex items-center gap-1 text-sm">
+                        <CalendarCheck className="w-3 h-3 text-orange-400" />
+                        <span>{format(new Date(bid.estDeliveryDate), "MMM d")}</span>
+                      </div>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell className="text-center">
                     {bid.qualityScore ? (
                       <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-xs">{bid.qualityScore}</Badge>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    {bid.bidTime ? (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <span className="text-xs text-muted-foreground">{format(new Date(bid.bidTime), "MMM d, h:mm a")}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{format(new Date(bid.bidTime), "PPpp")}</TooltipContent>
+                      </Tooltip>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell>
@@ -109,7 +141,7 @@ export default function Bids() {
               );
             }) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center h-24 text-muted-foreground">
                   No bids yet. Proposals appear when grinders submit via MGT Bot.
                 </TableCell>
               </TableRow>
@@ -118,5 +150,6 @@ export default function Bids() {
         </Table>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

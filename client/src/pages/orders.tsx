@@ -9,14 +9,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, MapPin, StickyNote, Gauge } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Order, Service } from "@shared/schema";
+import type { Order, Service, Grinder } from "@shared/schema";
 
 const formSchema = z.object({
   id: z.string().min(1, "Order ID is required"),
@@ -33,6 +34,7 @@ export default function Orders() {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
@@ -116,7 +118,16 @@ export default function Orders() {
     });
   };
 
+  const complexityColor = (c: number) => {
+    if (c <= 1) return "text-green-400";
+    if (c <= 2) return "text-emerald-400";
+    if (c <= 3) return "text-yellow-400";
+    if (c <= 4) return "text-orange-400";
+    return "text-red-400";
+  };
+
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -200,6 +211,13 @@ export default function Orders() {
                   )} />
                 </div>
 
+                <FormField control={form.control} name="location" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl><Input {...field} placeholder="e.g. Retail, Online" className="bg-background/50" data-testid="input-location" /></FormControl>
+                  </FormItem>
+                )} />
+
                 <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4 bg-primary hover:bg-primary/90" data-testid="button-submit-order">
                   {createMutation.isPending ? "Creating..." : "Create Order"}
                 </Button>
@@ -217,6 +235,8 @@ export default function Orders() {
               <TableHead>Service</TableHead>
               <TableHead>Platform</TableHead>
               <TableHead>Gamertag</TableHead>
+              <TableHead className="text-center">Cx</TableHead>
+              <TableHead>Assigned To</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Profit</TableHead>
@@ -226,13 +246,17 @@ export default function Orders() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center h-24">Loading...</TableCell></TableRow>
             ) : orders && orders.length > 0 ? orders.map((order: Order) => {
               const service = (services || []).find((s: Service) => s.id === order.serviceId);
+              const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
               return (
                 <TableRow key={order.id} className="hover:bg-white/[0.02]" data-testid={`row-order-${order.id}`}>
                   <TableCell className="font-mono font-medium" data-testid={`text-order-id-${order.id}`}>
-                    {order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}
+                    <div className="flex flex-col">
+                      <span>{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                      {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
@@ -240,6 +264,7 @@ export default function Orders() {
                       <div className="flex gap-1">
                         {order.isRush && <Badge variant="destructive" className="text-[10px] h-4">RUSH</Badge>}
                         {order.isEmergency && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] h-4"><AlertTriangle className="w-2 h-2 mr-0.5" />EMERGENCY</Badge>}
+                        {order.location && <Badge variant="outline" className="text-[10px] h-4 border-white/10"><MapPin className="w-2 h-2 mr-0.5" />{order.location}</Badge>}
                       </div>
                     </div>
                   </TableCell>
@@ -249,6 +274,24 @@ export default function Orders() {
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell className="text-sm">{order.gamertag || <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell className="text-center">
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span className={`font-mono font-bold ${complexityColor(order.complexity)}`}>{order.complexity}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Complexity {order.complexity}/5</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    {assignedGrinder ? (
+                      <div className="flex items-center gap-1">
+                        <User className="w-3 h-3 text-primary" />
+                        <span className="text-sm font-medium">{assignedGrinder.name}</span>
+                      </div>
+                    ) : order.assignedGrinderId ? (
+                      <span className="text-xs text-muted-foreground">{order.assignedGrinderId}</span>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell className="text-sm">{order.orderDueDate ? format(new Date(order.orderDueDate), "MMM d, yyyy") : "N/A"}</TableCell>
                   <TableCell className="text-right">
                     {editingPriceId === order.id ? (
@@ -349,7 +392,7 @@ export default function Orders() {
               );
             }) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center h-24 text-muted-foreground">
                   No orders yet. Orders will appear when MGT Bot posts in the bid war channel.
                 </TableCell>
               </TableRow>
@@ -358,5 +401,6 @@ export default function Orders() {
         </Table>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
