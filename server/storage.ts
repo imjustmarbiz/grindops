@@ -41,8 +41,10 @@ export interface IStorage {
   updateBidStatus(id: string, status: string, acceptedBy?: string): Promise<Bid | undefined>;
 
   getAssignments(): Promise<Assignment[]>;
+  getAssignment(id: string): Promise<Assignment | undefined>;
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
   updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment | undefined>;
+  replaceGrinder(assignmentId: string, data: { replacementGrinderId: string; originalGrinderPay: string; replacementGrinderPay: string; reason?: string }): Promise<Assignment | undefined>;
 
   getQueueConfig(): Promise<QueueConfig | undefined>;
   upsertQueueConfig(config: InsertQueueConfig): Promise<QueueConfig>;
@@ -266,8 +268,59 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async getAssignment(id: string): Promise<Assignment | undefined> {
+    const [result] = await db.select().from(assignments).where(eq(assignments.id, id));
+    return result;
+  }
+
   async updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment | undefined> {
     const [updated] = await db.update(assignments).set(data).where(eq(assignments.id, id)).returning();
+    return updated;
+  }
+
+  async replaceGrinder(assignmentId: string, data: { replacementGrinderId: string; originalGrinderPay: string; replacementGrinderPay: string; reason?: string }): Promise<Assignment | undefined> {
+    const assignment = await this.getAssignment(assignmentId);
+    if (!assignment) return undefined;
+
+    const originalGrinderId = assignment.grinderId;
+
+    const [updated] = await db.update(assignments).set({
+      grinderId: data.replacementGrinderId,
+      originalGrinderId: originalGrinderId,
+      replacementGrinderId: data.replacementGrinderId,
+      originalGrinderPay: data.originalGrinderPay,
+      replacementGrinderPay: data.replacementGrinderPay,
+      grinderEarnings: data.replacementGrinderPay,
+      replacedAt: new Date(),
+      replacementReason: data.reason || null,
+      wasReassigned: true,
+    }).where(eq(assignments.id, assignmentId)).returning();
+
+    const originalGrinder = await this.getGrinder(originalGrinderId);
+    if (originalGrinder) {
+      const newActive = Math.max(0, originalGrinder.activeOrders - 1);
+      const newEarnings = (Number(originalGrinder.totalEarnings) + Number(data.originalGrinderPay)).toFixed(2);
+      await this.updateGrinder(originalGrinderId, {
+        activeOrders: newActive,
+        reassignmentCount: originalGrinder.reassignmentCount + 1,
+        totalEarnings: newEarnings,
+      });
+    }
+
+    const replacementGrinder = await this.getGrinder(data.replacementGrinderId);
+    if (replacementGrinder) {
+      await this.updateGrinder(data.replacementGrinderId, {
+        activeOrders: replacementGrinder.activeOrders + 1,
+        totalOrders: replacementGrinder.totalOrders + 1,
+        lastAssigned: new Date(),
+      });
+    }
+
+    const order = assignment.orderId ? await this.getOrder(assignment.orderId) : null;
+    if (order) {
+      await this.updateOrder(order.id, { assignedGrinderId: data.replacementGrinderId });
+    }
+
     return updated;
   }
 

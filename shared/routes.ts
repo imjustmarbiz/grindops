@@ -115,6 +115,16 @@ export const api = {
       path: '/api/assignments' as const,
       input: insertAssignmentSchema,
     },
+    replace: {
+      method: 'POST' as const,
+      path: '/api/assignments/:id/replace' as const,
+      input: z.object({
+        replacementGrinderId: z.string().min(1, "Replacement grinder is required"),
+        originalGrinderPay: z.string(),
+        replacementGrinderPay: z.string(),
+        reason: z.string().optional(),
+      }),
+    },
   },
   analytics: {
     summary: {

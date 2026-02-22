@@ -123,6 +123,12 @@ export const assignments = pgTable("assignments", {
   isOnTime: boolean("is_on_time"),
   qualityRating: integer("quality_rating"),
   wasReassigned: boolean("was_reassigned").notNull().default(false),
+  originalGrinderId: varchar("original_grinder_id"),
+  replacementGrinderId: varchar("replacement_grinder_id"),
+  originalGrinderPay: numeric("original_grinder_pay"),
+  replacementGrinderPay: numeric("replacement_grinder_pay"),
+  replacedAt: timestamp("replaced_at"),
+  replacementReason: text("replacement_reason"),
   notes: text("notes"),
 });
 

@@ -231,6 +231,53 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.assignments.replace.path, async (req, res) => {
+    try {
+      const input = api.assignments.replace.input.parse(req.body);
+      const assignment = await storage.getAssignment(req.params.id);
+      if (!assignment) return res.status(404).json({ message: "Assignment not found" });
+      if (assignment.status !== "Active") return res.status(400).json({ message: "Can only replace grinders on active assignments" });
+
+      const replacementGrinder = await storage.getGrinder(input.replacementGrinderId);
+      if (!replacementGrinder) return res.status(404).json({ message: "Replacement grinder not found" });
+
+      const origPay = parseFloat(input.originalGrinderPay) || 0;
+      const replPay = parseFloat(input.replacementGrinderPay) || 0;
+      if (origPay < 0 || replPay < 0) return res.status(400).json({ message: "Pay values cannot be negative" });
+
+      const originalGrinderId = assignment.grinderId;
+      const result = await storage.replaceGrinder(req.params.id, {
+        replacementGrinderId: input.replacementGrinderId,
+        originalGrinderPay: input.originalGrinderPay,
+        replacementGrinderPay: input.replacementGrinderPay,
+        reason: input.reason,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "assignment",
+        entityId: req.params.id,
+        action: "grinder_replaced",
+        actor: "admin",
+        details: JSON.stringify({
+          orderId: assignment.orderId,
+          originalGrinderId,
+          replacementGrinderId: input.replacementGrinderId,
+          originalGrinderPay: input.originalGrinderPay,
+          replacementGrinderPay: input.replacementGrinderPay,
+          reason: input.reason,
+        }),
+      });
+
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.get(api.analytics.summary.path, async (req, res) => {
     const summary = await storage.getAnalyticsSummary();
     res.json(summary);

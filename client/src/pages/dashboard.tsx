@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
-  BarChart3, PieChart, Gauge, Star, Target, Timer, Percent,
+  BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 
@@ -135,6 +135,13 @@ export default function Dashboard() {
   const completedAssignments = allAssignments.filter(a => a.status === "Completed");
   const onTimeCount = completedAssignments.filter(a => a.isOnTime === true).length;
   const onTimeRate = completedAssignments.length > 0 ? (onTimeCount / completedAssignments.length) * 100 : 0;
+
+  const replacedAssignments = allAssignments.filter(a => a.wasReassigned);
+  const totalOriginalGrinderPay = replacedAssignments.reduce((s, a) => s + Number(a.originalGrinderPay || 0), 0);
+  const totalReplacementGrinderPay = replacedAssignments.reduce((s, a) => s + Number(a.replacementGrinderPay || 0), 0);
+  const replacementRate = allAssignments.length > 0 ? (replacedAssignments.length / allAssignments.length) * 100 : 0;
+  const grindersReplacedOff = [...new Set(replacedAssignments.map(a => a.originalGrinderId).filter(Boolean))];
+  const grindersReplacedIn = [...new Set(replacedAssignments.map(a => a.replacementGrinderId).filter(Boolean))];
 
   const categoryIcon = (cat: string) => {
     if (cat === "Elite Grinder") return <Crown className="w-3 h-3 text-yellow-500" />;
@@ -541,6 +548,68 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {replacedAssignments.length > 0 && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Repeat className="w-5 h-5 text-amber-400" />
+              Replacement Tracker
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+              <div className="p-3 rounded-lg bg-white/5 text-center">
+                <p className="text-xl font-bold text-amber-400" data-testid="text-replacement-count">{replacedAssignments.length}</p>
+                <p className="text-[10px] text-muted-foreground">Total Replacements</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 text-center">
+                <p className="text-xl font-bold text-red-400">{formatCurrency(totalOriginalGrinderPay)}</p>
+                <p className="text-[10px] text-muted-foreground">Paid to Originals</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 text-center">
+                <p className="text-xl font-bold text-blue-400">{formatCurrency(totalReplacementGrinderPay)}</p>
+                <p className="text-[10px] text-muted-foreground">Paid to Replacements</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 text-center">
+                <p className="text-xl font-bold text-amber-400">{grindersReplacedOff.length}</p>
+                <p className="text-[10px] text-muted-foreground">Grinders Removed</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 text-center">
+                <p className="text-xl font-bold">{replacementRate.toFixed(1)}%</p>
+                <p className="text-[10px] text-muted-foreground">Replacement Rate</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {replacedAssignments.slice(0, 5).map(a => {
+                const orig = allGrinders.find(g => g.id === a.originalGrinderId);
+                const repl = allGrinders.find(g => g.id === a.replacementGrinderId);
+                const order = allOrders.find(o => o.id === a.orderId);
+                return (
+                  <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5" data-testid={`row-replacement-${a.id}`}>
+                    <div className="flex items-center gap-1.5 text-sm flex-1">
+                      <span className="text-red-400 font-medium">{orig?.name || "Unknown"}</span>
+                      <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-blue-400 font-medium">{repl?.name || "Unknown"}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : ""}</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-red-400">${a.originalGrinderPay || "0"}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="text-blue-400">${a.replacementGrinderPay || "0"}</span>
+                    </div>
+                    {a.replacementReason && (
+                      <Badge variant="outline" className="text-[10px] border-border/50 max-w-[120px] truncate">
+                        {a.replacementReason}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
     </TooltipProvider>
   );
