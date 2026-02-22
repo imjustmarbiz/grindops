@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Menu, Activity, Brain, ScrollText } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Sidebar, 
   SidebarContent, 
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const navItems = [
+const staffNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Orders", url: "/orders", icon: ListOrdered },
@@ -27,9 +28,17 @@ const navItems = [
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
 ];
 
+const grinderNavItems = [
+  { title: "My Profile", url: "/", icon: UserCircle },
+];
+
 function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+
+  const isStaff = user?.role === "staff";
+  const navItems = isStaff ? staffNavItems : grinderNavItems;
+  const roleBadge = isStaff ? "Staff" : user?.role === "grinder" ? "Grinder" : "Member";
 
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
@@ -42,7 +51,9 @@ function AppSidebar() {
         </div>
         
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground font-medium">MANAGEMENT</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground font-medium">
+            {isStaff ? "MANAGEMENT" : "NAVIGATION"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
@@ -52,6 +63,7 @@ function AppSidebar() {
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                       <Link 
                         href={item.url} 
+                        data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           isActive 
                             ? "bg-primary/10 text-primary font-medium shadow-sm shadow-primary/5" 
@@ -75,16 +87,26 @@ function AppSidebar() {
               <Avatar className="h-10 w-10 border border-primary/20">
                 <AvatarImage src={user?.profileImageUrl || undefined} />
                 <AvatarFallback className="bg-primary/20 text-primary">
-                  {user?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                  {user?.firstName?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</span>
-                <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                <span className="text-sm font-medium truncate" data-testid="text-user-name">
+                  {user?.firstName || user?.discordUsername || "User"}
+                </span>
+                <Badge 
+                  variant={isStaff ? "default" : "secondary"} 
+                  className={`w-fit text-[10px] px-1.5 py-0 ${isStaff ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}
+                  data-testid="text-user-role"
+                >
+                  <Shield className="w-3 h-3 mr-1" />
+                  {roleBadge}
+                </Badge>
               </div>
             </div>
             <Button 
               variant="outline" 
+              data-testid="button-logout"
               className="w-full justify-start gap-2 border-white/10 hover:bg-white/10 hover:text-destructive transition-colors hover-elevate" 
               onClick={() => logout()}
             >
@@ -109,14 +131,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30">
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full relative">
-          {/* Subtle background ambient light */}
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
           
           <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/50 px-6 backdrop-blur-md bg-background/50 relative z-10">
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
             <div className="ml-auto flex items-center gap-4">
-              {/* Could add notifications, etc here */}
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6 md:p-8 relative z-10">

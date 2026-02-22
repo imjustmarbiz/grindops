@@ -1,19 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Activity, Shield, Zap, Target } from "lucide-react";
+import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 
 export default function AuthPage() {
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/api/auth/discord/login";
   };
+
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get("error");
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background overflow-hidden selection:bg-primary/30 text-foreground">
-      {/* Left Panel - Branding & Features */}
       <div className="w-full lg:w-1/2 relative hidden lg:flex flex-col p-12 justify-between border-r border-border/50">
-        {/* Abstract Background Elements */}
         <div className="absolute inset-0 z-0">
-          {/* landing page hero abstract dark geometry */}
           <img 
             src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" 
             alt="Abstract background" 
@@ -73,7 +74,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Right Panel - Login */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none lg:hidden" />
         
@@ -83,7 +83,6 @@ export default function AuthPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md space-y-8 relative z-10"
         >
-          {/* Mobile Branding */}
           <div className="flex items-center gap-3 mb-12 lg:hidden justify-center">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
               <Activity className="w-6 h-6 text-white" />
@@ -92,23 +91,34 @@ export default function AuthPage() {
           </div>
 
           <div className="text-center space-y-3">
-            <h2 className="text-3xl font-display font-bold">Welcome Back</h2>
-            <p className="text-muted-foreground">Sign in to access your dashboard</p>
+            <h2 className="text-3xl font-display font-bold" data-testid="text-welcome">Welcome Back</h2>
+            <p className="text-muted-foreground">Sign in with your Discord account to access the dashboard</p>
           </div>
+
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 text-sm text-center" data-testid="text-auth-error">
+              {error === "no_code" && "Login was cancelled. Please try again."}
+              {error === "token_failed" && "Authentication failed. Please try again."}
+              {error === "user_fetch_failed" && "Could not retrieve your Discord profile. Please try again."}
+              {error === "auth_failed" && "Something went wrong. Please try again."}
+            </div>
+          )}
 
           <div className="glass-panel p-8 rounded-2xl space-y-6 relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             <Button 
               size="lg" 
-              className="w-full h-14 text-base font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(139,92,246,0.25)] hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] transition-all duration-300 hover:-translate-y-0.5"
+              data-testid="button-discord-login"
+              className="w-full h-14 text-base font-semibold rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white shadow-[0_0_20px_rgba(88,101,242,0.25)] hover:shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all duration-300 hover:-translate-y-0.5"
               onClick={handleLogin}
             >
-              Sign In with Replit
+              <SiDiscord className="w-5 h-5 mr-2" />
+              Sign In with Discord
             </Button>
             
             <p className="text-center text-xs text-muted-foreground">
-              By signing in, you agree to the internal staff policies.
+              Your Discord roles determine your access level. Staff get full access, Grinders see their personal dashboard.
             </p>
           </div>
         </motion.div>

@@ -4,27 +4,44 @@
 A fullstack web dashboard + Discord bot for managing a gaming services queue system. Staff can manage grinders (workers), orders, bids, and assignments through both a web interface and Discord slash commands. The Grinder Bot passively monitors an existing MGT Bot in Discord to automatically build the database from real order and proposal data.
 
 ## Recent Changes
-- 2026-02-22: Initial build with Replit Auth, database schema, API routes, and Discord bot integration
+- 2026-02-22: Initial build with database schema, API routes, and Discord bot integration
 - 2026-02-22: Added MGT Bot watcher - monitors bid war channel and bid proposals channel to auto-import orders, grinders, and bids from MGT Bot embeds
 - Schema updated with Discord-specific fields (mgtOrderNumber, discordMessageId, platform, gamertag, discordUserId, mgtProposalId, timeline, canStart, qualityScore)
 - Removed dummy seed data; database now populated from real MGT Bot activity
+- 2026-02-22: Replaced Replit Auth with Discord OAuth2 authentication
+  - Staff role (1466369178729578663) gets full dashboard access
+  - Grinder role (1466369179648004224) sees personal profile only (no prices/profits/company analytics)
+  - All sensitive API endpoints protected with requireStaff middleware
+  - OAuth2 flow includes CSRF state parameter protection
+  - Grinder personal endpoint at /api/grinder/me strips sensitive data
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui, dark mode professional theme
 - **Backend**: Express.js with PostgreSQL (Drizzle ORM)
-- **Auth**: Replit Auth (OpenID Connect)
+- **Auth**: Discord OAuth2 with role-based access (Staff vs Grinder)
 - **Discord Bot**: discord.js v14, runs alongside the web server sharing the same database
 - **MGT Bot Watcher**: Passively monitors MGT Bot (user 1466336342521937930) messages in bid war channel (1467912681670447140) and bid proposals channel (1467929083366084800)
+
+## Auth & Access Control
+- Discord OAuth2 login at /api/auth/discord/login
+- Bot checks user's guild roles after OAuth2 callback
+- Staff role → full dashboard, all API endpoints
+- Grinder role → personal profile page only, /api/grinder/me endpoint
+- No role → access denied page
+- All sensitive endpoints (orders, bids, assignments, analytics, audit logs, config, queue) require staff role
+- Session stored in PostgreSQL with connect-pg-simple
 
 ## Key Files
 - `shared/schema.ts` - Database tables: services, grinders, orders, bids, assignments, queueConfig
 - `shared/routes.ts` - API contract definitions with Zod schemas
-- `shared/models/auth.ts` - Auth tables (users, sessions)
-- `server/routes.ts` - Express API routes + seed data (services only)
+- `shared/models/auth.ts` - Auth tables (users, sessions) with Discord fields
+- `server/routes.ts` - Express API routes with role-based middleware + seed data
 - `server/storage.ts` - Database storage layer with upsert methods for MGT Bot data
+- `server/discord/auth.ts` - Discord OAuth2 flow, session management, role middleware
 - `server/discord/bot.ts` - Discord bot with slash commands + MGT Bot message listeners
 - `server/discord/mgtWatcher.ts` - MGT Bot embed parsers and message handlers
 - `server/index.ts` - Server entry point (starts both web server and Discord bot)
+- `client/src/pages/grinder-profile.tsx` - Grinder personal dashboard (no sensitive data)
 
 ## Discord Integration
 ### MGT Bot Monitoring
@@ -56,3 +73,5 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
 - `DATABASE_URL` - PostgreSQL connection string
 - `SESSION_SECRET` - Session encryption secret
 - `DISCORD_BOT_TOKEN` - Discord bot token
+- `DISCORD_CLIENT_ID` - Discord OAuth2 client ID
+- `DISCORD_CLIENT_SECRET` - Discord OAuth2 client secret

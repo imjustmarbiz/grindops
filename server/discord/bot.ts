@@ -4,6 +4,10 @@ import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate } fro
 
 let client: Client | null = null;
 
+export function getDiscordBotClient(): Client | null {
+  return client;
+}
+
 const commands = [
   new SlashCommandBuilder()
     .setName("queue")
