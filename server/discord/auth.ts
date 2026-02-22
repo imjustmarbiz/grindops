@@ -43,6 +43,15 @@ function getRedirectUri(req: any): string {
   if (process.env.DISCORD_REDIRECT_URI) {
     return process.env.DISCORD_REDIRECT_URI;
   }
+  const domains = process.env.REPLIT_DOMAINS;
+  if (domains) {
+    const primaryDomain = domains.split(",")[0].trim();
+    return `https://${primaryDomain}/api/auth/discord/callback`;
+  }
+  const devDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (devDomain) {
+    return `https://${devDomain}/api/auth/discord/callback`;
+  }
   const host = req.get("host") || req.headers["x-forwarded-host"] || req.hostname;
   const protocol = req.headers["x-forwarded-proto"] || "https";
   return `${protocol}://${host}/api/auth/discord/callback`;
@@ -51,6 +60,12 @@ function getRedirectUri(req: any): string {
 export function setupDiscordAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
+
+  const domains = process.env.REPLIT_DOMAINS;
+  if (domains) {
+    const primaryDomain = domains.split(",")[0].trim();
+    console.log(`[discord-auth] Add this redirect URI to Discord Developer Portal: https://${primaryDomain}/api/auth/discord/callback`);
+  }
 
   app.get("/api/auth/discord/login", (req, res) => {
     const clientId = process.env.DISCORD_CLIENT_ID;
