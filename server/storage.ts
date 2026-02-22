@@ -32,6 +32,7 @@ export interface IStorage {
   upsertOrderByMgtNumber(mgtOrderNumber: number, data: Partial<InsertOrder>): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
   updateOrder(id: string, data: Partial<InsertOrder>): Promise<Order | undefined>;
+  deleteOrder(id: string): Promise<boolean>;
 
   getBids(): Promise<Bid[]>;
   getBidByProposalId(mgtProposalId: number): Promise<Bid | undefined>;
@@ -192,6 +193,13 @@ export class DatabaseStorage implements IStorage {
   async updateOrder(id: string, data: Partial<InsertOrder>): Promise<Order | undefined> {
     const [updated] = await db.update(orders).set(data).where(eq(orders.id, id)).returning();
     return updated;
+  }
+
+  async deleteOrder(id: string): Promise<boolean> {
+    await db.delete(bids).where(eq(bids.orderId, id));
+    await db.delete(assignments).where(eq(assignments.orderId, id));
+    const result = await db.delete(orders).where(eq(orders.id, id)).returning();
+    return result.length > 0;
   }
 
   async getBids(): Promise<Bid[]> {

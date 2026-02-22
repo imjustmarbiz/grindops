@@ -70,6 +70,10 @@ export const api = {
       path: '/api/orders/:id/price' as const,
       input: z.object({ customerPrice: z.string() }),
     },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/orders/:id' as const,
+    },
     suggestions: {
       method: 'GET' as const,
       path: '/api/orders/:id/suggestions' as const,

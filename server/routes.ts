@@ -107,6 +107,24 @@ export async function registerRoutes(
     }
   });
 
+  app.delete(api.orders.delete.path, async (req, res) => {
+    try {
+      const deleted = await storage.deleteOrder(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Order not found" });
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "deleted",
+        actor: "admin",
+        details: JSON.stringify({ orderId: req.params.id }),
+      });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.patch(api.orders.updatePrice.path, async (req, res) => {
     try {
       const { customerPrice } = api.orders.updatePrice.input.parse(req.body);

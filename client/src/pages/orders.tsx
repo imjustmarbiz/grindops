@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,6 +57,23 @@ export default function Orders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/orders/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      toast({ title: "Order deleted" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to delete order", description: err.message, variant: "destructive" });
     },
   });
 
@@ -204,6 +221,7 @@ export default function Orders() {
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Profit</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -311,11 +329,27 @@ export default function Orders() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => {
+                        if (confirm(`Delete order ${order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}? This will also remove its bids and assignments.`)) {
+                          deleteMutation.mutate(order.id);
+                        }
+                      }}
+                      data-testid={`button-delete-order-${order.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             }) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
                   No orders yet. Orders will appear when MGT Bot posts in the bid war channel.
                 </TableCell>
               </TableRow>
