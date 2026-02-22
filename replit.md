@@ -4,6 +4,14 @@
 A fullstack web dashboard + Discord bot for managing a gaming services queue system. Staff can manage grinders (workers), orders, bids, and assignments through both a web interface and Discord slash commands. The Grinder Bot passively monitors an existing MGT Bot in Discord to automatically build the database from real order and proposal data.
 
 ## Recent Changes
+- 2026-02-22: Refactored staff dashboard into 5 focused pages with sidebar navigation
+  - Overview: KPIs, search, order pipeline, bidding countdown, recent activity, risk alerts
+  - Operations: Create manual order, staff override assign, alert composer
+  - Analytics: Revenue split, fleet utilization, bid conversion, top earners, service distribution, elite vs grinder
+  - Payouts: Payout management, payout requests, grinder order updates
+  - Admin: Elite requests, strike management, order limits, owner profile editing, replacement tracker
+  - Shared useStaffData hook for efficient data fetching across pages
+  - New staff-utils.tsx with reusable chart/display components (AnimatedRing, MiniBar, PipelineStep)
 - 2026-02-22: Initial build with database schema, API routes, and Discord bot integration
 - 2026-02-22: Added MGT Bot watcher - monitors bid war channel and bid proposals channel to auto-import orders, grinders, and bids from MGT Bot embeds
 - Schema updated with Discord-specific fields (mgtOrderNumber, discordMessageId, platform, gamertag, discordUserId, mgtProposalId, timeline, canStart, qualityScore)
