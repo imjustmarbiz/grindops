@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { PAYOUT_PLATFORMS } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,11 @@ export default function GrinderProfile() {
   const [editCanStart, setEditCanStart] = useState("");
   const [payoutAmount, setPayoutAmount] = useState("");
   const [payoutNotes, setPayoutNotes] = useState("");
+  const [payoutPlatform, setPayoutPlatform] = useState("");
+  const [payoutDetails, setPayoutDetails] = useState("");
+  const [savePayoutMethod, setSavePayoutMethod] = useState(true);
+  const [availStatus, setAvailStatus] = useState("available");
+  const [availNote, setAvailNote] = useState("");
 
   const submitUpdateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -97,6 +103,8 @@ export default function GrinderProfile() {
       setPayoutDialog(null);
       setPayoutAmount("");
       setPayoutNotes("");
+      setPayoutPlatform("");
+      setPayoutDetails("");
       toast({ title: "Payout requested", description: "Staff will review your request." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -148,6 +156,25 @@ export default function GrinderProfile() {
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  const availabilityMutation = useMutation({
+    mutationFn: async (data: { status: string; note: string }) => {
+      const res = await apiRequest("PATCH", "/api/grinder/me/availability", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      toast({ title: "Availability updated" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (profile?.grinder) {
+      setAvailStatus(profile.grinder.availabilityStatus || "available");
+      setAvailNote(profile.grinder.availabilityNote || "");
+    }
+  }, [profile]);
 
   if (isLoading) {
     return (
@@ -255,24 +282,9 @@ export default function GrinderProfile() {
     );
   }
 
-  const { grinder, isElite, assignments, bids, availableOrders, lostBids, aiTips, orderUpdates, payoutRequests, strikeLogs, alerts, eliteRequests, eliteCoaching, unreadAlertCount, unackedStrikeCount } = profile;
+  const { grinder, isElite, assignments, bids, availableOrders, lostBids, aiTips, orderUpdates, payoutRequests, payoutMethods, strikeLogs, alerts, eliteRequests, eliteCoaching, unreadAlertCount, unackedStrikeCount } = profile;
   const stats = profile.stats || { totalAssignments: 0, activeAssignments: 0, completedAssignments: 0, totalBids: 0, pendingBids: 0, acceptedBids: 0, winRate: 0, totalEarned: 0, activeEarnings: 0, totalEarnings: 0 };
   const serviceName = (serviceId: string) => services?.find((s: any) => s.id === serviceId)?.name || serviceId;
-  const [availStatus, setAvailStatus] = useState(grinder.availabilityStatus || "available");
-  const [availNote, setAvailNote] = useState(grinder.availabilityNote || "");
-
-  const availabilityMutation = useMutation({
-    mutationFn: async (data: { status: string; note: string }) => {
-      const res = await apiRequest("PATCH", "/api/grinder/me/availability", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
-      toast({ title: "Availability updated" });
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
   const eliteGradient = isElite ? "from-cyan-500/20 via-cyan-500/10 to-teal-500/20" : "from-[#5865F2]/20 via-[#5865F2]/10 to-[#5865F2]/5";
   const eliteBorder = isElite ? "border-cyan-500/30" : "border-[#5865F2]/30";
   const eliteGlow = isElite ? "shadow-cyan-500/10 shadow-lg" : "";
@@ -718,7 +730,14 @@ export default function GrinderProfile() {
                         )}
                         {!payoutRequests?.find((p: any) => p.assignmentId === a.id) && (
                           <Button size="sm" variant="outline" className="gap-1 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 ml-auto" data-testid={`button-payout-${a.id}`}
-                            onClick={() => { setPayoutDialog(a); setPayoutAmount(a.grinderEarnings || a.bidAmount || ""); setPayoutNotes(""); }}>
+                            onClick={() => {
+                              setPayoutDialog(a);
+                              setPayoutAmount(String(Number(a.grinderEarnings || a.bidAmount || 0).toFixed(2)));
+                              setPayoutNotes("");
+                              const defaultMethod = payoutMethods?.find((m: any) => m.isDefault) || payoutMethods?.[0];
+                              if (defaultMethod) { setPayoutPlatform(defaultMethod.platform); setPayoutDetails(defaultMethod.details); setSavePayoutMethod(false); }
+                              else { setPayoutPlatform(""); setPayoutDetails(""); setSavePayoutMethod(true); }
+                            }}>
                             <Banknote className="w-3 h-3" /> Request Payout
                           </Button>
                         )}
@@ -841,16 +860,18 @@ export default function GrinderProfile() {
                 <Card key={p.id} className={`glass-panel ${eliteBorder}`} data-testid={`card-payout-${p.id}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium">Order {p.orderId}</p>
                         <p className="text-sm text-muted-foreground">
                           Amount: <span className="text-green-400 font-medium">${Number(p.amount).toFixed(2)}</span>
-                          {p.notes && <span className="ml-2">- {p.notes}</span>}
+                          {p.payoutPlatform && <span className="ml-2">via {p.payoutPlatform}</span>}
                         </p>
+                        {p.notes && <p className="text-xs text-muted-foreground">{p.notes}</p>}
                         <p className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()}</p>
                       </div>
                       <Badge className={
-                        p.status === "Approved" ? "bg-green-500/20 text-green-400" :
+                        p.status === "Paid" ? "bg-green-500/20 text-green-400" :
+                        p.status === "Approved" ? "bg-blue-500/20 text-blue-400" :
                         p.status === "Denied" ? "bg-red-500/20 text-red-400" :
                         "bg-yellow-500/20 text-yellow-400"
                       }>
@@ -1228,26 +1249,98 @@ export default function GrinderProfile() {
       </Dialog>
 
       <Dialog open={!!payoutDialog} onOpenChange={(open) => !open && setPayoutDialog(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Request Payout - Order {payoutDialog?.orderId}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <p className="text-sm text-muted-foreground">Amount Owed</p>
+              <p className="text-xl font-bold text-green-400" data-testid="text-payout-owed">${Number(payoutDialog?.grinderEarnings || payoutDialog?.bidAmount || 0).toFixed(2)}</p>
+            </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Payout Amount ($)</label>
               <Input type="number" value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} data-testid="input-payout-amount" />
             </div>
             <div>
+              <label className="text-sm font-medium mb-1.5 block">Payout Platform</label>
+              {payoutMethods && payoutMethods.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-muted-foreground mb-1.5">Saved methods:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {payoutMethods.map((m: any) => (
+                      <Badge
+                        key={m.id}
+                        variant="outline"
+                        className={`cursor-pointer transition-colors text-xs ${payoutPlatform === m.platform && payoutDetails === m.details ? "bg-primary/20 border-primary text-primary" : "border-border/50"}`}
+                        onClick={() => { setPayoutPlatform(m.platform); setPayoutDetails(m.details); setSavePayoutMethod(false); }}
+                        data-testid={`badge-saved-method-${m.id}`}
+                      >
+                        {m.platform}: {m.details}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Select value={payoutPlatform} onValueChange={(val) => {
+                setPayoutPlatform(val);
+                const saved = payoutMethods?.find((m: any) => m.platform === val);
+                if (saved) { setPayoutDetails(saved.details); setSavePayoutMethod(false); }
+                else { setPayoutDetails(""); setSavePayoutMethod(true); }
+              }}>
+                <SelectTrigger data-testid="select-payout-platform">
+                  <SelectValue placeholder="Select platform..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYOUT_PLATFORMS.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {payoutPlatform === "Zelle" ? "Email or Phone Number" :
+                 payoutPlatform === "PayPal" ? "PayPal Email" :
+                 payoutPlatform === "Apple Pay" ? "Phone Number" :
+                 payoutPlatform === "Cash App" ? "$Cashtag" :
+                 payoutPlatform === "Venmo" ? "@Username" :
+                 "Payout Details"}
+              </label>
+              <Input
+                value={payoutDetails}
+                onChange={(e) => setPayoutDetails(e.target.value)}
+                placeholder={
+                  payoutPlatform === "Zelle" ? "email@example.com or (555) 123-4567" :
+                  payoutPlatform === "PayPal" ? "your@paypal.email" :
+                  payoutPlatform === "Apple Pay" ? "(555) 123-4567" :
+                  payoutPlatform === "Cash App" ? "$YourCashtag" :
+                  payoutPlatform === "Venmo" ? "@YourUsername" :
+                  "Enter your payout details"
+                }
+                data-testid="input-payout-details"
+              />
+            </div>
+            {!payoutMethods?.find((m: any) => m.platform === payoutPlatform && m.details === payoutDetails) && payoutPlatform && payoutDetails && (
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={savePayoutMethod} onChange={(e) => setSavePayoutMethod(e.target.checked)} className="rounded" data-testid="checkbox-save-method" />
+                Save this payment method for future payouts
+              </label>
+            )}
+            <div>
               <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
               <Textarea value={payoutNotes} onChange={(e) => setPayoutNotes(e.target.value)} placeholder="Any notes for staff..." data-testid="input-payout-notes" />
             </div>
-            <Button className="w-full bg-green-600 hover:bg-green-700" data-testid="button-submit-payout"
-              disabled={!payoutAmount || requestPayoutMutation.isPending}
+            <Button className="w-full bg-green-600" data-testid="button-submit-payout"
+              disabled={!payoutAmount || !payoutPlatform || !payoutDetails || requestPayoutMutation.isPending}
               onClick={() => {
                 requestPayoutMutation.mutate({
                   assignmentId: payoutDialog.id,
                   orderId: payoutDialog.orderId,
                   amount: payoutAmount,
+                  payoutPlatform,
+                  payoutDetails,
+                  savePayoutMethod,
                   notes: payoutNotes || undefined,
                 });
               }}>

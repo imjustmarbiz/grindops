@@ -453,6 +453,7 @@ export async function registerRoutes(
     const allOrders = await storage.getOrders();
     const myOrderUpdates = await storage.getOrderUpdates(myGrinder.id);
     const myPayoutRequests = await storage.getPayoutRequests(myGrinder.id);
+    const myPayoutMethods = await storage.getGrinderPayoutMethods(myGrinder.id);
     const myStrikeLogs = await storage.getStrikeLogs(myGrinder.id);
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
@@ -642,6 +643,7 @@ export async function registerRoutes(
       })),
       orderUpdates: myOrderUpdates,
       payoutRequests: myPayoutRequests,
+      payoutMethods: myPayoutMethods,
       strikeLogs: myStrikeLogs,
       alerts: myAlerts.map((a: any) => ({
         ...a,
@@ -715,14 +717,30 @@ export async function registerRoutes(
     const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
-    const { assignmentId, orderId, amount, notes } = req.body;
-    if (!assignmentId || !orderId || !amount) {
-      return res.status(400).json({ message: "Missing required fields" });
+    const { assignmentId, orderId, amount, notes, payoutPlatform, payoutDetails, savePayoutMethod } = req.body;
+    if (!assignmentId || !orderId || !amount || !payoutPlatform || !payoutDetails) {
+      return res.status(400).json({ message: "Missing required fields (amount, platform, and payout details are required)" });
     }
 
     const assignment = await storage.getAssignment(assignmentId);
     if (!assignment || assignment.grinderId !== myGrinder.id) {
       return res.status(403).json({ message: "Not your assignment" });
+    }
+
+    if (savePayoutMethod) {
+      const existingMethods = await storage.getGrinderPayoutMethods(myGrinder.id);
+      const existing = existingMethods.find((m: any) => m.platform === payoutPlatform);
+      if (existing) {
+        await storage.updateGrinderPayoutMethod(existing.id, { details: payoutDetails });
+      } else {
+        await storage.createGrinderPayoutMethod({
+          id: `PM-${Date.now().toString(36)}`,
+          grinderId: myGrinder.id,
+          platform: payoutPlatform,
+          details: payoutDetails,
+          isDefault: existingMethods.length === 0,
+        });
+      }
     }
 
     const request = await storage.createPayoutRequest({
@@ -731,6 +749,8 @@ export async function registerRoutes(
       orderId,
       grinderId: myGrinder.id,
       amount: String(amount),
+      payoutPlatform,
+      payoutDetails,
       status: "Pending",
       notes: notes || null,
       reviewedBy: null,
@@ -742,10 +762,31 @@ export async function registerRoutes(
       entityId: request.id,
       action: "payout_requested",
       actor: myGrinder.name,
-      details: JSON.stringify({ orderId, assignmentId, amount }),
+      details: JSON.stringify({ orderId, assignmentId, amount, payoutPlatform }),
     });
 
     res.status(201).json(request);
+  });
+
+  app.get("/api/grinder/me/payout-methods", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    const methods = await storage.getGrinderPayoutMethods(myGrinder.id);
+    res.json(methods);
+  });
+
+  app.delete("/api/grinder/me/payout-methods/:id", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    const methods = await storage.getGrinderPayoutMethods(myGrinder.id);
+    const method = methods.find((m: any) => m.id === req.params.id);
+    if (!method) return res.status(404).json({ message: "Payout method not found" });
+    await storage.deleteGrinderPayoutMethod(req.params.id);
+    res.json({ success: true });
   });
 
   app.patch("/api/grinder/me/bids/:bidId", async (req, res) => {
@@ -828,11 +869,15 @@ export async function registerRoutes(
 
   app.patch("/api/staff/payout-requests/:id", requireStaff, async (req, res) => {
     const { status, reviewedBy } = req.body;
-    const updated = await storage.updatePayoutRequest(req.params.id, {
+    const updateData: any = {
       status,
       reviewedBy: reviewedBy || "staff",
       reviewedAt: new Date(),
-    });
+    };
+    if (status === "Paid") {
+      updateData.paidAt = new Date();
+    }
+    const updated = await storage.updatePayoutRequest(req.params.id, updateData);
     if (!updated) return res.status(404).json({ message: "Payout request not found" });
 
     await storage.createAuditLog({
@@ -845,6 +890,11 @@ export async function registerRoutes(
     });
 
     res.json(updated);
+  });
+
+  app.get("/api/staff/grinder-payout-methods/:grinderId", requireStaff, async (req, res) => {
+    const methods = await storage.getGrinderPayoutMethods(req.params.grinderId);
+    res.json(methods);
   });
 
   app.post("/api/grinder/me/elite-request", async (req, res) => {

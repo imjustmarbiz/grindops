@@ -29,6 +29,8 @@ export const ROLE_LABELS: Record<string, string> = {
   [GRINDER_ROLES.EVENT]: "Event Grinder",
 };
 
+export const PAYOUT_PLATFORMS = ["Zelle", "PayPal", "Apple Pay", "Cash App", "Venmo"] as const;
+
 export const services = pgTable("services", {
   id: varchar("id").primaryKey(),
   name: text("name").notNull(),
@@ -170,11 +172,24 @@ export const payoutRequests = pgTable("payout_requests", {
   orderId: varchar("order_id").references(() => orders.id).notNull(),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   amount: numeric("amount").notNull(),
+  payoutPlatform: text("payout_platform"),
+  payoutDetails: text("payout_details"),
   status: text("status").notNull().default("Pending"),
   notes: text("notes"),
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
+  paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const grinderPayoutMethods = pgTable("grinder_payout_methods", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  platform: text("platform").notNull(),
+  details: text("details").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const eliteRequests = pgTable("elite_requests", {
@@ -260,7 +275,8 @@ export const insertBidSchema = createInsertSchema(bids);
 export const insertAssignmentSchema = createInsertSchema(assignments);
 export const insertQueueConfigSchema = createInsertSchema(queueConfig);
 export const insertOrderUpdateSchema = createInsertSchema(orderUpdates).omit({ createdAt: true });
-export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({ createdAt: true, reviewedAt: true });
+export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({ createdAt: true, reviewedAt: true, paidAt: true });
+export const insertGrinderPayoutMethodSchema = createInsertSchema(grinderPayoutMethods).omit({ createdAt: true, updatedAt: true });
 export const insertEliteRequestSchema = createInsertSchema(eliteRequests).omit({ requestedAt: true, reviewedAt: true });
 export const insertStaffAlertSchema = createInsertSchema(staffAlerts).omit({ createdAt: true });
 export const insertStrikeLogSchema = createInsertSchema(strikeLogs).omit({ createdAt: true, acknowledgedAt: true });
@@ -282,6 +298,8 @@ export type OrderUpdate = typeof orderUpdates.$inferSelect;
 export type InsertOrderUpdate = z.infer<typeof insertOrderUpdateSchema>;
 export type PayoutRequest = typeof payoutRequests.$inferSelect;
 export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
+export type GrinderPayoutMethod = typeof grinderPayoutMethods.$inferSelect;
+export type InsertGrinderPayoutMethod = z.infer<typeof insertGrinderPayoutMethodSchema>;
 export type EliteRequest = typeof eliteRequests.$inferSelect;
 export type InsertEliteRequest = z.infer<typeof insertEliteRequestSchema>;
 export type StaffAlert = typeof staffAlerts.$inferSelect;

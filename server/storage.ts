@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
-  orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs,
+  orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -11,6 +11,7 @@ import {
   type AuditLog, type InsertAuditLog,
   type OrderUpdate, type InsertOrderUpdate,
   type PayoutRequest, type InsertPayoutRequest,
+  type GrinderPayoutMethod, type InsertGrinderPayoutMethod,
   type EliteRequest, type InsertEliteRequest,
   type StaffAlert, type InsertStaffAlert,
   type StrikeLog, type InsertStrikeLog,
@@ -639,9 +640,27 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date }>): Promise<PayoutRequest | undefined> {
+  async updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date; paidAt: Date }>): Promise<PayoutRequest | undefined> {
     const [updated] = await db.update(payoutRequests).set(data).where(eq(payoutRequests.id, id)).returning();
     return updated;
+  }
+
+  async getGrinderPayoutMethods(grinderId: string): Promise<GrinderPayoutMethod[]> {
+    return await db.select().from(grinderPayoutMethods).where(eq(grinderPayoutMethods.grinderId, grinderId)).orderBy(desc(grinderPayoutMethods.createdAt));
+  }
+
+  async createGrinderPayoutMethod(method: InsertGrinderPayoutMethod): Promise<GrinderPayoutMethod> {
+    const [created] = await db.insert(grinderPayoutMethods).values(method).returning();
+    return created;
+  }
+
+  async updateGrinderPayoutMethod(id: string, data: Partial<InsertGrinderPayoutMethod>): Promise<GrinderPayoutMethod | undefined> {
+    const [updated] = await db.update(grinderPayoutMethods).set({ ...data, updatedAt: new Date() }).where(eq(grinderPayoutMethods.id, id)).returning();
+    return updated;
+  }
+
+  async deleteGrinderPayoutMethod(id: string): Promise<void> {
+    await db.delete(grinderPayoutMethods).where(eq(grinderPayoutMethods.id, id));
   }
 
   async updateBid(id: string, data: Partial<InsertBid>): Promise<Bid | undefined> {

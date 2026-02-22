@@ -17,6 +17,7 @@ import {
   BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
   MessageSquare, Banknote, Bell, Send, Trash2, Award, Eye,
   Gavel, FileCheck, Lightbulb, HelpCircle, Settings, UserCheck,
+  Search, X, CreditCard, Wallet,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 
@@ -185,6 +186,7 @@ export default function Dashboard() {
   const [assignNotes, setAssignNotes] = useState("");
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const updateLimitMutation = useMutation({
     mutationFn: async ({ grinderId, capacity }: { grinderId: string; capacity: number }) => {
@@ -272,6 +274,13 @@ export default function Dashboard() {
   const grindersReplacedOff = [...new Set(replacedAssignments.map(a => a.originalGrinderId).filter(Boolean))];
   const grindersReplacedIn = [...new Set(replacedAssignments.map(a => a.replacementGrinderId).filter(Boolean))];
 
+  const allPayoutReqs = payoutReqs || [];
+  const pendingPayouts = allPayoutReqs.filter((p: any) => p.status === "Pending");
+  const approvedPayouts = allPayoutReqs.filter((p: any) => p.status === "Approved");
+  const paidPayouts = allPayoutReqs.filter((p: any) => p.status === "Paid");
+  const totalOwed = [...pendingPayouts, ...approvedPayouts].reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+  const totalPaidOut = paidPayouts.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+
   const categoryIcon = (cat: string) => {
     if (cat === "Elite Grinder") return <Crown className="w-3 h-3 text-yellow-500" />;
     if (cat === "VC Grinder") return <Zap className="w-3 h-3 text-cyan-400" />;
@@ -295,6 +304,113 @@ export default function Dashboard() {
           <LastUpdated date={lastUpdatedDate} />
         </div>
       </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search orders, grinders, bids..."
+          className="pl-9 pr-9 bg-white/5 border-border/30"
+          data-testid="input-search"
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" data-testid="button-clear-search">
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {searchQuery.trim().length > 0 && (() => {
+        const q = searchQuery.toLowerCase().trim();
+        const matchedOrders = allOrders.filter(o =>
+          (o.mgtOrderNumber && String(o.mgtOrderNumber).includes(q)) ||
+          o.id.toLowerCase().includes(q) ||
+          (o.gamertag && o.gamertag.toLowerCase().includes(q)) ||
+          (o.platform && o.platform.toLowerCase().includes(q)) ||
+          o.status.toLowerCase().includes(q)
+        ).slice(0, 10);
+        const matchedGrinders = allGrinders.filter(g =>
+          g.name.toLowerCase().includes(q) ||
+          g.id.toLowerCase().includes(q) ||
+          (g.discordUsername && g.discordUsername.toLowerCase().includes(q)) ||
+          (g.category && g.category.toLowerCase().includes(q))
+        ).slice(0, 10);
+        const matchedBids = allBids.filter(b =>
+          b.id.toLowerCase().includes(q) ||
+          b.orderId.toLowerCase().includes(q) ||
+          b.grinderId.toLowerCase().includes(q) ||
+          b.status.toLowerCase().includes(q) ||
+          (String(b.bidAmount)).includes(q)
+        ).slice(0, 10);
+        const total = matchedOrders.length + matchedGrinders.length + matchedBids.length;
+        return (
+          <Card className="glass-panel border-primary/20" data-testid="card-search-results">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Search className="w-4 h-4 text-primary" />
+                Search Results ({total})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {matchedOrders.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Orders ({matchedOrders.length})</p>
+                  <div className="space-y-1.5">
+                    {matchedOrders.map(o => {
+                      const svc = allServices.find(s => s.id === o.serviceId);
+                      return (
+                        <div key={o.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-order-${o.id}`}>
+                          <span className="font-medium">{o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id.slice(0, 8)}</span>
+                          <span className="text-muted-foreground">{svc?.name || o.serviceId}</span>
+                          {o.gamertag && <span className="text-xs text-muted-foreground">({o.gamertag})</span>}
+                          <Badge variant="outline" className="text-[10px]">{o.status}</Badge>
+                          <span className="text-emerald-400 font-medium ml-auto">{formatCurrency(Number(o.customerPrice))}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {matchedGrinders.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Grinders ({matchedGrinders.length})</p>
+                  <div className="space-y-1.5">
+                    {matchedGrinders.map(g => (
+                      <div key={g.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-grinder-${g.id}`}>
+                        {categoryIcon(g.category)}
+                        <span className="font-medium">{g.name}</span>
+                        {g.discordUsername && <span className="text-xs text-muted-foreground">@{g.discordUsername}</span>}
+                        <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
+                        <span className="text-xs text-muted-foreground ml-auto">{g.activeOrders}/{g.capacity} orders</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {matchedBids.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Bids ({matchedBids.length})</p>
+                  <div className="space-y-1.5">
+                    {matchedBids.map(b => {
+                      const grinder = allGrinders.find(g => g.id === b.grinderId);
+                      return (
+                        <div key={b.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-bid-${b.id}`}>
+                          <span className="font-medium">{grinder?.name || b.grinderId.slice(0, 8)}</span>
+                          <span className="text-muted-foreground">on {b.orderId.slice(0, 8)}</span>
+                          <span className="text-emerald-400">${Number(b.bidAmount).toFixed(2)}</span>
+                          <Badge variant="outline" className={`text-[10px] ${b.status === "Accepted" ? "text-green-400" : b.status === "Denied" ? "text-red-400" : "text-yellow-400"}`}>{b.status}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {total === 0 && <p className="text-sm text-muted-foreground text-center py-4">No results found for "{searchQuery}"</p>}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
@@ -1383,6 +1499,107 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+      <Card className="glass-panel border-green-500/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Wallet className="w-5 h-5 text-green-400" />
+            Payout Management
+            {pendingPayouts.length > 0 && (
+              <Badge className="bg-yellow-500/20 text-yellow-400 ml-2">{pendingPayouts.length} pending</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
+              <p className="text-xl font-bold text-yellow-400" data-testid="text-total-owed">{formatCurrency(totalOwed)}</p>
+              <p className="text-[10px] text-muted-foreground">Outstanding</p>
+            </div>
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+              <p className="text-xl font-bold text-green-400" data-testid="text-total-paid">{formatCurrency(totalPaidOut)}</p>
+              <p className="text-[10px] text-muted-foreground">Paid Out</p>
+            </div>
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
+              <p className="text-xl font-bold text-blue-400">{allPayoutReqs.length}</p>
+              <p className="text-[10px] text-muted-foreground">Total Requests</p>
+            </div>
+          </div>
+
+          {[...pendingPayouts, ...approvedPayouts].length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Payouts</p>
+              {[...pendingPayouts, ...approvedPayouts].map((p: any) => {
+                const grinder = allGrinders.find(g => g.id === p.grinderId);
+                return (
+                  <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/5" data-testid={`staff-payout-${p.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{grinder?.name || p.grinderId}</span>
+                        <span className="text-green-400 font-bold">{formatCurrency(Number(p.amount))}</span>
+                        <Badge variant="outline" className={`text-[10px] ${p.status === "Approved" ? "text-blue-400 border-blue-500/30" : "text-yellow-400 border-yellow-500/30"}`}>{p.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {p.payoutPlatform && (
+                          <Badge variant="outline" className="text-[10px] border-border/50 gap-1">
+                            <CreditCard className="w-3 h-3" /> {p.payoutPlatform}: {p.payoutDetails || "N/A"}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">Order {p.orderId.slice(0, 10)}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {p.notes && <p className="text-xs text-muted-foreground mt-1">{p.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {p.status === "Pending" && (
+                        <>
+                          <Button size="sm" variant="outline" className="text-xs bg-blue-500/10 border-blue-500/30 text-blue-400 h-7 px-2" data-testid={`button-approve-payout-${p.id}`}
+                            disabled={payoutMutation.isPending}
+                            onClick={() => payoutMutation.mutate({ id: p.id, status: "Approved" })}>
+                            <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-xs bg-red-500/10 border-red-500/30 text-red-400 h-7 px-2" data-testid={`button-deny-payout-${p.id}`}
+                            disabled={payoutMutation.isPending}
+                            onClick={() => payoutMutation.mutate({ id: p.id, status: "Denied" })}>
+                            <X className="w-3 h-3 mr-1" /> Deny
+                          </Button>
+                        </>
+                      )}
+                      {(p.status === "Approved" || p.status === "Pending") && (
+                        <Button size="sm" className="text-xs bg-green-600 h-7 px-2" data-testid={`button-mark-paid-${p.id}`}
+                          disabled={payoutMutation.isPending}
+                          onClick={() => payoutMutation.mutate({ id: p.id, status: "Paid" })}>
+                          <Banknote className="w-3 h-3 mr-1" /> Mark Paid
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-2">No pending payouts.</p>
+          )}
+
+          {paidPayouts.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recently Paid ({paidPayouts.length})</p>
+              {paidPayouts.slice(0, 5).map((p: any) => {
+                const grinder = allGrinders.find(g => g.id === p.grinderId);
+                return (
+                  <div key={p.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 opacity-70 text-sm" data-testid={`staff-paid-${p.id}`}>
+                    <span className="font-medium">{grinder?.name || p.grinderId}</span>
+                    <span className="text-green-400">{formatCurrency(Number(p.amount))}</span>
+                    {p.payoutPlatform && <span className="text-xs text-muted-foreground">via {p.payoutPlatform}</span>}
+                    <Badge className="bg-green-500/20 text-green-400 text-[10px]">Paid</Badge>
+                    {p.paidAt && <span className="text-xs text-muted-foreground ml-auto">{new Date(p.paidAt).toLocaleDateString()}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="glass-panel border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
