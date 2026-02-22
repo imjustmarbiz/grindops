@@ -53,6 +53,26 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/grinders/:id", requireOwner, async (req, res) => {
+    try {
+      const grinder = await storage.getGrinder(req.params.id);
+      if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+      const deleted = await storage.deleteGrinder(req.params.id);
+      if (!deleted) return res.status(500).json({ message: "Failed to delete grinder" });
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: req.params.id,
+        action: "grinder_removed",
+        actor: (req as any).userId || "owner",
+        details: JSON.stringify({ name: grinder.name, discordUsername: grinder.discordUsername }),
+      });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.get(api.orders.list.path, requireStaff, async (req, res) => {
     const results = await storage.getOrders();
     res.json(results);

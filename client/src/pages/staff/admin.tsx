@@ -34,6 +34,7 @@ export default function StaffAdmin() {
   const [strikeReason, setStrikeReason] = useState("");
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
+  const [removeGrinder, setRemoveGrinder] = useState<any>(null);
   const [editProfileGrinder, setEditProfileGrinder] = useState<any>(null);
   const [editProfileName, setEditProfileName] = useState("");
   const [editProfileCategory, setEditProfileCategory] = useState("");
@@ -103,6 +104,21 @@ export default function StaffAdmin() {
       toast({ title: "Grinder profile updated" });
     },
     onError: () => toast({ title: "Failed to update profile", variant: "destructive" }),
+  });
+
+  const removeGrinderMutation = useMutation({
+    mutationFn: async (grinderId: string) => {
+      const res = await apiRequest("DELETE", `/api/grinders/${grinderId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      setRemoveGrinder(null);
+      toast({ title: "Grinder removed permanently" });
+    },
+    onError: () => toast({ title: "Failed to remove grinder", variant: "destructive" }),
   });
 
   const replacedAssignments = allAssignments.filter(a => a.wasReassigned);
@@ -362,18 +378,26 @@ export default function StaffAdmin() {
                     </div>
                     {g.notes && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{g.notes}</p>}
                   </div>
-                  <Button size="sm" variant="ghost" className="text-amber-400 text-xs"
-                    data-testid={`button-edit-profile-${g.id}`}
-                    onClick={() => {
-                      setEditProfileGrinder(g);
-                      setEditProfileName(g.name);
-                      setEditProfileCategory(g.category);
-                      setEditProfileTier(g.tier);
-                      setEditProfileCapacity(String(g.capacity));
-                      setEditProfileNotes(g.notes || "");
-                    }}>
-                    Edit
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" className="text-amber-400 text-xs"
+                      data-testid={`button-edit-profile-${g.id}`}
+                      onClick={() => {
+                        setEditProfileGrinder(g);
+                        setEditProfileName(g.name);
+                        setEditProfileCategory(g.category);
+                        setEditProfileTier(g.tier);
+                        setEditProfileCapacity(String(g.capacity));
+                        setEditProfileNotes(g.notes || "");
+                      }}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-red-400 text-xs hover:text-red-300 hover:bg-red-500/10"
+                      data-testid={`button-remove-grinder-${g.id}`}
+                      onClick={() => setRemoveGrinder(g)}>
+                      <Ban className="w-3 h-3 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -452,6 +476,58 @@ export default function StaffAdmin() {
               {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
               Save Profile Changes
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Grinder Confirmation Dialog */}
+      <Dialog open={!!removeGrinder} onOpenChange={(open) => !open && setRemoveGrinder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <Ban className="w-5 h-5" />
+              Remove Grinder Permanently
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+              <p className="text-sm text-red-300 font-medium mb-2">This action cannot be undone.</p>
+              <p className="text-sm text-muted-foreground">
+                Removing <span className="text-white font-semibold">{removeGrinder?.name}</span> will permanently delete their profile, all bids, assignments, strike logs, payout requests, and related data.
+              </p>
+            </div>
+            {removeGrinder && (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="p-2 rounded bg-white/5">
+                  <span className="text-muted-foreground">Orders:</span>{" "}
+                  <span className="font-medium">{removeGrinder.totalOrders || 0}</span>
+                </div>
+                <div className="p-2 rounded bg-white/5">
+                  <span className="text-muted-foreground">Active:</span>{" "}
+                  <span className="font-medium">{removeGrinder.activeOrders || 0}</span>
+                </div>
+                <div className="p-2 rounded bg-white/5">
+                  <span className="text-muted-foreground">Strikes:</span>{" "}
+                  <span className="font-medium">{removeGrinder.strikes || 0}</span>
+                </div>
+                <div className="p-2 rounded bg-white/5">
+                  <span className="text-muted-foreground">Earnings:</span>{" "}
+                  <span className="font-medium">{formatCurrency(Number(removeGrinder.totalEarnings || 0))}</span>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setRemoveGrinder(null)} data-testid="button-cancel-remove">
+                Cancel
+              </Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                data-testid="button-confirm-remove"
+                disabled={removeGrinderMutation.isPending}
+                onClick={() => removeGrinderMutation.mutate(removeGrinder.id)}>
+                {removeGrinderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
+                Remove Permanently
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

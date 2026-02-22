@@ -30,6 +30,7 @@ export interface IStorage {
   getGrinderByDiscordId(discordUserId: string): Promise<Grinder | undefined>;
   createGrinder(grinder: InsertGrinder): Promise<Grinder>;
   updateGrinder(id: string, data: Partial<InsertGrinder>): Promise<Grinder | undefined>;
+  deleteGrinder(id: string): Promise<boolean>;
   upsertGrinderByDiscordId(discordUserId: string, data: Partial<InsertGrinder>): Promise<Grinder>;
 
   getOrders(): Promise<Order[]>;
@@ -149,6 +150,19 @@ export class DatabaseStorage implements IStorage {
   async updateGrinder(id: string, data: Partial<InsertGrinder>): Promise<Grinder | undefined> {
     const [updated] = await db.update(grinders).set(data).where(eq(grinders.id, id)).returning();
     return updated;
+  }
+
+  async deleteGrinder(id: string): Promise<boolean> {
+    await db.delete(bids).where(eq(bids.grinderId, id));
+    await db.delete(assignments).where(eq(assignments.grinderId, id));
+    await db.delete(strikeLogs).where(eq(strikeLogs.grinderId, id));
+    await db.delete(eliteRequests).where(eq(eliteRequests.grinderId, id));
+    await db.delete(orderUpdates).where(eq(orderUpdates.grinderId, id));
+    await db.delete(payoutRequests).where(eq(payoutRequests.grinderId, id));
+    await db.delete(grinderPayoutMethods).where(eq(grinderPayoutMethods.grinderId, id));
+    await db.delete(staffAlerts).where(eq(staffAlerts.grinderId, id));
+    const [deleted] = await db.delete(grinders).where(eq(grinders.id, id)).returning();
+    return !!deleted;
   }
 
   async upsertGrinderByDiscordId(discordUserId: string, data: Partial<InsertGrinder>): Promise<Grinder> {
