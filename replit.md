@@ -52,6 +52,15 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Elite Grinder role default order limit: 5 (was 3)
   - Renamed "capacity" → "order limit" across all dashboards and Discord bot
   - Staff can override individual grinder order limits from dashboard
+- 2026-02-22: Added Staff Dashboard Search feature
+  - Global search bar filters orders, grinders, and bids inline
+  - Search by order number, gamertag, platform, grinder name, Discord username, bid amount, status
+  - Up to 10 results shown per category with clear button
+- 2026-02-22: Added Staff Payout Management section
+  - Outstanding/Paid Out/Total Requests summary cards
+  - Active payouts list with Approve/Deny/Mark Paid actions
+  - Shows payout platform and details for each request
+  - Recently paid payouts list with timestamps
 - 2026-02-22: Enhanced grinder dashboard with availability, theming, and name fixes
   - Grinders can set availability status (available, busy, away, offline) with optional note
   - Staff dashboard shows grinder availability status and notes
