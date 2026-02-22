@@ -61,6 +61,13 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Active payouts list with Approve/Deny/Mark Paid actions
   - Shows payout platform and details for each request
   - Recently paid payouts list with timestamps
+- 2026-02-22: Added Manual Order Creation system
+  - Staff can create orders directly from dashboard with service, price, platform, gamertag, due date, complexity
+  - Toggle: "Send to Grinders" (visible for bidding) vs "Manual Assign Only" (staff assigns privately)
+  - Manual orders flagged with `isManual=true`, private orders have `visibleToGrinders=false`
+  - Grinders can place bids on manual orders from their dashboard (opens bid dialog instead of Discord)
+  - Dashboard-placed bids go through POST /api/grinder/me/bids endpoint
+  - Orders display "Dashboard" badge for manual orders, distinction between Discord and dashboard order flows
 - 2026-02-22: Enhanced grinder dashboard with availability, theming, and name fixes
   - Grinders can set availability status (available, busy, away, offline) with optional note
   - Staff dashboard shows grinder availability status and notes

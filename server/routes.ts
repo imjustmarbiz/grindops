@@ -458,7 +458,7 @@ export async function registerRoutes(
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
-    const openOrders = allOrders.filter((o: any) => o.status === "Open");
+    const openOrders = allOrders.filter((o: any) => o.status === "Open" && o.visibleToGrinders !== false);
 
     const availableOrders = openOrders.map((o: any) => {
       const orderBids = allBids.filter((b: any) => b.orderId === o.id);
@@ -475,6 +475,7 @@ export async function registerRoutes(
         complexity: o.complexity,
         location: o.location,
         status: o.status,
+        isManual: o.isManual,
         discordMessageId: o.discordMessageId,
         createdAt: o.createdAt,
         firstBidAt: o.firstBidAt,
@@ -787,6 +788,62 @@ export async function registerRoutes(
     if (!method) return res.status(404).json({ message: "Payout method not found" });
     await storage.deleteGrinderPayoutMethod(req.params.id);
     res.json({ success: true });
+  });
+
+  app.post("/api/grinder/me/bids", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+
+      const { orderId, bidAmount, timeline, canStart } = req.body;
+      if (!orderId || !bidAmount) return res.status(400).json({ message: "orderId and bidAmount are required" });
+
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.status !== "Open") return res.status(400).json({ message: "Order is not open for bidding" });
+      if (!order.visibleToGrinders) return res.status(403).json({ message: "This order is not open for grinder bids" });
+
+      const allBids = await storage.getBids();
+      const existingBid = allBids.find((b: any) => b.orderId === orderId && b.grinderId === myGrinder.id);
+      if (existingBid) return res.status(400).json({ message: "You already have a bid on this order" });
+
+      if (myGrinder.activeOrders >= myGrinder.capacity) {
+        return res.status(400).json({ message: "You are at your order limit" });
+      }
+
+      const bidId = `BID-${Date.now().toString(36)}`;
+      const now = new Date();
+      const estDelivery = timeline
+        ? new Date(now.getTime() + parseInt(timeline) * 3600000)
+        : new Date(now.getTime() + 48 * 3600000);
+
+      const newBid = await storage.createBid({
+        id: bidId,
+        orderId,
+        grinderId: myGrinder.id,
+        bidAmount: String(bidAmount),
+        bidTime: now,
+        estDeliveryDate: estDelivery,
+        timeline: timeline || null,
+        canStart: canStart || null,
+        status: "Pending",
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "bid",
+        entityId: bidId,
+        action: "bid_placed_via_dashboard",
+        actor: myGrinder.name,
+        details: JSON.stringify({ orderId, bidAmount, isManualOrder: order.isManual }),
+      });
+
+      res.status(201).json(newBid);
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
   });
 
   app.patch("/api/grinder/me/bids/:bidId", async (req, res) => {

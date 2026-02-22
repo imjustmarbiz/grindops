@@ -64,6 +64,10 @@ export default function GrinderProfile() {
   const [savePayoutMethod, setSavePayoutMethod] = useState(true);
   const [availStatus, setAvailStatus] = useState("available");
   const [availNote, setAvailNote] = useState("");
+  const [placeBidDialog, setPlaceBidDialog] = useState<any>(null);
+  const [placeBidAmount, setPlaceBidAmount] = useState("");
+  const [placeBidTimeline, setPlaceBidTimeline] = useState("");
+  const [placeBidCanStart, setPlaceBidCanStart] = useState("");
 
   const submitUpdateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -155,6 +159,22 @@ export default function GrinderProfile() {
       toast({ title: "Strike acknowledged" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const placeBidMutation = useMutation({
+    mutationFn: async (data: { orderId: string; bidAmount: string; timeline?: string; canStart?: string }) => {
+      const res = await apiRequest("POST", "/api/grinder/me/bids", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      setPlaceBidDialog(null);
+      setPlaceBidAmount("");
+      setPlaceBidTimeline("");
+      setPlaceBidCanStart("");
+      toast({ title: "Bid submitted!", description: "Staff will review your bid." });
+    },
+    onError: (e: any) => toast({ title: "Bid failed", description: e.message, variant: "destructive" }),
   });
 
   const availabilityMutation = useMutation({
@@ -622,6 +642,7 @@ export default function GrinderProfile() {
                             {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
                           </span>
                           <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
+                          {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
                           {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
                           {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
                           <Badge variant="outline" className="text-muted-foreground">{serviceName(order.serviceId)}</Badge>
@@ -644,6 +665,21 @@ export default function GrinderProfile() {
                               <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
                             )}
                           </div>
+                        ) : order.isManual ? (
+                          <Button
+                            size="sm"
+                            className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
+                            data-testid={`button-bid-${order.id}`}
+                            onClick={() => {
+                              setPlaceBidDialog(order);
+                              setPlaceBidAmount("");
+                              setPlaceBidTimeline("");
+                              setPlaceBidCanStart("");
+                            }}
+                          >
+                            <Gavel className="w-4 h-4" />
+                            Place Bid
+                          </Button>
                         ) : (
                           <Button
                             size="sm"
@@ -1243,6 +1279,65 @@ export default function GrinderProfile() {
               }}>
               {editBidMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Edit3 className="w-4 h-4 mr-2" />}
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!placeBidDialog} onOpenChange={(open) => !open && setPlaceBidDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Place Bid - {placeBidDialog?.mgtOrderNumber ? `Order #${placeBidDialog.mgtOrderNumber}` : placeBidDialog?.id}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Service:</span>
+                <span className="font-medium">{serviceName(placeBidDialog?.serviceId)}</span>
+              </div>
+              {placeBidDialog?.platform && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Platform:</span>
+                  <span>{placeBidDialog.platform}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Due:</span>
+                <span>{placeBidDialog?.orderDueDate ? new Date(placeBidDialog.orderDueDate).toLocaleDateString() : "N/A"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Complexity:</span>
+                <span>{placeBidDialog?.complexity}/5</span>
+              </div>
+              <Badge className="bg-amber-500/20 text-amber-400 mt-1">Dashboard Order</Badge>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Your Bid Amount ($)</label>
+              <Input type="number" step="0.01" min="0" value={placeBidAmount} onChange={(e) => setPlaceBidAmount(e.target.value)} placeholder="Enter your price" data-testid="input-place-bid-amount" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Timeline</label>
+              <Input value={placeBidTimeline} onChange={(e) => setPlaceBidTimeline(e.target.value)} placeholder="e.g., 2 hours, 1 day" data-testid="input-place-bid-timeline" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Can Start</label>
+              <Input value={placeBidCanStart} onChange={(e) => setPlaceBidCanStart(e.target.value)} placeholder="e.g., Immediately, 3:00 PM" data-testid="input-place-bid-can-start" />
+            </div>
+            <Button
+              className={`w-full ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500" : ""}`}
+              disabled={!placeBidAmount || placeBidMutation.isPending}
+              data-testid="button-submit-bid"
+              onClick={() => {
+                placeBidMutation.mutate({
+                  orderId: placeBidDialog.id,
+                  bidAmount: placeBidAmount,
+                  timeline: placeBidTimeline || undefined,
+                  canStart: placeBidCanStart || undefined,
+                });
+              }}
+            >
+              {placeBidMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Gavel className="w-4 h-4 mr-2" />}
+              Submit Bid
             </Button>
           </div>
         </DialogContent>

@@ -17,7 +17,7 @@ import {
   BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
   MessageSquare, Banknote, Bell, Send, Trash2, Award, Eye,
   Gavel, FileCheck, Lightbulb, HelpCircle, Settings, UserCheck,
-  Search, X, CreditCard, Wallet,
+  Search, X, CreditCard, Wallet, Plus, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 
@@ -187,6 +187,40 @@ export default function Dashboard() {
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [manualOrderService, setManualOrderService] = useState("");
+  const [manualOrderPrice, setManualOrderPrice] = useState("");
+  const [manualOrderPlatform, setManualOrderPlatform] = useState("");
+  const [manualOrderGamertag, setManualOrderGamertag] = useState("");
+  const [manualOrderDueDays, setManualOrderDueDays] = useState("3");
+  const [manualOrderNotes, setManualOrderNotes] = useState("");
+  const [manualOrderSendToGrinders, setManualOrderSendToGrinders] = useState(true);
+  const [manualOrderIsRush, setManualOrderIsRush] = useState(false);
+  const [manualOrderComplexity, setManualOrderComplexity] = useState("1");
+
+  const createManualOrderMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/orders", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
+      setManualOrderService("");
+      setManualOrderPrice("");
+      setManualOrderPlatform("");
+      setManualOrderGamertag("");
+      setManualOrderDueDays("3");
+      setManualOrderNotes("");
+      setManualOrderSendToGrinders(true);
+      setManualOrderIsRush(false);
+      setManualOrderComplexity("1");
+      toast({ title: "Manual order created", description: manualOrderSendToGrinders ? "Order is visible to grinders for bidding." : "Order created for manual assignment only." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to create order", description: err.message || "Something went wrong", variant: "destructive" });
+    },
+  });
 
   const updateLimitMutation = useMutation({
     mutationFn: async ({ grinderId, capacity }: { grinderId: string; capacity: number }) => {
@@ -475,6 +509,134 @@ export default function Dashboard() {
       </div>
 
       <BiddingCountdownPanel />
+
+      <Card className="glass-panel border-amber-500/20" data-testid="card-create-manual-order">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Plus className="w-5 h-5 text-amber-400" />
+            Create Manual Order
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Service</label>
+              <Select value={manualOrderService} onValueChange={setManualOrderService}>
+                <SelectTrigger data-testid="select-manual-service">
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allServices.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Customer Price ($)</label>
+              <Input type="number" step="0.01" min="0" placeholder="Price" value={manualOrderPrice} onChange={(e) => setManualOrderPrice(e.target.value)} data-testid="input-manual-price" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Platform</label>
+              <Select value={manualOrderPlatform} onValueChange={setManualOrderPlatform}>
+                <SelectTrigger data-testid="select-manual-platform">
+                  <SelectValue placeholder="Select platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Xbox">Xbox</SelectItem>
+                  <SelectItem value="PS5">PS5</SelectItem>
+                  <SelectItem value="PS4">PS4</SelectItem>
+                  <SelectItem value="PC">PC</SelectItem>
+                  <SelectItem value="Switch">Switch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Gamertag</label>
+              <Input placeholder="Customer gamertag" value={manualOrderGamertag} onChange={(e) => setManualOrderGamertag(e.target.value)} data-testid="input-manual-gamertag" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Due in (days)</label>
+              <Input type="number" min="1" placeholder="3" value={manualOrderDueDays} onChange={(e) => setManualOrderDueDays(e.target.value)} data-testid="input-manual-due" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Complexity (1-5)</label>
+              <Select value={manualOrderComplexity} onValueChange={setManualOrderComplexity}>
+                <SelectTrigger data-testid="select-manual-complexity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1,2,3,4,5].map(n => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground font-medium">Notes (optional)</label>
+            <Input placeholder="Additional details..." value={manualOrderNotes} onChange={(e) => setManualOrderNotes(e.target.value)} data-testid="input-manual-notes" />
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+            <div className="flex items-center gap-2 flex-1">
+              <button
+                type="button"
+                onClick={() => setManualOrderSendToGrinders(!manualOrderSendToGrinders)}
+                className="flex items-center gap-2"
+                data-testid="toggle-send-to-grinders"
+              >
+                {manualOrderSendToGrinders
+                  ? <ToggleRight className="w-8 h-5 text-emerald-400" />
+                  : <ToggleLeft className="w-8 h-5 text-muted-foreground" />
+                }
+              </button>
+              <div>
+                <span className={`text-sm font-medium ${manualOrderSendToGrinders ? "text-emerald-400" : "text-muted-foreground"}`}>
+                  {manualOrderSendToGrinders ? "Send to Grinders" : "Manual Assign Only"}
+                </span>
+                <p className="text-[10px] text-muted-foreground">
+                  {manualOrderSendToGrinders
+                    ? "Grinders will see this order and can submit bids from their dashboard"
+                    : "Only staff sees this order. Use Override Assign below to assign a grinder"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <input type="checkbox" checked={manualOrderIsRush} onChange={(e) => setManualOrderIsRush(e.target.checked)} className="rounded" data-testid="checkbox-manual-rush" />
+                Rush
+              </label>
+            </div>
+          </div>
+          <Button
+            className="w-full bg-amber-600"
+            disabled={!manualOrderService || !manualOrderPrice || createManualOrderMutation.isPending}
+            data-testid="button-create-manual-order"
+            onClick={() => {
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + Number(manualOrderDueDays || 3));
+              createManualOrderMutation.mutate({
+                id: `MO-${Date.now().toString(36)}`,
+                serviceId: manualOrderService,
+                customerPrice: manualOrderPrice,
+                platform: manualOrderPlatform || null,
+                gamertag: manualOrderGamertag || null,
+                orderDueDate: dueDate.toISOString(),
+                isRush: manualOrderIsRush,
+                isEmergency: false,
+                complexity: Number(manualOrderComplexity),
+                notes: manualOrderNotes || null,
+                isManual: true,
+                visibleToGrinders: manualOrderSendToGrinders,
+                status: "Open",
+              });
+            }}
+          >
+            {createManualOrderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+            Create Order
+          </Button>
+        </CardContent>
+      </Card>
 
       {(() => {
         const assignableOrders = allOrders.filter(o => o.status === "Open" || o.status === "Bidding Closed");
