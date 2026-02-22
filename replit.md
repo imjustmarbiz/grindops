@@ -48,6 +48,13 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Elite Grinder role default order limit: 5 (was 3)
   - Renamed "capacity" → "order limit" across all dashboards and Discord bot
   - Staff can override individual grinder order limits from dashboard
+- 2026-02-22: Enhanced grinder dashboard with availability, theming, and name fixes
+  - Grinders can set availability status (available, busy, away, offline) with optional note
+  - Staff dashboard shows grinder availability status and notes
+  - Auto-fix grinder name from Discord display name when it's "Unknown"
+  - Badge shows "Grinder" or "Elite Grinder" role label
+  - Regular grinder dashboard uses Discord purple (#5865F2) theme
+  - Elite grinder dashboard uses cyan (#00ffff) theme for elevated feel
 
 ## Architecture
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui, dark mode professional theme

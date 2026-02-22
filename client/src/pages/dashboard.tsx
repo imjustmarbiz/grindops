@@ -617,7 +617,7 @@ export default function Dashboard() {
                       <span className="text-[10px] font-mono w-6 text-right">{g.activeOrders}/{g.capacity}</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>{g.name}: {g.activeOrders}/{g.capacity} orders ({g.category})</TooltipContent>
+                  <TooltipContent>{g.name}: {g.activeOrders}/{g.capacity} orders ({g.category}) - {(g as any).availabilityStatus || "available"}</TooltipContent>
                 </Tooltip>
               ))}
             </div>
@@ -1164,8 +1164,19 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium truncate">{g.name}</span>
                     <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
+                    <Badge className={`text-[10px] ${
+                      (g as any).availabilityStatus === "busy" ? "bg-yellow-500/20 text-yellow-400" :
+                      (g as any).availabilityStatus === "away" ? "bg-orange-500/20 text-orange-400" :
+                      (g as any).availabilityStatus === "offline" ? "bg-red-500/20 text-red-400" :
+                      "bg-emerald-500/20 text-emerald-400"
+                    }`}>
+                      {(g as any).availabilityStatus || "available"}
+                    </Badge>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{g.activeOrders} active / {g.capacity} limit</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {g.activeOrders} active / {g.capacity} limit
+                    {(g as any).availabilityNote && ` · ${(g as any).availabilityNote}`}
+                  </span>
                 </div>
                 {editLimitGrinderId === g.id ? (
                   <div className="flex items-center gap-1.5">

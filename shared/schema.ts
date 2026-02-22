@@ -63,6 +63,9 @@ export const grinders = pgTable("grinders", {
   reassignmentCount: integer("reassignment_count").notNull().default(0),
   avgTurnaroundDays: numeric("avg_turnaround_days"),
   strikes: integer("strikes").notNull().default(0),
+  availabilityStatus: text("availability_status").notNull().default("available"),
+  availabilityNote: text("availability_note"),
+  availabilityUpdatedAt: timestamp("availability_updated_at"),
   notes: text("notes"),
 });
 

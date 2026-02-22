@@ -11,13 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { BiddingCountdownPanel, InlineCountdown } from "@/components/bidding-countdown";
 import {
   Loader2, FileCheck, Gavel, TrendingUp, Clock, CheckCircle, AlertCircle,
   ExternalLink, X, DollarSign, Star, Zap, Send, CalendarClock,
   Award, Target, BarChart3, Lightbulb, Crown, ShieldCheck, Sparkles,
-  Ban, Edit3, MessageSquare, Banknote, Bell, ArrowUpCircle, AlertOctagon, Eye
+  Ban, Edit3, MessageSquare, Banknote, Bell, ArrowUpCircle, AlertOctagon, Eye,
+  Signal
 } from "lucide-react";
 
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
@@ -170,43 +172,57 @@ export default function GrinderProfile() {
   const { grinder, isElite, assignments, bids, availableOrders, lostBids, aiTips, orderUpdates, payoutRequests, strikeLogs, alerts, eliteRequests, eliteCoaching, unreadAlertCount, unackedStrikeCount } = profile;
   const stats = profile.stats || { totalAssignments: 0, activeAssignments: 0, completedAssignments: 0, totalBids: 0, pendingBids: 0, acceptedBids: 0, winRate: 0, totalEarned: 0, activeEarnings: 0, totalEarnings: 0 };
   const serviceName = (serviceId: string) => services?.find((s: any) => s.id === serviceId)?.name || serviceId;
+  const [availStatus, setAvailStatus] = useState(grinder.availabilityStatus || "available");
+  const [availNote, setAvailNote] = useState(grinder.availabilityNote || "");
 
-  const eliteGradient = isElite ? "from-amber-500/20 via-yellow-500/10 to-orange-500/20" : "from-primary/10 via-primary/5 to-accent/10";
-  const eliteBorder = isElite ? "border-amber-500/30" : "border-border/50";
-  const eliteGlow = isElite ? "shadow-amber-500/10 shadow-lg" : "";
-  const eliteAccent = isElite ? "text-amber-400" : "text-primary";
+  const availabilityMutation = useMutation({
+    mutationFn: async (data: { status: string; note: string }) => {
+      const res = await apiRequest("PATCH", "/api/grinder/me/availability", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      toast({ title: "Availability updated" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const eliteGradient = isElite ? "from-cyan-500/20 via-cyan-500/10 to-teal-500/20" : "from-[#5865F2]/20 via-[#5865F2]/10 to-[#5865F2]/5";
+  const eliteBorder = isElite ? "border-cyan-500/30" : "border-[#5865F2]/30";
+  const eliteGlow = isElite ? "shadow-cyan-500/10 shadow-lg" : "";
+  const eliteAccent = isElite ? "text-cyan-400" : "text-[#5865F2]";
 
   return (
     <div className="space-y-6">
       <div className={`relative rounded-2xl bg-gradient-to-r ${eliteGradient} border ${eliteBorder} p-6 ${eliteGlow} overflow-hidden`}>
         {isElite && (
-          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/5 rounded-full blur-3xl pointer-events-none" />
         )}
         <div className="flex items-center gap-6 relative z-10">
           <div className="relative">
-            <Avatar className={`h-20 w-20 border-2 ${isElite ? "border-amber-500/50 ring-2 ring-amber-400/20" : "border-primary/20"}`}>
+            <Avatar className={`h-20 w-20 border-2 ${isElite ? "border-cyan-500/50 ring-2 ring-cyan-400/20" : "border-[#5865F2]/30"}`}>
               <AvatarImage src={user?.profileImageUrl || undefined} />
-              <AvatarFallback className={`${isElite ? "bg-amber-500/20 text-amber-400" : "bg-primary/20 text-primary"} text-2xl`}>
+              <AvatarFallback className={`${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} text-2xl`}>
                 {grinder.name?.charAt(0) || "G"}
               </AvatarFallback>
             </Avatar>
             {isElite && (
-              <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+              <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-lg">
                 <Crown className="w-4 h-4 text-white" />
               </div>
             )}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className={`text-3xl font-display font-bold ${isElite ? "bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent" : ""}`} data-testid="text-grinder-name">
+              <h1 className={`text-3xl font-display font-bold ${isElite ? "bg-gradient-to-r from-cyan-300 to-teal-400 bg-clip-text text-transparent" : ""}`} data-testid="text-grinder-name">
                 {grinder.name}
               </h1>
-              {isElite && <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />}
+              {isElite && <Sparkles className="w-6 h-6 text-cyan-400 animate-pulse" />}
             </div>
             <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <Badge className={`${isElite ? "bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-300 border-amber-500/30" : "border-primary/30 text-primary"}`} data-testid="text-grinder-tier">
+              <Badge className={`${isElite ? "bg-gradient-to-r from-cyan-500/30 to-teal-500/30 text-cyan-300 border-cyan-500/30" : "border-[#5865F2]/30 text-[#5865F2]"}`} data-testid="text-grinder-tier">
                 {isElite && <Crown className="w-3 h-3 mr-1" />}
-                {grinder.tier || grinder.category || "Grinder"}
+                {isElite ? "Elite Grinder" : "Grinder"}
               </Badge>
               <Badge variant={grinder.activeOrders < grinder.capacity ? "default" : "secondary"}
                 className={grinder.activeOrders < grinder.capacity ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"} data-testid="text-grinder-status">
@@ -248,6 +264,48 @@ export default function GrinderProfile() {
         </div>
       </div>
 
+      <Card className={`${isElite ? "border-cyan-500/20" : "border-[#5865F2]/20"}`} data-testid="card-availability">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Signal className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-[#5865F2]"}`} />
+              <span className="text-sm font-medium">Availability</span>
+            </div>
+            <Select
+              value={availStatus}
+              onValueChange={(val) => { setAvailStatus(val); availabilityMutation.mutate({ status: val, note: availNote }); }}
+            >
+              <SelectTrigger className="w-40 h-8 text-xs" data-testid="select-availability">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="busy">Busy</SelectItem>
+                <SelectItem value="away">Away</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              className="flex-1 h-8 text-xs min-w-[150px]"
+              placeholder="Status note (optional)"
+              value={availNote}
+              onChange={(e) => setAvailNote(e.target.value)}
+              onBlur={() => {
+                if (availNote !== (grinder.availabilityNote || "")) {
+                  availabilityMutation.mutate({ status: availStatus, note: availNote });
+                }
+              }}
+              data-testid="input-availability-note"
+            />
+            {grinder.availabilityUpdatedAt && (
+              <span className="text-[10px] text-muted-foreground">
+                Updated {new Date(grinder.availabilityUpdatedAt).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         {[
           { label: "Active Orders", value: stats.activeAssignments, icon: Clock, color: "yellow" },
@@ -256,7 +314,7 @@ export default function GrinderProfile() {
           { label: "Pending Bids", value: stats.pendingBids, icon: Target, color: "blue" },
           { label: "Order Limit", value: `${grinder.activeOrders}/${grinder.capacity}`, icon: BarChart3, color: "cyan" },
         ].map((stat, i) => (
-          <Card key={i} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-amber-500/40" : "hover:border-primary/30"} transition-all`}>
+          <Card key={i} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-cyan-500/40" : "hover:border-[#5865F2]/40"} transition-all`}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className={`w-10 h-10 rounded-lg bg-${stat.color}-500/10 flex items-center justify-center`}>
                 <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
@@ -271,18 +329,18 @@ export default function GrinderProfile() {
       </div>
 
       {aiTips.length > 0 && (
-        <Card className={`${isElite ? "border-amber-500/20 bg-gradient-to-r from-amber-500/5 to-transparent" : "border-blue-500/20 bg-blue-500/5"}`}>
+        <Card className={`${isElite ? "border-cyan-500/20 bg-gradient-to-r from-cyan-500/5 to-transparent" : "border-blue-500/20 bg-blue-500/5"}`}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className={`w-5 h-5 ${isElite ? "text-amber-400" : "text-blue-400"}`} />
-              <span className={`font-semibold ${isElite ? "text-amber-300" : "text-blue-300"}`}>
+              <Lightbulb className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+              <span className={`font-semibold ${isElite ? "text-cyan-300" : "text-blue-300"}`}>
                 {isElite ? "Elite AI Coach" : "AI Suggestions"}
               </span>
             </div>
             <div className="space-y-2">
               {aiTips.map((tip: string, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground" data-testid={`text-ai-tip-${i}`}>
-                  <Sparkles className={`w-4 h-4 mt-0.5 shrink-0 ${isElite ? "text-amber-500" : "text-blue-500"}`} />
+                  <Sparkles className={`w-4 h-4 mt-0.5 shrink-0 ${isElite ? "text-cyan-500" : "text-blue-500"}`} />
                   <span>{tip}</span>
                 </div>
               ))}
@@ -294,23 +352,23 @@ export default function GrinderProfile() {
       <BiddingCountdownPanel variant="compact" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full grid-cols-6 ${isElite ? "bg-amber-500/5" : "bg-muted/50"}`}>
-          <TabsTrigger value="overview" data-testid="tab-overview" className={isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}>
+        <TabsList className={`grid w-full grid-cols-6 ${isElite ? "bg-cyan-500/5" : "bg-muted/50"}`}>
+          <TabsTrigger value="overview" data-testid="tab-overview" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
             Overview
           </TabsTrigger>
-          <TabsTrigger value="orders" data-testid="tab-orders" className={isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}>
+          <TabsTrigger value="orders" data-testid="tab-orders" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
             Available Orders
           </TabsTrigger>
-          <TabsTrigger value="assignments" data-testid="tab-assignments" className={isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}>
+          <TabsTrigger value="assignments" data-testid="tab-assignments" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
             My Work
           </TabsTrigger>
-          <TabsTrigger value="bids" data-testid="tab-bids" className={isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}>
+          <TabsTrigger value="bids" data-testid="tab-bids" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
             My Bids
           </TabsTrigger>
-          <TabsTrigger value="payouts" data-testid="tab-payouts" className={isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}>
+          <TabsTrigger value="payouts" data-testid="tab-payouts" className={isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}>
             Payouts
           </TabsTrigger>
-          <TabsTrigger value="status" data-testid="tab-status" className={`relative ${isElite ? "data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300" : ""}`}>
+          <TabsTrigger value="status" data-testid="tab-status" className={`relative ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
             Status
             {(unreadAlertCount > 0 || unackedStrikeCount > 0) && (
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
@@ -352,7 +410,7 @@ export default function GrinderProfile() {
                       <span className="text-muted-foreground">Quality Score</span>
                       <span className="font-medium">{Number(grinder.avgQualityRating).toFixed(1)}/5</span>
                     </div>
-                    <Progress value={Number(grinder.avgQualityRating) / 5 * 100} className={`h-2 ${isElite ? "[&>div]:bg-amber-500" : ""}`} />
+                    <Progress value={Number(grinder.avgQualityRating) / 5 * 100} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
                   </div>
                 )}
                 {grinder.onTimeRate != null && (
@@ -361,7 +419,7 @@ export default function GrinderProfile() {
                       <span className="text-muted-foreground">On-Time Rate</span>
                       <span className="font-medium">{(Number(grinder.onTimeRate) * 100).toFixed(0)}%</span>
                     </div>
-                    <Progress value={Number(grinder.onTimeRate) * 100} className={`h-2 ${isElite ? "[&>div]:bg-amber-500" : ""}`} />
+                    <Progress value={Number(grinder.onTimeRate) * 100} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
                   </div>
                 )}
                 {grinder.completionRate != null && (
@@ -370,7 +428,7 @@ export default function GrinderProfile() {
                       <span className="text-muted-foreground">Completion Rate</span>
                       <span className="font-medium">{(Number(grinder.completionRate) * 100).toFixed(0)}%</span>
                     </div>
-                    <Progress value={Number(grinder.completionRate) * 100} className={`h-2 ${isElite ? "[&>div]:bg-amber-500" : ""}`} />
+                    <Progress value={Number(grinder.completionRate) * 100} className={`h-2 ${isElite ? "[&>div]:bg-cyan-500" : ""}`} />
                   </div>
                 )}
               </CardContent>
@@ -389,7 +447,7 @@ export default function GrinderProfile() {
                 ) : (
                   <div className="space-y-3">
                     {assignments.slice(0, 5).map((a: any) => (
-                      <div key={a.id} className={`flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 ${isElite ? "hover:border-amber-500/20" : "hover:border-primary/20"} transition-colors`} data-testid={`card-assignment-${a.id}`}>
+                      <div key={a.id} className={`flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} transition-colors`} data-testid={`card-assignment-${a.id}`}>
                         <div>
                           <p className="text-sm font-medium">Order {a.orderId}</p>
                           <p className="text-xs text-muted-foreground">
@@ -454,7 +512,7 @@ export default function GrinderProfile() {
           ) : (
             <div className="grid gap-4">
               {availableOrders.map((order: any) => (
-                <Card key={order.id} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-amber-500/30" : "hover:border-primary/30"} transition-all`} data-testid={`card-order-${order.id}`}>
+                <Card key={order.id} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-cyan-500/30" : "hover:border-[#5865F2]/30"} transition-all`} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -488,7 +546,7 @@ export default function GrinderProfile() {
                         ) : (
                           <Button
                             size="sm"
-                            className={`gap-2 ${isElite ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white" : ""}`}
+                            className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
                             data-testid={`button-bid-${order.id}`}
                             onClick={() => {
                               const link = order.discordMessageId
@@ -822,24 +880,24 @@ export default function GrinderProfile() {
             </CardContent>
           </Card>
 
-          <Card className={`glass-panel ${isElite ? "border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-transparent" : eliteBorder}`}>
+          <Card className={`glass-panel ${isElite ? "border-cyan-500/30 bg-gradient-to-r from-cyan-500/5 to-transparent" : eliteBorder}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Crown className={`w-5 h-5 ${isElite ? "text-amber-400" : eliteAccent}`} />
+                <Crown className={`w-5 h-5 ${isElite ? "text-cyan-400" : eliteAccent}`} />
                 {isElite ? "Elite Status" : "Elite Path Coaching"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isElite ? (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/20">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center">
                     <Crown className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="font-bold text-amber-300 text-lg">Elite Status Active</p>
+                    <p className="font-bold text-cyan-300 text-lg">Elite Status Active</p>
                     <p className="text-sm text-muted-foreground">You have access to elite-tier orders and priority bidding.</p>
                   </div>
-                  <Sparkles className="w-6 h-6 text-amber-400 ml-auto animate-pulse" />
+                  <Sparkles className="w-6 h-6 text-cyan-400 ml-auto animate-pulse" />
                 </div>
               ) : (
                 <>
@@ -900,7 +958,7 @@ export default function GrinderProfile() {
                     </>
                   )}
                   <Button
-                    className={`w-full gap-2 ${isElite ? "" : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"}`}
+                    className={`w-full gap-2 ${isElite ? "" : "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white"}`}
                     disabled={eliteRequestMutation.isPending || eliteRequests.some((r: any) => r.status === "Pending")}
                     onClick={() => eliteRequestMutation.mutate()}
                     data-testid="button-request-elite"

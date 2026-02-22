@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupDiscordAuth, isAuthenticated, requireStaff, requireGrinderOrStaff } from "./discord/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -431,8 +432,17 @@ export async function registerRoutes(
   app.get("/api/grinder/me", async (req, res) => {
     const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
     if (!myGrinder) return res.json(null);
+
+    const authUser = await authStorage.getUser(userId);
+    if (authUser && myGrinder.name === "Unknown") {
+      const displayName = authUser.firstName || authUser.discordUsername || "Unknown";
+      if (displayName !== "Unknown") {
+        await storage.updateGrinder(myGrinder.id, { name: displayName, discordUsername: authUser.discordUsername || myGrinder.discordUsername });
+        myGrinder = { ...myGrinder, name: displayName, discordUsername: authUser.discordUsername || myGrinder.discordUsername };
+      }
+    }
 
     const allAssignments = await storage.getAssignments();
     const myAssignments = allAssignments.filter((a: any) => a.grinderId === myGrinder.id);
@@ -590,6 +600,9 @@ export async function registerRoutes(
       completionRate: myGrinder.completionRate,
       strikes: myGrinder.strikes,
       avgTurnaroundDays: myGrinder.avgTurnaroundDays,
+      availabilityStatus: myGrinder.availabilityStatus,
+      availabilityNote: myGrinder.availabilityNote,
+      availabilityUpdatedAt: myGrinder.availabilityUpdatedAt,
       notes: myGrinder.notes,
     };
 
@@ -879,6 +892,26 @@ export async function registerRoutes(
 
     await storage.acknowledgeStrike(req.params.strikeId as string);
     res.json({ success: true });
+  });
+
+  app.patch("/api/grinder/me/availability", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+
+    const { status, note } = req.body;
+    const validStatuses = ["available", "busy", "away", "offline"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status. Must be: " + validStatuses.join(", ") });
+    }
+
+    const updated = await storage.updateGrinder(myGrinder.id, {
+      availabilityStatus: status,
+      availabilityNote: note || null,
+      availabilityUpdatedAt: new Date(),
+    });
+    res.json(updated);
   });
 
   app.get("/api/staff/elite-requests", requireStaff, async (req, res) => {
