@@ -85,6 +85,9 @@ export const orders = pgTable("orders", {
   companyProfit: numeric("company_profit"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
+  firstBidAt: timestamp("first_bid_at"),
+  biddingClosesAt: timestamp("bidding_closes_at"),
+  biddingNotifiedStages: jsonb("bidding_notified_stages").notNull().default([]),
 });
 
 export const bids = pgTable("bids", {
