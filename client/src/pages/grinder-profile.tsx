@@ -607,7 +607,9 @@ export default function GrinderProfile() {
                           <p className="text-xs text-muted-foreground">Bid: ${b.bidAmount}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="border-red-500/30 text-red-400">Not Selected</Badge>
+                      <Badge variant="outline" className="border-red-500/30 text-red-400">
+                        {b.status === "Order Assigned" ? "Order Assigned" : "Not Selected"}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -852,10 +854,11 @@ export default function GrinderProfile() {
                           <Badge className={
                             b.status === "Accepted" ? "bg-green-500/20 text-green-400" :
                             b.status === "Denied" ? "bg-red-500/20 text-red-400" :
+                            b.status === "Order Assigned" ? "bg-red-500/20 text-red-400" :
                             isLost ? "bg-red-500/20 text-red-400" :
                             "bg-yellow-500/20 text-yellow-400"
                           }>
-                            {isLost ? "Not Selected" : b.status}
+                            {b.status === "Order Assigned" ? "Order Assigned" : isLost ? "Not Selected" : b.status}
                           </Badge>
                           {b.status === "Pending" && !isLost && (
                             <Button size="sm" variant="ghost" className="gap-1 text-xs" data-testid={`button-edit-bid-${b.id}`}

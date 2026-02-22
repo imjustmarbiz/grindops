@@ -200,12 +200,22 @@ export async function registerRoutes(
       const allBids = await storage.getBids();
       const orderBids = allBids.filter(b => b.orderId === orderId);
       let acceptedBidId: string | null = null;
+      const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId;
       for (const bid of orderBids) {
         if (bid.grinderId === input.grinderId && bid.status === "Pending") {
           await storage.updateBidStatus(bid.id, "Accepted", "staff_override");
           acceptedBidId = bid.id;
         } else if (bid.status === "Pending") {
-          await storage.updateBidStatus(bid.id, "Denied");
+          await storage.updateBidStatus(bid.id, "Order Assigned");
+          await storage.createStaffAlert({
+            id: `SA-${Date.now().toString(36)}-${bid.grinderId}`,
+            targetType: "grinder",
+            grinderId: bid.grinderId,
+            title: `Order ${orderLabel} Assigned`,
+            message: `Order ${orderLabel} has been assigned to another grinder. Your bid of $${bid.bidAmount} was not selected.`,
+            severity: "warning",
+            createdBy: "system",
+          });
         }
       }
       if (acceptedBidId) {
@@ -376,11 +386,21 @@ export async function registerRoutes(
         const order = await storage.getOrder(bid.orderId);
         if (order) {
           await storage.updateOrder(bid.orderId, { acceptedBidId: bid.id, status: "Assigned", assignedGrinderId: bid.grinderId });
-        }
-        const allBids = await storage.getBids();
-        const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
-        for (const ob of otherPending) {
-          await storage.updateBidStatus(ob.id, "Denied", actorName);
+          const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
+          const allBids = await storage.getBids();
+          const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
+          for (const ob of otherPending) {
+            await storage.updateBidStatus(ob.id, "Order Assigned");
+            await storage.createStaffAlert({
+              id: `SA-${Date.now().toString(36)}-${ob.grinderId}`,
+              targetType: "grinder",
+              grinderId: ob.grinderId,
+              title: `Order ${orderLabel} Assigned`,
+              message: `Order ${orderLabel} has been assigned to another grinder. Your bid of $${ob.bidAmount} was not selected.`,
+              severity: "warning",
+              createdBy: "system",
+            });
+          }
         }
       }
 
@@ -422,14 +442,24 @@ export async function registerRoutes(
         if (order) {
           const prevAccepted = order.acceptedBidId;
           if (prevAccepted && prevAccepted !== bid.id) {
-            await storage.updateBidStatus(prevAccepted, "Denied", `${actorName} (override)`);
+            await storage.updateBidStatus(prevAccepted, "Order Assigned", `${actorName} (override)`);
           }
           await storage.updateOrder(bid.orderId, { acceptedBidId: bid.id, status: "Assigned", assignedGrinderId: bid.grinderId });
-        }
-        const allBids = await storage.getBids();
-        const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
-        for (const ob of otherPending) {
-          await storage.updateBidStatus(ob.id, "Denied", `${actorName} (override)`);
+          const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
+          const allBids = await storage.getBids();
+          const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
+          for (const ob of otherPending) {
+            await storage.updateBidStatus(ob.id, "Order Assigned");
+            await storage.createStaffAlert({
+              id: `SA-${Date.now().toString(36)}-${ob.grinderId}`,
+              targetType: "grinder",
+              grinderId: ob.grinderId,
+              title: `Order ${orderLabel} Assigned`,
+              message: `Order ${orderLabel} has been assigned to another grinder. Your bid of $${ob.bidAmount} was not selected.`,
+              severity: "warning",
+              createdBy: "system",
+            });
+          }
         }
       } else if (status === "Denied" || status === "Pending") {
         const order = await storage.getOrder(bid.orderId);

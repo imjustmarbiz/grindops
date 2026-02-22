@@ -51,7 +51,9 @@ export default function Bids() {
   const statusColor = (status: string) => {
     switch (status) {
       case "Accepted": return "bg-green-500/20 text-green-400 border-green-500/30";
-      case "Rejected": return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "Rejected":
+      case "Denied": return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "Order Assigned": return "bg-red-500/20 text-red-400 border-red-500/30";
       case "Countered": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       default: return "bg-blue-500/20 text-blue-400 border-blue-500/30";
     }
@@ -72,7 +74,8 @@ export default function Bids() {
           { label: "Total", value: bids?.length || 0, color: "text-foreground" },
           { label: "Pending", value: bids?.filter(b => b.status === "Pending").length || 0, color: "text-blue-400" },
           { label: "Accepted", value: bids?.filter(b => b.status === "Accepted").length || 0, color: "text-green-400" },
-          { label: "Rejected", value: bids?.filter(b => b.status === "Rejected").length || 0, color: "text-red-400" },
+          { label: "Rejected", value: bids?.filter(b => b.status === "Rejected" || b.status === "Denied").length || 0, color: "text-red-400" },
+          { label: "Order Assigned", value: bids?.filter(b => b.status === "Order Assigned").length || 0, color: "text-orange-400" },
         ].map(s => (
           <Card key={s.label} className="border-border/50">
             <div className="p-4 text-center">
@@ -194,7 +197,7 @@ export default function Bids() {
                       )}
                       {isOwner && bid.status !== "Pending" && (
                         <>
-                          {bid.status === "Denied" && (
+                          {(bid.status === "Denied" || bid.status === "Order Assigned") && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-400"
