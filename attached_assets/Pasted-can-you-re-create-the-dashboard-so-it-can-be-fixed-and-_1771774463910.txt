@@ -1,0 +1,23 @@
+can you re-create the dashboard so it can be fixed and I want it to be a fully built out analytical dashboard that tracks everything. I want the grinder and company money analytics built into it. Like it should be tracking grinders money earned if/when bid is accepted. tracking companty splits based on order amount minus grinder bid. I want this to be one-stop-shop dashboard to see everything as an admin. Want it to give automated suggestions on who you should assign to an order based on a weighted system. Should give weighted score for all columns
+
+Margin Weight: Order Price - Effective Bid
+Capacity Weight: Capacity Score = 1 - (Active Orders / Capacity Limit). Grinder role 1466369179648004224 capacity is 5. Elite grinder role 1466370965016412316 capacity is 3.
+Tier Weight: Additional boost for Elite grinders
+Fairness weight: how long its been since a grinder last received an order
+New grinder weight: Boost for gridners with 0 completed orders
+Reliablity weight: on-time rate, completion rate, low re-assignment rate
+Quality weight: performance quality ratings / feedback
+Risk weight: strikes, reassignment, deadline misses
+Special multipliers: emergency boost - final score x (1 + emergencyboost)
+Large order boost for elite grinders: Orders over $500 give 1466370965016412316 role a boost
+
+Want the dashboard to also have sections for each type of grinder and automatically recognize how to input data intos system
+
+Grinder - 1466369179648004224
+Elite Grinder - 1466370965016412316
+VC Grinder - 1468501279478255708 and 1468501106916065363
+Event Grinder - 1468796147136073922
+
+Want the dashboard to automatically build an emergency / replacement queue as well based on above factors. Add strike system into dashboard (3 is the most, 0 = none) more strikes = ai suggests less likely to do order
+Want grinder scorecards built into dashboard and commands
+Want audit log of everything. I want this fully built out. I want a premium dashboard and command system to track everything.
