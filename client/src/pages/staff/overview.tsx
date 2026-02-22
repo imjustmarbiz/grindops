@@ -2,16 +2,59 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency, formatCompact, AnimatedRing, PipelineStep, LastUpdated, categoryIcon } from "@/lib/staff-utils";
+import { formatCurrency, formatCompact, AnimatedRing, LastUpdated, categoryIcon } from "@/lib/staff-utils";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Search, X, BarChart3, Gauge, Target, Timer,
+  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame,
 } from "lucide-react";
+
+function SparkBar({ segments, height = 6 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  if (total === 0) return <div className="w-full rounded-full bg-white/5" style={{ height }} />;
+  return (
+    <div className="w-full rounded-full bg-white/5 overflow-hidden flex" style={{ height }}>
+      {segments.map((seg, i) => (
+        <div key={i} className={`${seg.color} transition-all duration-700`} style={{ width: `${(seg.value / total) * 100}%` }} />
+      ))}
+    </div>
+  );
+}
+
+function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textColor, trend, trendUp }: {
+  label: string; value: string; subtitle: string; icon: any; gradient: string; iconBg: string; textColor: string; trend?: string; trendUp?: boolean;
+}) {
+  return (
+    <Card className={`${gradient} border-0 overflow-hidden relative group hover:scale-[1.02] transition-transform duration-300`}>
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.03] -translate-y-8 translate-x-8" />
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-white/50">{label}</p>
+            <p className={`text-2xl sm:text-3xl font-bold ${textColor} tracking-tight`} data-testid={`text-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-white/40">{subtitle}</p>
+              {trend && (
+                <span className={`flex items-center gap-0.5 text-[10px] font-medium ${trendUp ? "text-emerald-400" : "text-red-400"}`}>
+                  {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                  {trend}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center backdrop-blur-sm`}>
+            <Icon className={`w-5 h-5 ${textColor}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function StaffOverview() {
   const { user } = useAuth();
@@ -60,38 +103,54 @@ export default function StaffOverview() {
   const avgOrderValue = nonCancelledOrders.length > 0 ? nonCancelledOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0) / nonCancelledOrders.length : 0;
 
   const grindersWithStrikes = allGrinders.filter(g => g.strikes > 0).sort((a, b) => b.strikes - a.strikes);
+  const suspendedGrinders = allGrinders.filter(g => g.suspended);
   const atCapacity = allGrinders.filter(g => g.activeOrders >= g.capacity).length;
+  const availableGrinders = allGrinders.filter(g => g.activeOrders < g.capacity && !g.suspended).length;
+  const totalCapacity = allGrinders.reduce((s, g) => s + g.capacity, 0);
+  const totalActive = allGrinders.reduce((s, g) => s + g.activeOrders, 0);
+  const fleetUtilization = totalCapacity > 0 ? (totalActive / totalCapacity) * 100 : 0;
+
+  const pendingBids = allBids.filter(b => b.status === "Pending").length;
+  const acceptedBids = allBids.filter(b => b.status === "Accepted").length;
+
+  const pipelineData = [
+    { label: "Open", count: openOrders, icon: Clock, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", ring: "bg-blue-500" },
+    { label: "Assigned", count: assignedOrders, icon: Target, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", ring: "bg-amber-500" },
+    { label: "In Progress", count: inProgressOrders, icon: Timer, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", ring: "bg-purple-500" },
+    { label: "Completed", count: completedOrders, icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", ring: "bg-emerald-500" },
+    { label: "Cancelled", count: cancelledOrders, icon: AlertTriangle, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", ring: "bg-red-500" },
+  ];
 
   return (
     <TooltipProvider>
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-            {isOwner ? "Owner Command Center" : "Staff Command Center"}
-          </h1>
-          <p className="text-muted-foreground mt-1">Real-time analytics and operations overview</p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-muted-foreground">Live</span>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-page-title">
+              {isOwner ? "Owner Command Center" : "Staff Command Center"}
+            </h1>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+            </div>
           </div>
-          <LastUpdated date={lastUpdatedDate} />
+          <p className="text-sm text-muted-foreground mt-1">Real-time analytics and operations overview</p>
         </div>
+        <LastUpdated date={lastUpdatedDate} />
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search orders, grinders, bids..."
-          className="pl-9 pr-9 bg-white/5 border-border/30"
+          className="pl-10 pr-10 h-11 bg-white/[0.03] border-white/10 rounded-xl focus:border-primary/50 transition-colors"
           data-testid="input-search"
         />
         {searchQuery && (
-          <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" data-testid="button-clear-search">
+          <button onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors" data-testid="button-clear-search">
             <X className="w-4 h-4" />
           </button>
         )}
@@ -121,7 +180,7 @@ export default function StaffOverview() {
         ).slice(0, 10);
         const total = matchedOrders.length + matchedGrinders.length + matchedBids.length;
         return (
-          <Card className="glass-panel border-primary/20" data-testid="card-search-results">
+          <Card className="border-primary/20 bg-white/[0.02]" data-testid="card-search-results">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Search className="w-4 h-4 text-primary" />
@@ -189,101 +248,136 @@ export default function StaffOverview() {
         );
       })()}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-emerald-400" data-testid="text-total-revenue">{formatCurrency(revenue)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{totalOrders} orders total</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-emerald-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Grinder Payouts</p>
-                <p className="text-2xl font-bold text-blue-400" data-testid="text-grinder-payouts">{formatCurrency(payouts)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{allGrinders.length} grinders</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Company Profit</p>
-                <p className="text-2xl font-bold text-purple-400" data-testid="text-company-profit">{formatCurrency(profit)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{profitMarginPct.toFixed(1)}% margin</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Order Value</p>
-                <p className="text-2xl font-bold text-amber-400" data-testid="text-avg-order-value">{formatCurrency(avgOrderValue)}</p>
-                <p className="text-xs text-muted-foreground mt-1">avg margin {(analytics?.avgMargin || 0).toFixed(1)}%</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-amber-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={`${nonCancelledOrders.length} orders`} icon={DollarSign}
+          gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
+        <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${allGrinders.length} grinders`} icon={Users}
+          gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+        <StatCard label="Company Profit" value={formatCurrency(profit)} subtitle={`${profitMarginPct.toFixed(1)}% margin`} icon={TrendingUp}
+          gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400" />
+        <StatCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} subtitle={`avg margin ${(analytics?.avgMargin || 0).toFixed(1)}%`} icon={BarChart3}
+          gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
       </div>
 
       <BiddingCountdownPanel />
 
-      <Card className="border-border/50">
+      <Card className="border-white/[0.06] bg-white/[0.02]">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
               Order Pipeline
             </CardTitle>
-            <LastUpdated date={ordersUpdatedAt ? new Date(ordersUpdatedAt) : null} />
+            <div className="flex items-center gap-3">
+              {(rushOrders > 0 || emergencyOrders > 0) && (
+                <div className="flex items-center gap-2">
+                  {rushOrders > 0 && (
+                    <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1 text-[10px]">
+                      <Flame className="w-3 h-3" /> {rushOrders} Rush
+                    </Badge>
+                  )}
+                  {emergencyOrders > 0 && (
+                    <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1 text-[10px]">
+                      <Zap className="w-3 h-3" /> {emergencyOrders} Emergency
+                    </Badge>
+                  )}
+                </div>
+              )}
+              <LastUpdated date={ordersUpdatedAt ? new Date(ordersUpdatedAt) : null} />
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            <PipelineStep label="Open" count={openOrders} total={totalOrders} color="border-blue-500/30 bg-blue-500/5 text-blue-400" icon={Clock} hideArrow />
-            <PipelineStep label="Assigned" count={assignedOrders} total={totalOrders} color="border-amber-500/30 bg-amber-500/5 text-amber-400" icon={Target} hideArrow />
-            <PipelineStep label="In Progress" count={inProgressOrders} total={totalOrders} color="border-purple-500/30 bg-purple-500/5 text-purple-400" icon={Timer} hideArrow />
-            <PipelineStep label="Completed" count={completedOrders} total={totalOrders} color="border-emerald-500/30 bg-emerald-500/5 text-emerald-400" icon={CheckCircle} hideArrow />
-            <PipelineStep label="Cancelled" count={cancelledOrders} total={totalOrders} color="border-red-500/30 bg-red-500/5 text-red-400" icon={AlertTriangle} isLast hideArrow />
+        <CardContent className="space-y-4">
+          <SparkBar height={8} segments={pipelineData.map(p => ({ value: p.count, color: p.ring, label: p.label }))} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {pipelineData.map((p) => {
+              const pct = totalOrders > 0 ? ((p.count / totalOrders) * 100).toFixed(0) : "0";
+              const Icon = p.icon;
+              return (
+                <div key={p.label} className={`relative flex flex-col items-center p-4 rounded-xl border ${p.border} ${p.bg} transition-all hover:scale-[1.03] cursor-default group`} data-testid={`pipeline-${p.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  <div className={`w-8 h-8 rounded-lg ${p.bg} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
+                    <Icon className={`w-4 h-4 ${p.color}`} />
+                  </div>
+                  <span className={`text-2xl font-bold ${p.color}`}>{p.count}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{p.label}</span>
+                  <span className="text-[10px] text-white/30">{pct}%</span>
+                </div>
+              );
+            })}
           </div>
-          {(rushOrders > 0 || emergencyOrders > 0) && (
-            <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border/50">
-              {rushOrders > 0 && <Badge variant="destructive" className="gap-1"><Clock className="w-3 h-3" /> {rushOrders} Rush Active</Badge>}
-              {emergencyOrders > 0 && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1"><AlertTriangle className="w-3 h-3" /> {emergencyOrders} Emergency Active</Badge>}
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-border/50">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02]">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-1">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Gauge className="w-5 h-5 text-cyan-400" />
+              Fleet Health
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-center">
+              <AnimatedRing
+                percent={fleetUtilization}
+                color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"}
+                label="Fleet Utilization"
+                value={`${fleetUtilization.toFixed(0)}%`}
+                size={100}
+                stroke={10}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-center p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 cursor-default">
+                    <p className="text-lg font-bold text-emerald-400" data-testid="text-available-grinders">{availableGrinders}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Available</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Grinders with open order slots</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-center p-2.5 rounded-lg bg-red-500/5 border border-red-500/10 cursor-default">
+                    <p className="text-lg font-bold text-red-400" data-testid="text-at-limit">{atCapacity}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground">At Limit</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Grinders at their order limit</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-center p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10 cursor-default">
+                    <p className="text-lg font-bold text-blue-400" data-testid="text-total-slots">{totalActive}<span className="text-white/30">/{totalCapacity}</span></p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Slots</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Active orders / total capacity</TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Pending Bids</span>
+                <span className="font-medium text-yellow-400">{pendingBids}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Accepted Bids</span>
+                <span className="font-medium text-emerald-400">{acceptedBids}</span>
+              </div>
+              {suspendedGrinders.length > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Suspended</span>
+                  <span className="font-medium text-red-400">{suspendedGrinders.length}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2 border-white/[0.06] bg-white/[0.02]">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Clock className="w-5 h-5 text-blue-400" />
                 Recent Activity
@@ -292,100 +386,120 @@ export default function StaffOverview() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
-              {(!auditLogs || auditLogs.length === 0) && <p className="text-muted-foreground text-sm">No activity yet</p>}
-              {(auditLogs || []).slice(0, 12).map((log) => (
-                <div key={log.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors" data-testid={`card-audit-${log.id}`}>
-                  <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                    log.action.includes("created") || log.action.includes("accepted") ? "bg-emerald-400" :
-                    log.action.includes("rejected") || log.action.includes("denied") ? "bg-red-400" :
-                    log.action.includes("updated") || log.action.includes("changed") || log.action.includes("price") ? "bg-blue-400" :
-                    log.action.includes("deleted") ? "bg-red-400" :
-                    "bg-muted-foreground"
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">
-                      <span className="font-medium capitalize">{log.entityType}</span>{" "}
-                      <span className="text-muted-foreground">{log.entityId}</span>{" "}
-                      <span className="text-primary">{log.action.replace(/_/g, " ")}</span>
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {log.actor} &middot; {new Date(log.createdAt).toLocaleString()}
-                    </p>
-                  </div>
+            <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
+              {(!auditLogs || auditLogs.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <Activity className="w-8 h-8 mb-2 opacity-30" />
+                  <p className="text-sm">No activity yet</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
-                Risk & Alerts
-              </CardTitle>
-              <LastUpdated date={grindersUpdatedAt ? new Date(grindersUpdatedAt) : null} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="p-3 rounded-lg bg-white/5 text-center">
-                  <p className="text-lg font-bold text-amber-400" data-testid="text-grinders-with-strikes">{grindersWithStrikes.length}</p>
-                  <p className="text-[10px] text-muted-foreground">With Strikes</p>
-                </div>
-                <div className="p-3 rounded-lg bg-white/5 text-center">
-                  <p className="text-lg font-bold text-red-400" data-testid="text-max-strikes">{allGrinders.filter(g => g.strikes >= 3).length}</p>
-                  <p className="text-[10px] text-muted-foreground">Max Strikes</p>
-                </div>
-                <div className="p-3 rounded-lg bg-white/5 text-center">
-                  <p className="text-lg font-bold text-blue-400" data-testid="text-reassigned">{allAssignments.filter(a => a.wasReassigned).length}</p>
-                  <p className="text-[10px] text-muted-foreground">Reassigned</p>
-                </div>
-              </div>
-
-              {grindersWithStrikes.length === 0 ? (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  <span className="text-sm text-emerald-400">All grinders in good standing</span>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {grindersWithStrikes.slice(0, 4).map((g) => (
-                    <div key={g.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white/5" data-testid={`card-risk-${g.id}`}>
-                      <div className="flex items-center gap-2">
-                        {categoryIcon(g.category)}
-                        <span className="text-sm font-medium">{g.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < g.strikes ? "bg-red-500" : "bg-white/10"}`} />
-                        ))}
-                      </div>
+              )}
+              {(auditLogs || []).slice(0, 15).map((log) => {
+                const actionColor =
+                  log.action.includes("created") || log.action.includes("accepted") || log.action.includes("paid") ? "bg-emerald-400" :
+                  log.action.includes("rejected") || log.action.includes("denied") || log.action.includes("deleted") ? "bg-red-400" :
+                  log.action.includes("updated") || log.action.includes("changed") || log.action.includes("price") || log.action.includes("assign") ? "bg-blue-400" :
+                  log.action.includes("imported") ? "bg-purple-400" :
+                  "bg-muted-foreground";
+                return (
+                  <div key={log.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors" data-testid={`card-audit-${log.id}`}>
+                    <div className="relative mt-1.5 flex-shrink-0">
+                      <div className={`w-2 h-2 rounded-full ${actionColor}`} />
+                      <div className={`absolute inset-0 w-2 h-2 rounded-full ${actionColor} animate-ping opacity-20`} />
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {atCapacity > 0 && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                  <Gauge className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm text-amber-400">{atCapacity} grinder{atCapacity > 1 ? "s" : ""} at order limit</span>
-                </div>
-              )}
-
-              {openOrders > 5 && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                  <Package className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-blue-400">{openOrders} orders waiting for assignment</span>
-                </div>
-              )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">
+                        <span className="font-medium capitalize">{log.entityType.replace(/_/g, " ")}</span>{" "}
+                        <span className="text-white/40">{log.entityId}</span>{" "}
+                        <span className="text-primary/80">{log.action.replace(/_/g, " ")}</span>
+                      </p>
+                      <p className="text-[10px] text-white/30 mt-0.5">
+                        {log.actor} &middot; {new Date(log.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-white/[0.06] bg-white/[0.02]">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-amber-400" />
+              Risk & Alerts
+            </CardTitle>
+            <LastUpdated date={grindersUpdatedAt ? new Date(grindersUpdatedAt) : null} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
+              <p className="text-2xl font-bold text-amber-400" data-testid="text-grinders-with-strikes">{grindersWithStrikes.length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">With Strikes</p>
+            </div>
+            <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-center">
+              <p className="text-2xl font-bold text-red-400" data-testid="text-max-strikes">{allGrinders.filter(g => g.strikes >= 3).length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Max Strikes</p>
+            </div>
+            <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-center">
+              <p className="text-2xl font-bold text-orange-400" data-testid="text-suspended">{suspendedGrinders.length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Suspended</p>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
+              <p className="text-2xl font-bold text-blue-400" data-testid="text-reassigned">{allAssignments.filter(a => a.wasReassigned).length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Reassigned</p>
+            </div>
+          </div>
+
+          {grindersWithStrikes.length === 0 ? (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+              </div>
+              <span className="text-sm text-emerald-400 font-medium">All grinders in good standing</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {grindersWithStrikes.slice(0, 5).map((g) => (
+                <div key={g.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors" data-testid={`card-risk-${g.id}`}>
+                  <div className="flex items-center gap-3">
+                    {categoryIcon(g.category)}
+                    <div>
+                      <span className="text-sm font-medium">{g.name}</span>
+                      {g.suspended && <Badge className="ml-2 bg-red-500/15 text-red-400 border-red-500/20 text-[9px]">Suspended</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className={`w-3 h-3 rounded-full transition-all ${i < g.strikes ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]" : "bg-white/10"}`} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(atCapacity > 0 || openOrders > 5) && (
+            <div className="mt-3 space-y-2">
+              {atCapacity > 0 && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                  <Gauge className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span className="text-sm text-amber-400">{atCapacity} grinder{atCapacity > 1 ? "s" : ""} at order limit</span>
+                </div>
+              )}
+              {openOrders > 5 && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                  <Package className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <span className="text-sm text-blue-400">{openOrders} orders waiting for assignment</span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
     </TooltipProvider>
   );
