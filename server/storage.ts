@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
+  orderUpdates, payoutRequests,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -8,6 +9,8 @@ import {
   type Assignment, type InsertAssignment,
   type QueueConfig, type InsertQueueConfig,
   type AuditLog, type InsertAuditLog,
+  type OrderUpdate, type InsertOrderUpdate,
+  type PayoutRequest, type InsertPayoutRequest,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -56,6 +59,15 @@ export interface IStorage {
   getAnalyticsSummary(): Promise<AnalyticsSummary>;
   getSuggestionsForOrder(orderId: string): Promise<SuggestionResult[]>;
   getEmergencyQueue(): Promise<SuggestionResult[]>;
+
+  getOrderUpdates(grinderId?: string): Promise<OrderUpdate[]>;
+  createOrderUpdate(update: InsertOrderUpdate): Promise<OrderUpdate>;
+
+  getPayoutRequests(grinderId?: string): Promise<PayoutRequest[]>;
+  createPayoutRequest(request: InsertPayoutRequest): Promise<PayoutRequest>;
+  updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date }>): Promise<PayoutRequest | undefined>;
+
+  updateBid(id: string, data: Partial<InsertBid>): Promise<Bid | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -558,6 +570,40 @@ export class DatabaseStorage implements IStorage {
 
     allSuggestions.sort((a, b) => b.scores.finalScore - a.scores.finalScore);
     return allSuggestions.slice(0, 20);
+  }
+
+  async getOrderUpdates(grinderId?: string): Promise<OrderUpdate[]> {
+    if (grinderId) {
+      return await db.select().from(orderUpdates).where(eq(orderUpdates.grinderId, grinderId)).orderBy(desc(orderUpdates.createdAt));
+    }
+    return await db.select().from(orderUpdates).orderBy(desc(orderUpdates.createdAt));
+  }
+
+  async createOrderUpdate(update: InsertOrderUpdate): Promise<OrderUpdate> {
+    const [created] = await db.insert(orderUpdates).values(update).returning();
+    return created;
+  }
+
+  async getPayoutRequests(grinderId?: string): Promise<PayoutRequest[]> {
+    if (grinderId) {
+      return await db.select().from(payoutRequests).where(eq(payoutRequests.grinderId, grinderId)).orderBy(desc(payoutRequests.createdAt));
+    }
+    return await db.select().from(payoutRequests).orderBy(desc(payoutRequests.createdAt));
+  }
+
+  async createPayoutRequest(request: InsertPayoutRequest): Promise<PayoutRequest> {
+    const [created] = await db.insert(payoutRequests).values(request).returning();
+    return created;
+  }
+
+  async updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date }>): Promise<PayoutRequest | undefined> {
+    const [updated] = await db.update(payoutRequests).set(data).where(eq(payoutRequests.id, id)).returning();
+    return updated;
+  }
+
+  async updateBid(id: string, data: Partial<InsertBid>): Promise<Bid | undefined> {
+    const [updated] = await db.update(bids).set(data).where(eq(bids.id, id)).returning();
+    return updated;
   }
 
   async getTopQueueItems() {

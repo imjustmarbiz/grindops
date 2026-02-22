@@ -147,6 +147,30 @@ export const queueConfig = pgTable("queue_config", {
   largeOrderEliteBoost: numeric("large_order_elite_boost").notNull().default("0.15"),
 });
 
+export const orderUpdates = pgTable("order_updates", {
+  id: varchar("id").primaryKey(),
+  assignmentId: varchar("assignment_id").references(() => assignments.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id).notNull(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  updateType: text("update_type").notNull().default("progress"),
+  message: text("message").notNull(),
+  newDeadline: timestamp("new_deadline"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const payoutRequests = pgTable("payout_requests", {
+  id: varchar("id").primaryKey(),
+  assignmentId: varchar("assignment_id").references(() => assignments.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id).notNull(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  amount: numeric("amount").notNull(),
+  status: text("status").notNull().default("Pending"),
+  notes: text("notes"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey(),
   entityType: text("entity_type").notNull(),
@@ -194,6 +218,8 @@ export const insertOrderSchema = createInsertSchema(orders).omit({ createdAt: tr
 export const insertBidSchema = createInsertSchema(bids);
 export const insertAssignmentSchema = createInsertSchema(assignments);
 export const insertQueueConfigSchema = createInsertSchema(queueConfig);
+export const insertOrderUpdateSchema = createInsertSchema(orderUpdates).omit({ createdAt: true });
+export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({ createdAt: true, reviewedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ createdAt: true });
 
 export type Service = typeof services.$inferSelect;
@@ -208,6 +234,10 @@ export type Assignment = typeof assignments.$inferSelect;
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type QueueConfig = typeof queueConfig.$inferSelect;
 export type InsertQueueConfig = z.infer<typeof insertQueueConfigSchema>;
+export type OrderUpdate = typeof orderUpdates.$inferSelect;
+export type InsertOrderUpdate = z.infer<typeof insertOrderUpdateSchema>;
+export type PayoutRequest = typeof payoutRequests.$inferSelect;
+export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 

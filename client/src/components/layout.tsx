@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -29,7 +29,7 @@ const staffNavItems = [
 ];
 
 const grinderNavItems = [
-  { title: "My Profile", url: "/", icon: UserCircle },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
 ];
 
 function AppSidebar() {
@@ -37,8 +37,9 @@ function AppSidebar() {
   const { user, logout } = useAuth();
 
   const isStaff = user?.role === "staff";
+  const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
   const navItems = isStaff ? staffNavItems : grinderNavItems;
-  const roleBadge = isStaff ? "Staff" : user?.role === "grinder" ? "Grinder" : "Member";
+  const roleBadge = isStaff ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
 
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
@@ -96,10 +97,10 @@ function AppSidebar() {
                 </span>
                 <Badge 
                   variant={isStaff ? "default" : "secondary"} 
-                  className={`w-fit text-[10px] px-1.5 py-0 ${isStaff ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}
+                  className={`w-fit text-[10px] px-1.5 py-0 ${isStaff ? "bg-primary/20 text-primary" : isElite ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/30" : "bg-muted text-muted-foreground"}`}
                   data-testid="text-user-role"
                 >
-                  <Shield className="w-3 h-3 mr-1" />
+                  {isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
                   {roleBadge}
                 </Badge>
               </div>

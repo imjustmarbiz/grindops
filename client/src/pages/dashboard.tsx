@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
   BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
+  MessageSquare, Banknote,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 
@@ -79,6 +83,8 @@ function LastUpdated({ date }: { date: Date | null }) {
 }
 
 export default function Dashboard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: analytics, isLoading, dataUpdatedAt } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 10000 });
   const { data: grindersList, dataUpdatedAt: grindersUpdatedAt } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
   const { data: auditLogs, dataUpdatedAt: logsUpdatedAt } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 10000 });
@@ -86,6 +92,19 @@ export default function Dashboard() {
   const { data: ordersList, dataUpdatedAt: ordersUpdatedAt } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
   const { data: bidsList, dataUpdatedAt: bidsUpdatedAt } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 10000 });
   const { data: servicesList } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 10000 });
+  const { data: grinderUpdates } = useQuery<any[]>({ queryKey: ["/api/staff/order-updates"], refetchInterval: 10000 });
+  const { data: payoutReqs } = useQuery<any[]>({ queryKey: ["/api/staff/payout-requests"], refetchInterval: 10000 });
+
+  const payoutMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy: "staff" });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      toast({ title: "Payout request updated" });
+    },
+  });
 
   const latestUpdate = Math.max(dataUpdatedAt || 0, grindersUpdatedAt || 0, logsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
@@ -582,6 +601,92 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {(grinderUpdates && grinderUpdates.length > 0) && (
+          <Card className="border-blue-500/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-blue-400" />
+                Grinder Order Updates
+                <Badge className="bg-blue-500/20 text-blue-400 ml-auto">{grinderUpdates.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {grinderUpdates.slice(0, 15).map((u: any) => {
+                  const grinder = (grindersList || []).find(g => g.id === u.grinderId);
+                  return (
+                    <div key={u.id} className="p-3 rounded-lg bg-white/5 border border-white/10" data-testid={`card-grinder-update-${u.id}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-blue-400">{grinder?.name || u.grinderId}</span>
+                          <Badge variant="outline" className="text-[10px]">{u.updateType}</Badge>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{new Date(u.createdAt).toLocaleString()}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Order {u.orderId}: {u.message}</p>
+                      {u.newDeadline && <p className="text-xs text-yellow-400 mt-1">New deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(payoutReqs && payoutReqs.length > 0) && (
+          <Card className="border-green-500/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-green-400" />
+                Payout Requests
+                <Badge className="bg-green-500/20 text-green-400 ml-auto">
+                  {payoutReqs.filter((p: any) => p.status === "Pending").length} pending
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {payoutReqs.slice(0, 15).map((p: any) => {
+                  const grinder = (grindersList || []).find(g => g.id === p.grinderId);
+                  return (
+                    <div key={p.id} className="p-3 rounded-lg bg-white/5 border border-white/10" data-testid={`card-payout-req-${p.id}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{grinder?.name || p.grinderId}</span>
+                          <span className="text-sm text-green-400 font-bold">${Number(p.amount).toFixed(2)}</span>
+                        </div>
+                        <Badge className={
+                          p.status === "Approved" ? "bg-green-500/20 text-green-400" :
+                          p.status === "Denied" ? "bg-red-500/20 text-red-400" :
+                          "bg-yellow-500/20 text-yellow-400"
+                        }>{p.status}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Order {p.orderId} &middot; {new Date(p.createdAt).toLocaleString()}</p>
+                      {p.notes && <p className="text-xs text-muted-foreground mt-1">{p.notes}</p>}
+                      {p.status === "Pending" && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700" data-testid={`button-approve-payout-${p.id}`}
+                            disabled={payoutMutation.isPending}
+                            onClick={() => payoutMutation.mutate({ id: p.id, status: "Approved" })}>
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10" data-testid={`button-deny-payout-${p.id}`}
+                            disabled={payoutMutation.isPending}
+                            onClick={() => payoutMutation.mutate({ id: p.id, status: "Denied" })}>
+                            Deny
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {replacedAssignments.length > 0 && (
