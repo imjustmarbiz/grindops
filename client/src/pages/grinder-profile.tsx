@@ -382,6 +382,33 @@ export default function GrinderProfile() {
         </div>
       </div>
 
+      {grinder.suspended && (
+        <Card className="border-red-500/40 bg-red-500/5" data-testid="card-suspension-banner">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                <Ban className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-400">Account Suspended</h3>
+                <p className="text-sm text-muted-foreground">
+                  You have an outstanding fine of <span className="text-red-400 font-bold">${parseFloat(grinder.outstandingFine || "0").toFixed(2)}</span>. 
+                  You cannot place bids or accept orders until all fines are paid. Contact staff to arrange payment.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Strike Fine Policy</p>
+              <div className="flex gap-4 text-xs">
+                <span className={grinder.strikes >= 1 ? "text-red-400 font-bold" : "text-muted-foreground"}>Strike 1: $25</span>
+                <span className={grinder.strikes >= 2 ? "text-red-400 font-bold" : "text-muted-foreground"}>Strike 2: $50</span>
+                <span className={grinder.strikes >= 3 ? "text-red-400 font-bold" : "text-muted-foreground"}>Strike 3: $100</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className={`${isElite ? "border-cyan-500/20" : "border-[#5865F2]/20"}`} data-testid="card-availability">
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
@@ -644,6 +671,7 @@ export default function GrinderProfile() {
                             {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
                           </span>
                           <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
+                          {order.elitePriority && isElite && <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30"><Sparkles className="w-3 h-3 mr-0.5" />Elite Early Access</Badge>}
                           {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
                           {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
                           {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
@@ -1006,6 +1034,14 @@ export default function GrinderProfile() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">{log.reason}</p>
+                        {parseFloat(log.fineAmount || "0") > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className={log.finePaid ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                              <DollarSign className="w-3 h-3 mr-0.5" />
+                              {log.finePaid ? "Paid" : "Unpaid"}: ${parseFloat(log.fineAmount).toFixed(2)}
+                            </Badge>
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Date(log.createdAt).toLocaleString()} — Resulting strikes: {log.resultingStrikes}
                         </p>

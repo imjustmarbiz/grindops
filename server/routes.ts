@@ -141,6 +141,10 @@ export async function registerRoutes(
 
       const grinder = await storage.getGrinder(input.grinderId);
       if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+      if (grinder.suspended) {
+        const fine = parseFloat(grinder.outstandingFine?.toString() || "0");
+        return res.status(403).json({ message: `Grinder is suspended with $${fine.toFixed(2)} outstanding fine. Clear fines before assigning.` });
+      }
 
       const bidAmount = parseFloat(input.bidAmount);
       if (isNaN(bidAmount) || bidAmount < 0) return res.status(400).json({ message: "Invalid bid/pay amount" });
@@ -591,11 +595,22 @@ export async function registerRoutes(
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
-    const openOrders = allOrders.filter((o: any) => o.status === "Open" && o.visibleToGrinders !== false);
+    const isElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder";
+    const ELITE_PRIORITY_MINUTES = 5;
+    const now = new Date();
+
+    const openOrders = allOrders.filter((o: any) => {
+      if (o.status !== "Open" || o.visibleToGrinders === false) return false;
+      if (isElite) return true;
+      const orderAge = (now.getTime() - new Date(o.createdAt).getTime()) / (1000 * 60);
+      return orderAge >= ELITE_PRIORITY_MINUTES;
+    });
 
     const availableOrders = openOrders.map((o: any) => {
       const orderBids = allBids.filter((b: any) => b.orderId === o.id);
       const myBidOnOrder = myBids.find((b: any) => b.orderId === o.id);
+      const orderAge = (now.getTime() - new Date(o.createdAt).getTime()) / (1000 * 60);
+      const isElitePriority = orderAge < ELITE_PRIORITY_MINUTES;
       return {
         id: o.id,
         mgtOrderNumber: o.mgtOrderNumber,
@@ -618,6 +633,7 @@ export async function registerRoutes(
         myBidId: myBidOnOrder?.id || null,
         myBidStatus: myBidOnOrder?.status || null,
         myBidAmount: myBidOnOrder?.bidAmount || null,
+        elitePriority: isElitePriority,
       };
     });
 
@@ -656,8 +672,6 @@ export async function registerRoutes(
     if (completedAssignments.length >= 5 && winRate > 0.5) {
       aiTips.push("Great track record! You're eligible for Elite status - keep up the consistency.");
     }
-
-    const isElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder";
 
     const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder");
     let eliteCoaching: any = null;
@@ -933,10 +947,23 @@ export async function registerRoutes(
       const { orderId, bidAmount, timeline, canStart } = req.body;
       if (!orderId || !bidAmount) return res.status(400).json({ message: "orderId and bidAmount are required" });
 
+      if (myGrinder.suspended) {
+        const fine = parseFloat(myGrinder.outstandingFine?.toString() || "0");
+        return res.status(403).json({ message: `You are suspended. Pay your outstanding fine of $${fine.toFixed(2)} before placing bids.` });
+      }
+
       const order = await storage.getOrder(orderId);
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (order.status !== "Open") return res.status(400).json({ message: "Order is not open for bidding" });
       if (!order.visibleToGrinders) return res.status(403).json({ message: "This order is not open for grinder bids" });
+
+      const bidderIsElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder";
+      if (!bidderIsElite && order.createdAt) {
+        const orderAgeMin = (Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60);
+        if (orderAgeMin < 5) {
+          return res.status(403).json({ message: "This order is in the Elite priority window. Regular grinders can bid after 5 minutes." });
+        }
+      }
 
       const allBids = await storage.getBids();
       const existingBid = allBids.find((b: any) => b.orderId === orderId && b.grinderId === myGrinder.id);
@@ -1222,6 +1249,8 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  const STRIKE_FINES: Record<number, number> = { 1: 25, 2: 50, 3: 100 };
+
   app.post("/api/staff/strikes", requireStaff, async (req, res) => {
     const { grinderId, action, reason, createdBy } = req.body;
     if (!grinderId || !action || !reason) {
@@ -1234,7 +1263,18 @@ export async function registerRoutes(
     const delta = action === "add" ? 1 : -1;
     const newStrikes = Math.max(0, grinder.strikes + delta);
 
-    await storage.updateGrinder(grinderId, { strikes: newStrikes });
+    const fineAmount = action === "add" ? (STRIKE_FINES[newStrikes] || 100) : 0;
+    const currentFine = parseFloat(grinder.outstandingFine?.toString() || "0");
+    const newOutstandingFine = action === "add"
+      ? (currentFine + fineAmount).toString()
+      : currentFine.toString();
+    const shouldSuspend = action === "add" && newStrikes >= 1;
+
+    await storage.updateGrinder(grinderId, {
+      strikes: newStrikes,
+      suspended: shouldSuspend,
+      outstandingFine: newOutstandingFine,
+    });
 
     const strikeLog = await storage.createStrikeLog({
       id: `SL-${Date.now().toString(36)}`,
@@ -1243,16 +1283,21 @@ export async function registerRoutes(
       reason,
       delta,
       resultingStrikes: newStrikes,
+      fineAmount: fineAmount.toString(),
       createdBy: createdBy || "staff",
     });
+
+    const fineMsg = action === "add"
+      ? ` A fine of $${fineAmount} has been applied. Your total outstanding fine is $${newOutstandingFine}. You are suspended from taking orders until all fines are paid.`
+      : "";
 
     await storage.createStaffAlert({
       id: `SA-${Date.now().toString(36)}s`,
       targetType: "grinder",
       grinderId,
-      title: action === "add" ? "Strike Added" : "Strike Removed",
-      message: `${action === "add" ? "A strike has been added to" : "A strike has been removed from"} your profile. Reason: ${reason}. You now have ${newStrikes} strike${newStrikes !== 1 ? "s" : ""}.`,
-      severity: action === "add" ? "warning" : "success",
+      title: action === "add" ? `Strike ${newStrikes} - $${fineAmount} Fine` : "Strike Removed",
+      message: `${action === "add" ? "A strike has been added to" : "A strike has been removed from"} your profile. Reason: ${reason}. You now have ${newStrikes} strike${newStrikes !== 1 ? "s" : ""}.${fineMsg}`,
+      severity: action === "add" ? "danger" : "success",
       createdBy: createdBy || "staff",
       readBy: [],
     });
@@ -1263,15 +1308,60 @@ export async function registerRoutes(
       entityId: grinderId,
       action: `strike_${action}`,
       actor: createdBy || "staff",
-      details: JSON.stringify({ reason, delta, resultingStrikes: newStrikes }),
+      details: JSON.stringify({ reason, delta, resultingStrikes: newStrikes, fineAmount, outstandingFine: newOutstandingFine, suspended: shouldSuspend }),
     });
 
-    res.status(201).json({ strikeLog, newStrikes });
+    res.status(201).json({ strikeLog, newStrikes, fineAmount, outstandingFine: newOutstandingFine, suspended: shouldSuspend });
   });
 
   app.get("/api/staff/strike-logs", requireStaff, async (req, res) => {
     const logs = await storage.getStrikeLogs();
     res.json(logs);
+  });
+
+  app.post("/api/staff/fines/:grinderId/pay", requireStaff, async (req, res) => {
+    try {
+      const grinder = await storage.getGrinder(req.params.grinderId);
+      if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+
+      const currentFine = parseFloat(grinder.outstandingFine?.toString() || "0");
+      if (currentFine <= 0) return res.status(400).json({ message: "No outstanding fines" });
+
+      await storage.updateGrinder(req.params.grinderId, {
+        outstandingFine: "0",
+        suspended: false,
+      });
+
+      const logs = await storage.getStrikeLogs();
+      const unpaidLogs = logs.filter((l: any) => l.grinderId === req.params.grinderId && !l.finePaid && parseFloat(l.fineAmount?.toString() || "0") > 0);
+      for (const log of unpaidLogs) {
+        await storage.updateStrikeLog(log.id, { finePaid: true, finePaidAt: new Date() });
+      }
+
+      await storage.createStaffAlert({
+        id: `SA-${Date.now().toString(36)}fp`,
+        targetType: "grinder",
+        grinderId: req.params.grinderId,
+        title: "Fines Cleared - Suspension Lifted",
+        message: `Your outstanding fine of $${currentFine.toFixed(2)} has been marked as paid. Your suspension has been lifted and you can now take orders again.`,
+        severity: "success",
+        createdBy: (req as any).userId || "staff",
+        readBy: [],
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: req.params.grinderId,
+        action: "fine_paid",
+        actor: (req as any).userId || "staff",
+        details: JSON.stringify({ amountPaid: currentFine }),
+      });
+
+      res.json({ success: true, amountPaid: currentFine });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.get("/api/staff/elite-vs-grinder-metrics", requireStaff, async (req, res) => {

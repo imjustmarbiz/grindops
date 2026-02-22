@@ -17,7 +17,7 @@ import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Crown, Zap, Shield, ArrowRight,
   BarChart3, PieChart, Gauge, Star, Target, Timer, Percent, Repeat,
-  MessageSquare, Banknote, Bell, Send, Trash2, Award, Eye,
+  MessageSquare, Banknote, Bell, Send, Trash2, Award, Eye, Ban,
   Gavel, FileCheck, Lightbulb, HelpCircle, Settings, UserCheck,
   Search, X, CreditCard, Wallet, Plus, ToggleLeft, ToggleRight,
 } from "lucide-react";
@@ -134,6 +134,18 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/strike-logs"] }); queryClient.invalidateQueries({ queryKey: ["/api/grinders"] }); toast({ title: "Strike updated" }); },
+  });
+
+  const finePayMutation = useMutation({
+    mutationFn: async (grinderId: string) => {
+      const res = await apiRequest("POST", `/api/staff/fines/${grinderId}/pay`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/strike-logs"] });
+      toast({ title: "Fines marked as paid, suspension lifted" });
+    },
   });
 
   const alertMutation = useMutation({
@@ -1432,6 +1444,23 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </div>
+              {allGrinders.filter(g => g.suspended).length > 0 && (
+                <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/5 space-y-2">
+                  <p className="text-xs font-semibold text-red-400 flex items-center gap-1"><Ban className="w-3 h-3" /> Suspended Grinders</p>
+                  {allGrinders.filter(g => g.suspended).map(g => (
+                    <div key={g.id} className="flex items-center justify-between gap-2 text-xs" data-testid={`row-suspended-${g.id}`}>
+                      <span className="font-medium truncate">{g.name}</span>
+                      <span className="text-red-400 font-bold">${parseFloat(g.outstandingFine || "0").toFixed(2)}</span>
+                      <Button size="sm" variant="outline" className="text-xs h-6 px-2 border-green-500/30 text-green-400 hover:bg-green-500/10"
+                        data-testid={`button-pay-fine-${g.id}`}
+                        disabled={finePayMutation.isPending}
+                        onClick={() => finePayMutation.mutate(g.id)}>
+                        Mark Paid
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                 {(!strikeLogsList || strikeLogsList.length === 0) && <p className="text-muted-foreground text-xs">No strike logs</p>}
                 {(strikeLogsList || []).slice(0, 10).map((log: any) => {
@@ -1442,7 +1471,12 @@ export default function Dashboard() {
                         {log.action === "add" ? "+" : "-"}
                       </Badge>
                       <span className="font-medium flex-1 truncate">{grinder?.name || log.grinderId}</span>
-                      <span className="text-muted-foreground truncate max-w-[120px]">{log.reason}</span>
+                      {parseFloat(log.fineAmount || "0") > 0 && (
+                        <Badge className={log.finePaid ? "bg-green-500/15 text-green-400 text-[9px]" : "bg-red-500/15 text-red-400 text-[9px]"}>
+                          ${parseFloat(log.fineAmount).toFixed(0)} {log.finePaid ? "Paid" : "Owed"}
+                        </Badge>
+                      )}
+                      <span className="text-muted-foreground truncate max-w-[100px]">{log.reason}</span>
                       <span className="text-muted-foreground text-[10px]">{new Date(log.createdAt).toLocaleDateString()}</span>
                     </div>
                   );
@@ -1468,6 +1502,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium truncate">{g.name}</span>
+                    {g.suspended && <Badge className="bg-red-500/20 text-red-400 text-[9px]"><Ban className="w-2.5 h-2.5 mr-0.5" />Suspended</Badge>}
                     <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
                     <Badge className={`text-[10px] ${
                       (g as any).availabilityStatus === "busy" ? "bg-yellow-500/20 text-yellow-400" :

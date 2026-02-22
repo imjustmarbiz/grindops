@@ -85,6 +85,7 @@ export interface IStorage {
 
   getStrikeLogs(grinderId?: string): Promise<StrikeLog[]>;
   createStrikeLog(log: InsertStrikeLog): Promise<StrikeLog>;
+  updateStrikeLog(id: string, data: Partial<StrikeLog>): Promise<void>;
   acknowledgeStrike(id: string): Promise<void>;
 }
 
@@ -724,6 +725,10 @@ export class DatabaseStorage implements IStorage {
   async createStrikeLog(log: InsertStrikeLog): Promise<StrikeLog> {
     const [created] = await db.insert(strikeLogs).values(log).returning();
     return created;
+  }
+
+  async updateStrikeLog(id: string, data: Partial<StrikeLog>): Promise<void> {
+    await db.update(strikeLogs).set(data).where(eq(strikeLogs.id, id));
   }
 
   async acknowledgeStrike(id: string): Promise<void> {

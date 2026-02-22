@@ -23,10 +23,21 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - AI compares grinder metrics vs elite grinder averages, gives actionable tips
   - Grinders can request elite status; staff reviews/approves from dashboard
   - Elite vs Regular grinder performance comparison on staff dashboard
-- 2026-02-22: Added Strike Management system
+- 2026-02-22: Added Strike Management system with Fine Enforcement
   - Staff can add/remove strikes with reasons from dashboard
   - Strike logs with full history, grinder notifications
   - Grinders see strike status/history in their dashboard with acknowledge flow
+  - Strike fines: Strike 1=$25, Strike 2=$50, Strike 3=$100
+  - Grinders are suspended when they receive a strike; must pay fines before resuming orders
+  - Suspended grinders cannot place bids or be assigned orders
+  - Staff can mark fines as paid from dashboard, which lifts suspension
+  - Fine amounts shown on strike log entries (paid/unpaid status)
+  - Suspension banner on grinder dashboard with fine policy info
+- 2026-02-22: Added Elite Priority Order Access
+  - Elite grinders get 5-minute head start to see and bid on new orders
+  - Regular grinders see orders after the 5-minute priority window
+  - "Elite Early Access" badge on priority-window orders in grinder dashboard
+  - Backend enforcement: non-elite bid attempts during priority window return 403
 - 2026-02-22: Added Staff Alert Messaging system
   - Staff can send custom alerts to all grinders or individual grinders
   - Severity levels: info, warning, success, danger
