@@ -20,7 +20,7 @@ import {
   ExternalLink, X, DollarSign, Star, Zap, Send, CalendarClock,
   Award, Target, BarChart3, Lightbulb, Crown, ShieldCheck, Sparkles,
   Ban, Edit3, MessageSquare, Banknote, Bell, ArrowUpCircle, AlertOctagon, Eye,
-  Signal
+  Signal, ScrollText
 } from "lucide-react";
 
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
@@ -381,6 +381,36 @@ export default function GrinderProfile() {
           </div>
         </div>
       </div>
+
+      {!grinder.rulesAccepted && (
+        <Card className="border-amber-500/40 bg-amber-500/5" data-testid="card-rules-banner">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                <ScrollText className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-400">Rules Not Accepted</h3>
+                <p className="text-sm text-muted-foreground">
+                  You must accept the Grinder Rules & Guidelines before you can place bids on orders. 
+                  Use the <span className="font-mono text-amber-400">/grinder rules</span> slash command in any Discord text channel to view and accept the rules.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Grinder Rules & Guidelines</p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>1. <span className="font-medium">Privacy</span> - Never discuss customer prices with anyone</p>
+                <p>2. <span className="font-medium">Quality</span> - Complete all orders to the highest standard</p>
+                <p>3. <span className="font-medium">Communication</span> - Stay responsive during active orders</p>
+                <p>4. <span className="font-medium">Honesty</span> - Only bid on orders you can realistically complete</p>
+                <p>5. <span className="font-medium">Timeliness</span> - Meet your quoted timelines</p>
+                <p>6. <span className="font-medium">Professionalism</span> - Represent the team professionally</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {grinder.suspended && (
         <Card className="border-red-500/40 bg-red-500/5" data-testid="card-suspension-banner">

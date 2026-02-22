@@ -72,6 +72,12 @@ const commands = [
       opt.setName("order").setDescription("Order ID").setRequired(true))
     .addStringOption(opt =>
       opt.setName("grinder").setDescription("Grinder ID").setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName("grinder")
+    .setDescription("Grinder tools and information")
+    .addSubcommand(sub =>
+      sub.setName("rules").setDescription("View and accept the Grinder Rules & Guidelines")),
 ];
 
 async function handleQueue(interaction: ChatInputCommandInteraction) {
@@ -361,6 +367,16 @@ async function handlePlaceBid(interaction: ChatInputCommandInteraction) {
       return;
     }
 
+    if (!grinder.rulesAccepted) {
+      await interaction.reply({ content: `⚠️ Grinder "${grinder.name}" has not accepted the Grinder Rules yet. They must use \`/grinder rules\` to accept before placing bids.`, ephemeral: true });
+      return;
+    }
+
+    if (grinder.suspended) {
+      await interaction.reply({ content: `⚠️ Grinder "${grinder.name}" is currently suspended and cannot place bids.`, ephemeral: true });
+      return;
+    }
+
     const bidId = `B${Date.now().toString(36).toUpperCase()}`;
     const estDelivery = new Date();
     estDelivery.setDate(estDelivery.getDate() + deliveryDays);
@@ -444,6 +460,70 @@ async function handleAssign(interaction: ChatInputCommandInteraction) {
   }
 }
 
+async function handleGrinderRules(interaction: ChatInputCommandInteraction) {
+  const discordUserId = interaction.user.id;
+
+  try {
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === discordUserId);
+
+    if (!myGrinder) {
+      await interaction.reply({
+        content: "You don't have a grinder profile yet. Your profile will be created when you submit your first bid proposal through the MGT Bot.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (myGrinder.rulesAccepted) {
+      const acceptedDate = myGrinder.rulesAcceptedAt ? new Date(myGrinder.rulesAcceptedAt).toLocaleDateString() : "previously";
+      const embed = new EmbedBuilder()
+        .setTitle("📜 Grinder Rules & Guidelines")
+        .setColor(0x57F287)
+        .setDescription(
+          "**1️⃣ Privacy** - Never discuss customer prices with anyone\n" +
+          "**2️⃣ Quality** - Complete all orders to the highest standard\n" +
+          "**3️⃣ Communication** - Stay responsive during active orders\n" +
+          "**4️⃣ Honesty** - Only bid on orders you can realistically complete\n" +
+          "**5️⃣ Timeliness** - Meet your quoted timelines\n" +
+          "**6️⃣ Professionalism** - Represent the team professionally\n\n" +
+          "Violations may result in strikes or removal.\n\n" +
+          `✅ You have already accepted the rules on ${acceptedDate}.`
+        )
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    await storage.updateGrinder(myGrinder.id, {
+      rulesAccepted: true,
+      rulesAcceptedAt: new Date(),
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle("📜 Grinder Rules & Guidelines")
+      .setColor(0x57F287)
+      .setDescription(
+        "By working as a grinder, you agree to:\n\n" +
+        "**1️⃣ Privacy** - Never discuss customer prices with anyone\n" +
+        "**2️⃣ Quality** - Complete all orders to the highest standard\n" +
+        "**3️⃣ Communication** - Stay responsive during active orders\n" +
+        "**4️⃣ Honesty** - Only bid on orders you can realistically complete\n" +
+        "**5️⃣ Timeliness** - Meet your quoted timelines\n" +
+        "**6️⃣ Professionalism** - Represent the team professionally\n\n" +
+        "Violations may result in strikes or removal.\n\n" +
+        "✅ **You have accepted the rules.** You can now place bids on orders!"
+      )
+      .setFooter({ text: `Accepted by ${interaction.user.username}` })
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } catch (error: any) {
+    await interaction.reply({ content: `Failed to process rules: ${error.message}`, ephemeral: true });
+  }
+}
+
 export async function startDiscordBot() {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token) {
@@ -510,6 +590,11 @@ export async function startDiscordBot() {
         case "setprice": await handleSetPrice(interaction); break;
         case "placebid": await handlePlaceBid(interaction); break;
         case "assign": await handleAssign(interaction); break;
+        case "grinder":
+          if (interaction.options.getSubcommand() === "rules") {
+            await handleGrinderRules(interaction);
+          }
+          break;
         default:
           await interaction.reply({ content: "Unknown command.", ephemeral: true });
       }

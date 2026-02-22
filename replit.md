@@ -42,6 +42,13 @@ A fullstack web dashboard + Discord bot for managing a gaming services queue sys
   - Staff can send custom alerts to all grinders or individual grinders
   - Severity levels: info, warning, success, danger
   - Grinders see alerts inbox with read/unread tracking
+- 2026-02-22: Added Grinder Rules & Guidelines acceptance system
+  - Grinders must accept rules before placing any bids (dashboard or Discord)
+  - `/grinder rules` Discord slash command to view and accept rules
+  - Amber banner on grinder dashboard when rules not accepted
+  - "Rules Pending" badge on staff dashboard grinder list
+  - Backend enforcement: POST /api/grinder/me/bids returns 403 if rules not accepted
+  - Discord /placebid command also checks rules acceptance
 - New DB tables: elite_requests, staff_alerts, strike_logs
 - 2026-02-22: Added Live Bidding Countdown Timer system
   - 10-minute countdown starts when first bid is placed on an order

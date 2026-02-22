@@ -1503,6 +1503,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium truncate">{g.name}</span>
                     {g.suspended && <Badge className="bg-red-500/20 text-red-400 text-[9px]"><Ban className="w-2.5 h-2.5 mr-0.5" />Suspended</Badge>}
+                    {!(g as any).rulesAccepted && <Badge className="bg-amber-500/20 text-amber-400 text-[9px]">Rules Pending</Badge>}
                     <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
                     <Badge className={`text-[10px] ${
                       (g as any).availabilityStatus === "busy" ? "bg-yellow-500/20 text-yellow-400" :
