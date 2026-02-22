@@ -198,8 +198,13 @@ export default function GrinderProfile() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-full min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-[#5865F2]/15 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-[#5865F2]" />
+          </div>
+          <p className="text-sm text-white/40 font-medium">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -458,11 +463,13 @@ export default function GrinderProfile() {
         </Card>
       )}
 
-      <Card className={`${isElite ? "border-cyan-500/20" : "border-[#5865F2]/20"}`} data-testid="card-availability">
+      <Card className={`border-0 ${isElite ? "bg-gradient-to-r from-cyan-500/[0.06] to-transparent" : "bg-gradient-to-r from-[#5865F2]/[0.06] to-transparent"}`} data-testid="card-availability">
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <Signal className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-[#5865F2]"}`} />
+              <div className={`w-7 h-7 rounded-lg ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+                <Signal className={`w-3.5 h-3.5 ${isElite ? "text-cyan-400" : "text-[#5865F2]"}`} />
+              </div>
               <span className="text-sm font-medium">Availability</span>
             </div>
             <Select
@@ -500,22 +507,25 @@ export default function GrinderProfile() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5">
         {[
-          { label: "Active Orders", value: stats.activeAssignments, icon: Clock, color: "yellow" },
-          { label: "Completed", value: stats.completedAssignments, icon: CheckCircle, color: "green" },
-          { label: "Total Bids", value: stats.totalBids, icon: Gavel, color: "purple" },
-          { label: "Pending Bids", value: stats.pendingBids, icon: Target, color: "blue" },
-          { label: "Order Limit", value: `${grinder.activeOrders}/${grinder.capacity}`, icon: BarChart3, color: "cyan" },
+          { label: "Active Orders", value: stats.activeAssignments, icon: Clock, gradient: "bg-gradient-to-br from-yellow-500/[0.08] via-background to-yellow-500/[0.04]", iconBg: "bg-yellow-500/15", textColor: "text-yellow-400" },
+          { label: "Completed", value: stats.completedAssignments, icon: CheckCircle, gradient: "bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-500/[0.04]", iconBg: "bg-emerald-500/15", textColor: "text-emerald-400" },
+          { label: "Total Bids", value: stats.totalBids, icon: Gavel, gradient: "bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-500/[0.04]", iconBg: "bg-purple-500/15", textColor: "text-purple-400" },
+          { label: "Pending Bids", value: stats.pendingBids, icon: Target, gradient: "bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-500/[0.04]", iconBg: "bg-blue-500/15", textColor: "text-blue-400" },
+          { label: "Order Limit", value: `${grinder.activeOrders}/${grinder.capacity}`, icon: BarChart3, gradient: isElite ? "bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-500/[0.04]" : "bg-gradient-to-br from-[#5865F2]/[0.08] via-background to-[#5865F2]/[0.04]", iconBg: isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15", textColor: isElite ? "text-cyan-400" : "text-[#5865F2]" },
         ].map((stat, i) => (
-          <Card key={i} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-cyan-500/40" : "hover:border-[#5865F2]/40"} transition-all`}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg bg-${stat.color}-500/10 flex items-center justify-center`}>
-                <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold" data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
+          <Card key={i} className={`${stat.gradient} border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300`}>
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className={`text-xl sm:text-2xl font-bold ${stat.textColor} tracking-tight`} data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>{stat.value}</p>
+                  <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-white/40">{stat.label}</p>
+                </div>
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${stat.iconBg} flex items-center justify-center backdrop-blur-sm`}>
+                  <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.textColor}`} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -523,17 +533,20 @@ export default function GrinderProfile() {
       </div>
 
       {aiTips.length > 0 && (
-        <Card className={`${isElite ? "border-cyan-500/20 bg-gradient-to-r from-cyan-500/5 to-transparent" : "border-blue-500/20 bg-blue-500/5"}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+        <Card className={`border-0 overflow-hidden relative ${isElite ? "bg-gradient-to-r from-cyan-500/[0.08] via-background to-teal-500/[0.04]" : "bg-gradient-to-r from-blue-500/[0.08] via-background to-indigo-500/[0.04]"}`}>
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-10 translate-x-10" />
+          <CardContent className="p-4 sm:p-5 relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-blue-500/15"} flex items-center justify-center`}>
+                <Lightbulb className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+              </div>
               <span className={`font-semibold ${isElite ? "text-cyan-300" : "text-blue-300"}`}>
                 {isElite ? "Elite AI Coach" : "AI Suggestions"}
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {aiTips.map((tip: string, i: number) => (
-                <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground" data-testid={`text-ai-tip-${i}`}>
+                <div key={i} className="flex items-start gap-2.5 text-sm text-white/60 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`text-ai-tip-${i}`}>
                   <Sparkles className={`w-4 h-4 mt-0.5 shrink-0 ${isElite ? "text-cyan-500" : "text-blue-500"}`} />
                   <span>{tip}</span>
                 </div>
@@ -574,32 +587,30 @@ export default function GrinderProfile() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card className={`glass-panel ${eliteBorder}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <TrendingUp className={`w-5 h-5 ${eliteAccent}`} />
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+            <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+                    <TrendingUp className={`w-5 h-5 ${eliteAccent}`} />
+                  </div>
                   Performance Analytics
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 grid-cols-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Orders</p>
-                    <p className="text-xl font-bold" data-testid="text-analytics-total-orders">{grinder.totalOrders}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Earned</p>
-                    <p className="text-xl font-bold text-green-400" data-testid="text-analytics-total-earned">${(stats.totalEarned || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Active Earnings</p>
-                    <p className="text-xl font-bold text-yellow-400">${(stats.activeEarnings || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Win Rate</p>
-                    <p className="text-xl font-bold">{stats.winRate}%</p>
-                  </div>
+                <div className="grid gap-3 grid-cols-2">
+                  {[
+                    { label: "Total Orders", value: grinder.totalOrders, color: "text-white" },
+                    { label: "Total Earned", value: `$${(stats.totalEarned || 0).toLocaleString()}`, color: "text-emerald-400" },
+                    { label: "Active Earnings", value: `$${(stats.activeEarnings || 0).toLocaleString()}`, color: "text-yellow-400" },
+                    { label: "Win Rate", value: `${stats.winRate}%`, color: isElite ? "text-cyan-400" : "text-[#5865F2]" },
+                  ].map((item, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">{item.label}</p>
+                      <p className={`text-xl font-bold ${item.color} mt-1`} data-testid={`text-analytics-${item.label.toLowerCase().replace(/\s/g, '-')}`}>{item.value}</p>
+                    </div>
+                  ))}
                 </div>
                 {grinder.avgQualityRating != null && (
                   <div>
@@ -631,29 +642,37 @@ export default function GrinderProfile() {
               </CardContent>
             </Card>
 
-            <Card className={`glass-panel ${eliteBorder}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileCheck className={`w-5 h-5 ${eliteAccent}`} />
+            <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
+                    <FileCheck className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
+                  </div>
                   Recent Assignments
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {assignments.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No assignments yet. Start bidding on orders!</p>
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">
+                      <FileCheck className="w-6 h-6 text-white/20" />
+                    </div>
+                    <p className="text-white/40 text-sm">No assignments yet. Start bidding on orders!</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {assignments.slice(0, 5).map((a: any) => (
-                      <div key={a.id} className={`flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} transition-colors`} data-testid={`card-assignment-${a.id}`}>
+                      <div key={a.id} className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} transition-all duration-200`} data-testid={`card-assignment-${a.id}`}>
                         <div>
                           <p className="text-sm font-medium">Order {a.orderId}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-white/40">
                             Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}
-                            {a.grinderEarnings && <span className="text-green-400 ml-2">${Number(a.grinderEarnings).toFixed(2)}</span>}
+                            {a.grinderEarnings && <span className="text-emerald-400 ml-2">${Number(a.grinderEarnings).toFixed(2)}</span>}
                           </p>
                         </div>
                         <Badge
-                          className={a.status === "Active" ? "bg-green-500/20 text-green-400" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400" : "bg-muted text-muted-foreground"}>
+                          className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
                           {a.status}
                         </Badge>
                       </div>
@@ -665,25 +684,30 @@ export default function GrinderProfile() {
           </div>
 
           {lostBids.length > 0 && (
-            <Card className="border-red-500/20 bg-red-500/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg text-red-400">
-                  <Ban className="w-5 h-5" />
+            <Card className="border-0 bg-gradient-to-r from-red-500/[0.06] via-background to-red-500/[0.03] overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-3 text-lg text-red-400">
+                  <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
+                    <Ban className="w-5 h-5 text-red-400" />
+                  </div>
                   Bids Not Selected ({lostBids.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {lostBids.map((b: any) => (
-                    <div key={b.id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10" data-testid={`card-lost-bid-${b.id}`}>
+                    <div key={b.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`card-lost-bid-${b.id}`}>
                       <div className="flex items-center gap-3">
-                        <X className="w-5 h-5 text-red-500" />
+                        <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center">
+                          <X className="w-4 h-4 text-red-400" />
+                        </div>
                         <div>
                           <p className="text-sm font-medium">Order {b.orderId}</p>
-                          <p className="text-xs text-muted-foreground">Bid: ${b.bidAmount}</p>
+                          <p className="text-xs text-white/40">Bid: ${b.bidAmount}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="border-red-500/30 text-red-400">
+                      <Badge className="border-0 bg-red-500/15 text-red-400">
                         {b.status === "Order Assigned" ? "Order Assigned" : "Not Selected"}
                       </Badge>
                     </div>
@@ -696,22 +720,27 @@ export default function GrinderProfile() {
 
         <TabsContent value="orders" className="space-y-4 mt-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Zap className={`w-5 h-5 ${eliteAccent}`} />
-              Available Orders ({availableOrders.length})
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
+                <Zap className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+              </div>
+              Available Orders
+              <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{availableOrders.length}</Badge>
             </h2>
           </div>
           {availableOrders.length === 0 ? (
-            <Card className={`glass-panel ${eliteBorder}`}>
-              <CardContent className="p-8 text-center">
-                <Target className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No open orders right now. Check back soon!</p>
+            <Card className="border-0 bg-white/[0.03]">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-4">
+                  <Target className="w-7 h-7 text-white/20" />
+                </div>
+                <p className="text-white/40">No open orders right now. Check back soon!</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4">
               {availableOrders.map((order: any) => (
-                <Card key={order.id} className={`glass-panel ${eliteBorder} ${isElite ? "hover:border-cyan-500/30" : "hover:border-[#5865F2]/30"} transition-all`} data-testid={`card-order-${order.id}`}>
+                <Card key={order.id} className={`border-0 bg-white/[0.03] ${isElite ? "sm:hover:bg-cyan-500/[0.05]" : "sm:hover:bg-[#5865F2]/[0.05]"} transition-all duration-200`} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex-1">
@@ -786,32 +815,37 @@ export default function GrinderProfile() {
         </TabsContent>
 
         <TabsContent value="assignments" className="space-y-4 mt-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <FileCheck className={`w-5 h-5 ${eliteAccent}`} />
-            My Assignments ({assignments.length})
+          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
+              <FileCheck className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
+            </div>
+            My Assignments
+            <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
           </h2>
           {assignments.length === 0 ? (
-            <Card className={`glass-panel ${eliteBorder}`}>
-              <CardContent className="p-8 text-center">
-                <FileCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No assignments yet. Win a bid to get your first order!</p>
+            <Card className="border-0 bg-white/[0.03]">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-4">
+                  <FileCheck className="w-7 h-7 text-white/20" />
+                </div>
+                <p className="text-white/40">No assignments yet. Win a bid to get your first order!</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
               {assignments.map((a: any) => (
-                <Card key={a.id} className={`glass-panel ${eliteBorder}`} data-testid={`card-work-assignment-${a.id}`}>
-                  <CardContent className="p-4">
+                <Card key={a.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-work-assignment-${a.id}`}>
+                  <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
                       <div>
                         <span className="font-bold text-lg">Order {a.orderId}</span>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                        <div className="flex items-center gap-3 mt-1 text-sm text-white/40 flex-wrap">
                           <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
                           <span>Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</span>
-                          {a.grinderEarnings && <span className="text-green-400">${Number(a.grinderEarnings).toFixed(2)}</span>}
+                          {a.grinderEarnings && <span className="text-emerald-400 font-medium">${Number(a.grinderEarnings).toFixed(2)}</span>}
                         </div>
                       </div>
-                      <Badge className={a.status === "Active" ? "bg-green-500/20 text-green-400" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400" : "bg-muted text-muted-foreground"}>
+                      <Badge className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
                         {a.status}
                       </Badge>
                     </div>
@@ -870,22 +904,25 @@ export default function GrinderProfile() {
           )}
 
           {orderUpdates && orderUpdates.length > 0 && (
-            <Card className={`glass-panel ${eliteBorder} mt-6`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MessageSquare className={`w-5 h-5 ${eliteAccent}`} />
+            <Card className="border-0 bg-white/[0.03] mt-6 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-blue-500/15"} flex items-center justify-center`}>
+                    <MessageSquare className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+                  </div>
                   My Updates
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {orderUpdates.slice(0, 10).map((u: any) => (
-                    <div key={u.id} className="p-3 rounded-lg bg-white/5 border border-white/10" data-testid={`card-update-${u.id}`}>
+                    <div key={u.id} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`card-update-${u.id}`}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium">Order {u.orderId}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(u.createdAt).toLocaleString()}</span>
+                        <span className="text-xs text-white/30">{new Date(u.createdAt).toLocaleString()}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground">{u.message}</p>
+                      <p className="text-sm text-white/50">{u.message}</p>
                       {u.newDeadline && <p className="text-xs text-yellow-400 mt-1">New deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>}
                     </div>
                   ))}
@@ -896,15 +933,20 @@ export default function GrinderProfile() {
         </TabsContent>
 
         <TabsContent value="bids" className="space-y-4 mt-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Gavel className={`w-5 h-5 ${eliteAccent}`} />
-            My Bids ({bids.length})
+          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-purple-500/15"} flex items-center justify-center`}>
+              <Gavel className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
+            </div>
+            My Bids
+            <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{bids.length}</Badge>
           </h2>
           {bids.length === 0 ? (
-            <Card className={`glass-panel ${eliteBorder}`}>
-              <CardContent className="p-8 text-center">
-                <Gavel className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No bids yet. Check available orders to start bidding!</p>
+            <Card className="border-0 bg-white/[0.03]">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-4">
+                  <Gavel className="w-7 h-7 text-white/20" />
+                </div>
+                <p className="text-white/40">No bids yet. Check available orders to start bidding!</p>
               </CardContent>
             </Card>
           ) : (
@@ -912,15 +954,19 @@ export default function GrinderProfile() {
               {bids.map((b: any) => {
                 const isLost = lostBids.find((lb: any) => lb.id === b.id);
                 return (
-                  <Card key={b.id} className={`glass-panel ${isLost ? "border-red-500/20" : eliteBorder}`} data-testid={`card-bid-${b.id}`}>
+                  <Card key={b.id} className={`border-0 ${isLost ? "bg-gradient-to-r from-red-500/[0.04] to-transparent" : "bg-white/[0.03]"} sm:hover:bg-white/[0.05] transition-all duration-200`} data-testid={`card-bid-${b.id}`}>
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          {isLost && <X className="w-5 h-5 text-red-500" />}
+                          {isLost && (
+                            <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center">
+                              <X className="w-4 h-4 text-red-400" />
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium">Order {b.orderId}</p>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
-                              <span>Bid: ${b.bidAmount}</span>
+                            <div className="flex items-center gap-3 text-sm text-white/40 mt-1 flex-wrap">
+                              <span className="font-medium text-white/60">Bid: ${b.bidAmount}</span>
                               {b.timeline && <span>Timeline: {b.timeline}</span>}
                               {b.canStart && <span>Can Start: {b.canStart}</span>}
                               <span>{b.bidTime ? new Date(b.bidTime).toLocaleDateString() : ""}</span>
@@ -928,13 +974,13 @@ export default function GrinderProfile() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge className={
-                            b.status === "Accepted" ? "bg-green-500/20 text-green-400" :
+                          <Badge className={`border-0 ${
+                            b.status === "Accepted" ? "bg-emerald-500/20 text-emerald-400" :
                             b.status === "Denied" ? "bg-red-500/20 text-red-400" :
                             b.status === "Order Assigned" ? "bg-red-500/20 text-red-400" :
                             isLost ? "bg-red-500/20 text-red-400" :
                             "bg-yellow-500/20 text-yellow-400"
-                          }>
+                          }`}>
                             {b.status === "Order Assigned" ? "Order Assigned" : isLost ? "Not Selected" : b.status}
                           </Badge>
                           {b.status === "Pending" && !isLost && (
@@ -959,38 +1005,42 @@ export default function GrinderProfile() {
         </TabsContent>
 
         <TabsContent value="payouts" className="space-y-4 mt-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Banknote className={`w-5 h-5 ${eliteAccent}`} />
+          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
+              <Banknote className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
+            </div>
             Payout Requests
           </h2>
           {(!payoutRequests || payoutRequests.length === 0) ? (
-            <Card className={`glass-panel ${eliteBorder}`}>
-              <CardContent className="p-8 text-center">
-                <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No payout requests yet. Complete an order and request payout.</p>
+            <Card className="border-0 bg-white/[0.03]">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-4">
+                  <DollarSign className="w-7 h-7 text-white/20" />
+                </div>
+                <p className="text-white/40">No payout requests yet. Complete an order and request payout.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
               {payoutRequests.map((p: any) => (
-                <Card key={p.id} className={`glass-panel ${eliteBorder}`} data-testid={`card-payout-${p.id}`}>
+                <Card key={p.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-payout-${p.id}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium">Order {p.orderId}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Amount: <span className="text-green-400 font-medium">${Number(p.amount).toFixed(2)}</span>
+                        <p className="text-sm text-white/50">
+                          Amount: <span className="text-emerald-400 font-medium">${Number(p.amount).toFixed(2)}</span>
                           {p.payoutPlatform && <span className="ml-2">via {p.payoutPlatform}</span>}
                         </p>
-                        {p.notes && <p className="text-xs text-muted-foreground">{p.notes}</p>}
-                        <p className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()}</p>
+                        {p.notes && <p className="text-xs text-white/40">{p.notes}</p>}
+                        <p className="text-xs text-white/30">{new Date(p.createdAt).toLocaleString()}</p>
                       </div>
-                      <Badge className={
-                        p.status === "Paid" ? "bg-green-500/20 text-green-400" :
+                      <Badge className={`border-0 ${
+                        p.status === "Paid" ? "bg-emerald-500/20 text-emerald-400" :
                         p.status === "Approved" ? "bg-blue-500/20 text-blue-400" :
                         p.status === "Denied" ? "bg-red-500/20 text-red-400" :
                         "bg-yellow-500/20 text-yellow-400"
-                      }>
+                      }`}>
                         {p.status}
                       </Badge>
                     </div>
@@ -1002,19 +1052,27 @@ export default function GrinderProfile() {
         </TabsContent>
 
         <TabsContent value="status" className="space-y-6 mt-6">
-          <Card className={`glass-panel ${eliteBorder}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bell className={`w-5 h-5 ${eliteAccent}`} />
+          <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-blue-500/15"} flex items-center justify-center`}>
+                  <Bell className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+                </div>
                 Alerts Inbox
                 {unreadAlertCount > 0 && (
-                  <Badge className="bg-blue-500/20 text-blue-400 ml-2">{unreadAlertCount} unread</Badge>
+                  <Badge className="bg-blue-500/20 text-blue-400 border-0 ml-2">{unreadAlertCount} unread</Badge>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {alerts.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No alerts yet.</p>
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">
+                    <Bell className="w-6 h-6 text-white/20" />
+                  </div>
+                  <p className="text-white/40 text-sm">No alerts yet.</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {alerts.map((alert: any) => {
@@ -1050,25 +1108,33 @@ export default function GrinderProfile() {
             </CardContent>
           </Card>
 
-          <Card className={`glass-panel ${eliteBorder}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <AlertOctagon className={`w-5 h-5 ${grinder.strikes > 0 ? "text-red-400" : eliteAccent}`} />
+          <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className={`w-9 h-9 rounded-xl ${grinder.strikes > 0 ? "bg-red-500/15" : isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+                  <AlertOctagon className={`w-5 h-5 ${grinder.strikes > 0 ? "text-red-400" : eliteAccent}`} />
+                </div>
                 Strike History
                 <div className="flex items-center gap-1 ml-2">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <span
                       key={i}
-                      className={`w-3 h-3 rounded-full ${i < (grinder.strikes || 0) ? "bg-red-500" : "bg-muted"}`}
+                      className={`w-3 h-3 rounded-full ${i < (grinder.strikes || 0) ? "bg-red-500" : "bg-white/[0.1]"}`}
                     />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground ml-1">({grinder.strikes || 0}/3)</span>
+                <span className="text-sm text-white/40 ml-1">({grinder.strikes || 0}/3)</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {strikeLogs.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No strike history. Keep it up!</p>
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle className="w-6 h-6 text-emerald-400/40" />
+                  </div>
+                  <p className="text-white/40 text-sm">No strike history. Keep it up!</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {strikeLogs.map((log: any) => (
@@ -1114,10 +1180,13 @@ export default function GrinderProfile() {
             </CardContent>
           </Card>
 
-          <Card className={`glass-panel ${isElite ? "border-cyan-500/30 bg-gradient-to-r from-cyan-500/5 to-transparent" : eliteBorder}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Crown className={`w-5 h-5 ${isElite ? "text-cyan-400" : eliteAccent}`} />
+          <Card className={`border-0 overflow-hidden relative ${isElite ? "bg-gradient-to-r from-cyan-500/[0.08] via-background to-teal-500/[0.04]" : "bg-white/[0.03]"}`}>
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
+                  <Crown className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+                </div>
                 {isElite ? "Elite Status" : "Elite Grinder Role"}
               </CardTitle>
             </CardHeader>
@@ -1234,10 +1303,13 @@ export default function GrinderProfile() {
         </TabsContent>
 
         <TabsContent value="guide" className="space-y-4 mt-6">
-          <Card className={`glass-panel ${eliteBorder}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Target className={`w-5 h-5 ${eliteAccent}`} />
+          <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+                  <Target className={`w-5 h-5 ${eliteAccent}`} />
+                </div>
                 How to Use Your Dashboard
               </CardTitle>
             </CardHeader>
@@ -1252,24 +1324,27 @@ export default function GrinderProfile() {
                 { step: 7, icon: Bell, title: "Check Alerts & Strikes", desc: "The 'Status' tab shows your alerts from staff and any strikes. Make sure to acknowledge new strikes and read important alerts." },
                 { step: 8, icon: Crown, title: "Aim for Elite Status", desc: "In the Overview tab, you can request Elite status. Elite grinders get a higher order limit (5 vs 3), a special cyan theme, and priority consideration." },
               ].map(({ step, icon: StepIcon, title, desc }) => (
-                <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5" data-testid={`guide-step-${step}`}>
+                <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`guide-step-${step}`}>
                   <div className={`w-7 h-7 rounded-full ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} flex items-center justify-center flex-shrink-0 text-sm font-bold`}>{step}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <StepIcon className={`w-4 h-4 ${eliteAccent} flex-shrink-0`} />
                       <span className="font-semibold text-sm">{title}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                    <p className="text-xs text-white/40 mt-1">{desc}</p>
                   </div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-          <Card className={`glass-panel ${eliteBorder}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Lightbulb className={`w-5 h-5 ${eliteAccent}`} />
+          <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
+                  <Lightbulb className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+                </div>
                 Tips for Success
               </CardTitle>
             </CardHeader>
@@ -1283,9 +1358,9 @@ export default function GrinderProfile() {
                   { icon: Zap, tip: "Bid quickly when new orders drop. The 10-minute countdown starts with the first bid." },
                   { icon: ArrowUpCircle, tip: "Keep your availability status updated so you get considered for direct assignments." },
                 ].map(({ icon: TipIcon, tip }, i) => (
-                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/5" data-testid={`tip-${i}`}>
+                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`tip-${i}`}>
                     <TipIcon className={`w-4 h-4 mt-0.5 ${eliteAccent} flex-shrink-0`} />
-                    <p className="text-xs text-muted-foreground">{tip}</p>
+                    <p className="text-xs text-white/40">{tip}</p>
                   </div>
                 ))}
               </div>
