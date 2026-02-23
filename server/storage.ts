@@ -170,7 +170,8 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getGrinderByDiscordId(discordUserId);
     if (existing) {
       const updateData: Record<string, any> = {};
-      if (data.name) updateData.name = data.name;
+      if (data.name && data.name !== "Unknown") updateData.name = data.name;
+      else if (data.name && existing.name === "Unknown") updateData.name = data.name;
       if (data.discordUsername) updateData.discordUsername = data.discordUsername;
       if (data.tier) updateData.tier = data.tier;
       if (data.discordRoleId) updateData.discordRoleId = data.discordRoleId;

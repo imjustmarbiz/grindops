@@ -307,19 +307,26 @@ export async function handleProposalMessage(message: Message) {
     let grinderId: string | null = null;
     if (grinderDiscordId) {
       let roleInfo = { roleId: GRINDER_ROLES.GRINDER as string, category: "Grinder", capacity: 5 };
+      let memberDisplayName: string | null = null;
+      let memberUsername: string | null = null;
       try {
         const guild = message.guild;
         if (guild) {
           const member = await guild.members.fetch(grinderDiscordId).catch(() => null);
           if (member) {
             roleInfo = detectGrinderRole(member);
+            memberDisplayName = member.displayName || member.user.globalName || member.user.username;
+            memberUsername = member.user.username;
           }
         }
       } catch (e) {}
 
+      const resolvedName = grinderName || memberDisplayName || "Unknown";
+      const resolvedUsername = memberUsername || grinderName || undefined;
+
       const grinder = await storage.upsertGrinderByDiscordId(grinderDiscordId, {
-        name: grinderName || "Unknown",
-        discordUsername: grinderName || undefined,
+        name: resolvedName,
+        discordUsername: resolvedUsername,
         tier: grinderTier,
         discordRoleId: roleInfo.roleId,
         category: roleInfo.category,

@@ -487,6 +487,31 @@ export async function startDiscordBot() {
     }
 
     console.log("[discord] MGT Bot watcher active - monitoring bid war and proposals channels");
+
+    try {
+      const allGrinders = await storage.getGrinders();
+      const unknownGrinders = allGrinders.filter((g: any) => g.name === "Unknown" && g.discordUserId);
+      if (unknownGrinders.length > 0) {
+        console.log(`[discord] Fixing ${unknownGrinders.length} grinder(s) with "Unknown" name...`);
+        for (const grinder of unknownGrinders) {
+          try {
+            const guilds = client!.guilds.cache;
+            for (const [, guild] of guilds) {
+              const member = await guild.members.fetch(grinder.discordUserId).catch(() => null);
+              if (member) {
+                const displayName = member.displayName || member.user.globalName || member.user.username;
+                const username = member.user.username;
+                await storage.updateGrinder(grinder.id, { name: displayName, discordUsername: username });
+                console.log(`[discord] Fixed grinder ${grinder.id}: "Unknown" → "${displayName}" (@${username})`);
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+      }
+    } catch (e) {
+      console.error("[discord] Error fixing unknown grinder names:", e);
+    }
   });
 
   client.on("messageCreate", async (message) => {
