@@ -539,9 +539,9 @@ export async function registerRoutes(
 
           const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
           const allBids = await storage.getBids();
-          const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
-          for (const ob of otherPending) {
-            await storage.updateBidStatus(ob.id, "Order Assigned");
+          const otherBids = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && (b.status === "Pending" || b.status === "Countered"));
+          for (const ob of otherBids) {
+            await storage.updateBidStatus(ob.id, "Denied", actorName);
             await storage.createStaffAlert({
               id: `SA-${Date.now().toString(36)}-${ob.grinderId}`,
               targetType: "grinder",
@@ -551,6 +551,9 @@ export async function registerRoutes(
               severity: "warning",
               createdBy: "system",
             });
+          }
+          if (otherBids.length > 0) {
+            console.log(`[bids] Auto-denied ${otherBids.length} other bid(s) on order ${bid.orderId}`);
           }
         }
       }
@@ -687,9 +690,9 @@ export async function registerRoutes(
 
           const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
           const allBids = await storage.getBids();
-          const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
-          for (const ob of otherPending) {
-            await storage.updateBidStatus(ob.id, "Order Assigned");
+          const otherBids = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && (b.status === "Pending" || b.status === "Countered"));
+          for (const ob of otherBids) {
+            await storage.updateBidStatus(ob.id, "Denied", `${actorName} (override)`);
             await storage.createStaffAlert({
               id: `SA-${Date.now().toString(36)}-${ob.grinderId}`,
               targetType: "grinder",
@@ -699,6 +702,9 @@ export async function registerRoutes(
               severity: "warning",
               createdBy: "system",
             });
+          }
+          if (otherBids.length > 0) {
+            console.log(`[bids] Owner override auto-denied ${otherBids.length} other bid(s) on order ${bid.orderId}`);
           }
         }
       } else if (status === "Denied" || status === "Pending") {

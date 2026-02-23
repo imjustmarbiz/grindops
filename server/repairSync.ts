@@ -85,7 +85,26 @@ export async function repairMissingAssignments() {
     }
   }
 
-  // === 3. Recalculate bid margins when order price exists but margin is missing ===
+  // === 3. Auto-deny pending/countered bids on orders that already have an accepted bid ===
+  const freshBids = await storage.getBids();
+  const ordersWithAcceptedBid = new Map<string, string>();
+  for (const bid of freshBids) {
+    if (bid.status === "Accepted") {
+      ordersWithAcceptedBid.set(bid.orderId, bid.id);
+    }
+  }
+  for (const bid of freshBids) {
+    if ((bid.status === "Pending" || bid.status === "Countered") && ordersWithAcceptedBid.has(bid.orderId)) {
+      const acceptedBidId = ordersWithAcceptedBid.get(bid.orderId);
+      if (acceptedBidId !== bid.id) {
+        await storage.updateBidStatus(bid.id, "Denied", "system-repair");
+        totalRepairs++;
+        console.log(`[repair-sync] Auto-denied stale bid ${bid.id} on order ${bid.orderId} (accepted bid: ${acceptedBidId})`);
+      }
+    }
+  }
+
+  // === 4. Recalculate bid margins when order price exists but margin is missing ===
   for (const bid of allBids) {
     const order = allOrders.find(o => o.id === bid.orderId);
     if (!order) continue;

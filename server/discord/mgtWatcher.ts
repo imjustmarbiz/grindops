@@ -458,6 +458,15 @@ export async function handleProposalMessage(message: Message) {
         });
       }
 
+      const allBidsForOrder = await storage.getBids();
+      const otherPending = allBidsForOrder.filter(b => b.orderId === order.id && b.id !== bid.id && (b.status === "Pending" || b.status === "Countered"));
+      for (const ob of otherPending) {
+        await storage.updateBidStatus(ob.id, "Denied", acceptedBy || "mgt-bot");
+      }
+      if (otherPending.length > 0) {
+        console.log(`[mgt-watcher] Auto-denied ${otherPending.length} other bid(s) on order ${order.id}`);
+      }
+
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}-asgn`,
         entityType: "assignment",
@@ -571,6 +580,15 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
               totalEarnings: newEarnings.toFixed(2),
               lastAssigned: new Date(),
             });
+          }
+
+          const allBidsForOrder = await storage.getBids();
+          const otherPending = allBidsForOrder.filter(b => b.orderId === order.id && b.id !== existingBid.id && (b.status === "Pending" || b.status === "Countered"));
+          for (const ob of otherPending) {
+            await storage.updateBidStatus(ob.id, "Denied", acceptedBy || "mgt-bot");
+          }
+          if (otherPending.length > 0) {
+            console.log(`[mgt-watcher] Auto-denied ${otherPending.length} other bid(s) on order ${order.id}`);
           }
 
           await storage.createAuditLog({
