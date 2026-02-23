@@ -201,7 +201,7 @@ export default function Bids() {
                   <TableCell className="text-right text-muted-foreground">{order ? `$${order.customerPrice}` : "-"}</TableCell>
                   <TableCell className="text-right">
                     {bid.margin ? (
-                      <span className="font-medium text-emerald-400">
+                      <span className="font-medium text-emerald-400 whitespace-nowrap">
                         <DollarSign className="w-3 h-3 inline" />{bid.margin}
                         {bid.marginPct && <span className="text-xs text-muted-foreground ml-1">({bid.marginPct}%)</span>}
                       </span>
