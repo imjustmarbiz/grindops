@@ -343,10 +343,12 @@ export default function GrinderProfile() {
               {isElite && <Sparkles className="w-6 h-6 text-cyan-400 animate-pulse" />}
             </div>
             <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <Badge className={`${isElite ? "bg-gradient-to-r from-cyan-500/30 to-teal-500/30 text-cyan-300 border-cyan-500/30" : "border-[#5865F2]/30 text-[#5865F2]"}`} data-testid="text-grinder-tier">
-                {isElite && <Crown className="w-3 h-3 mr-1" />}
-                {isElite ? "Elite Grinder" : "Grinder"}
-              </Badge>
+              {(grinder.roles && grinder.roles.length > 0 ? grinder.roles : [grinder.category || (isElite ? "Elite Grinder" : "Grinder")]).map((role: string) => (
+                <Badge key={role} className={`${role === "Elite Grinder" ? "bg-gradient-to-r from-cyan-500/30 to-teal-500/30 text-cyan-300 border-cyan-500/30" : role === "VC Grinder" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" : role === "Event Grinder" ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "border-[#5865F2]/30 text-[#5865F2]"}`} data-testid={`badge-role-${role.toLowerCase().replace(/\s/g, "-")}`}>
+                  {role === "Elite Grinder" && <Crown className="w-3 h-3 mr-1" />}
+                  {role}
+                </Badge>
+              ))}
               <Badge variant={grinder.activeOrders < grinder.capacity ? "default" : "secondary"}
                 className={grinder.activeOrders < grinder.capacity ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"} data-testid="text-grinder-status">
                 {grinder.activeOrders < grinder.capacity ? "Available" : "At Order Limit"}

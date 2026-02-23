@@ -47,6 +47,7 @@ export const grinders = pgTable("grinders", {
   discordUsername: text("discord_username"),
   discordRoleId: varchar("discord_role_id"),
   category: text("category").notNull().default("Grinder"),
+  roles: text("roles").array().default([]),
   tier: text("tier").notNull().default("New"),
   capacity: integer("capacity").notNull().default(3),
   activeOrders: integer("active_orders").notNull().default(0),

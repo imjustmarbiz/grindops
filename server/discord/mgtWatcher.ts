@@ -60,24 +60,47 @@ function extractNumber(text: string): number | null {
   return parseFloat(match[1].replace(/,/g, ""));
 }
 
-function detectGrinderRole(member: GuildMember | null): { roleId: string; category: string; capacity: number } {
-  if (!member) return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5 };
+function detectGrinderRole(member: GuildMember | null): { roleId: string; category: string; capacity: number; roles: string[] } {
+  if (!member) return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5, roles: ["Grinder"] };
   
-  const roleIds = member.roles.cache.map(r => r.id);
-  
-  if (roleIds.includes(GRINDER_ROLES.ELITE)) {
-    return { roleId: GRINDER_ROLES.ELITE, category: "Elite Grinder", capacity: 3 };
+  const memberRoleIds = member.roles.cache.map(r => r.id);
+  const roles: string[] = [];
+
+  const allRoleIds = Object.values(GRINDER_ROLES) as string[];
+  for (const rid of allRoleIds) {
+    if (memberRoleIds.includes(rid)) {
+      const label = ROLE_LABELS[rid];
+      if (label && !roles.includes(label)) {
+        roles.push(label);
+      }
+    }
   }
-  if (roleIds.includes(GRINDER_ROLES.VC_1) || roleIds.includes(GRINDER_ROLES.VC_2)) {
-    return { roleId: GRINDER_ROLES.VC_1, category: "VC Grinder", capacity: 5 };
+
+  let primaryRoleId = GRINDER_ROLES.GRINDER;
+  let primaryCategory = "Grinder";
+  let primaryCapacity = 5;
+
+  if (memberRoleIds.includes(GRINDER_ROLES.ELITE)) {
+    primaryRoleId = GRINDER_ROLES.ELITE;
+    primaryCategory = "Elite Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.ELITE] || 5;
+  } else if (memberRoleIds.includes(GRINDER_ROLES.VC_1) || memberRoleIds.includes(GRINDER_ROLES.VC_2)) {
+    primaryRoleId = GRINDER_ROLES.VC_1;
+    primaryCategory = "VC Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.VC_1] || 3;
+  } else if (memberRoleIds.includes(GRINDER_ROLES.EVENT)) {
+    primaryRoleId = GRINDER_ROLES.EVENT;
+    primaryCategory = "Event Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.EVENT] || 3;
+  } else if (memberRoleIds.includes(GRINDER_ROLES.GRINDER)) {
+    primaryRoleId = GRINDER_ROLES.GRINDER;
+    primaryCategory = "Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.GRINDER] || 3;
   }
-  if (roleIds.includes(GRINDER_ROLES.EVENT)) {
-    return { roleId: GRINDER_ROLES.EVENT, category: "Event Grinder", capacity: 5 };
-  }
-  if (roleIds.includes(GRINDER_ROLES.GRINDER)) {
-    return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5 };
-  }
-  return { roleId: GRINDER_ROLES.GRINDER, category: "Grinder", capacity: 5 };
+
+  if (roles.length === 0) roles.push(primaryCategory);
+
+  return { roleId: primaryRoleId, category: primaryCategory, capacity: primaryCapacity, roles };
 }
 
 async function findOrCreateService(serviceName: string): Promise<string> {
@@ -306,7 +329,7 @@ export async function handleProposalMessage(message: Message) {
 
     let grinderId: string | null = null;
     if (grinderDiscordId) {
-      let roleInfo = { roleId: GRINDER_ROLES.GRINDER as string, category: "Grinder", capacity: 5 };
+      let roleInfo = { roleId: GRINDER_ROLES.GRINDER as string, category: "Grinder", capacity: 5, roles: ["Grinder"] as string[] };
       let memberDisplayName: string | null = null;
       let memberUsername: string | null = null;
       try {
@@ -330,6 +353,7 @@ export async function handleProposalMessage(message: Message) {
         tier: grinderTier,
         discordRoleId: roleInfo.roleId,
         category: roleInfo.category,
+        roles: roleInfo.roles,
         capacity: roleInfo.capacity,
         totalOrders,
         totalReviews,

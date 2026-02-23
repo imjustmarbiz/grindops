@@ -277,6 +277,56 @@ export async function repairMissingAssignments() {
     }
   }
 
+  // === 7. Populate roles array from Discord for grinders with empty roles ===
+  try {
+    const { getDiscordBotClient } = await import("./discord/bot");
+    const { GRINDER_ROLES, ROLE_LABELS } = await import("@shared/schema");
+    const client = getDiscordBotClient();
+    if (client) {
+      const allRoleIds = Object.values(GRINDER_ROLES) as string[];
+      const guild = client.guilds.cache.first() || null;
+
+      if (guild) {
+        for (const grinder of allGrinders) {
+          const existingRoles = (grinder as any).roles as string[] | null;
+          if (existingRoles && existingRoles.length > 0) continue;
+          if (!grinder.discordUserId) {
+            await storage.updateGrinder(grinder.id, { roles: [grinder.category || "Grinder"] } as any);
+            totalRepairs++;
+            continue;
+          }
+
+          try {
+            const member = await guild.members.fetch(grinder.discordUserId).catch(() => null);
+            if (!member) {
+              await storage.updateGrinder(grinder.id, { roles: [grinder.category || "Grinder"] } as any);
+              totalRepairs++;
+              continue;
+            }
+
+            const roles: string[] = [];
+            for (const rid of allRoleIds) {
+              if (member.roles.cache.has(rid)) {
+                const label = ROLE_LABELS[rid];
+                if (label && !roles.includes(label)) roles.push(label);
+              }
+            }
+            if (roles.length === 0) roles.push(grinder.category || "Grinder");
+
+            await storage.updateGrinder(grinder.id, { roles } as any);
+            totalRepairs++;
+            console.log(`[repair-sync] Populated roles for ${grinder.name}: [${roles.join(", ")}]`);
+          } catch (e) {
+            await storage.updateGrinder(grinder.id, { roles: [grinder.category || "Grinder"] } as any);
+            totalRepairs++;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.log(`[repair-sync] Skipped roles repair (bot not ready): ${e}`);
+  }
+
   // === Summary ===
   if (totalRepairs > 0) {
     console.log(`[repair-sync] Completed ${totalRepairs} total repair(s)`);

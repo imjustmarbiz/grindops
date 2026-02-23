@@ -92,7 +92,11 @@ export default function Grinders() {
     updateMutation.mutate({ id: grinder.id, data: { strikes: newStrikes } });
   };
 
-  const categorize = (g: Grinder) => g.category || "Grinder";
+  const grinderHasRole = (g: Grinder, role: string) => {
+    const roles = (g as any).roles as string[] | null | undefined;
+    if (roles && roles.length > 0) return roles.includes(role);
+    return (g.category || "Grinder") === role;
+  };
   const categories = ["All", "Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"];
 
   const categoryIcon = (cat: string) => {
@@ -105,7 +109,7 @@ export default function Grinders() {
   const filterGrinders = (category: string) => {
     if (!grinders) return [];
     if (category === "All") return grinders;
-    return grinders.filter(g => categorize(g) === category);
+    return grinders.filter(g => grinderHasRole(g, category));
   };
 
   return (
@@ -191,7 +195,7 @@ export default function Grinders() {
                       <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {categoryIcon(categorize(g))}
+                            {categoryIcon(g.category || "Grinder")}
                             <div>
                               <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
                               {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}
@@ -199,7 +203,13 @@ export default function Grinders() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs bg-white/[0.03]">{categorize(g)}</Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
+                              <Badge key={r} variant="outline" className={`text-xs ${r === "Elite Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : r === "VC Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : r === "Event Grinder" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "bg-white/[0.03]"}`}>{r}</Badge>
+                            )) : (
+                              <Badge variant="outline" className="text-xs bg-white/[0.03]">{g.category || "Grinder"}</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={`text-xs ${g.tier === "New" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : g.tier === "Pro" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : g.tier === "Elite" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "bg-white/[0.03]"}`}>
@@ -283,7 +293,7 @@ export default function Grinders() {
         <DialogContent className="sm:max-w-[600px] border-white/10 bg-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
-              {selectedGrinder && categoryIcon(categorize(selectedGrinder))}
+              {selectedGrinder && categoryIcon(selectedGrinder.category || "Grinder")}
               {selectedGrinder?.name} - Scorecard
             </DialogTitle>
           </DialogHeader>
@@ -311,7 +321,7 @@ export default function Grinders() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "Category", value: categorize(selectedGrinder) },
+                    { label: "Roles", value: ((selectedGrinder as any).roles as string[] | null)?.join(", ") || selectedGrinder.category || "Grinder" },
                     { label: "Tier", value: selectedGrinder.tier },
                     { label: "Capacity", value: `${selectedGrinder.activeOrders}/${selectedGrinder.capacity}` },
                     { label: "Utilization", value: selectedGrinder.utilization ? `${Number(selectedGrinder.utilization).toFixed(0)}%` : "0%" },

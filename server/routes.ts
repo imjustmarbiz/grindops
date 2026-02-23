@@ -70,7 +70,9 @@ export async function registerRoutes(
       let roleId = "1466369179648004224";
       let resolvedCategory = category || "Grinder";
       let resolvedCapacity = capacity ?? 3;
+      let resolvedRoles: string[] = [];
 
+      const { GRINDER_ROLES, ROLE_LABELS, ROLE_CAPACITY } = await import("@shared/schema");
       const { getDiscordBotClient } = await import("./discord/bot");
       const client = getDiscordBotClient();
       if (client) {
@@ -84,14 +86,28 @@ export async function registerRoutes(
               }
               resolvedUsername = member.user.username;
 
-              const GRINDER_ROLE = "1466369179648004224";
-              const ELITE_ROLE = "1466370965016412316";
-              if (member.roles.cache.has(ELITE_ROLE)) {
-                roleId = ELITE_ROLE;
-                if (!category) resolvedCategory = "Elite Grinder";
-                if (capacity === undefined) resolvedCapacity = 5;
-              } else if (member.roles.cache.has(GRINDER_ROLE)) {
-                roleId = GRINDER_ROLE;
+              const allRoleIds = Object.values(GRINDER_ROLES) as string[];
+              for (const rid of allRoleIds) {
+                if (member.roles.cache.has(rid)) {
+                  const label = ROLE_LABELS[rid];
+                  if (label && !resolvedRoles.includes(label)) {
+                    resolvedRoles.push(label);
+                  }
+                }
+              }
+
+              if (resolvedRoles.length > 0) {
+                if (resolvedRoles.includes("Elite Grinder")) {
+                  roleId = GRINDER_ROLES.ELITE;
+                  if (!category) resolvedCategory = "Elite Grinder";
+                  if (capacity === undefined) resolvedCapacity = ROLE_CAPACITY[GRINDER_ROLES.ELITE] || 5;
+                } else {
+                  const firstRole = resolvedRoles[0];
+                  const matchedRoleId = Object.entries(ROLE_LABELS).find(([, label]) => label === firstRole)?.[0];
+                  if (matchedRoleId) roleId = matchedRoleId;
+                  if (!category) resolvedCategory = firstRole;
+                  if (capacity === undefined && matchedRoleId) resolvedCapacity = ROLE_CAPACITY[matchedRoleId] || 3;
+                }
               }
               break;
             }
@@ -99,6 +115,10 @@ export async function registerRoutes(
         } catch (e) {
           console.error("[api] Failed to fetch Discord member for new grinder:", e);
         }
+      }
+
+      if (resolvedRoles.length === 0) {
+        resolvedRoles = [resolvedCategory];
       }
 
       const grinderId = `GRD-${discordUserId.slice(-6)}`;
@@ -109,6 +129,7 @@ export async function registerRoutes(
         discordUsername: resolvedUsername,
         discordRoleId: roleId,
         category: resolvedCategory,
+        roles: resolvedRoles,
         tier: "New",
         capacity: resolvedCapacity,
       });
@@ -865,7 +886,8 @@ export async function registerRoutes(
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
-    const isElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder";
+    const grinderRoles = (myGrinder as any).roles as string[] | null;
+    const isElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder" || (grinderRoles && grinderRoles.includes("Elite Grinder"));
     const ELITE_PRIORITY_MINUTES = 5;
     const now = new Date();
 
@@ -943,7 +965,7 @@ export async function registerRoutes(
       aiTips.push("Great track record! You're eligible for Elite status - keep up the consistency.");
     }
 
-    const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder");
+    const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder" || (g.roles && g.roles.includes("Elite Grinder")));
     let eliteCoaching: any = null;
     if (!isElite && eliteGrinders.length > 0) {
       const eliteAvgWinRate = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.winRate) || 0), 0) / eliteGrinders.length;
@@ -1006,6 +1028,7 @@ export async function registerRoutes(
       discordUsername: myGrinder.discordUsername,
       discordRoleId: myGrinder.discordRoleId,
       category: myGrinder.category,
+      roles: (myGrinder as any).roles || [myGrinder.category || "Grinder"],
       tier: myGrinder.tier,
       capacity: myGrinder.capacity,
       activeOrders: myGrinder.activeOrders,
@@ -1690,8 +1713,9 @@ export async function registerRoutes(
 
   app.get("/api/staff/elite-vs-grinder-metrics", requireStaff, async (req, res) => {
     const allGrinders = await storage.getGrinders();
-    const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder");
-    const regularGrinders = allGrinders.filter((g: any) => !(g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder"));
+    const isEliteGrinder = (g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder" || (g.roles && g.roles.includes("Elite Grinder"));
+    const eliteGrinders = allGrinders.filter(isEliteGrinder);
+    const regularGrinders = allGrinders.filter((g: any) => !isEliteGrinder(g));
 
     const computeAvg = (arr: any[], field: string) => {
       const vals = arr.map(g => Number(g[field]) || 0);
