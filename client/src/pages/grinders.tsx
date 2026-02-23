@@ -6,8 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Grinder } from "@shared/schema";
@@ -31,6 +34,8 @@ export default function Grinders() {
   const queryClient = useQueryClient();
   const { data: grinders, isLoading } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
   const [selectedGrinder, setSelectedGrinder] = useState<Grinder | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addForm, setAddForm] = useState({ discordUserId: "", name: "", category: "Grinder", capacity: "3" });
   const { toast } = useToast();
   const searchString = useSearch();
 
@@ -54,6 +59,33 @@ export default function Grinders() {
       toast({ title: "Grinder updated" });
     },
   });
+
+  const addGrinderMutation = useMutation({
+    mutationFn: async (data: { discordUserId: string; name?: string; category?: string; capacity?: number }) => {
+      const res = await apiRequest("POST", "/api/grinders", data);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      setShowAddDialog(false);
+      setAddForm({ discordUserId: "", name: "", category: "Grinder", capacity: "3" });
+      toast({ title: "Grinder added", description: `${data.name} has been added to the roster.` });
+    },
+    onError: (e: any) => toast({ title: "Failed to add grinder", description: e.message, variant: "destructive" }),
+  });
+
+  const handleAddGrinder = () => {
+    if (!addForm.discordUserId.trim()) {
+      toast({ title: "Discord ID required", description: "Please enter the grinder's Discord User ID.", variant: "destructive" });
+      return;
+    }
+    addGrinderMutation.mutate({
+      discordUserId: addForm.discordUserId.trim(),
+      name: addForm.name.trim() || undefined,
+      category: addForm.category,
+      capacity: parseInt(addForm.capacity) || 3,
+    });
+  };
 
   const handleStrikeChange = (grinder: Grinder, delta: number) => {
     const newStrikes = Math.max(0, Math.min(3, grinder.strikes + delta));
@@ -88,10 +120,16 @@ export default function Grinders() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Auto-imported from MGT Bot. Click a grinder to view their scorecard.</p>
         </div>
-        <Badge className="bg-primary/15 text-primary border border-primary/20 gap-1">
-          <Users className="w-3 h-3" />
-          {(grinders || []).length} total
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-primary/15 text-primary border border-primary/20 gap-1">
+            <Users className="w-3 h-3" />
+            {(grinders || []).length} total
+          </Badge>
+          <Button size="sm" className="gap-1.5" onClick={() => setShowAddDialog(true)} data-testid="button-add-grinder">
+            <UserPlus className="w-4 h-4" />
+            Add Grinder
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -322,6 +360,94 @@ export default function Grinders() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="bg-[#0a0a0f] border-white/[0.08] max-w-md" data-testid="dialog-add-grinder">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                <UserPlus className="w-4 h-4 text-emerald-400" />
+              </div>
+              Add Grinder
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Enter their Discord User ID. Their name and roles will be pulled from Discord automatically.
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="add-discord-id" className="text-sm font-medium">Discord User ID *</Label>
+              <Input
+                id="add-discord-id"
+                value={addForm.discordUserId}
+                onChange={(e) => setAddForm({ ...addForm, discordUserId: e.target.value })}
+                placeholder="e.g. 123456789012345678"
+                className="bg-white/[0.03] border-white/[0.08] font-mono"
+                data-testid="input-add-grinder-discord-id"
+              />
+              <p className="text-xs text-muted-foreground">Right-click user in Discord → Copy User ID (enable Developer Mode in Discord settings)</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-name" className="text-sm font-medium">Display Name (optional)</Label>
+              <Input
+                id="add-name"
+                value={addForm.name}
+                onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                placeholder="Auto-detected from Discord if left blank"
+                className="bg-white/[0.03] border-white/[0.08]"
+                data-testid="input-add-grinder-name"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Category</Label>
+                <Select value={addForm.category} onValueChange={(v) => setAddForm({ ...addForm, category: v })}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/[0.08]" data-testid="select-add-grinder-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Grinder">Grinder</SelectItem>
+                    <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
+                    <SelectItem value="VC Grinder">VC Grinder</SelectItem>
+                    <SelectItem value="Event Grinder">Event Grinder</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-capacity" className="text-sm font-medium">Order Limit</Label>
+                <Input
+                  id="add-capacity"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={addForm.capacity}
+                  onChange={(e) => setAddForm({ ...addForm, capacity: e.target.value })}
+                  className="bg-white/[0.03] border-white/[0.08]"
+                  data-testid="input-add-grinder-capacity"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-white/[0.08]" data-testid="button-add-grinder-cancel">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddGrinder}
+              disabled={addGrinderMutation.isPending}
+              className="gap-2"
+              data-testid="button-add-grinder-submit"
+            >
+              {addGrinderMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Add Grinder
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

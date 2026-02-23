@@ -53,6 +53,85 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/grinders", requireStaff, async (req, res) => {
+    try {
+      const { discordUserId, name, category, capacity } = req.body;
+      if (!discordUserId) {
+        return res.status(400).json({ message: "Discord User ID is required" });
+      }
+
+      const existing = await storage.getGrinderByDiscordId(discordUserId);
+      if (existing) {
+        return res.status(409).json({ message: `Grinder already exists: ${existing.name} (${existing.id})` });
+      }
+
+      let resolvedName = name || "Unknown";
+      let resolvedUsername: string | undefined;
+      let roleId = "1466369179648004224";
+      let resolvedCategory = category || "Grinder";
+      let resolvedCapacity = capacity ?? 3;
+
+      const { getDiscordBotClient } = await import("./discord/bot");
+      const client = getDiscordBotClient();
+      if (client) {
+        try {
+          const guilds = client.guilds.cache;
+          for (const [, guild] of guilds) {
+            const member = await guild.members.fetch(discordUserId).catch(() => null);
+            if (member) {
+              if (!name || name === "Unknown") {
+                resolvedName = member.displayName || member.user.globalName || member.user.username;
+              }
+              resolvedUsername = member.user.username;
+
+              const GRINDER_ROLE = "1466369179648004224";
+              const ELITE_ROLE = "1466370965016412316";
+              if (member.roles.cache.has(ELITE_ROLE)) {
+                roleId = ELITE_ROLE;
+                if (!category) resolvedCategory = "Elite Grinder";
+                if (capacity === undefined) resolvedCapacity = 5;
+              } else if (member.roles.cache.has(GRINDER_ROLE)) {
+                roleId = GRINDER_ROLE;
+              }
+              break;
+            }
+          }
+        } catch (e) {
+          console.error("[api] Failed to fetch Discord member for new grinder:", e);
+        }
+      }
+
+      const grinderId = `GRD-${discordUserId.slice(-6)}`;
+      const grinder = await storage.createGrinder({
+        id: grinderId,
+        name: resolvedName,
+        discordUserId,
+        discordUsername: resolvedUsername,
+        discordRoleId: roleId,
+        category: resolvedCategory,
+        tier: "New",
+        capacity: resolvedCapacity,
+      });
+
+      const userId = (req as any).userId;
+      const dbUser = await authStorage.getUser(userId);
+      const actorName = dbUser?.firstName || dbUser?.discordUsername || "Staff";
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "grinder",
+        entityId: grinder.id,
+        action: "grinder_manually_added",
+        actor: actorName,
+        details: JSON.stringify({ discordUserId, name: resolvedName, category: resolvedCategory }),
+      });
+
+      res.json(grinder);
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.delete("/api/grinders/:id", requireOwner, async (req, res) => {
     try {
       const grinder = await storage.getGrinder(req.params.id);
