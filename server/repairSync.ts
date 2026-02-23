@@ -1,80 +1,215 @@
 import { storage } from "./storage";
 
 export async function repairMissingAssignments() {
+  console.log("[repair-sync] Starting comprehensive data repair...");
+
   const allBids = await storage.getBids();
   const allAssignments = await storage.getAssignments();
   const allOrders = await storage.getOrders();
+  const allGrinders = await storage.getGrinders();
 
-  const acceptedBids = allBids.filter(b => b.status === "Accepted");
+  let totalRepairs = 0;
+
+  // === 1. Create missing assignments for accepted bids ===
   const assignedOrderIds = new Set(allAssignments.map(a => a.orderId));
 
-  let repaired = 0;
-
-  for (const bid of acceptedBids) {
+  for (const bid of allBids.filter(b => b.status === "Accepted")) {
     if (assignedOrderIds.has(bid.orderId)) continue;
 
     const order = allOrders.find(o => o.id === bid.orderId);
     if (!order) continue;
 
-    if (order.status !== "Open" && order.status !== "Bidding Closed" && order.status !== "Assigned") continue;
-
     const orderPrice = Number(order.customerPrice) || 0;
     const grinderEarnings = Number(bid.bidAmount) || 0;
     const companyProfit = orderPrice - grinderEarnings;
     const marginPct = orderPrice > 0 ? ((companyProfit / orderPrice) * 100) : 0;
-
     const assignmentId = `ASN-${bid.id}-${order.id}`.replace(/[^a-zA-Z0-9-]/g, "");
 
-    await storage.createAssignment({
-      id: assignmentId,
-      grinderId: bid.grinderId,
-      orderId: order.id,
-      dueDateTime: order.orderDueDate,
-      status: "Active",
-      bidAmount: grinderEarnings.toFixed(2),
-      orderPrice: orderPrice.toFixed(2),
-      margin: companyProfit.toFixed(2),
-      marginPct: marginPct.toFixed(2),
-      companyProfit: companyProfit.toFixed(2),
-      grinderEarnings: grinderEarnings.toFixed(2),
-    });
-
-    if (order.status !== "Assigned") {
-      await storage.updateOrderStatus(order.id, "Assigned");
-    }
-    await storage.updateOrder(order.id, {
-      assignedGrinderId: bid.grinderId,
-      acceptedBidId: bid.id,
-      companyProfit: companyProfit.toFixed(2),
-    });
-
-    const grinder = await storage.getGrinder(bid.grinderId);
-    if (grinder) {
-      const newEarnings = Number(grinder.totalEarnings) + grinderEarnings;
-      await storage.updateGrinder(bid.grinderId, {
-        activeOrders: grinder.activeOrders + 1,
-        totalOrders: grinder.totalOrders + 1,
-        totalEarnings: newEarnings.toFixed(2),
-        lastAssigned: new Date(),
+    try {
+      await storage.createAssignment({
+        id: assignmentId,
+        grinderId: bid.grinderId,
+        orderId: order.id,
+        dueDateTime: order.orderDueDate,
+        status: "Active",
+        bidAmount: grinderEarnings.toFixed(2),
+        orderPrice: orderPrice.toFixed(2),
+        margin: companyProfit.toFixed(2),
+        marginPct: marginPct.toFixed(2),
+        companyProfit: companyProfit.toFixed(2),
+        grinderEarnings: grinderEarnings.toFixed(2),
       });
+      assignedOrderIds.add(bid.orderId);
+      totalRepairs++;
+      console.log(`[repair-sync] Created missing assignment ${assignmentId} for accepted bid ${bid.id} on order ${order.id}`);
+    } catch (e: any) {
+      if (!e.message?.includes("duplicate")) {
+        console.error(`[repair-sync] Failed to create assignment for bid ${bid.id}:`, e.message);
+      }
     }
-
-    await storage.createAuditLog({
-      id: `AL-repair-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
-      entityType: "assignment",
-      entityId: assignmentId,
-      action: "auto_repaired",
-      actor: "system",
-      details: JSON.stringify({ bidId: bid.id, orderId: order.id, grinderId: bid.grinderId, grinderEarnings, companyProfit }),
-    });
-
-    repaired++;
-    console.log(`[repair-sync] Created missing assignment ${assignmentId} for accepted bid ${bid.id} on order ${order.id}`);
   }
 
-  if (repaired > 0) {
-    console.log(`[repair-sync] Repaired ${repaired} missing assignment(s)`);
+  // === 2. Sync order status & fields for accepted bids ===
+  for (const bid of allBids.filter(b => b.status === "Accepted")) {
+    const order = allOrders.find(o => o.id === bid.orderId);
+    if (!order) continue;
+
+    const updates: Record<string, any> = {};
+
+    if (order.status === "Open" || order.status === "Bidding Closed") {
+      updates.status = "Assigned";
+    }
+    if (!order.assignedGrinderId) {
+      updates.assignedGrinderId = bid.grinderId;
+    }
+    if (!order.acceptedBidId) {
+      updates.acceptedBidId = bid.id;
+    }
+
+    const orderPrice = Number(order.customerPrice) || 0;
+    const grinderEarnings = Number(bid.bidAmount) || 0;
+    if (orderPrice > 0 && !order.companyProfit) {
+      updates.companyProfit = (orderPrice - grinderEarnings).toFixed(2);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      if (updates.status) {
+        await storage.updateOrderStatus(order.id, updates.status);
+        delete updates.status;
+      }
+      if (Object.keys(updates).length > 0) {
+        await storage.updateOrder(order.id, updates);
+      }
+      totalRepairs++;
+      console.log(`[repair-sync] Synced order ${order.id} fields: ${Object.keys(updates).join(", ")}`);
+    }
+  }
+
+  // === 3. Recalculate bid margins when order price exists but margin is missing ===
+  for (const bid of allBids) {
+    const order = allOrders.find(o => o.id === bid.orderId);
+    if (!order) continue;
+
+    const orderPrice = Number(order.customerPrice) || 0;
+    const bidAmount = Number(bid.bidAmount) || 0;
+
+    if (orderPrice > 0 && bidAmount > 0 && !bid.margin) {
+      const margin = orderPrice - bidAmount;
+      const marginPct = (margin / orderPrice) * 100;
+      await storage.updateBid(bid.id, {
+        margin: margin.toFixed(2),
+        marginPct: marginPct.toFixed(2),
+      });
+      totalRepairs++;
+      console.log(`[repair-sync] Calculated margin for bid ${bid.id}: $${margin.toFixed(2)} (${marginPct.toFixed(1)}%)`);
+    }
+  }
+
+  // === 4. Update assignment financials when order price was added after assignment creation ===
+  const freshAssignments = await storage.getAssignments();
+  for (const assignment of freshAssignments) {
+    const order = allOrders.find(o => o.id === assignment.orderId);
+    if (!order) continue;
+
+    const orderPrice = Number(order.customerPrice) || 0;
+    const currentOrderPrice = Number(assignment.orderPrice) || 0;
+    const grinderEarnings = Number(assignment.grinderEarnings) || Number(assignment.bidAmount) || 0;
+
+    if (orderPrice > 0 && currentOrderPrice !== orderPrice) {
+      const companyProfit = orderPrice - grinderEarnings;
+      const marginPct = orderPrice > 0 ? ((companyProfit / orderPrice) * 100) : 0;
+
+      await storage.updateAssignment(assignment.id, {
+        orderPrice: orderPrice.toFixed(2),
+        margin: companyProfit.toFixed(2),
+        marginPct: marginPct.toFixed(2),
+        companyProfit: companyProfit.toFixed(2),
+      });
+
+      if (!order.companyProfit || Number(order.companyProfit) !== companyProfit) {
+        await storage.updateOrder(order.id, { companyProfit: companyProfit.toFixed(2) });
+      }
+
+      totalRepairs++;
+      console.log(`[repair-sync] Updated assignment ${assignment.id} financials: price=$${orderPrice}, profit=$${companyProfit.toFixed(2)}`);
+    }
+  }
+
+  // === 5. Recalculate grinder stats from actual assignment data ===
+  const latestAssignments = await storage.getAssignments();
+
+  for (const grinder of allGrinders) {
+    const grinderAssignments = latestAssignments.filter(a => a.grinderId === grinder.id);
+    const activeAssignments = grinderAssignments.filter(a => a.status === "Active");
+    const completedAssignments = grinderAssignments.filter(a => a.status === "Completed");
+
+    const correctActiveOrders = activeAssignments.length;
+    const correctTotalOrders = grinderAssignments.length;
+    const correctCompletedOrders = completedAssignments.length;
+
+    let correctTotalEarnings = 0;
+    for (const a of grinderAssignments) {
+      correctTotalEarnings += Number(a.grinderEarnings) || Number(a.bidAmount) || 0;
+    }
+
+    let correctLastAssigned: Date | null = null;
+    for (const a of grinderAssignments) {
+      const assignedDate = a.assignedDateTime ? new Date(a.assignedDateTime) : null;
+      if (assignedDate && (!correctLastAssigned || assignedDate > correctLastAssigned)) {
+        correctLastAssigned = assignedDate;
+      }
+    }
+
+    const now7dAgo = new Date();
+    now7dAgo.setDate(now7dAgo.getDate() - 7);
+    const correctL7D = grinderAssignments.filter(a => {
+      const d = a.assignedDateTime ? new Date(a.assignedDateTime) : null;
+      return d && d >= now7dAgo;
+    }).length;
+
+    const grinderBids = allBids.filter(b => b.grinderId === grinder.id);
+    const acceptedBids = grinderBids.filter(b => b.status === "Accepted");
+    const correctWinRate = grinderBids.length > 0
+      ? ((acceptedBids.length / grinderBids.length) * 100).toFixed(0)
+      : grinder.winRate;
+
+    const correctUtilization = grinder.capacity > 0
+      ? ((correctActiveOrders / grinder.capacity) * 100).toFixed(0)
+      : "0";
+
+    const updates: Record<string, any> = {};
+    if (grinder.activeOrders !== correctActiveOrders) updates.activeOrders = correctActiveOrders;
+    if (grinder.totalOrders !== correctTotalOrders) updates.totalOrders = correctTotalOrders;
+    if (grinder.completedOrders !== correctCompletedOrders) updates.completedOrders = correctCompletedOrders;
+    if (Number(grinder.totalEarnings) !== correctTotalEarnings) updates.totalEarnings = correctTotalEarnings.toFixed(2);
+    if (grinder.ordersAssignedL7D !== correctL7D) updates.ordersAssignedL7D = correctL7D;
+    if (correctWinRate && grinder.winRate !== correctWinRate) updates.winRate = correctWinRate;
+    if (grinder.utilization !== correctUtilization) updates.utilization = correctUtilization;
+    if (correctLastAssigned && (!grinder.lastAssigned || new Date(grinder.lastAssigned).getTime() !== correctLastAssigned.getTime())) {
+      updates.lastAssigned = correctLastAssigned;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await storage.updateGrinder(grinder.id, updates);
+      totalRepairs++;
+      console.log(`[repair-sync] Fixed grinder ${grinder.name} (${grinder.id}) stats: ${JSON.stringify(updates)}`);
+    }
+  }
+
+  // === 6. Fix orders that say "Assigned" but have no assignment record ===
+  for (const order of allOrders.filter(o => o.status === "Assigned")) {
+    const hasAssignment = latestAssignments.some(a => a.orderId === order.id);
+    if (!hasAssignment && !order.assignedGrinderId) {
+      await storage.updateOrderStatus(order.id, "Open");
+      totalRepairs++;
+      console.log(`[repair-sync] Reset orphaned order ${order.id} from Assigned back to Open (no assignment found)`);
+    }
+  }
+
+  // === Summary ===
+  if (totalRepairs > 0) {
+    console.log(`[repair-sync] Completed ${totalRepairs} total repair(s)`);
   } else {
-    console.log(`[repair-sync] All accepted bids have assignments - no repairs needed`);
+    console.log(`[repair-sync] All data is consistent - no repairs needed`);
   }
 }
