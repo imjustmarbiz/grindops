@@ -87,6 +87,14 @@ app.use((req, res, next) => {
     console.error("Failed to start bidding timer scheduler:", error);
   }
 
+  // Repair accepted bids that are missing assignments
+  try {
+    const { repairMissingAssignments } = await import("./repairSync");
+    await repairMissingAssignments();
+  } catch (error) {
+    console.error("Failed to repair missing assignments:", error);
+  }
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
