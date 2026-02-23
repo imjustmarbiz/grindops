@@ -308,8 +308,8 @@ export async function registerRoutes(
         if (bid.grinderId === input.grinderId && bid.status === "Pending") {
           await storage.updateBidStatus(bid.id, "Accepted", "staff_override");
           acceptedBidId = bid.id;
-        } else if (bid.status === "Pending") {
-          await storage.updateBidStatus(bid.id, "Order Assigned");
+        } else if (bid.status === "Pending" || bid.status === "Countered") {
+          await storage.updateBidStatus(bid.id, "Denied", "staff_override");
           await storage.createStaffAlert({
             id: `SA-${Date.now().toString(36)}-${bid.grinderId}`,
             targetType: "grinder",
@@ -321,9 +321,29 @@ export async function registerRoutes(
           });
         }
       }
-      if (acceptedBidId) {
-        await storage.updateOrder(orderId, { acceptedBidId });
+
+      if (!acceptedBidId) {
+        const staffBidId = `BID-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        await storage.createBid({
+          id: staffBidId,
+          orderId: orderId,
+          grinderId: input.grinderId,
+          bidAmount: input.bidAmount,
+          bidTime: now,
+          estDeliveryDate: order.orderDueDate || now,
+          timeline: "Staff assigned",
+          canStart: "Immediately",
+          qualityScore: null,
+          margin: margin.toFixed(2),
+          marginPct: marginPct.toFixed(2),
+          notes: input.notes || "Auto-created bid from staff override assignment",
+          status: "Accepted",
+          acceptedBy: "staff_override",
+        });
+        acceptedBidId = staffBidId;
       }
+
+      await storage.updateOrder(orderId, { acceptedBidId });
 
       const newEarnings = (Number(grinder.totalEarnings || 0) + bidAmount).toFixed(2);
       await storage.updateGrinder(input.grinderId, {
