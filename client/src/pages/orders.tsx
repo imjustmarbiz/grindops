@@ -388,19 +388,20 @@ export default function Orders() {
       </div>
 
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[950px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
-              <TableHead>MGT #</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Platform</TableHead>
-              <TableHead>Gamertag</TableHead>
-              <TableHead className="text-center">Cx</TableHead>
-              <TableHead>Assigned To</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Profit</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="whitespace-nowrap">MGT #</TableHead>
+              <TableHead className="whitespace-nowrap">Service</TableHead>
+              <TableHead className="whitespace-nowrap">Platform</TableHead>
+              <TableHead className="whitespace-nowrap">Gamertag</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Cx</TableHead>
+              <TableHead className="whitespace-nowrap">Assigned To</TableHead>
+              <TableHead className="whitespace-nowrap">Due Date</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Price</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Profit</TableHead>
+              <TableHead className="whitespace-nowrap">Status</TableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
@@ -483,10 +484,10 @@ export default function Orders() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {assignedGrinder ? (
                       <div className="flex items-center gap-1">
-                        <User className="w-3 h-3 text-primary" />
+                        <User className="w-3 h-3 text-primary shrink-0" />
                         <span className="text-sm font-medium">{assignedGrinder.name}</span>
                       </div>
                     ) : order.assignedGrinderId ? (
@@ -545,7 +546,7 @@ export default function Orders() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {order.companyProfit ? (
                       <span className="font-semibold text-emerald-400">${order.companyProfit}</span>
                     ) : <span className="text-muted-foreground">-</span>}
@@ -599,6 +600,7 @@ export default function Orders() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
     </TooltipProvider>

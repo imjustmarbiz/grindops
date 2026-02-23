@@ -162,22 +162,23 @@ export default function Bids() {
       </div>
 
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[1100px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
-              <TableHead>Proposal</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead>Grinder</TableHead>
-              <TableHead className="text-right">Bid</TableHead>
-              <TableHead className="text-right">Order Price</TableHead>
-              <TableHead className="text-right">Margin</TableHead>
-              <TableHead>Timeline</TableHead>
-              <TableHead>Can Start</TableHead>
-              <TableHead>Est. Delivery</TableHead>
-              <TableHead className="text-center">QS</TableHead>
-              <TableHead>Submitted</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="whitespace-nowrap">Proposal</TableHead>
+              <TableHead className="whitespace-nowrap">Order</TableHead>
+              <TableHead className="whitespace-nowrap">Grinder</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Bid</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Order Price</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Margin</TableHead>
+              <TableHead className="whitespace-nowrap">Timeline</TableHead>
+              <TableHead className="whitespace-nowrap">Can Start</TableHead>
+              <TableHead className="whitespace-nowrap">Est. Delivery</TableHead>
+              <TableHead className="text-center whitespace-nowrap">QS</TableHead>
+              <TableHead className="whitespace-nowrap">Submitted</TableHead>
+              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <TableHead className="whitespace-nowrap">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,8 +198,8 @@ export default function Bids() {
                       {grinder && <p className="text-xs text-muted-foreground">{grinder.category}</p>}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-bold text-emerald-400">${bid.bidAmount}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{order ? `$${order.customerPrice}` : "-"}</TableCell>
+                  <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">${bid.bidAmount}</TableCell>
+                  <TableCell className="text-right text-muted-foreground whitespace-nowrap">{order ? `$${order.customerPrice}` : "-"}</TableCell>
                   <TableCell className="text-right">
                     {bid.margin ? (
                       <span className="font-medium text-emerald-400 whitespace-nowrap">
@@ -207,26 +208,26 @@ export default function Bids() {
                       </span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {bid.timeline ? (
                       <div className="flex items-center gap-1 text-sm">
-                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
                         <span>{bid.timeline}</span>
                       </div>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {bid.canStart ? (
                       <div className="flex items-center gap-1 text-sm">
-                        <Play className="w-3 h-3 text-cyan-400" />
+                        <Play className="w-3 h-3 text-cyan-400 shrink-0" />
                         <span className="text-cyan-300">{bid.canStart}</span>
                       </div>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {bid.estDeliveryDate ? (
                       <div className="flex items-center gap-1 text-sm">
-                        <CalendarCheck className="w-3 h-3 text-orange-400" />
+                        <CalendarCheck className="w-3 h-3 text-orange-400 shrink-0" />
                         <span>{format(new Date(bid.estDeliveryDate), "MMM d")}</span>
                       </div>
                     ) : <span className="text-muted-foreground">-</span>}
@@ -236,11 +237,11 @@ export default function Bids() {
                       <Badge variant="outline" className="border-purple-500/20 text-purple-400 bg-purple-500/10 text-xs">{bid.qualityScore}</Badge>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {bid.bidTime ? (
                       <Tooltip>
                         <TooltipTrigger>
-                          <span className="text-xs text-muted-foreground">{format(new Date(bid.bidTime), "MMM d, h:mm a")}</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(bid.bidTime), "MMM d, h:mm a")}</span>
                         </TooltipTrigger>
                         <TooltipContent>{format(new Date(bid.bidTime), "PPpp")}</TooltipContent>
                       </Tooltip>
@@ -337,6 +338,7 @@ export default function Bids() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       <Dialog open={!!editingBid} onOpenChange={(open) => !open && setEditingBid(null)}>

@@ -134,21 +134,22 @@ export default function Assignments() {
       </div>
 
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[1100px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
-              <TableHead>ID</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead>Grinder</TableHead>
-              <TableHead>Assigned</TableHead>
-              <TableHead>Due</TableHead>
-              <TableHead>Delivered</TableHead>
-              <TableHead className="text-right">Order Price</TableHead>
-              <TableHead className="text-right">Grinder Pay</TableHead>
-              <TableHead className="text-right">Margin</TableHead>
-              <TableHead className="text-right">Profit</TableHead>
-              <TableHead className="text-center">Quality</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="whitespace-nowrap">ID</TableHead>
+              <TableHead className="whitespace-nowrap">Order</TableHead>
+              <TableHead className="whitespace-nowrap">Grinder</TableHead>
+              <TableHead className="whitespace-nowrap">Assigned</TableHead>
+              <TableHead className="whitespace-nowrap">Due</TableHead>
+              <TableHead className="whitespace-nowrap">Delivered</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Order Price</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Grinder Pay</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Margin</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Profit</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Quality</TableHead>
+              <TableHead className="whitespace-nowrap">Status</TableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
@@ -189,8 +190,8 @@ export default function Assignments() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{format(new Date(a.assignedDateTime), "MMM d, h:mm a")}</TableCell>
-                  <TableCell className="text-sm text-orange-400">{format(new Date(a.dueDateTime), "MMM d, h:mm a")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{format(new Date(a.assignedDateTime), "MMM d, h:mm a")}</TableCell>
+                  <TableCell className="text-sm text-orange-400 whitespace-nowrap">{format(new Date(a.dueDateTime), "MMM d, h:mm a")}</TableCell>
                   <TableCell>
                     {a.deliveredDateTime ? (
                       <div className="flex flex-col">
@@ -224,15 +225,15 @@ export default function Assignments() {
                       <span className="font-medium text-blue-400">{a.grinderEarnings ? `$${a.grinderEarnings}` : a.bidAmount ? `$${a.bidAmount}` : "-"}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {a.margin ? (
-                      <span className="font-medium text-emerald-400">
+                      <span className="font-medium text-emerald-400 whitespace-nowrap">
                         ${a.margin}
                         {a.marginPct && <span className="text-xs text-muted-foreground ml-1">({a.marginPct}%)</span>}
                       </span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell className="text-right font-bold text-emerald-400">{a.companyProfit ? `$${a.companyProfit}` : "-"}</TableCell>
+                  <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">{a.companyProfit ? `$${a.companyProfit}` : "-"}</TableCell>
                   <TableCell className="text-center">
                     {a.qualityRating ? (
                       <Tooltip>
@@ -288,6 +289,7 @@ export default function Assignments() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>

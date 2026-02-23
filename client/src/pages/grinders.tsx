@@ -166,19 +166,20 @@ export default function Grinders() {
         {categories.map(cat => (
           <TabsContent key={cat} value={cat}>
             <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-              <Table>
+              <div className="overflow-x-auto">
+              <Table className="min-w-[900px]">
                 <TableHeader className="bg-white/[0.03]">
                   <TableRow className="border-white/[0.06]">
-                    <TableHead>Grinder</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Tier</TableHead>
-                    <TableHead className="text-center">Capacity</TableHead>
-                    <TableHead className="text-center">Orders</TableHead>
-                    <TableHead className="text-right">Earnings</TableHead>
-                    <TableHead className="text-center">Win Rate</TableHead>
-                    <TableHead className="text-center">Last Order</TableHead>
-                    <TableHead className="text-center">Strikes</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="whitespace-nowrap">Grinder</TableHead>
+                    <TableHead className="whitespace-nowrap">Category</TableHead>
+                    <TableHead className="whitespace-nowrap">Tier</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Capacity</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Orders</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Earnings</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Win Rate</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Last Order</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Strikes</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -210,13 +211,13 @@ export default function Grinders() {
                             {g.activeOrders}/{g.capacity}
                           </span>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center whitespace-nowrap">
                           <div>
                             <span className="font-medium">{g.totalOrders}</span>
                             <span className="text-xs text-muted-foreground ml-1">({g.completedOrders} done)</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-bold text-emerald-400">
+                        <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">
                           {formatCurrency(Number(g.totalEarnings))}
                         </TableCell>
                         <TableCell className="text-center">
@@ -272,6 +273,7 @@ export default function Grinders() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </Card>
           </TabsContent>
         ))}
