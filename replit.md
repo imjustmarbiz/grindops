@@ -4,6 +4,16 @@
 A fullstack web dashboard + Discord bot for managing a gaming services queue system. Staff can manage grinders (workers), orders, bids, and assignments through both a web interface and Discord slash commands. The Grinder Bot passively monitors an existing MGT Bot in Discord to automatically build the database from real order and proposal data.
 
 ## Recent Changes
+- 2026-02-23: Added Multi-Role Grinder Support
+  - Grinders can now have multiple roles simultaneously (e.g., Elite + VC + Event)
+  - New `roles` text array column on grinders table
+  - Grinder roster tabs filter by roles array - grinders appear under all matching tabs
+  - Category column shows all role badges with color-coded styling
+  - Grinder profile shows all role badges instead of single category
+  - Manual grinder creation detects all Discord roles
+  - MGT Bot watcher detects all Discord roles on upsert
+  - Elite detection checks roles array in addition to category/roleId
+  - Repair sync populates roles from Discord for existing grinders on startup
 - 2026-02-22: Refactored staff dashboard into 5 focused pages with sidebar navigation
   - Overview: KPIs, search, order pipeline, bidding countdown, recent activity, risk alerts
   - Operations: Create manual order, staff override assign, alert composer
