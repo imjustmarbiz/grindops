@@ -375,29 +375,82 @@ export class DatabaseStorage implements IStorage {
       wasReassigned: true,
     }).where(eq(assignments.id, assignmentId)).returning();
 
+    const origPay = Number(data.originalGrinderPay) || 0;
+    const replPay = Number(data.replacementGrinderPay) || 0;
+
     const originalGrinder = await this.getGrinder(originalGrinderId);
     if (originalGrinder) {
       const newActive = Math.max(0, originalGrinder.activeOrders - 1);
-      const newEarnings = (Number(originalGrinder.totalEarnings) + Number(data.originalGrinderPay)).toFixed(2);
+      const newEarnings = (Number(originalGrinder.totalEarnings) + origPay).toFixed(2);
+      const allBids = await this.getBids();
+      const origBids = allBids.filter(b => b.grinderId === originalGrinderId);
+      const origAccepted = origBids.filter(b => b.status === "Accepted").length;
+      const origWinRate = origBids.length > 0 ? ((origAccepted / origBids.length) * 100).toFixed(0) : originalGrinder.winRate;
+      const origUtilization = originalGrinder.capacity > 0 ? ((newActive / originalGrinder.capacity) * 100).toFixed(0) : "0";
       await this.updateGrinder(originalGrinderId, {
         activeOrders: newActive,
         reassignmentCount: originalGrinder.reassignmentCount + 1,
         totalEarnings: newEarnings,
+        winRate: origWinRate,
+        utilization: origUtilization,
       });
     }
 
     const replacementGrinder = await this.getGrinder(data.replacementGrinderId);
     if (replacementGrinder) {
+      const newReplEarnings = (Number(replacementGrinder.totalEarnings) + replPay).toFixed(2);
+      const newReplActive = replacementGrinder.activeOrders + 1;
+      const replUtilization = replacementGrinder.capacity > 0 ? ((newReplActive / replacementGrinder.capacity) * 100).toFixed(0) : "0";
       await this.updateGrinder(data.replacementGrinderId, {
-        activeOrders: replacementGrinder.activeOrders + 1,
+        activeOrders: newReplActive,
         totalOrders: replacementGrinder.totalOrders + 1,
+        totalEarnings: newReplEarnings,
         lastAssigned: new Date(),
+        utilization: replUtilization,
       });
     }
 
     const order = assignment.orderId ? await this.getOrder(assignment.orderId) : null;
     if (order) {
-      await this.updateOrder(order.id, { assignedGrinderId: data.replacementGrinderId });
+      const orderPrice = Number(order.customerPrice) || 0;
+      const totalGrinderCost = origPay + replPay;
+      const newProfit = orderPrice - totalGrinderCost;
+      const newMarginPct = orderPrice > 0 ? ((newProfit / orderPrice) * 100).toFixed(2) : "0";
+
+      await this.updateOrder(order.id, {
+        assignedGrinderId: data.replacementGrinderId,
+        companyProfit: newProfit.toFixed(2),
+      });
+
+      await db.update(assignments).set({
+        margin: newProfit.toFixed(2),
+        marginPct: newMarginPct,
+        companyProfit: newProfit.toFixed(2),
+      }).where(eq(assignments.id, assignmentId));
+    }
+
+    try {
+      const replBidId = `BID-${assignmentId}-repl-${Date.now().toString(36)}`;
+      await this.createBid({
+        id: replBidId,
+        orderId: assignment.orderId,
+        grinderId: data.replacementGrinderId,
+        bidAmount: replPay.toFixed(2),
+        bidTime: new Date(),
+        estDeliveryDate: assignment.dueDateTime || (order?.orderDueDate) || new Date(),
+        timeline: "Replacement",
+        canStart: "Immediately",
+        qualityScore: null,
+        margin: order ? (Number(order.customerPrice) - replPay).toFixed(2) : null,
+        marginPct: order && Number(order.customerPrice) > 0 ? (((Number(order.customerPrice) - replPay) / Number(order.customerPrice)) * 100).toFixed(2) : null,
+        notes: `Replacement grinder bid for assignment ${assignmentId}`,
+        status: "Accepted",
+        acceptedBy: "replacement",
+      });
+    } catch (e: any) {
+      if (!e.message?.includes("duplicate")) {
+        console.error(`[replace] Failed to create replacement bid:`, e.message);
+      }
     }
 
     return updated;
