@@ -421,7 +421,7 @@ export async function handleProposalMessage(message: Message) {
 
     console.log(`[mgt-watcher] Tracked proposal #${proposalId} for order #${orderNumber} -> ${bid.id} (${status})`);
 
-    if (status === "Accepted" && order.status === "Open") {
+    if (status === "Accepted" && (order.status === "Open" || order.status === "Bidding Closed")) {
       await storage.updateOrderStatus(order.id, "Assigned");
       const assignmentId = `A${Date.now().toString(36).toUpperCase()}`;
       const orderPrice = Number(order.customerPrice) || 0;
@@ -536,7 +536,7 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
 
       if (newStatus === "Accepted") {
         const order = await storage.getOrder(existingBid.orderId);
-        if (order && order.status === "Open") {
+        if (order && (order.status === "Open" || order.status === "Bidding Closed")) {
           await storage.updateOrderStatus(order.id, "Assigned");
           const assignmentId = `A${Date.now().toString(36).toUpperCase()}`;
           const orderPrice = Number(order.customerPrice) || 0;
