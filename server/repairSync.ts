@@ -49,6 +49,58 @@ export async function repairMissingAssignments() {
     }
   }
 
+  // === 1b. Create missing bid records for assignments that have no accepted bid ===
+  const bidsByOrderGrinder = new Set(
+    allBids.filter(b => b.status === "Accepted").map(b => `${b.orderId}::${b.grinderId}`)
+  );
+
+  for (const assignment of allAssignments) {
+    const key = `${assignment.orderId}::${assignment.grinderId}`;
+    if (bidsByOrderGrinder.has(key)) continue;
+
+    const order = allOrders.find(o => o.id === assignment.orderId);
+    if (!order) continue;
+
+    const bidAmount = assignment.grinderEarnings || assignment.bidAmount || "0";
+    const orderPrice = Number(order.customerPrice) || 0;
+    const grinderPay = Number(bidAmount) || 0;
+    const margin = orderPrice - grinderPay;
+    const marginPct = orderPrice > 0 ? ((margin / orderPrice) * 100) : 0;
+
+    const retroBidId = `BID-${assignment.id}-retro`.replace(/[^a-zA-Z0-9-]/g, "");
+
+    try {
+      await storage.createBid({
+        id: retroBidId,
+        orderId: assignment.orderId,
+        grinderId: assignment.grinderId,
+        bidAmount: grinderPay.toFixed(2),
+        bidTime: assignment.assignedDateTime || new Date(),
+        estDeliveryDate: assignment.dueDateTime || order.orderDueDate || new Date(),
+        timeline: "Staff assigned",
+        canStart: "Immediately",
+        qualityScore: null,
+        margin: margin.toFixed(2),
+        marginPct: marginPct.toFixed(2),
+        notes: `Retroactive bid from assignment ${assignment.id}`,
+        status: "Accepted",
+        acceptedBy: "staff_override",
+      });
+
+      if (!order.acceptedBidId) {
+        await storage.updateOrder(order.id, { acceptedBidId: retroBidId });
+      }
+
+      bidsByOrderGrinder.add(key);
+      totalRepairs++;
+      console.log(`[repair-sync] Created retroactive bid ${retroBidId} for assignment ${assignment.id} on order ${assignment.orderId}`);
+    } catch (e: any) {
+      if (!e.message?.includes("duplicate")) {
+        console.error(`[repair-sync] Failed to create retro bid for assignment ${assignment.id}:`, e.message);
+      }
+    }
+  }
+
   // === 2. Sync order status & fields for accepted bids ===
   for (const bid of allBids.filter(b => b.status === "Accepted")) {
     const order = allOrders.find(o => o.id === bid.orderId);
