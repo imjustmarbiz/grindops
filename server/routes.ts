@@ -325,9 +325,11 @@ export async function registerRoutes(
         await storage.updateOrder(orderId, { acceptedBidId });
       }
 
+      const newEarnings = (Number(grinder.totalEarnings || 0) + bidAmount).toFixed(2);
       await storage.updateGrinder(input.grinderId, {
         activeOrders: (grinder.activeOrders || 0) + 1,
         totalOrders: (grinder.totalOrders || 0) + 1,
+        totalEarnings: newEarnings,
         lastAssigned: now,
       });
 
@@ -521,9 +523,12 @@ export async function registerRoutes(
 
           const grinder = await storage.getGrinder(bid.grinderId);
           if (grinder) {
+            const grinderEarnings = Number(bid.bidAmount) || 0;
+            const newEarnings = (Number(grinder.totalEarnings || 0) + grinderEarnings).toFixed(2);
             await storage.updateGrinder(bid.grinderId, {
               activeOrders: (grinder.activeOrders || 0) + 1,
               totalOrders: (grinder.totalOrders || 0) + 1,
+              totalEarnings: newEarnings,
               lastAssigned: now,
             });
           }
@@ -681,9 +686,12 @@ export async function registerRoutes(
 
           const grinder = await storage.getGrinder(bid.grinderId);
           if (grinder) {
+            const grinderEarnings = Number(bid.bidAmount) || 0;
+            const newEarnings = (Number(grinder.totalEarnings || 0) + grinderEarnings).toFixed(2);
             await storage.updateGrinder(bid.grinderId, {
               activeOrders: (grinder.activeOrders || 0) + 1,
               totalOrders: (grinder.totalOrders || 0) + 1,
+              totalEarnings: newEarnings,
               lastAssigned: now,
             });
           }
