@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -6,9 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Loader2 } from "lucide-react";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2 } from "lucide-react";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
 export default function Bids() {
@@ -19,6 +24,19 @@ export default function Bids() {
   const { data: bids, isLoading } = useQuery<Bid[]>({ queryKey: ["/api/bids"] });
   const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
+
+  const [editingBid, setEditingBid] = useState<Bid | null>(null);
+  const [editForm, setEditForm] = useState({ bidAmount: "", timeline: "", canStart: "", notes: "" });
+
+  const openEditDialog = (bid: Bid) => {
+    setEditForm({
+      bidAmount: bid.bidAmount?.toString() || "",
+      timeline: bid.timeline || "",
+      canStart: bid.canStart || "",
+      notes: bid.notes || "",
+    });
+    setEditingBid(bid);
+  };
 
   const bidStatusMutation = useMutation({
     mutationFn: async ({ bidId, status }: { bidId: string; status: string }) => {
@@ -48,6 +66,37 @@ export default function Bids() {
     onError: (e: any) => toast({ title: "Override failed", description: e.message, variant: "destructive" }),
   });
 
+  const bidEditMutation = useMutation({
+    mutationFn: async ({ bidId, data }: { bidId: string; data: Record<string, any> }) => {
+      const res = await apiRequest("PATCH", `/api/bids/${bidId}/edit`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setEditingBid(null);
+      toast({ title: "Bid updated successfully" });
+    },
+    onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
+  const handleEditSubmit = () => {
+    if (!editingBid) return;
+    const data: Record<string, any> = {};
+    if (editForm.bidAmount && editForm.bidAmount !== editingBid.bidAmount?.toString()) {
+      data.bidAmount = parseFloat(editForm.bidAmount);
+    }
+    if (editForm.timeline !== (editingBid.timeline || "")) data.timeline = editForm.timeline;
+    if (editForm.canStart !== (editingBid.canStart || "")) data.canStart = editForm.canStart;
+    if (editForm.notes !== (editingBid.notes || "")) data.notes = editForm.notes;
+
+    if (Object.keys(data).length === 0) {
+      toast({ title: "No changes", description: "Nothing was modified" });
+      return;
+    }
+    bidEditMutation.mutate({ bidId: editingBid.id, data });
+  };
+
   const statusColor = (status: string) => {
     switch (status) {
       case "Accepted": return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
@@ -62,6 +111,12 @@ export default function Bids() {
   const pendingCount = bids?.filter(b => b.status === "Pending").length || 0;
   const acceptedCount = bids?.filter(b => b.status === "Accepted").length || 0;
   const rejectedCount = bids?.filter(b => b.status === "Rejected" || b.status === "Denied").length || 0;
+
+  const editOrder = editingBid ? (orders || []).find((o: Order) => o.id === editingBid.orderId) : null;
+  const editGrinder = editingBid ? (grinders || []).find((g: Grinder) => g.id === editingBid.grinderId) : null;
+  const editMarginPreview = editForm.bidAmount && editOrder?.customerPrice
+    ? Number(editOrder.customerPrice) - Number(editForm.bidAmount)
+    : null;
 
   return (
     <TooltipProvider>
@@ -199,6 +254,16 @@ export default function Bids() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-blue-400 hover:bg-blue-500/10"
+                            data-testid={`button-edit-bid-${bid.id}`}
+                            onClick={() => openEditDialog(bid)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit Bid</TooltipContent>
+                      </Tooltip>
                       {bid.status === "Pending" && (
                         <>
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400 hover:bg-emerald-500/10"
@@ -273,6 +338,100 @@ export default function Bids() {
           </TableBody>
         </Table>
       </Card>
+
+      <Dialog open={!!editingBid} onOpenChange={(open) => !open && setEditingBid(null)}>
+        <DialogContent className="bg-[#0a0a0f] border-white/[0.08] max-w-md" data-testid="dialog-edit-bid">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center">
+                <Pencil className="w-4 h-4 text-blue-400" />
+              </div>
+              Edit Bid
+            </DialogTitle>
+            {editingBid && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {editGrinder?.name || editingBid.grinderId} &mdash; Order {editOrder?.mgtOrderNumber ? `#${editOrder.mgtOrderNumber}` : editingBid.orderId}
+                <Badge variant="outline" className={`ml-2 text-xs ${statusColor(editingBid.status)}`}>{editingBid.status}</Badge>
+              </p>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-bid-amount" className="text-sm font-medium">Bid Amount ($)</Label>
+              <Input
+                id="edit-bid-amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.bidAmount}
+                onChange={(e) => setEditForm({ ...editForm, bidAmount: e.target.value })}
+                className="bg-white/[0.03] border-white/[0.08]"
+                data-testid="input-edit-bid-amount"
+              />
+              {editMarginPreview !== null && (
+                <p className={`text-xs ${editMarginPreview >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  Margin: ${editMarginPreview.toFixed(2)} ({editOrder?.customerPrice && Number(editOrder.customerPrice) > 0
+                    ? ((editMarginPreview / Number(editOrder.customerPrice)) * 100).toFixed(1) : "0"}%)
+                  {editOrder?.customerPrice && <span className="text-muted-foreground ml-1">(Order: ${editOrder.customerPrice})</span>}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-bid-timeline" className="text-sm font-medium">Timeline</Label>
+              <Input
+                id="edit-bid-timeline"
+                value={editForm.timeline}
+                onChange={(e) => setEditForm({ ...editForm, timeline: e.target.value })}
+                placeholder="e.g. 2 hours, 1 day"
+                className="bg-white/[0.03] border-white/[0.08]"
+                data-testid="input-edit-bid-timeline"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-bid-canstart" className="text-sm font-medium">Can Start</Label>
+              <Input
+                id="edit-bid-canstart"
+                value={editForm.canStart}
+                onChange={(e) => setEditForm({ ...editForm, canStart: e.target.value })}
+                placeholder="e.g. Now, Tonight, Tomorrow"
+                className="bg-white/[0.03] border-white/[0.08]"
+                data-testid="input-edit-bid-canstart"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-bid-notes" className="text-sm font-medium">Notes</Label>
+              <Textarea
+                id="edit-bid-notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                placeholder="Staff notes about this bid..."
+                className="bg-white/[0.03] border-white/[0.08] resize-none"
+                rows={3}
+                data-testid="input-edit-bid-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setEditingBid(null)} className="border-white/[0.08]" data-testid="button-edit-bid-cancel">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={bidEditMutation.isPending}
+              className="gap-2"
+              data-testid="button-edit-bid-save"
+            >
+              {bidEditMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </TooltipProvider>
   );

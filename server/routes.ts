@@ -443,6 +443,55 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/bids/:id/edit", requireStaff, async (req, res) => {
+    try {
+      const bid = await storage.getBid(req.params.id);
+      if (!bid) return res.status(404).json({ message: "Bid not found" });
+
+      const { bidAmount, timeline, canStart, notes } = req.body;
+      const updateData: any = {};
+      if (bidAmount !== undefined) updateData.bidAmount = String(bidAmount);
+      if (timeline !== undefined) updateData.timeline = timeline;
+      if (canStart !== undefined) updateData.canStart = canStart;
+      if (notes !== undefined) updateData.notes = notes;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
+
+      if (updateData.bidAmount) {
+        const order = await storage.getOrder(bid.orderId);
+        if (order && order.customerPrice) {
+          const orderPrice = Number(order.customerPrice);
+          const newBidAmount = Number(updateData.bidAmount);
+          const margin = orderPrice - newBidAmount;
+          const marginPct = orderPrice > 0 ? ((margin / orderPrice) * 100).toFixed(2) : "0";
+          updateData.margin = String(margin);
+          updateData.marginPct = marginPct;
+        }
+      }
+
+      const updated = await storage.updateBid(bid.id, updateData);
+
+      const userId = (req as any).userId;
+      const dbUser = await authStorage.getUser(userId);
+      const actorName = dbUser?.firstName || dbUser?.discordUsername || "Staff";
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "bid",
+        entityId: bid.id,
+        action: "bid_edited_by_staff",
+        actor: actorName,
+        details: JSON.stringify({ changes: updateData, previousAmount: bid.bidAmount }),
+      });
+
+      res.json(updated);
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.patch("/api/bids/:id/override", requireOwner, async (req, res) => {
     try {
       const { status, acceptedBy } = req.body;
