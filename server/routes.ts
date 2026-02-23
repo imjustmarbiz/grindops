@@ -409,7 +409,55 @@ export async function registerRoutes(
       if (status === "Accepted") {
         const order = await storage.getOrder(bid.orderId);
         if (order) {
-          await storage.updateOrder(bid.orderId, { acceptedBidId: bid.id, status: "Assigned", assignedGrinderId: bid.grinderId });
+          const bidAmount = Number(bid.bidAmount) || 0;
+          const orderPrice = Number(order.customerPrice) || 0;
+          const margin = orderPrice - bidAmount;
+          const marginPct = orderPrice > 0 ? ((margin / orderPrice) * 100).toFixed(2) : "0";
+          const companyProfit = margin > 0 ? margin : 0;
+
+          await storage.updateOrder(bid.orderId, {
+            acceptedBidId: bid.id,
+            status: "Assigned",
+            assignedGrinderId: bid.grinderId,
+            companyProfit: companyProfit.toFixed(2),
+          });
+
+          const now = new Date();
+          const assignmentId = `ASN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          await storage.createAssignment({
+            id: assignmentId,
+            grinderId: bid.grinderId,
+            orderId: bid.orderId,
+            assignedDateTime: now,
+            status: "Active",
+            bidAmount: bid.bidAmount,
+            orderPrice: order.customerPrice,
+            margin: margin.toFixed(2),
+            marginPct,
+            companyProfit: companyProfit.toFixed(2),
+            grinderEarnings: bid.bidAmount,
+            dueDateTime: order.orderDueDate,
+            notes: `Assigned via bid acceptance by ${actorName}`,
+          });
+
+          const grinder = await storage.getGrinder(bid.grinderId);
+          if (grinder) {
+            await storage.updateGrinder(bid.grinderId, {
+              activeOrders: (grinder.activeOrders || 0) + 1,
+              totalOrders: (grinder.totalOrders || 0) + 1,
+              lastAssigned: now,
+            });
+          }
+
+          if (order.firstBidAt && order.biddingClosesAt && new Date(order.biddingClosesAt) > now) {
+            const existingStages = (order.biddingNotifiedStages as string[]) || [];
+            const updatedStages = existingStages.includes("closed") ? existingStages : [...existingStages, "closed"];
+            await storage.updateOrder(bid.orderId, {
+              biddingClosesAt: now,
+              biddingNotifiedStages: updatedStages,
+            } as any);
+          }
+
           const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
           const allBids = await storage.getBids();
           const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
@@ -517,7 +565,47 @@ export async function registerRoutes(
           if (prevAccepted && prevAccepted !== bid.id) {
             await storage.updateBidStatus(prevAccepted, "Order Assigned", `${actorName} (override)`);
           }
-          await storage.updateOrder(bid.orderId, { acceptedBidId: bid.id, status: "Assigned", assignedGrinderId: bid.grinderId });
+
+          const bidAmount = Number(bid.bidAmount) || 0;
+          const orderPrice = Number(order.customerPrice) || 0;
+          const margin = orderPrice - bidAmount;
+          const marginPct = orderPrice > 0 ? ((margin / orderPrice) * 100).toFixed(2) : "0";
+          const companyProfit = margin > 0 ? margin : 0;
+
+          await storage.updateOrder(bid.orderId, {
+            acceptedBidId: bid.id,
+            status: "Assigned",
+            assignedGrinderId: bid.grinderId,
+            companyProfit: companyProfit.toFixed(2),
+          });
+
+          const now = new Date();
+          const assignmentId = `ASN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          await storage.createAssignment({
+            id: assignmentId,
+            grinderId: bid.grinderId,
+            orderId: bid.orderId,
+            assignedDateTime: now,
+            status: "Active",
+            bidAmount: bid.bidAmount,
+            orderPrice: order.customerPrice,
+            margin: margin.toFixed(2),
+            marginPct,
+            companyProfit: companyProfit.toFixed(2),
+            grinderEarnings: bid.bidAmount,
+            dueDateTime: order.orderDueDate,
+            notes: `Owner override assignment by ${actorName}`,
+          });
+
+          const grinder = await storage.getGrinder(bid.grinderId);
+          if (grinder) {
+            await storage.updateGrinder(bid.grinderId, {
+              activeOrders: (grinder.activeOrders || 0) + 1,
+              totalOrders: (grinder.totalOrders || 0) + 1,
+              lastAssigned: now,
+            });
+          }
+
           const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
           const allBids = await storage.getBids();
           const otherPending = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && b.status === "Pending");
