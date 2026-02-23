@@ -58,7 +58,7 @@ export default function StaffAnalytics() {
 
   const pendingBids = allBids.filter(b => b.status === "Pending").length;
   const acceptedBids = allBids.filter(b => b.status === "Accepted").length;
-  const rejectedBids = allBids.filter(b => b.status === "Rejected").length;
+  const rejectedBids = allBids.filter(b => b.status === "Rejected" || b.status === "Denied").length;
   const totalBids = allBids.length;
   const bidConversionRate = totalBids > 0 ? (acceptedBids / totalBids) * 100 : 0;
 
