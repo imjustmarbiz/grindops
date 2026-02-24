@@ -317,16 +317,16 @@ export default function StaffOverview() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <FadeInUp>
-        <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <FadeInUp className="h-full">
+        <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Gauge className="w-5 h-5 text-cyan-400" />
               Fleet Health
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
             <div className="flex items-center justify-center">
               <AnimatedRing
                 percent={fleetUtilization}
@@ -386,8 +386,8 @@ export default function StaffOverview() {
         </Card>
         </FadeInUp>
 
-        <FadeInUp>
-        <Card className="lg:col-span-2 border-white/[0.06] bg-white/[0.02]">
+        <FadeInUp className="h-full">
+        <Card className="lg:col-span-2 border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -397,7 +397,7 @@ export default function StaffOverview() {
               <LastUpdated date={auditLogsUpdatedAt ? new Date(auditLogsUpdatedAt) : null} />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
               {(!auditLogs || auditLogs.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">

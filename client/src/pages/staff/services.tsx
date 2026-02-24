@@ -233,8 +233,8 @@ export default function StaffServices() {
         </FadeInUp>
 
         <FadeInUp delay={0.05}>
-          <div className={`grid gap-4 ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className={`grid gap-4 items-start ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 content-start">
               <StatCard label="Total Services" value={allServices.length} icon={Package} color="bg-primary/20 text-primary" />
               <StatCard label="Total Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} color="bg-emerald-500/20 text-emerald-400" />
               <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${totalOrders} orders`} />
