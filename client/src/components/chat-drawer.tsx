@@ -174,6 +174,16 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
     },
   });
 
+  const deleteThreadMutation = useMutation({
+    mutationFn: async (threadId: string) => {
+      await apiRequest("DELETE", `/api/chat/threads/${threadId}`);
+    },
+    onSuccess: () => {
+      setActiveThreadId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/threads"] });
+    },
+  });
+
   const createThreadMutation = useMutation({
     mutationFn: async (data: { title?: string; type: string; participantIds: string[]; participantNames: string[]; participantRoles: string[]; participantAvatarUrls: (string | null)[] }) => {
       const res = await apiRequest("POST", "/api/chat/threads", data);
@@ -400,6 +410,23 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <UserPlus className="w-4 h-4" />
                   </Button>
                 )}
+                {activeThreadId && !showAddMember && (isStaff || activeThread?.ownerId === userId) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (confirm("Delete this entire conversation? This cannot be undone.")) {
+                        deleteThreadMutation.mutate(activeThreadId);
+                      }
+                    }}
+                    data-testid="button-delete-thread"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    title="Delete conversation"
+                    disabled={deleteThreadMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
                 {!activeThreadId && !showGroupCreate && isStaff && (
                   <>
                     <Button
@@ -616,7 +643,9 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                               {!isMine && (
                                 <p className="text-[10px] font-medium text-muted-foreground mb-0.5">{msg.senderName}</p>
                               )}
-                              {msg.body && <p className="text-sm leading-relaxed">{msg.body}</p>}
+                              {msg.body && <p className="text-sm leading-relaxed">{msg.body.split(/(@\w+)/g).map((part, i) =>
+                                part.match(/^@\w+$/) ? <span key={i} className="font-semibold text-primary">{part}</span> : part
+                              )}</p>}
                               {msgAttachments && msgAttachments.length > 0 && (
                                 <div className="space-y-1">
                                   {msgAttachments.map((url, i) => (

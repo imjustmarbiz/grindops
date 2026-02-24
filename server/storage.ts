@@ -122,6 +122,7 @@ export interface IStorage {
   getMessagesForThread(threadId: string): Promise<Message[]>;
   createMessage(msg: InsertMessage): Promise<Message>;
   deleteMessage(messageId: string): Promise<boolean>;
+  deleteThread(threadId: string): Promise<boolean>;
   markThreadRead(threadId: string, userId: string): Promise<void>;
 
   getNotificationsForUser(userId: string, role: string): Promise<Notification[]>;
@@ -1052,6 +1053,13 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessage(messageId: string): Promise<boolean> {
     const result = await db.delete(messages).where(eq(messages.id, messageId)).returning();
+    return result.length > 0;
+  }
+
+  async deleteThread(threadId: string): Promise<boolean> {
+    await db.delete(messages).where(eq(messages.threadId, threadId));
+    await db.delete(threadParticipants).where(eq(threadParticipants.threadId, threadId));
+    const result = await db.delete(messageThreads).where(eq(messageThreads.id, threadId)).returning();
     return result.length > 0;
   }
 

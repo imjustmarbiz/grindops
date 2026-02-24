@@ -2915,15 +2915,34 @@ export async function registerRoutes(
     if ((!body || !body.trim()) && (!attachments || attachments.length === 0)) {
       return res.status(400).json({ error: "Message body or attachment required" });
     }
+    const trimmedBody = (body || "").trim();
     const msg = await storage.createMessage({
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       threadId: req.params.threadId,
       senderUserId: userId,
       senderName: user.displayName || user.username || "Staff",
       senderRole: user.role || "staff",
-      body: (body || "").trim(),
+      body: trimmedBody,
       attachments: attachments || null,
     });
+
+    const mentions = trimmedBody.match(/@(\w+)/g);
+    if (mentions && mentions.length > 0) {
+      const mentionedNames = mentions.map((m: string) => m.substring(1).toLowerCase());
+      for (const participant of thread.participants) {
+        const pName = (participant.userName || "").toLowerCase();
+        if (participant.userId !== userId && mentionedNames.some((n: string) => pName.includes(n) || n.includes(pName.split(" ")[0]))) {
+          await createSystemNotification({
+            userId: participant.userId,
+            type: "message",
+            title: "You were mentioned",
+            body: `${user.displayName || user.username || "Someone"} mentioned you: "${trimmedBody.substring(0, 80)}${trimmedBody.length > 80 ? "..." : ""}"`,
+            severity: "info",
+          });
+        }
+      }
+    }
+
     res.json(msg);
   });
 
@@ -2956,6 +2975,32 @@ export async function registerRoutes(
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
     const urls = files.map(f => `/uploads/chat/${f.filename}`);
     res.json({ urls });
+  });
+
+  app.delete('/api/chat/threads/:threadId', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const thread = await storage.getThread(req.params.threadId);
+    if (!thread) return res.status(404).json({ error: "Thread not found" });
+    const isParticipant = thread.participants.some(p => p.userId === userId);
+    if (!isParticipant && user.role !== "owner" && user.role !== "staff") {
+      return res.status(403).json({ error: "Not authorized to delete this thread" });
+    }
+    const threadMessages = await storage.getMessagesForThread(req.params.threadId);
+    for (const msg of threadMessages) {
+      if (msg.attachments) {
+        for (const url of msg.attachments) {
+          const filename = url.split("/").pop();
+          if (filename) {
+            const filePath = path.join(uploadsDir, filename);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+        }
+      }
+    }
+    await storage.deleteThread(req.params.threadId);
+    res.json({ success: true });
   });
 
   app.post('/api/chat/threads/:threadId/read', async (req, res) => {
