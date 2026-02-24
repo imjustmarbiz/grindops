@@ -1117,13 +1117,15 @@ export async function registerRoutes(
 
     if (!myGrinder && authUser && (authUser.role === "grinder" || authUser.role === "owner" || authUser.role === "staff")) {
       const displayName = authUser.firstName || authUser.discordUsername || authUser.username || "Unknown";
+      const isDevElite = userId === "dev-elite-user";
       myGrinder = await storage.createGrinder({
         id: `G-${Date.now().toString(36)}`,
         name: displayName,
         discordUserId: userId,
         discordUsername: authUser.discordUsername || authUser.username || null,
-        category: "Grinder",
-        tier: "New",
+        category: isDevElite ? "Elite Grinder" : "Grinder",
+        tier: isDevElite ? "Elite" : "New",
+        roles: isDevElite ? ["Elite Grinder", "Grinder"] : undefined,
         capacity: 3,
       });
     }

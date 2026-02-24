@@ -276,24 +276,34 @@ export function setupDiscordAuth(app: Express) {
   });
 
   if (process.env.NODE_ENV === "development") {
+    const DEV_ROLES: Record<string, { userId: string; email: string; firstName: string; lastName: string; discordId: string; discordUsername: string; sessionRole: string }> = {
+      owner: { userId: "dev-owner-user", email: "dev-owner@test.local", firstName: "Demo", lastName: "Owner", discordId: "dev-owner-discord", discordUsername: "DemoOwner", sessionRole: "owner" },
+      staff: { userId: "dev-staff-user", email: "dev-staff@test.local", firstName: "Demo", lastName: "Staff", discordId: "dev-staff-discord", discordUsername: "DemoStaff", sessionRole: "staff" },
+      grinder: { userId: "dev-grinder-user", email: "dev-grinder@test.local", firstName: "Demo", lastName: "Grinder", discordId: "dev-grinder-discord", discordUsername: "DemoGrinder", sessionRole: "grinder" },
+      elite: { userId: "dev-elite-user", email: "dev-elite@test.local", firstName: "Demo", lastName: "Elite", discordId: "dev-elite-discord", discordUsername: "DemoElite", sessionRole: "grinder" },
+    };
+
     app.get("/api/auth/dev/login", async (req, res) => {
-      const role = (req.query.role as string) || "grinder";
-      const devUserId = `dev-${role}-user`;
+      const roleKey = (req.query.role as string) || "grinder";
+      const config = DEV_ROLES[roleKey];
+      if (!config) {
+        return res.status(400).json({ message: `Invalid role. Use: owner, staff, grinder, elite` });
+      }
       try {
         const user = await authStorage.upsertUser({
-          id: devUserId,
-          email: `dev-${role}@test.local`,
-          firstName: "Demo",
-          lastName: role === "grinder" ? "Grinder" : role === "staff" ? "Staff" : "Owner",
+          id: config.userId,
+          email: config.email,
+          firstName: config.firstName,
+          lastName: config.lastName,
           profileImageUrl: null,
-          discordId: `dev-${role}-discord`,
-          discordUsername: role === "grinder" ? "DemoGrinder" : role === "staff" ? "DemoStaff" : "DemoOwner",
+          discordId: config.discordId,
+          discordUsername: config.discordUsername,
           discordAvatar: null,
-          role,
+          role: config.sessionRole,
           discordRoles: [],
         });
         (req.session as any).userId = user.id;
-        (req.session as any).userRole = role;
+        (req.session as any).userRole = config.sessionRole;
         req.session.save(() => {
           const redirect = (req.query.redirect as string) || "/";
           res.redirect(redirect);
