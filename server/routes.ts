@@ -1516,6 +1516,11 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Not your assignment" });
     }
 
+    const { payoutPlatform, payoutDetails, savePayoutMethod } = req.body;
+    if (!payoutPlatform || !payoutDetails) {
+      return res.status(400).json({ message: "Payout platform and details are required" });
+    }
+
     const now = new Date();
 
     const order = assignment.orderId ? await storage.getOrder(assignment.orderId) : null;
@@ -1564,9 +1569,21 @@ export async function registerRoutes(
       ...(newAvgTurnaround ? { avgTurnaroundDays: newAvgTurnaround } : {}),
     });
 
+    if (savePayoutMethod) {
+      const existingMethods = await storage.getGrinderPayoutMethods(myGrinder.id);
+      const alreadyExists = existingMethods.find((m: any) => m.platform === payoutPlatform && m.details === payoutDetails);
+      if (!alreadyExists) {
+        await storage.createGrinderPayoutMethod({
+          id: `PM-${Date.now().toString(36)}`,
+          grinderId: myGrinder.id,
+          platform: payoutPlatform,
+          details: payoutDetails,
+          isDefault: existingMethods.length === 0,
+        });
+      }
+    }
+
     const payoutAmount = assignment.grinderEarnings || assignment.bidAmount || "0";
-    const payoutMethods = await storage.getGrinderPayoutMethods(myGrinder.id);
-    const defaultMethod = payoutMethods.find((m: any) => m.isDefault) || payoutMethods[0];
 
     const existingPayouts = await storage.getPayoutRequests(myGrinder.id);
     const alreadyRequested = existingPayouts.find((p: any) => p.assignmentId === assignment.id);
@@ -1578,8 +1595,8 @@ export async function registerRoutes(
         orderId: assignment.orderId,
         grinderId: myGrinder.id,
         amount: String(payoutAmount),
-        payoutPlatform: defaultMethod?.platform || null,
-        payoutDetails: defaultMethod?.details || null,
+        payoutPlatform: payoutPlatform,
+        payoutDetails: payoutDetails,
         status: "Pending",
         notes: "Auto-created on order completion",
         reviewedBy: null,
@@ -1592,7 +1609,7 @@ export async function registerRoutes(
       entityId: assignment.id,
       action: "marked_complete_by_grinder",
       actor: myGrinder.name,
-      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), onTimeRate: newOnTimeRate, avgTurnaroundDays: newAvgTurnaround, autoPayoutCreated: !alreadyRequested }),
+      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), onTimeRate: newOnTimeRate, avgTurnaroundDays: newAvgTurnaround, autoPayoutCreated: !alreadyRequested, payoutPlatform, payoutDetails }),
     });
 
     res.json(updated);

@@ -64,6 +64,10 @@ export default function GrinderProfile() {
   const [savePayoutMethod, setSavePayoutMethod] = useState(true);
   const [availStatus, setAvailStatus] = useState("available");
   const [availNote, setAvailNote] = useState("");
+  const [completeDialog, setCompleteDialog] = useState<any>(null);
+  const [completePlatform, setCompletePlatform] = useState("");
+  const [completeDetails, setCompleteDetails] = useState("");
+  const [completeSaveMethod, setCompleteSaveMethod] = useState(true);
   const [disputeDialog, setDisputeDialog] = useState<any>(null);
   const [disputeReason, setDisputeReason] = useState("");
   const [disputePlatform, setDisputePlatform] = useState("");
@@ -149,13 +153,17 @@ export default function GrinderProfile() {
   });
 
   const markCompleteMutation = useMutation({
-    mutationFn: async (assignmentId: string) => {
-      const res = await apiRequest("PATCH", `/api/grinder/me/assignments/${assignmentId}/complete`, {});
+    mutationFn: async ({ assignmentId, payoutPlatform, payoutDetails, savePayoutMethod }: { assignmentId: string; payoutPlatform: string; payoutDetails: string; savePayoutMethod?: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/grinder/me/assignments/${assignmentId}/complete`, { payoutPlatform, payoutDetails, savePayoutMethod });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
-      toast({ title: "Order marked complete", description: "You can now request payout." });
+      setCompleteDialog(null);
+      setCompletePlatform("");
+      setCompleteDetails("");
+      setCompleteSaveMethod(true);
+      toast({ title: "Order marked complete", description: "Payout request created with your chosen method." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -897,7 +905,12 @@ export default function GrinderProfile() {
                           <CalendarClock className="w-3 h-3" /> Update Deadline
                         </Button>
                         <Button size="sm" variant="outline" className="gap-1 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20" data-testid={`button-complete-${a.id}`}
-                          onClick={() => markCompleteMutation.mutate(a.id)}>
+                          onClick={() => {
+                            setCompleteDialog(a);
+                            const defaultMethod = payoutMethods?.find((m: any) => m.isDefault) || payoutMethods?.[0];
+                            if (defaultMethod) { setCompletePlatform(defaultMethod.platform); setCompleteDetails(defaultMethod.details); setCompleteSaveMethod(false); }
+                            else { setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); }
+                          }}>
                           <CheckCircle className="w-3 h-3" /> Mark Complete
                         </Button>
                       </div>
@@ -1691,6 +1704,105 @@ export default function GrinderProfile() {
               }}>
               {requestPayoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Banknote className="w-4 h-4 mr-2" />}
               Request Payout
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!completeDialog} onOpenChange={(open) => { if (!open) { setCompleteDialog(null); setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              Complete Order - {completeDialog?.orderId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <p className="text-sm text-white/60">Payout Amount</p>
+              <p className="text-xl font-bold text-green-400" data-testid="text-complete-amount">
+                ${Number(completeDialog?.grinderEarnings || completeDialog?.bidAmount || 0).toFixed(2)}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Where should we send your payout? *</label>
+              {payoutMethods && payoutMethods.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-muted-foreground mb-1.5">Saved payment methods:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {payoutMethods.map((m: any) => (
+                      <Badge
+                        key={m.id}
+                        variant="outline"
+                        className={`cursor-pointer transition-colors text-xs ${completePlatform === m.platform && completeDetails === m.details ? "bg-primary/20 border-primary text-primary" : "border-border/50"}`}
+                        onClick={() => { setCompletePlatform(m.platform); setCompleteDetails(m.details); setCompleteSaveMethod(false); }}
+                        data-testid={`badge-complete-method-${m.id}`}
+                      >
+                        {m.platform}: {m.details}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Select value={completePlatform} onValueChange={(val) => {
+                setCompletePlatform(val);
+                const saved = payoutMethods?.find((m: any) => m.platform === val);
+                if (saved) { setCompleteDetails(saved.details); setCompleteSaveMethod(false); }
+                else { setCompleteDetails(""); setCompleteSaveMethod(true); }
+              }}>
+                <SelectTrigger data-testid="select-complete-platform">
+                  <SelectValue placeholder="Select payment platform..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYOUT_PLATFORMS.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {completePlatform && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  {completePlatform === "Zelle" ? "Email or Phone Number *" :
+                   completePlatform === "PayPal" ? "PayPal Email *" :
+                   completePlatform === "Apple Pay" ? "Phone Number *" :
+                   completePlatform === "Cash App" ? "$Cashtag *" :
+                   completePlatform === "Venmo" ? "@Username *" :
+                   "Payout Details *"}
+                </label>
+                <Input
+                  value={completeDetails}
+                  onChange={(e) => setCompleteDetails(e.target.value)}
+                  placeholder={
+                    completePlatform === "Zelle" ? "email@example.com or (555) 123-4567" :
+                    completePlatform === "PayPal" ? "your@paypal.email" :
+                    completePlatform === "Apple Pay" ? "(555) 123-4567" :
+                    completePlatform === "Cash App" ? "$YourCashtag" :
+                    completePlatform === "Venmo" ? "@YourUsername" :
+                    "Enter your payout details"
+                  }
+                  data-testid="input-complete-details"
+                />
+              </div>
+            )}
+            {completePlatform && completeDetails && !payoutMethods?.find((m: any) => m.platform === completePlatform && m.details === completeDetails) && (
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={completeSaveMethod} onChange={(e) => setCompleteSaveMethod(e.target.checked)} className="rounded" data-testid="checkbox-complete-save-method" />
+                Save this payment method for future payouts
+              </label>
+            )}
+            <Button className="w-full bg-green-600 hover:bg-green-700" data-testid="button-confirm-complete"
+              disabled={!completePlatform || !completeDetails || markCompleteMutation.isPending}
+              onClick={() => {
+                markCompleteMutation.mutate({
+                  assignmentId: completeDialog.id,
+                  payoutPlatform: completePlatform,
+                  payoutDetails: completeDetails,
+                  savePayoutMethod: completeSaveMethod,
+                });
+              }}>
+              {markCompleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              Complete & Request Payout
             </Button>
           </div>
         </DialogContent>
