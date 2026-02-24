@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -30,6 +30,7 @@ const staffNavItems = [
   { title: "Grinders", url: "/grinders", icon: Users },
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Assignments", url: "/assignments", icon: FileCheck },
+  { title: "Reports", url: "/reports", icon: FileBarChart },
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
 ];
 
@@ -39,6 +40,7 @@ const grinderNavItems = [
   { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
+  { title: "Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Status", url: "/grinder/status", icon: Bell },
   { title: "Guide", url: "/grinder/guide", icon: BookOpen },
 ];

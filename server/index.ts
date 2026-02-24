@@ -87,6 +87,14 @@ app.use((req, res, next) => {
     console.error("Failed to start bidding timer scheduler:", error);
   }
 
+  // Start daily update deadline checker
+  try {
+    const { startDailyUpdateChecker } = await import("./dailyUpdateChecker");
+    startDailyUpdateChecker();
+  } catch (error) {
+    console.error("Failed to start daily update checker:", error);
+  }
+
   // Repair accepted bids that are missing assignments
   try {
     const { repairMissingAssignments } = await import("./repairSync");

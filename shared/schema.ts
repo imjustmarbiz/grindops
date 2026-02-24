@@ -174,6 +174,41 @@ export const orderUpdates = pgTable("order_updates", {
   updateType: text("update_type").notNull().default("progress"),
   message: text("message").notNull(),
   newDeadline: timestamp("new_deadline"),
+  mediaUrls: text("media_urls").array().default([]),
+  mediaTypes: text("media_types").array().default([]),
+  acknowledgedBy: text("acknowledged_by"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activityCheckpoints = pgTable("activity_checkpoints", {
+  id: varchar("id").primaryKey(),
+  assignmentId: varchar("assignment_id").references(() => assignments.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id).notNull(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  type: text("type").notNull(),
+  response: text("response"),
+  note: text("note"),
+  resolvedBy: text("resolved_by"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedNote: text("resolved_note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const performanceReports = pgTable("performance_reports", {
+  id: varchar("id").primaryKey(),
+  assignmentId: varchar("assignment_id").references(() => assignments.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id).notNull(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  metricsSnapshot: jsonb("metrics_snapshot").notNull().default({}),
+  metricDeltas: jsonb("metric_deltas").notNull().default({}),
+  checkpointSummary: jsonb("checkpoint_summary").notNull().default({}),
+  dailyUpdateCompliance: numeric("daily_update_compliance").default("100"),
+  overallGrade: text("overall_grade").default("A"),
+  staffNotes: text("staff_notes"),
+  status: text("status").notNull().default("Draft"),
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -293,7 +328,9 @@ export const insertOrderSchema = createInsertSchema(orders).omit({ createdAt: tr
 export const insertBidSchema = createInsertSchema(bids);
 export const insertAssignmentSchema = createInsertSchema(assignments);
 export const insertQueueConfigSchema = createInsertSchema(queueConfig);
-export const insertOrderUpdateSchema = createInsertSchema(orderUpdates).omit({ createdAt: true });
+export const insertOrderUpdateSchema = createInsertSchema(orderUpdates).omit({ createdAt: true, acknowledgedBy: true, acknowledgedAt: true });
+export const insertActivityCheckpointSchema = createInsertSchema(activityCheckpoints).omit({ createdAt: true, resolvedBy: true, resolvedAt: true, resolvedNote: true });
+export const insertPerformanceReportSchema = createInsertSchema(performanceReports).omit({ createdAt: true, approvedBy: true, approvedAt: true });
 export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({ createdAt: true, reviewedAt: true, paidAt: true });
 export const insertGrinderPayoutMethodSchema = createInsertSchema(grinderPayoutMethods).omit({ createdAt: true, updatedAt: true });
 export const insertEliteRequestSchema = createInsertSchema(eliteRequests).omit({ requestedAt: true, reviewedAt: true });
@@ -315,6 +352,10 @@ export type QueueConfig = typeof queueConfig.$inferSelect;
 export type InsertQueueConfig = z.infer<typeof insertQueueConfigSchema>;
 export type OrderUpdate = typeof orderUpdates.$inferSelect;
 export type InsertOrderUpdate = z.infer<typeof insertOrderUpdateSchema>;
+export type ActivityCheckpoint = typeof activityCheckpoints.$inferSelect;
+export type InsertActivityCheckpoint = z.infer<typeof insertActivityCheckpointSchema>;
+export type PerformanceReport = typeof performanceReports.$inferSelect;
+export type InsertPerformanceReport = z.infer<typeof insertPerformanceReportSchema>;
 export type PayoutRequest = typeof payoutRequests.$inferSelect;
 export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
 export type GrinderPayoutMethod = typeof grinderPayoutMethods.$inferSelect;

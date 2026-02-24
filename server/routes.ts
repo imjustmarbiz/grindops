@@ -2033,6 +2033,348 @@ export async function registerRoutes(
     }
   });
 
+  // ============ ACTIVITY CHECKPOINTS (Grinder routes) ============
+
+  app.get("/api/grinder/me/checkpoints/:assignmentId", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      const checkpoints = await storage.getActivityCheckpoints(req.params.assignmentId);
+      const mine = checkpoints.filter((c: any) => c.grinderId === myGrinder.id);
+      res.json(mine);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.post("/api/grinder/me/checkpoints", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      const { assignmentId, orderId, type, response, note } = req.body;
+      if (!assignmentId || !orderId || !type) {
+        return res.status(400).json({ message: "assignmentId, orderId, and type are required" });
+      }
+
+      const validTypes = ["ticket_ack", "login", "logoff", "issue", "order_update"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ message: `Invalid type. Must be one of: ${validTypes.join(", ")}` });
+      }
+
+      if (type === "ticket_ack") {
+        if (response !== "yes" && response !== "no") {
+          return res.status(400).json({ message: "ticket_ack requires response to be 'yes' or 'no'" });
+        }
+        if (response === "no" && !note) {
+          return res.status(400).json({ message: "Note is required when declining a ticket" });
+        }
+      }
+
+      if (type === "login" || type === "logoff") {
+        const existingCheckpoints = await storage.getActivityCheckpoints(assignmentId);
+        const loginLogoffs = existingCheckpoints
+          .filter((c: any) => c.grinderId === myGrinder.id && (c.type === "login" || c.type === "logoff"))
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const lastType = loginLogoffs.length > 0 ? loginLogoffs[0].type : null;
+
+        if (type === "login") {
+          if (lastType === "login") {
+            return res.status(400).json({ message: "Already logged in. Must logoff first." });
+          }
+        }
+        if (type === "logoff") {
+          if (lastType !== "login") {
+            return res.status(400).json({ message: "Not currently logged in. Must login first." });
+          }
+        }
+      }
+
+      if (type === "issue" && !note) {
+        return res.status(400).json({ message: "Note is required for issue checkpoints" });
+      }
+
+      if (type === "order_update" && !req.body.message && !note) {
+        return res.status(400).json({ message: "Message is required for order_update checkpoints" });
+      }
+
+      const checkpoint = await storage.createActivityCheckpoint({
+        id: `CP-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        assignmentId,
+        orderId,
+        grinderId: myGrinder.id,
+        type,
+        response: response || null,
+        note: note || req.body.message || null,
+      });
+
+      res.status(201).json(checkpoint);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  // ============ ACTIVITY CHECKPOINTS (Staff routes) ============
+
+  app.get("/api/staff/checkpoints", requireStaff, async (req, res) => {
+    try {
+      const { assignmentId, grinderId } = req.query;
+      const checkpoints = await storage.getActivityCheckpoints(
+        assignmentId as string | undefined,
+        grinderId as string | undefined
+      );
+      res.json(checkpoints);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/staff/checkpoints/:id/resolve", requireStaff, async (req, res) => {
+    try {
+      const { resolvedBy, resolvedNote } = req.body;
+      if (!resolvedBy || !resolvedNote) {
+        return res.status(400).json({ message: "resolvedBy and resolvedNote are required" });
+      }
+      const updated = await storage.updateActivityCheckpoint(req.params.id, {
+        resolvedBy,
+        resolvedNote,
+        resolvedAt: new Date(),
+      });
+      if (!updated) return res.status(404).json({ message: "Checkpoint not found" });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  // ============ ORDER UPDATES (Staff routes) ============
+
+  app.patch("/api/staff/order-updates/:id/acknowledge", requireStaff, async (req, res) => {
+    try {
+      const { acknowledgedBy } = req.body;
+      if (!acknowledgedBy) {
+        return res.status(400).json({ message: "acknowledgedBy is required" });
+      }
+      const updated = await storage.updateOrderUpdate(req.params.id, {
+        acknowledgedBy,
+        acknowledgedAt: new Date(),
+      });
+      if (!updated) return res.status(404).json({ message: "Order update not found" });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.get("/api/staff/order-updates", requireStaff, async (req, res) => {
+    try {
+      const updates = await storage.getOrderUpdates();
+      res.json(updates);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  // ============ PERFORMANCE REPORTS ============
+
+  app.post("/api/staff/performance-reports/generate", requireStaff, async (req, res) => {
+    try {
+      const { assignmentId } = req.body;
+      if (!assignmentId) return res.status(400).json({ message: "assignmentId is required" });
+
+      const assignment = await storage.getAssignment(assignmentId);
+      if (!assignment) return res.status(404).json({ message: "Assignment not found" });
+
+      const grinder = await storage.getGrinder(assignment.grinderId);
+      if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+
+      const checkpoints = await storage.getActivityCheckpoints(assignmentId);
+      const orderUpdates = await storage.getOrderUpdates(assignment.grinderId);
+      const assignmentUpdates = orderUpdates.filter((u: any) => u.assignmentId === assignmentId);
+
+      const metricsSnapshot = {
+        qualityScore: grinder.avgQualityRating || "0",
+        completionRate: grinder.completionRate || "0",
+        winRate: grinder.winRate || "0",
+        onTimeRate: grinder.onTimeRate || "0",
+        totalEarnings: grinder.totalEarnings || "0",
+      };
+
+      const ticketAcked = checkpoints.filter((c: any) => c.type === "ticket_ack").length > 0;
+      const totalLogins = checkpoints.filter((c: any) => c.type === "login").length;
+      const totalLogoffs = checkpoints.filter((c: any) => c.type === "logoff").length;
+      const issuesReported = checkpoints.filter((c: any) => c.type === "issue").length;
+      const issuesResolved = checkpoints.filter((c: any) => c.type === "issue" && c.resolvedAt).length;
+      const updatesSubmitted = assignmentUpdates.length;
+
+      const checkpointSummary = {
+        ticketAcked,
+        totalLogins,
+        totalLogoffs,
+        issuesReported,
+        issuesResolved,
+        updatesSubmitted,
+      };
+
+      const startDate = new Date(assignment.assignedDateTime);
+      const endDate = assignment.deliveredDateTime ? new Date(assignment.deliveredDateTime) : new Date();
+      const diffMs = endDate.getTime() - startDate.getTime();
+      const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      const rawCompliance = (updatesSubmitted / days) * 100;
+      const dailyUpdateCompliance = Math.min(100, Math.round(rawCompliance));
+
+      const qualityVal = Number(grinder.avgQualityRating || 0);
+      const qualityNorm = (qualityVal / 5) * 100;
+      const gradeScore = (dailyUpdateCompliance + qualityNorm) / 2;
+
+      let overallGrade: string;
+      if (gradeScore >= 90) overallGrade = "A";
+      else if (gradeScore >= 75) overallGrade = "B";
+      else if (gradeScore >= 60) overallGrade = "C";
+      else if (gradeScore >= 40) overallGrade = "D";
+      else overallGrade = "F";
+
+      const report = await storage.createPerformanceReport({
+        id: `PR-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        assignmentId,
+        orderId: assignment.orderId,
+        grinderId: assignment.grinderId,
+        metricsSnapshot,
+        metricDeltas: {},
+        checkpointSummary,
+        dailyUpdateCompliance: String(dailyUpdateCompliance),
+        overallGrade,
+        status: "Draft",
+      });
+
+      res.status(201).json(report);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.get("/api/staff/performance-reports", requireStaff, async (req, res) => {
+    try {
+      const { grinderId, status } = req.query;
+      let reports = await storage.getPerformanceReports(grinderId as string | undefined);
+      if (status) {
+        reports = reports.filter((r: any) => r.status === status);
+      }
+      res.json(reports);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/staff/performance-reports/:id", requireStaff, async (req, res) => {
+    try {
+      const { staffNotes, status } = req.body;
+      const updateData: any = {};
+      if (staffNotes !== undefined) updateData.staffNotes = staffNotes;
+      if (status !== undefined) {
+        updateData.status = status;
+        if (status === "Approved") {
+          const userId = (req as any).userId;
+          const dbUser = await authStorage.getUser(userId);
+          updateData.approvedBy = dbUser?.firstName || dbUser?.discordUsername || "Staff";
+          updateData.approvedAt = new Date();
+        }
+      }
+      const updated = await storage.updatePerformanceReport(req.params.id, updateData);
+      if (!updated) return res.status(404).json({ message: "Performance report not found" });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.get("/api/grinder/me/performance-reports", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      const reports = await storage.getPerformanceReports(myGrinder.id);
+      const approved = reports.filter((r: any) => r.status === "Approved");
+      res.json(approved);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.get("/api/grinder/me/scorecard", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      const reports = await storage.getPerformanceReports(myGrinder.id);
+      const approvedReports = reports
+        .filter((r: any) => r.status === "Approved")
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
+
+      const checkpoints = await storage.getActivityCheckpoints(undefined, myGrinder.id);
+      const totalCheckpoints = checkpoints.length;
+      const issueCheckpoints = checkpoints.filter((c: any) => c.type === "issue").length;
+      const resolvedIssues = checkpoints.filter((c: any) => c.type === "issue" && c.resolvedAt).length;
+      const loginCount = checkpoints.filter((c: any) => c.type === "login").length;
+
+      const checkpointCompliance = {
+        totalCheckpoints,
+        issueCheckpoints,
+        resolvedIssues,
+        loginCount,
+        issueResolutionRate: issueCheckpoints > 0 ? Math.round((resolvedIssues / issueCheckpoints) * 100) : 100,
+      };
+
+      res.json({
+        grinder: myGrinder,
+        recentReports: approvedReports,
+        checkpointCompliance,
+      });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  // ============ GRINDER ORDER UPDATE SUBMISSION ============
+
+  app.post("/api/grinder/me/order-updates", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      const { assignmentId, orderId, message, mediaUrls, mediaTypes } = req.body;
+      if (!assignmentId || !orderId || !message) {
+        return res.status(400).json({ message: "assignmentId, orderId, and message are required" });
+      }
+
+      const update = await storage.createOrderUpdate({
+        id: `OU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        assignmentId,
+        orderId,
+        grinderId: myGrinder.id,
+        message,
+        mediaUrls: mediaUrls || [],
+        mediaTypes: mediaTypes || [],
+      });
+
+      res.status(201).json(update);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   return httpServer;
 }
 

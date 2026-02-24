@@ -10,8 +10,8 @@ I prefer iterative development with clear communication on major changes. I appr
 The system employs a modern full-stack architecture. The frontend is built with **React, Vite, Tailwind CSS, and shadcn/ui**, featuring a professional dark mode theme. The backend is an **Express.js** application utilizing **PostgreSQL** with **Drizzle ORM** for data persistence. Authentication is handled via **Discord OAuth2**, implementing role-based access control for Staff and Grinders. A **discord.js v14** bot runs alongside the web server, sharing the same database.
 
 **UI/UX Decisions:**
-- **Staff Dashboard:** Refactored into five focused pages (Overview, Operations, Analytics, Payouts, Admin) with sidebar navigation for clarity and ease of use. Key Performance Indicators (KPIs), order pipelines, bidding countdowns, and risk alerts are prominently displayed.
-- **Grinder Dashboard:** Refactored into seven focused pages (Overview, Available Orders, My Work, My Bids, Payouts, Status, Guide) with sidebar navigation, mirroring the staff dashboard structure. Uses shared `use-grinder-data` hook for data fetching. Grinders can set availability statuses. Theming adjusts based on role: regular grinders use Discord purple, while elite grinders use cyan for an elevated feel.
+- **Staff Dashboard:** Refactored into six focused pages (Overview, Operations, Analytics, Payouts, Reports, Admin) with sidebar navigation for clarity and ease of use. Key Performance Indicators (KPIs), order pipelines, bidding countdowns, and risk alerts are prominently displayed. Reports page provides performance report review/approval, activity checkpoint monitoring, and order update acknowledgment.
+- **Grinder Dashboard:** Refactored into eight focused pages (Overview, Available Orders, My Work, My Bids, Payouts, Scorecard, Status, Guide) with sidebar navigation, mirroring the staff dashboard structure. Uses shared `use-grinder-data` hook for data fetching. Grinders can set availability statuses. Theming adjusts based on role: regular grinders use Discord purple, while elite grinders use cyan for an elevated feel.
 - **Order Flow:** Comprehensive lifecycle management including "Need Replacement", "In Progress", "Completed", and "Paid Out" statuses, each with distinct visual indicators.
 - **Payout Workflow:** A multi-step payout confirmation process involving grinder approval, dispute resolution, and staff review ensures accurate and fair compensation.
 
@@ -26,7 +26,11 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Live Bidding Countdown Timer:** A 10-minute countdown starts on the first bid, with live updates and Discord notifications, automatically closing bidding upon expiration.
 - **Staff Override Assign:** Staff can manually assign grinders to orders, automatically handling bid acceptance and denial, and updating grinder stats.
 - **Manual Order Creation:** Staff can create orders directly from the dashboard, with options for public visibility or private assignment.
-- **Centralized Stats Recalculation:** `server/recalcStats.ts` provides `recalcGrinderStats()` used by routes.ts, mgtWatcher.ts, and repairSync.ts for consistent quality score (0-100), completion rate, win rate, and earnings calculations.
+- **Centralized Stats Recalculation:** `server/recalcStats.ts` provides `recalcGrinderStats()` used by routes.ts, mgtWatcher.ts, and repairSync.ts for consistent quality score (0-100), completion rate, win rate, and earnings calculations. Quality score now includes daily update compliance (15% weight).
+- **Activity Checkpoint System:** 5 checkpoint types (Acknowledge Ticket yes/no, Log In/Out, Order Issue, Daily Order Update). Grinders use buttons on active assignments to track activity. Checkpoint history viewable per assignment.
+- **Performance Reports:** Auto-generated per assignment with metrics snapshot, checkpoint summary, daily update compliance, and overall grade (A-F). Staff reviews, adds notes, and approves. Grinders see approved reports on their Scorecard page.
+- **Daily Update Deadline Checker:** `server/dailyUpdateChecker.ts` runs every 60s, checking at 12:30 AM ET for missed daily updates on active assignments. Creates `missed_update` checkpoints, sends staff alerts, and triggers stats recalculation.
+- **Grinder Scorecard:** Dedicated page showing quality score grade, key performance metrics with progress bars, approved performance reports history, and checkpoint activity summary.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database for all application data, managed with Drizzle ORM.

@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useGrinderData } from "@/hooks/use-grinder-data";
+import { apiRequest } from "@/lib/queryClient";
 import { PAYOUT_PLATFORMS } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText
 } from "lucide-react";
 
 export default function GrinderAssignments() {
   const {
     grinder, isElite, assignments, orderUpdates, payoutRequests, payoutMethods,
-    submitUpdateMutation, markCompleteMutation, requestPayoutMutation,
+    submitUpdateMutation, markCompleteMutation, requestPayoutMutation, toast, queryClient,
   } = useGrinderData();
 
   const [updateDialog, setUpdateDialog] = useState<any>(null);
@@ -33,6 +35,23 @@ export default function GrinderAssignments() {
   const [payoutPlatform, setPayoutPlatform] = useState("");
   const [payoutDetails, setPayoutDetails] = useState("");
   const [savePayoutMethod, setSavePayoutMethod] = useState(true);
+  const [issueDialog, setIssueDialog] = useState<any>(null);
+  const [issueNote, setIssueNote] = useState("");
+  const [expandedCheckpoints, setExpandedCheckpoints] = useState<string | null>(null);
+
+  const checkpointMutation = useMutation({
+    mutationFn: async (data: { assignmentId: string; orderId: string; type: string; response?: string; note?: string }) => {
+      const res = await apiRequest("POST", "/api/grinder/me/checkpoints", data);
+      return res.json();
+    },
+    onSuccess: (_: any, vars: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me/checkpoints", vars.assignmentId] });
+      const typeLabels: Record<string, string> = { ticket_ack: "Ticket acknowledged", login: "Logged in", logoff: "Logged off", issue: "Issue reported", order_update: "Update submitted" };
+      toast({ title: typeLabels[vars.type] || "Checkpoint recorded" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
   if (!grinder) return null;
 
@@ -92,6 +111,43 @@ export default function GrinderAssignments() {
                       }}>
                       <CheckCircle className="w-3 h-3" /> Mark Complete
                     </Button>
+                  </div>
+                )}
+                {a.status === "Active" && (
+                  <div className="mt-2 pt-2 border-t border-white/[0.06]">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30 font-medium mb-1.5">Activity Checkpoints</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
+                        disabled={checkpointMutation.isPending}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "ticket_ack", response: "yes" })}>
+                        <TicketCheck className="w-3 h-3" /> Ack ✓
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
+                        disabled={checkpointMutation.isPending}
+                        onClick={() => { setIssueDialog({ ...a, checkpointType: "ticket_ack_no" }); setIssueNote(""); }}>
+                        <TicketCheck className="w-3 h-3" /> Ack ✗
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
+                        disabled={checkpointMutation.isPending}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
+                        <LogIn className="w-3 h-3" /> Log In
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20" data-testid={`button-logoff-${a.id}`}
+                        disabled={checkpointMutation.isPending}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
+                        <LogOut className="w-3 h-3" /> Log Off
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
+                        disabled={checkpointMutation.isPending}
+                        onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
+                        <AlertTriangle className="w-3 h-3" /> Issue
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2" data-testid={`button-view-checkpoints-${a.id}`}
+                        onClick={() => setExpandedCheckpoints(expandedCheckpoints === a.id ? null : a.id)}>
+                        <FileText className="w-3 h-3" /> History
+                      </Button>
+                    </div>
+                    {expandedCheckpoints === a.id && <CheckpointHistory assignmentId={a.id} />}
                   </div>
                 )}
                 {a.status === "Completed" && (
@@ -417,6 +473,101 @@ export default function GrinderAssignments() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!issueDialog} onOpenChange={(open) => !open && setIssueDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {issueDialog?.checkpointType === "issue" ? (
+                <><AlertTriangle className="w-5 h-5 text-yellow-400" /> Report Issue - Order {issueDialog?.orderId}</>
+              ) : (
+                <><TicketCheck className="w-5 h-5 text-red-400" /> Decline Ticket - Order {issueDialog?.orderId}</>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {issueDialog?.checkpointType === "issue" ? "Describe the issue *" : "Reason for declining *"}
+              </label>
+              <Textarea
+                value={issueNote}
+                onChange={(e) => setIssueNote(e.target.value)}
+                placeholder={issueDialog?.checkpointType === "issue" ? "Describe the problem..." : "Reason for declining this ticket..."}
+                data-testid="input-issue-note"
+              />
+            </div>
+            <Button className="w-full" data-testid="button-submit-issue"
+              disabled={!issueNote || checkpointMutation.isPending}
+              onClick={() => {
+                if (issueDialog?.checkpointType === "issue") {
+                  checkpointMutation.mutate({
+                    assignmentId: issueDialog.id,
+                    orderId: issueDialog.orderId,
+                    type: "issue",
+                    note: issueNote,
+                  });
+                } else {
+                  checkpointMutation.mutate({
+                    assignmentId: issueDialog.id,
+                    orderId: issueDialog.orderId,
+                    type: "ticket_ack",
+                    response: "no",
+                    note: issueNote,
+                  });
+                }
+                setIssueDialog(null);
+                setIssueNote("");
+              }}>
+              {checkpointMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              Submit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CheckpointHistory({ assignmentId }: { assignmentId: string }) {
+  const { data: checkpoints, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/grinder/me/checkpoints", assignmentId],
+    queryFn: async () => {
+      const res = await fetch(`/api/grinder/me/checkpoints/${assignmentId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  if (isLoading) return <div className="mt-2 text-xs text-white/30">Loading checkpoints...</div>;
+  if (!checkpoints || checkpoints.length === 0) return <div className="mt-2 text-xs text-white/30">No checkpoints yet</div>;
+
+  const typeIcons: Record<string, string> = {
+    ticket_ack: "🎟️",
+    login: "🟢",
+    logoff: "🔴",
+    issue: "⚠️",
+    order_update: "📝",
+    missed_update: "❌",
+  };
+
+  return (
+    <div className="mt-2 space-y-1" data-testid={`checkpoint-history-${assignmentId}`}>
+      {checkpoints.slice(0, 15).map((cp: any) => (
+        <div key={cp.id} className="flex items-start gap-2 p-2 rounded bg-white/[0.02] border border-white/[0.04] text-xs">
+          <span>{typeIcons[cp.type] || "📋"}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium capitalize">{cp.type.replace(/_/g, " ")}</span>
+              {cp.response && <Badge variant="outline" className="text-[10px] h-4 px-1">{cp.response}</Badge>}
+              {cp.resolvedAt && <Badge className="text-[10px] h-4 px-1 bg-emerald-500/20 text-emerald-400 border-0">Resolved</Badge>}
+            </div>
+            {cp.note && <p className="text-white/40 mt-0.5 truncate">{cp.note}</p>}
+            {cp.resolvedNote && <p className="text-emerald-400/60 mt-0.5 truncate">Staff: {cp.resolvedNote}</p>}
+          </div>
+          <span className="text-white/20 whitespace-nowrap">{new Date(cp.createdAt).toLocaleString()}</span>
+        </div>
+      ))}
     </div>
   );
 }

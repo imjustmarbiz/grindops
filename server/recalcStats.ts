@@ -39,9 +39,21 @@ export async function recalcGrinderStats(grinderId: string) {
   const totalEarnings = completed.reduce((sum: number, a: any) => sum + (Number(a.grinderEarnings) || Number(a.bidAmount) || 0), 0)
     + active.reduce((sum: number, a: any) => sum + (Number(a.grinderEarnings) || Number(a.bidAmount) || 0), 0);
 
+  const allCheckpoints = await storage.getActivityCheckpoints(undefined, grinderId);
+  const missedUpdates = allCheckpoints.filter((c: any) => c.type === "missed_update").length;
+  const totalCheckpointDays = myAssignments.reduce((sum: number, a: any) => {
+    if (!a.assignedDateTime) return sum;
+    const start = new Date(a.assignedDateTime);
+    const end = a.deliveredDateTime ? new Date(a.deliveredDateTime) : new Date();
+    return sum + Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  }, 0);
+  const updateComplianceRate = totalCheckpointDays > 0
+    ? Math.max(0, ((totalCheckpointDays - missedUpdates) / totalCheckpointDays) * 100)
+    : 100;
+
   let qualityScore = 100;
-  if (completedCount > 0) {
-    const onTimeFactor = (onTimeCount / completedCount) * 100;
+  if (completedCount > 0 || active.length > 0) {
+    const onTimeFactor = completedCount > 0 ? (onTimeCount / completedCount) * 100 : 100;
     let speedFactor = 100;
     if (turnaroundCount > 0) {
       const avgDays = totalTurnaroundDays / turnaroundCount;
@@ -54,10 +66,11 @@ export async function recalcGrinderStats(grinderId: string) {
     const reassignPenalty = completedCount > 0 ? Math.min((reassignedCount / (completedCount + reassignedCount)) * 100, 50) : 0;
 
     qualityScore = Math.round(
-      (onTimeFactor * 0.40) +
-      (speedFactor * 0.25) +
-      ((100 - strikePenalty) * 0.20) +
-      ((100 - reassignPenalty) * 0.15)
+      (onTimeFactor * 0.35) +
+      (speedFactor * 0.20) +
+      ((100 - strikePenalty) * 0.15) +
+      ((100 - reassignPenalty) * 0.15) +
+      (updateComplianceRate * 0.15)
     );
     qualityScore = Math.max(0, Math.min(100, qualityScore));
   }

@@ -2,6 +2,7 @@ import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
+  activityCheckpoints, performanceReports,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -10,6 +11,8 @@ import {
   type QueueConfig, type InsertQueueConfig,
   type AuditLog, type InsertAuditLog,
   type OrderUpdate, type InsertOrderUpdate,
+  type ActivityCheckpoint, type InsertActivityCheckpoint,
+  type PerformanceReport, type InsertPerformanceReport,
   type PayoutRequest, type InsertPayoutRequest,
   type GrinderPayoutMethod, type InsertGrinderPayoutMethod,
   type EliteRequest, type InsertEliteRequest,
@@ -90,6 +93,17 @@ export interface IStorage {
   createStrikeLog(log: InsertStrikeLog): Promise<StrikeLog>;
   updateStrikeLog(id: string, data: Partial<StrikeLog>): Promise<void>;
   acknowledgeStrike(id: string): Promise<void>;
+
+  getActivityCheckpoints(assignmentId?: string, grinderId?: string): Promise<ActivityCheckpoint[]>;
+  createActivityCheckpoint(checkpoint: InsertActivityCheckpoint): Promise<ActivityCheckpoint>;
+  updateActivityCheckpoint(id: string, data: Partial<ActivityCheckpoint>): Promise<ActivityCheckpoint | undefined>;
+
+  getPerformanceReports(grinderId?: string): Promise<PerformanceReport[]>;
+  getPerformanceReport(id: string): Promise<PerformanceReport | undefined>;
+  createPerformanceReport(report: InsertPerformanceReport): Promise<PerformanceReport>;
+  updatePerformanceReport(id: string, data: Partial<PerformanceReport>): Promise<PerformanceReport | undefined>;
+
+  updateOrderUpdate(id: string, data: Partial<OrderUpdate>): Promise<OrderUpdate | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -827,6 +841,53 @@ export class DatabaseStorage implements IStorage {
 
   async acknowledgeStrike(id: string): Promise<void> {
     await db.update(strikeLogs).set({ acknowledgedAt: new Date() }).where(eq(strikeLogs.id, id));
+  }
+
+  async getActivityCheckpoints(assignmentId?: string, grinderId?: string): Promise<ActivityCheckpoint[]> {
+    if (assignmentId) {
+      return await db.select().from(activityCheckpoints).where(eq(activityCheckpoints.assignmentId, assignmentId)).orderBy(desc(activityCheckpoints.createdAt));
+    }
+    if (grinderId) {
+      return await db.select().from(activityCheckpoints).where(eq(activityCheckpoints.grinderId, grinderId)).orderBy(desc(activityCheckpoints.createdAt));
+    }
+    return await db.select().from(activityCheckpoints).orderBy(desc(activityCheckpoints.createdAt));
+  }
+
+  async createActivityCheckpoint(checkpoint: InsertActivityCheckpoint): Promise<ActivityCheckpoint> {
+    const [result] = await db.insert(activityCheckpoints).values(checkpoint).returning();
+    return result;
+  }
+
+  async updateActivityCheckpoint(id: string, data: Partial<ActivityCheckpoint>): Promise<ActivityCheckpoint | undefined> {
+    const [result] = await db.update(activityCheckpoints).set(data).where(eq(activityCheckpoints.id, id)).returning();
+    return result;
+  }
+
+  async getPerformanceReports(grinderId?: string): Promise<PerformanceReport[]> {
+    if (grinderId) {
+      return await db.select().from(performanceReports).where(eq(performanceReports.grinderId, grinderId)).orderBy(desc(performanceReports.createdAt));
+    }
+    return await db.select().from(performanceReports).orderBy(desc(performanceReports.createdAt));
+  }
+
+  async getPerformanceReport(id: string): Promise<PerformanceReport | undefined> {
+    const [result] = await db.select().from(performanceReports).where(eq(performanceReports.id, id));
+    return result;
+  }
+
+  async createPerformanceReport(report: InsertPerformanceReport): Promise<PerformanceReport> {
+    const [result] = await db.insert(performanceReports).values(report).returning();
+    return result;
+  }
+
+  async updatePerformanceReport(id: string, data: Partial<PerformanceReport>): Promise<PerformanceReport | undefined> {
+    const [result] = await db.update(performanceReports).set(data).where(eq(performanceReports.id, id)).returning();
+    return result;
+  }
+
+  async updateOrderUpdate(id: string, data: Partial<OrderUpdate>): Promise<OrderUpdate | undefined> {
+    const [result] = await db.update(orderUpdates).set(data).where(eq(orderUpdates.id, id)).returning();
+    return result;
   }
 
   async getTopQueueItems() {
