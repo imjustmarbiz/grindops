@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -39,6 +39,7 @@ export default function GrinderAssignments() {
   const [issueDialog, setIssueDialog] = useState<any>(null);
   const [issueNote, setIssueNote] = useState("");
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<string | null>(null);
+  const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
 
   const checkpointMutation = useMutation({
     mutationFn: async (data: { assignmentId: string; orderId: string; type: string; response?: string; note?: string }) => {
@@ -98,6 +99,32 @@ export default function GrinderAssignments() {
                 </div>
                 {a.status === "Active" && (
                   <div className="flex items-center gap-2 flex-wrap">
+                    {a.hasTicket && (
+                      <Button size="sm" variant="outline"
+                        className="gap-1 text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                        data-testid={`button-join-ticket-${a.id}`}
+                        disabled={joiningTicket === a.orderId}
+                        onClick={async () => {
+                          setJoiningTicket(a.orderId);
+                          try {
+                            const res = await apiRequest("POST", `/api/orders/${a.orderId}/ticket-invite`);
+                            const data = await res.json();
+                            if (data.inviteUrl) {
+                              window.open(data.inviteUrl, '_blank');
+                            } else if (data.channelUrl) {
+                              window.open(data.channelUrl, '_blank');
+                            }
+                            toast({ title: "Ticket opened", description: "Opening the Discord ticket channel." });
+                          } catch (err: any) {
+                            toast({ title: "Could not join ticket", description: err.message || "The bot may not have access to that channel.", variant: "destructive" });
+                          } finally {
+                            setJoiningTicket(null);
+                          }
+                        }}
+                      >
+                        {joiningTicket === a.orderId ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} Join Ticket
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" className="gap-1 text-xs" data-testid={`button-update-${a.id}`}
                       onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); }}>
                       <MessageSquare className="w-3 h-3" /> Submit Update

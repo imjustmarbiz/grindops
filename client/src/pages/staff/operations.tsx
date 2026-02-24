@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
-  CheckCircle, X, CreditCard, Package, Zap, AlertTriangle,
+  CheckCircle, X, CreditCard, Package, Zap, AlertTriangle, Link2, ExternalLink, Unlink,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -47,6 +47,9 @@ export default function StaffOperations() {
   const [assignGrinderId, setAssignGrinderId] = useState("");
   const [assignBidAmount, setAssignBidAmount] = useState("");
   const [assignNotes, setAssignNotes] = useState("");
+
+  const [ticketOrderId, setTicketOrderId] = useState("");
+  const [ticketChannelId, setTicketChannelId] = useState("");
 
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -113,6 +116,36 @@ export default function StaffOperations() {
       return res.json();
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/alerts"] }); toast({ title: "Alert sent" }); },
+  });
+
+  const linkTicketMutation = useMutation({
+    mutationFn: async (data: { orderId: string; discordTicketChannelId: string }) => {
+      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/ticket`, { discordTicketChannelId: data.discordTicketChannelId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setTicketOrderId("");
+      setTicketChannelId("");
+      toast({ title: "Ticket linked", description: "Discord ticket has been linked to the order." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to link ticket", description: err.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+
+  const unlinkTicketMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const res = await apiRequest("DELETE", `/api/orders/${orderId}/ticket`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({ title: "Ticket unlinked" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to unlink ticket", description: err.message, variant: "destructive" });
+    },
   });
 
   const deleteAlertMutation = useMutation({
@@ -455,6 +488,113 @@ export default function StaffOperations() {
         </Card>
         </FadeInUp>
       )}
+
+      <FadeInUp>
+      <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-link-ticket">
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-purple-500/[0.04] -translate-y-12 translate-x-12" />
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+              <Link2 className="w-4 h-4 text-purple-400" />
+            </div>
+            Link Discord Ticket
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground font-medium">Select Assigned Order</label>
+                <Select value={ticketOrderId} onValueChange={(v) => { setTicketOrderId(v); setTicketChannelId(""); }}>
+                  <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-ticket-order">
+                    <SelectValue placeholder="Choose an assigned order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allOrders.filter(o => o.status === "Assigned" || o.status === "In Progress").map(o => {
+                      const svc = allServices.find(s => s.id === o.serviceId);
+                      const grinder = allGrinders.find(g => g.id === o.assignedGrinderId);
+                      return (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {svc?.name || o.serviceId} {grinder ? `(${grinder.name})` : ""} {(o as any).discordTicketChannelId ? "[Linked]" : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground font-medium">Discord Channel ID</label>
+                <Input
+                  placeholder="Paste the ticket channel ID"
+                  value={ticketChannelId}
+                  onChange={(e) => setTicketChannelId(e.target.value)}
+                  className="bg-background/50 border-white/10"
+                  data-testid="input-ticket-channel-id"
+                />
+              </div>
+            </div>
+
+            {ticketOrderId && (() => {
+              const order = allOrders.find(o => o.id === ticketOrderId);
+              const existingTicket = (order as any)?.discordTicketChannelId;
+              return existingTicket ? (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-purple-300">Ticket linked: <span className="font-mono text-xs">{existingTicket}</span></span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1 text-xs text-purple-300 hover:text-purple-200"
+                      data-testid="button-view-ticket"
+                      onClick={async () => {
+                        try {
+                          const res = await apiRequest("POST", `/api/orders/${ticketOrderId}/ticket-invite`);
+                          const data = await res.json();
+                          if (data.inviteUrl) window.open(data.inviteUrl, '_blank');
+                          else if (data.channelUrl) window.open(data.channelUrl, '_blank');
+                        } catch {
+                          window.open(`https://discord.com/channels/@me/${existingTicket}`, '_blank');
+                        }
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" /> View
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1 text-xs text-red-400 hover:text-red-300"
+                      disabled={unlinkTicketMutation.isPending}
+                      onClick={() => unlinkTicketMutation.mutate(ticketOrderId)}
+                      data-testid="button-unlink-ticket"
+                    >
+                      <Unlink className="w-3 h-3" /> Unlink
+                    </Button>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
+            <Button
+              className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
+              disabled={!ticketOrderId || !ticketChannelId || linkTicketMutation.isPending}
+              data-testid="button-link-ticket"
+              onClick={() => {
+                linkTicketMutation.mutate({
+                  orderId: ticketOrderId,
+                  discordTicketChannelId: ticketChannelId,
+                });
+              }}
+            >
+              {linkTicketMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Link2 className="w-4 h-4 mr-2" />}
+              Link Ticket
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      </FadeInUp>
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-900/[0.04] overflow-hidden relative" data-testid="card-alert-composer">

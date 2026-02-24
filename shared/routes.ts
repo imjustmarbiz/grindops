@@ -86,7 +86,23 @@ export const api = {
         notes: z.string().nullable().optional(),
         orderBrief: z.string().nullable().optional(),
         discordBidLink: z.string().nullable().optional(),
+        discordTicketChannelId: z.string().nullable().optional(),
       }),
+    },
+    linkTicket: {
+      method: 'PATCH' as const,
+      path: '/api/orders/:id/ticket' as const,
+      input: z.object({
+        discordTicketChannelId: z.string().min(1, "Discord channel ID is required"),
+      }),
+    },
+    unlinkTicket: {
+      method: 'DELETE' as const,
+      path: '/api/orders/:id/ticket' as const,
+    },
+    ticketInvite: {
+      method: 'POST' as const,
+      path: '/api/orders/:id/ticket-invite' as const,
     },
     delete: {
       method: 'DELETE' as const,

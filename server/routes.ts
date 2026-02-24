@@ -562,6 +562,92 @@ export async function registerRoutes(
     res.json(suggestions);
   });
 
+  app.patch(api.orders.linkTicket.path, requireStaff, async (req, res) => {
+    try {
+      const input = api.orders.linkTicket.input.parse(req.body);
+      const order = await storage.getOrder(req.params.id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      const result = await storage.updateOrder(req.params.id, { discordTicketChannelId: input.discordTicketChannelId } as any);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "ticket_linked",
+        actor: (req as any).user?.username || "staff",
+        details: JSON.stringify({ discordTicketChannelId: input.discordTicketChannelId }),
+      });
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.delete(api.orders.unlinkTicket.path, requireStaff, async (req, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      const result = await storage.updateOrder(req.params.id, { discordTicketChannelId: null } as any);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "ticket_unlinked",
+        actor: (req as any).user?.username || "staff",
+        details: JSON.stringify({ orderId: req.params.id }),
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.post(api.orders.ticketInvite.path, isAuthenticated, async (req, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (!order.discordTicketChannelId) return res.status(400).json({ message: "No ticket linked to this order" });
+
+      const userId = (req as any).userId;
+      const authUser = await authStorage.getUser(userId);
+      const isStaff = authUser?.role === "staff" || authUser?.role === "owner";
+
+      if (!isStaff) {
+        const allGrinders = await storage.getGrinders();
+        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        if (!myGrinder || order.assignedGrinderId !== myGrinder.id) {
+          return res.status(403).json({ message: "You can only access tickets for orders assigned to you." });
+        }
+      }
+
+      const { getDiscordBotClient } = await import("./discord/bot");
+      const client = getDiscordBotClient();
+      if (!client) return res.status(503).json({ message: "Discord bot is not connected" });
+
+      try {
+        const channel = await client.channels.fetch(order.discordTicketChannelId);
+        if (!channel) return res.status(404).json({ message: "Discord channel not found" });
+
+        if ('guild' in channel && (channel as any).guild) {
+          const guildId = (channel as any).guild.id;
+          if ('createInvite' in channel && typeof channel.createInvite === 'function') {
+            const invite = await channel.createInvite({ maxAge: 3600, maxUses: 1, unique: true });
+            return res.json({ inviteUrl: `https://discord.gg/${invite.code}`, channelId: order.discordTicketChannelId, guildId });
+          } else {
+            return res.json({ channelUrl: `https://discord.com/channels/${guildId}/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId, guildId });
+          }
+        } else {
+          return res.json({ channelUrl: `https://discord.com/channels/@me/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId });
+        }
+      } catch (discordErr: any) {
+        console.error("[ticket-invite] Discord error:", discordErr);
+        return res.status(500).json({ message: "Could not create invite. The bot may not have permission to access that channel." });
+      }
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   app.get("/api/bidding-timers", async (req, res) => {
     const allOrders = await storage.getOrders();
     const activeTimers = allOrders
@@ -1170,19 +1256,23 @@ export async function registerRoutes(
     res.json({
       grinder: safeGrinder,
       isElite,
-      assignments: myAssignments.map((a: any) => ({
-        id: a.id,
-        orderId: a.orderId,
-        status: a.status,
-        assignedDateTime: a.assignedDateTime,
-        dueDateTime: a.dueDateTime,
-        deliveredDateTime: a.deliveredDateTime,
-        isOnTime: a.isOnTime,
-        qualityRating: a.qualityRating,
-        grinderEarnings: a.grinderEarnings,
-        bidAmount: a.bidAmount,
-        grinderId: a.grinderId,
-      })),
+      assignments: myAssignments.map((a: any) => {
+        const order = allOrders.find((o: any) => o.id === a.orderId);
+        return {
+          id: a.id,
+          orderId: a.orderId,
+          status: a.status,
+          assignedDateTime: a.assignedDateTime,
+          dueDateTime: a.dueDateTime,
+          deliveredDateTime: a.deliveredDateTime,
+          isOnTime: a.isOnTime,
+          qualityRating: a.qualityRating,
+          grinderEarnings: a.grinderEarnings,
+          bidAmount: a.bidAmount,
+          grinderId: a.grinderId,
+          hasTicket: !!(order?.discordTicketChannelId),
+        };
+      }),
       bids: myBids.map((b: any) => ({
         id: b.id,
         orderId: b.orderId,
