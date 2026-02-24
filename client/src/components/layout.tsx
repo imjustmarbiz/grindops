@@ -111,7 +111,10 @@ function AppSidebar() {
               </Avatar>
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-sm font-medium truncate" data-testid="text-user-name">
-                  {user?.firstName || user?.discordUsername || "User"}
+                  {grinderProfile?.grinder?.name || user?.firstName || user?.discordUsername || "User"}
+                  {(grinderProfile?.grinder?.discordUsername || user?.discordUsername) && (
+                    <span className="text-[11px] font-normal text-muted-foreground ml-1">(@{grinderProfile?.grinder?.discordUsername || user?.discordUsername})</span>
+                  )}
                 </span>
                 <Badge 
                   variant={isStaff ? "default" : "secondary"} 

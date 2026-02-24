@@ -41,7 +41,12 @@ export default function GrinderOverview() {
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{grinder.discordUsername}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                {grinder.name || grinder.discordUsername}
+                {grinder.discordUsername && (
+                  <span className="text-base font-normal text-muted-foreground ml-2">(@{grinder.discordUsername})</span>
+                )}
+              </h1>
               {isElite ? (
                 <Badge className="bg-gradient-to-r from-cyan-500/20 to-teal-500/20 text-cyan-300 border-cyan-500/30 gap-1">
                   <Crown className="w-3.5 h-3.5" />
