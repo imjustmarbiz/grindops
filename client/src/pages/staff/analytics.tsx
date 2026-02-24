@@ -396,7 +396,7 @@ export default function StaffAnalytics() {
                   return (
                     <div key={s.id} className="flex items-center gap-3 p-2 rounded-lg sm:hover:bg-white/[0.03] transition-colors" data-testid={`service-dist-${s.id}`}>
                       <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${serviceColors[i % serviceColors.length]}`} />
-                      <span className="text-sm font-medium flex-1 min-w-0">{s.name}</span>
+                      <span className="text-sm font-medium flex-1 min-w-0 whitespace-nowrap truncate">{s.name}</span>
                       <span className="text-[10px] text-muted-foreground flex-shrink-0">{pluralize(s.count, 'order')}</span>
                       <span className="text-xs font-medium text-emerald-400 flex-shrink-0 w-16 text-right">{formatCurrency(s.revenue)}</span>
                       <span className="text-[10px] text-white/30 w-8 text-right flex-shrink-0">{revPct.toFixed(0)}%</span>

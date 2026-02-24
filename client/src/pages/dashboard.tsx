@@ -1078,8 +1078,8 @@ export default function Dashboard() {
               {serviceDistribution.length === 0 && <p className="text-muted-foreground text-sm">No order data yet</p>}
               {serviceDistribution.map((s, i) => (
                 <div key={s.id} className="space-y-1" data-testid={`service-dist-${s.id}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{s.name}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium whitespace-nowrap truncate">{s.name}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{pluralize(s.count, 'order')}</span>
                       <span className="text-xs font-medium text-emerald-400">{formatCurrency(s.revenue)}</span>
