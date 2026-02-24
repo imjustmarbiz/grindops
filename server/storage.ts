@@ -2,7 +2,7 @@ import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
-  activityCheckpoints, performanceReports,
+  activityCheckpoints, performanceReports, messageThreads, messages, notifications,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -18,6 +18,9 @@ import {
   type EliteRequest, type InsertEliteRequest,
   type StaffAlert, type InsertStaffAlert,
   type StrikeLog, type InsertStrikeLog,
+  type MessageThread, type InsertMessageThread,
+  type Message, type InsertMessage,
+  type Notification, type InsertNotification,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -104,6 +107,16 @@ export interface IStorage {
   updatePerformanceReport(id: string, data: Partial<PerformanceReport>): Promise<PerformanceReport | undefined>;
 
   updateOrderUpdate(id: string, data: Partial<OrderUpdate>): Promise<OrderUpdate | undefined>;
+
+  getThreadsForUser(userId: string): Promise<MessageThread[]>;
+  getOrCreateThread(data: InsertMessageThread): Promise<MessageThread>;
+  getMessagesForThread(threadId: string): Promise<Message[]>;
+  createMessage(msg: InsertMessage): Promise<Message>;
+  markThreadRead(threadId: string, userId: string): Promise<void>;
+
+  getNotificationsForUser(userId: string, role: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(notificationId: string, userId: string): Promise<void>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -932,6 +945,86 @@ export class DatabaseStorage implements IStorage {
       estDeliveryDateTime: new Date(row.estDeliveryDateTime as any),
       finalPriorityScore: Number(row.finalPriorityScore) || 0
     }));
+  }
+
+  async getThreadsForUser(userId: string): Promise<MessageThread[]> {
+    return await db.select().from(messageThreads)
+      .where(or(eq(messageThreads.userAId, userId), eq(messageThreads.userBId, userId)))
+      .orderBy(desc(messageThreads.lastMessageAt));
+  }
+
+  async getOrCreateThread(data: InsertMessageThread): Promise<MessageThread> {
+    const existing = await db.select().from(messageThreads).where(
+      or(
+        and(eq(messageThreads.userAId, data.userAId), eq(messageThreads.userBId, data.userBId)),
+        and(eq(messageThreads.userAId, data.userBId), eq(messageThreads.userBId, data.userAId))
+      )
+    );
+    if (existing.length > 0) return existing[0];
+    const [created] = await db.insert(messageThreads).values(data).returning();
+    return created;
+  }
+
+  async getMessagesForThread(threadId: string): Promise<Message[]> {
+    return await db.select().from(messages)
+      .where(eq(messages.threadId, threadId))
+      .orderBy(messages.createdAt);
+  }
+
+  async createMessage(msg: InsertMessage): Promise<Message> {
+    const [created] = await db.insert(messages).values(msg).returning();
+    const thread = await db.select().from(messageThreads).where(eq(messageThreads.id, msg.threadId));
+    if (thread.length > 0) {
+      const t = thread[0];
+      const isUserA = t.userAId === msg.senderUserId;
+      await db.update(messageThreads).set({
+        lastMessageText: msg.body.substring(0, 100),
+        lastMessageAt: new Date(),
+        ...(isUserA ? { userBUnread: t.userBUnread + 1 } : { userAUnread: t.userAUnread + 1 }),
+      }).where(eq(messageThreads.id, msg.threadId));
+    }
+    return created;
+  }
+
+  async markThreadRead(threadId: string, userId: string): Promise<void> {
+    const thread = await db.select().from(messageThreads).where(eq(messageThreads.id, threadId));
+    if (thread.length > 0) {
+      const t = thread[0];
+      if (t.userAId === userId) {
+        await db.update(messageThreads).set({ userAUnread: 0 }).where(eq(messageThreads.id, threadId));
+      } else if (t.userBId === userId) {
+        await db.update(messageThreads).set({ userBUnread: 0 }).where(eq(messageThreads.id, threadId));
+      }
+    }
+  }
+
+  async getNotificationsForUser(userId: string, role: string): Promise<Notification[]> {
+    return await db.select().from(notifications)
+      .where(
+        or(
+          eq(notifications.userId, userId),
+          eq(notifications.roleScope, role),
+          eq(notifications.roleScope, "all")
+        )
+      )
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async markNotificationRead(notificationId: string, userId: string): Promise<void> {
+    const existing = await db.select().from(notifications).where(eq(notifications.id, notificationId));
+    if (existing.length > 0) {
+      const currentReadBy = (existing[0].readBy as string[]) || [];
+      if (!currentReadBy.includes(userId)) {
+        await db.update(notifications).set({
+          readBy: [...currentReadBy, userId],
+        }).where(eq(notifications.id, notificationId));
+      }
+    }
   }
 }
 
