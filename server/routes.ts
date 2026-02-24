@@ -7,6 +7,35 @@ import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireG
 import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats } from "./recalcStats";
 
+async function createSystemNotification(opts: {
+  userId?: string;
+  roleScope?: string;
+  type: string;
+  title: string;
+  body: string;
+  linkUrl?: string;
+  icon?: string;
+  severity?: string;
+}) {
+  try {
+    await storage.createNotification({
+      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: opts.userId || null,
+      roleScope: opts.roleScope || "all",
+      type: opts.type,
+      title: opts.title,
+      body: opts.body,
+      linkUrl: opts.linkUrl || null,
+      icon: opts.icon || null,
+      severity: opts.severity || "info",
+      readBy: [],
+      expiresAt: null,
+    });
+  } catch (err) {
+    console.error("[notification] Failed to create notification:", err);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -214,6 +243,14 @@ export async function registerRoutes(
         action: "created",
         actor: "admin",
         details: JSON.stringify({ customerPrice: result.customerPrice, serviceId: result.serviceId }),
+      });
+      createSystemNotification({
+        roleScope: "grinder",
+        type: "new_order",
+        title: "New Order Available",
+        body: `A new order (#${result.mgtOrderNumber || result.id}) is now open for bidding.`,
+        icon: "package",
+        severity: "info",
       });
       res.status(201).json(result);
     } catch (err) {
@@ -1931,6 +1968,15 @@ export async function registerRoutes(
       action: `strike_${action}`,
       actor: createdBy || "staff",
       details: JSON.stringify({ reason, delta, resultingStrikes: newStrikes, fineAmount, outstandingFine: newOutstandingFine, suspended: shouldSuspend }),
+    });
+
+    createSystemNotification({
+      userId: grinder.discordUserId || grinderId,
+      type: "strike",
+      title: action === "add" ? "Strike Received" : "Strike Removed",
+      body: `${action === "add" ? "You received a strike" : "A strike was removed"}. Reason: ${reason}. Current strikes: ${newStrikes}.`,
+      icon: "alert-triangle",
+      severity: action === "add" ? "danger" : "success",
     });
 
     res.status(201).json({ strikeLog, newStrikes, fineAmount, outstandingFine: newOutstandingFine, suspended: shouldSuspend });
