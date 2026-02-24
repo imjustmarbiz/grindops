@@ -99,6 +99,8 @@ export const orders = pgTable("orders", {
   acceptedBidId: varchar("accepted_bid_id"),
   companyProfit: numeric("company_profit"),
   notes: text("notes"),
+  orderBrief: text("order_brief"),
+  discordBidLink: text("discord_bid_link"),
   isManual: boolean("is_manual").notNull().default(false),
   visibleToGrinders: boolean("visible_to_grinders").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),

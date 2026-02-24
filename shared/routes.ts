@@ -84,6 +84,8 @@ export const api = {
         complexity: z.number().min(1).max(5).optional(),
         location: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
+        orderBrief: z.string().nullable().optional(),
+        discordBidLink: z.string().nullable().optional(),
       }),
     },
     delete: {

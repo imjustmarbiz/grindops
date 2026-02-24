@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, MapPin, StickyNote, Gauge, Package, Clock, TrendingUp } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, MapPin, StickyNote, Gauge, Package, Clock, TrendingUp, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -234,6 +235,9 @@ export default function Orders() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
+  const [briefOrder, setBriefOrder] = useState<Order | null>(null);
+  const [briefText, setBriefText] = useState("");
+  const [briefLink, setBriefLink] = useState("");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -510,9 +514,27 @@ export default function Orders() {
               return (
                 <TableRow key={order.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-order-${order.id}`}>
                   <TableCell className="font-mono font-medium" data-testid={`text-order-id-${order.id}`}>
-                    <div className="flex flex-col">
-                      <span>{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
-                      {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col">
+                        <span>{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                        {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${order.orderBrief ? "text-primary hover:text-primary/80 bg-primary/10" : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/5"}`}
+                            onClick={() => {
+                              setBriefOrder(order);
+                              setBriefText(order.orderBrief || "");
+                              setBriefLink(order.discordBidLink || "");
+                            }}
+                            data-testid={`button-brief-${order.id}`}
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>{order.orderBrief ? "View/Edit Brief" : "Add Brief"}</TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -710,6 +732,62 @@ export default function Orders() {
       </Card>
       </FadeInUp>
     </AnimatedPage>
+
+    <Dialog open={!!briefOrder} onOpenChange={(open) => !open && setBriefOrder(null)}>
+      <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-primary" />
+            </div>
+            Order Brief {briefOrder?.mgtOrderNumber ? `— #${briefOrder.mgtOrderNumber}` : ""}
+          </DialogTitle>
+        </DialogHeader>
+        {briefOrder && (
+          <div className="space-y-4 mt-2">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Brief / Details</label>
+              <Textarea
+                value={briefText}
+                onChange={(e) => setBriefText(e.target.value)}
+                placeholder="Enter order brief details... Auto-populated from MGT Bot embeds or type manually."
+                className="bg-background/50 border-white/10 min-h-[180px] text-sm"
+                data-testid="input-order-brief"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Discord Bid Link (optional)</label>
+              <Input
+                value={briefLink}
+                onChange={(e) => setBriefLink(e.target.value)}
+                placeholder="https://discord.com/channels/..."
+                className="bg-background/50 border-white/10"
+                data-testid="input-discord-bid-link"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                data-testid="button-save-brief"
+                disabled={updateFieldMutation.isPending}
+                onClick={() => {
+                  saveField(briefOrder.id, {
+                    orderBrief: briefText || null,
+                    discordBidLink: briefLink || null,
+                  });
+                  setBriefOrder(null);
+                }}
+              >
+                {updateFieldMutation.isPending ? "Saving..." : "Save Brief"}
+              </Button>
+              <Button variant="outline" className="border-white/10" onClick={() => setBriefOrder(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
     </TooltipProvider>
   );
 }

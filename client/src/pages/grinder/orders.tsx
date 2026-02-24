@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { InlineCountdown } from "@/components/bidding-countdown";
 import {
-  Loader2, Gavel, Zap, Target, ExternalLink, Sparkles
+  Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -20,6 +20,7 @@ export default function GrinderOrders() {
   const [placeBidAmount, setPlaceBidAmount] = useState("");
   const [placeBidTimeline, setPlaceBidTimeline] = useState("");
   const [placeBidCanStart, setPlaceBidCanStart] = useState("");
+  const [viewDetailsOrder, setViewDetailsOrder] = useState<any>(null);
 
   if (!grinder) return null;
 
@@ -73,6 +74,16 @@ export default function GrinderOrders() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-0 sm:ml-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-white/10 text-muted-foreground hover:text-foreground"
+                      data-testid={`button-details-${order.id}`}
+                      onClick={() => setViewDetailsOrder(order)}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Details
+                    </Button>
                     {order.hasBid ? (
                       <div className="flex items-center gap-2">
                         <Badge className="bg-blue-500/20 text-blue-400">
@@ -103,9 +114,11 @@ export default function GrinderOrders() {
                         className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
                         data-testid={`button-bid-${order.id}`}
                         onClick={() => {
-                          const link = order.discordMessageId
-                            ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
-                            : getBidWarLink();
+                          const link = order.discordBidLink
+                            ? order.discordBidLink
+                            : order.discordMessageId
+                              ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
+                              : getBidWarLink();
                           window.open(link, "_blank");
                         }}
                       >
@@ -122,6 +135,140 @@ export default function GrinderOrders() {
         </div>
       )}
       </FadeInUp>
+
+      <Dialog open={!!viewDetailsOrder} onOpenChange={(open) => !open && setViewDetailsOrder(null)}>
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
+                <FileText className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+              </div>
+              Order Details
+            </DialogTitle>
+          </DialogHeader>
+          {viewDetailsOrder && (
+            <div className="space-y-4 mt-2">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                <div className={`px-4 py-3 ${isElite ? "bg-cyan-500/10 border-b border-cyan-500/20" : "bg-amber-500/10 border-b border-amber-500/20"}`}>
+                  <div className="flex items-center gap-2">
+                    <Hash className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+                    <span className="font-bold text-lg">
+                      {viewDetailsOrder.mgtOrderNumber ? `Order #${viewDetailsOrder.mgtOrderNumber}` : viewDetailsOrder.id}
+                    </span>
+                    {viewDetailsOrder.isEmergency && <Badge className="bg-red-500/20 text-red-400 border-0 text-[10px]">EMERGENCY</Badge>}
+                    {viewDetailsOrder.isRush && <Badge className="bg-orange-500/20 text-orange-400 border-0 text-[10px]">RUSH</Badge>}
+                  </div>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Gamepad2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Service</p>
+                      <p className="font-medium">{serviceName(viewDetailsOrder.serviceId)}</p>
+                    </div>
+                  </div>
+                  {viewDetailsOrder.platform && (
+                    <div className="flex items-start gap-3">
+                      <Monitor className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Platform</p>
+                        <p className="font-medium">{viewDetailsOrder.platform}</p>
+                      </div>
+                    </div>
+                  )}
+                  {viewDetailsOrder.gamertag && (
+                    <div className="flex items-start gap-3">
+                      <User className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Gamertag</p>
+                        <p className="font-medium">{viewDetailsOrder.gamertag}</p>
+                      </div>
+                    </div>
+                  )}
+                  {viewDetailsOrder.notes && (
+                    <div className="flex items-start gap-3">
+                      <StickyNote className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Order Notes</p>
+                        <p className="text-sm">{viewDetailsOrder.notes}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-3">
+                    <DollarSign className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Complexity</p>
+                      <p className="font-medium">{viewDetailsOrder.complexity}/5</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Zap className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Due Date</p>
+                      <p className="font-medium">{new Date(viewDetailsOrder.orderDueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {viewDetailsOrder.orderBrief && (
+                  <div className="border-t border-white/10 p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Full Brief</p>
+                    <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {viewDetailsOrder.orderBrief.split("\n").map((line: string, i: number) => {
+                        const boldMatch = line.match(/^\*\*(.*?)\*\*\s*(.*)/);
+                        if (boldMatch) {
+                          return <p key={i} className="mb-1"><span className="font-semibold text-foreground">{boldMatch[1]}</span> {boldMatch[2]}</p>;
+                        }
+                        return <p key={i} className="mb-1 text-muted-foreground">{line}</p>;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                {!viewDetailsOrder.hasBid && !viewDetailsOrder.isManual && (
+                  <Button
+                    className={`flex-1 gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 text-white" : ""}`}
+                    data-testid={`button-bid-from-details-${viewDetailsOrder.id}`}
+                    onClick={() => {
+                      const link = viewDetailsOrder.discordBidLink
+                        ? viewDetailsOrder.discordBidLink
+                        : viewDetailsOrder.discordMessageId
+                          ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, viewDetailsOrder.discordMessageId)
+                          : getBidWarLink();
+                      window.open(link, "_blank");
+                    }}
+                  >
+                    <Gavel className="w-4 h-4" />
+                    Bid on Discord
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                )}
+                {!viewDetailsOrder.hasBid && viewDetailsOrder.isManual && (
+                  <Button
+                    className={`flex-1 gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 text-white" : ""}`}
+                    data-testid={`button-bid-manual-from-details-${viewDetailsOrder.id}`}
+                    onClick={() => {
+                      setViewDetailsOrder(null);
+                      setPlaceBidDialog(viewDetailsOrder);
+                      setPlaceBidAmount("");
+                      setPlaceBidTimeline("");
+                      setPlaceBidCanStart("");
+                    }}
+                  >
+                    <Gavel className="w-4 h-4" />
+                    Place Bid
+                  </Button>
+                )}
+                <Button variant="outline" className="border-white/10" onClick={() => setViewDetailsOrder(null)} data-testid="button-close-details">
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!placeBidDialog} onOpenChange={(open) => !open && setPlaceBidDialog(null)}>
         <DialogContent>

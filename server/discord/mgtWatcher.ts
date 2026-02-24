@@ -192,12 +192,26 @@ export async function handleNewOrderMessage(message: Message) {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 3);
 
+    const briefParts: string[] = [];
+    if (serviceName) briefParts.push(`**Service:** ${serviceName}`);
+    if (platform) briefParts.push(`**Platform:** ${platform}`);
+    briefParts.push(`**Order ID:** #${orderNumber}`);
+    if (gamertag) briefParts.push(`**Gamertag:** ${gamertag}`);
+    if (orderNotes) briefParts.push(`**Order Notes:** ${orderNotes}`);
+    if (customerPrice) briefParts.push(`**Customer Price:** $${customerPrice.toFixed(2)}`);
+    const orderBrief = briefParts.join("\n");
+
+    const guildId = message.guild?.id;
+    const discordBidLink = guildId ? `https://discord.com/channels/${guildId}/${BID_WAR_CHANNEL_ID}/${message.id}` : undefined;
+
     const order = await storage.upsertOrderByMgtNumber(orderNumber, {
       serviceId,
       customerPrice: customerPrice ? customerPrice.toFixed(2) : "0",
       platform: platform || undefined,
       gamertag: gamertag || undefined,
       notes: orderNotes || undefined,
+      orderBrief,
+      discordBidLink,
       orderDueDate: dueDate,
       discordMessageId: message.id,
       status: "Open",

@@ -31,6 +31,8 @@ import GrinderPayouts from "@/pages/grinder/payouts";
 import GrinderStatus from "@/pages/grinder/status";
 import GrinderGuide from "@/pages/grinder/guide";
 import GrinderScorecard from "@/pages/grinder/scorecard";
+import StaffEvents from "@/pages/staff/events";
+import GrinderEvents from "@/pages/grinder/events";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false }: { component: React.ComponentType; staffOnly?: boolean }) {
@@ -130,6 +132,7 @@ function Router() {
       <Route path="/reports" component={() => <ProtectedRoute component={StaffReports} staffOnly />} />
       <Route path="/streams" component={() => <ProtectedRoute component={StaffStreams} staffOnly />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLogPage} staffOnly />} />
+      <Route path="/events" component={() => <ProtectedRoute component={StaffEvents} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
@@ -138,6 +141,7 @@ function Router() {
       <Route path="/grinder/status" component={() => <ProtectedRoute component={GrinderStatus} />} />
       <Route path="/grinder/guide" component={() => <ProtectedRoute component={GrinderGuide} />} />
       <Route path="/grinder/scorecard" component={() => <ProtectedRoute component={GrinderScorecard} />} />
+      <Route path="/grinder/events" component={() => <ProtectedRoute component={GrinderEvents} />} />
       
       <Route component={NotFound} />
     </Switch>

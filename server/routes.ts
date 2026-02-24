@@ -2685,6 +2685,62 @@ export async function registerRoutes(
     })));
   });
 
+  app.get('/api/events', async (req, res) => {
+    const allEvents = await storage.getEvents();
+    res.json(allEvents);
+  });
+
+  app.post('/api/events', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    if (user.role !== "staff" && user.role !== "owner") return res.status(403).json({ error: "Staff only" });
+    const { type, title, description, startDate, endDate, discountPercent, tags, priority } = req.body;
+    if (!title || !description || !startDate) return res.status(400).json({ error: "Title, description, and start date are required" });
+    const event = await storage.createEvent({
+      id: `EVT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      type: type || "event",
+      title,
+      description,
+      startDate: new Date(startDate),
+      endDate: endDate ? new Date(endDate) : null,
+      discountPercent: discountPercent || null,
+      tags: tags || [],
+      priority: priority || "normal",
+      isActive: true,
+      createdBy: user.discordId || user.id,
+      createdByName: user.displayName || user.username || "Staff",
+    });
+    res.status(201).json(event);
+  });
+
+  app.patch('/api/events/:id', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    if (user.role !== "staff" && user.role !== "owner") return res.status(403).json({ error: "Staff only" });
+    const { title, description, startDate, endDate, discountPercent, tags, priority, isActive, type } = req.body;
+    const data: any = {};
+    if (title !== undefined) data.title = title;
+    if (description !== undefined) data.description = description;
+    if (startDate !== undefined) data.startDate = new Date(startDate);
+    if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
+    if (discountPercent !== undefined) data.discountPercent = discountPercent;
+    if (tags !== undefined) data.tags = tags;
+    if (priority !== undefined) data.priority = priority;
+    if (isActive !== undefined) data.isActive = isActive;
+    if (type !== undefined) data.type = type;
+    const updated = await storage.updateEvent(req.params.id, data);
+    if (!updated) return res.status(404).json({ error: "Event not found" });
+    res.json(updated);
+  });
+
+  app.delete('/api/events/:id', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    if (user.role !== "staff" && user.role !== "owner") return res.status(403).json({ error: "Staff only" });
+    await storage.deleteEvent(req.params.id);
+    res.json({ success: true });
+  });
+
   return httpServer;
 }
 
