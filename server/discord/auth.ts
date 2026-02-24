@@ -161,7 +161,7 @@ export function setupDiscordAuth(app: Express) {
 
       const avatarUrl = discordUser.avatar
         ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=128`
-        : null;
+        : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(discordUser.id) >> BigInt(22)) % 6}.png`;
 
       const user = await authStorage.upsertUser({
         id: discordUser.id,

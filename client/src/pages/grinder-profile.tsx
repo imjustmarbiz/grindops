@@ -366,7 +366,7 @@ export default function GrinderProfile() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 relative z-10">
           <div className="relative">
             <Avatar className={`h-14 w-14 sm:h-20 sm:w-20 border-2 ${isElite ? "border-cyan-500/50 ring-2 ring-cyan-400/20" : "border-[#5865F2]/30"}`}>
-              <AvatarImage src={user?.profileImageUrl || undefined} />
+              <AvatarImage src={grinder.discordAvatarUrl || user?.profileImageUrl || undefined} />
               <AvatarFallback className={`${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} text-2xl`}>
                 {grinder.name?.charAt(0) || "G"}
               </AvatarFallback>

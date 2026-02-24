@@ -1120,11 +1120,23 @@ export async function registerRoutes(
     });
     const unackedStrikes = myStrikeLogs.filter((s: any) => !s.acknowledgedAt);
 
+    let discordAvatarUrl = authUser?.profileImageUrl || null;
+    if (!discordAvatarUrl && myGrinder.discordUserId) {
+      if (authUser?.discordAvatar) {
+        discordAvatarUrl = `https://cdn.discordapp.com/avatars/${myGrinder.discordUserId}/${authUser.discordAvatar}.png?size=128`;
+      } else {
+        try {
+          discordAvatarUrl = `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(myGrinder.discordUserId) >> BigInt(22)) % 6}.png`;
+        } catch { discordAvatarUrl = null; }
+      }
+    }
+
     const safeGrinder = {
       id: myGrinder.id,
       name: myGrinder.name,
       discordUserId: myGrinder.discordUserId,
       discordUsername: myGrinder.discordUsername,
+      discordAvatarUrl,
       discordRoleId: myGrinder.discordRoleId,
       category: myGrinder.category,
       roles: (myGrinder as any).roles || [myGrinder.category || "Grinder"],

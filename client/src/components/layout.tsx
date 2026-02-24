@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,12 @@ function AppSidebar() {
   const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
   const navItems = isStaff ? staffNavItems : grinderNavItems;
   const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
+
+  const { data: grinderProfile } = useQuery<any>({
+    queryKey: ["/api/grinder/me"],
+    enabled: !isStaff,
+  });
+  const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || undefined;
 
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
@@ -91,7 +98,7 @@ function AppSidebar() {
           <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10 border border-primary/20">
-                <AvatarImage src={user?.profileImageUrl || undefined} />
+                <AvatarImage src={avatarUrl} />
                 <AvatarFallback className="bg-primary/20 text-primary">
                   {user?.firstName?.charAt(0) || "U"}
                 </AvatarFallback>
