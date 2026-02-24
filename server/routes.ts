@@ -689,14 +689,25 @@ export async function registerRoutes(
     try {
       const input = api.bids.create.input.parse(req.body);
       const result = await storage.createBid(input);
+      const userId = (req as any).userId;
+      const dbUser = userId ? await authStorage.getUser(userId) : null;
+      const actorName = dbUser?.firstName || dbUser?.discordUsername || "Staff";
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
         entityType: "bid",
         entityId: result.id,
         action: "created",
-        actor: "admin",
-        details: JSON.stringify({ orderId: result.orderId, grinderId: result.grinderId, bidAmount: result.bidAmount }),
+        actor: actorName,
+        details: JSON.stringify({ orderId: result.orderId, grinderId: result.grinderId, bidAmount: result.bidAmount, manuallyAdded: true }),
       });
+
+      const order = await storage.getOrder(result.orderId);
+      if (order && !order.firstBidAt) {
+        const now = new Date();
+        const biddingCloses = new Date(now.getTime() + 10 * 60 * 1000);
+        await storage.updateOrder(order.id, { firstBidAt: now, biddingClosesAt: biddingCloses });
+      }
+
       res.status(201).json(result);
     } catch (err) {
       if (err instanceof z.ZodError) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter } from "lucide-react";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
@@ -30,6 +31,15 @@ export default function Bids() {
   const [filterOrderId, setFilterOrderId] = useState<string>("all");
   const [editingBid, setEditingBid] = useState<Bid | null>(null);
   const [editForm, setEditForm] = useState({ bidAmount: "", timeline: "", canStart: "", notes: "" });
+  const [addBidOpen, setAddBidOpen] = useState(false);
+  const [addBidForm, setAddBidForm] = useState({
+    orderId: "",
+    grinderId: "",
+    bidAmount: "",
+    timeline: "",
+    canStart: "",
+    notes: "",
+  });
 
   const openEditDialog = (bid: Bid) => {
     setEditForm({
@@ -82,6 +92,53 @@ export default function Bids() {
     },
     onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
+
+  const createBidMutation = useMutation({
+    mutationFn: async (data: Record<string, any>) => {
+      const res = await apiRequest("POST", "/api/bids", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setAddBidOpen(false);
+      setAddBidForm({ orderId: "", grinderId: "", bidAmount: "", timeline: "", canStart: "", notes: "" });
+      toast({ title: "Bid created successfully" });
+    },
+    onError: (e: any) => toast({ title: "Failed to create bid", description: e.message, variant: "destructive" }),
+  });
+
+  const handleAddBidSubmit = () => {
+    if (!addBidForm.orderId || !addBidForm.grinderId || !addBidForm.bidAmount) {
+      toast({ title: "Missing fields", description: "Order, grinder, and bid amount are required", variant: "destructive" });
+      return;
+    }
+    const bidId = `BID-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const now = new Date();
+    const estDelivery = addBidForm.timeline
+      ? new Date(now.getTime() + parseInt(addBidForm.timeline) * 3600000)
+      : new Date(now.getTime() + 48 * 3600000);
+
+    const selectedOrder = (orders || []).find((o: Order) => o.id === addBidForm.orderId);
+    const bidAmt = parseFloat(addBidForm.bidAmount);
+    const customerPrice = selectedOrder?.customerPrice ? parseFloat(selectedOrder.customerPrice) : 0;
+    const margin = customerPrice > 0 ? customerPrice - bidAmt : 0;
+    const marginPct = customerPrice > 0 ? ((margin / customerPrice) * 100).toFixed(1) : "0";
+
+    createBidMutation.mutate({
+      id: bidId,
+      orderId: addBidForm.orderId,
+      grinderId: addBidForm.grinderId,
+      bidAmount: addBidForm.bidAmount,
+      estDeliveryDate: estDelivery.toISOString(),
+      timeline: addBidForm.timeline || null,
+      canStart: addBidForm.canStart || null,
+      notes: addBidForm.notes || null,
+      status: "Pending",
+      margin: margin.toFixed(2),
+      marginPct,
+    });
+  };
 
   const handleEditSubmit = () => {
     if (!editingBid) return;
@@ -146,12 +203,22 @@ export default function Bids() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Grinder proposals imported from MGT Bot.</p>
         </div>
-        {pendingCount > 0 && (
-          <Badge className="bg-blue-500/15 text-blue-400 border border-blue-500/20 gap-1 animate-pulse">
-            <Clock className="w-3 h-3" />
-            {pendingCount} pending
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 && (
+            <Badge className="bg-blue-500/15 text-blue-400 border border-blue-500/20 gap-1 animate-pulse">
+              <Clock className="w-3 h-3" />
+              {pendingCount} pending
+            </Badge>
+          )}
+          <Button
+            onClick={() => setAddBidOpen(true)}
+            className="gap-2 bg-gradient-to-r from-primary to-primary/80"
+            data-testid="button-add-bid"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Bid</span>
+          </Button>
+        </div>
       </div>
       </FadeInUp>
 
@@ -245,7 +312,9 @@ export default function Bids() {
                   <TableCell className="font-medium text-primary">{orderRef}</TableCell>
                   <TableCell>
                     <div>
-                      <span className="font-medium">{grinder?.name || bid.grinderId}</span>
+                      <Link href={`/grinders?highlight=${bid.grinderId}`} className="font-medium text-primary hover:underline cursor-pointer" data-testid={`link-grinder-${bid.grinderId}`}>
+                        {grinder?.name || bid.grinderId}
+                      </Link>
                       {grinder && <p className="text-xs text-muted-foreground">{grinder.category}</p>}
                     </div>
                   </TableCell>
@@ -483,6 +552,135 @@ export default function Bids() {
             >
               {bidEditMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={addBidOpen} onOpenChange={setAddBidOpen}>
+        <DialogContent className="bg-[#0a0a0f] border-white/[0.08] max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Plus className="w-4 h-4 text-primary" />
+              </div>
+              Add Bid
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Order *</Label>
+              <Select value={addBidForm.orderId} onValueChange={(val) => setAddBidForm({ ...addBidForm, orderId: val })}>
+                <SelectTrigger className="bg-white/[0.03] border-white/[0.08]" data-testid="select-add-bid-order">
+                  <SelectValue placeholder="Select an order" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0a0a0f] border-white/[0.08] max-h-60">
+                  {(orders || [])
+                    .filter((o: Order) => o.status !== "Completed" && o.status !== "Paid Out")
+                    .map((o: Order) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {o.serviceName || "Unknown"} {o.customerPrice ? `($${o.customerPrice})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Grinder *</Label>
+              <Select value={addBidForm.grinderId} onValueChange={(val) => setAddBidForm({ ...addBidForm, grinderId: val })}>
+                <SelectTrigger className="bg-white/[0.03] border-white/[0.08]" data-testid="select-add-bid-grinder">
+                  <SelectValue placeholder="Select a grinder" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0a0a0f] border-white/[0.08] max-h-60">
+                  {(grinders || [])
+                    .filter((g: Grinder) => g.status !== "suspended")
+                    .sort((a: Grinder, b: Grinder) => (a.name || "").localeCompare(b.name || ""))
+                    .map((g: Grinder) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.name || g.discordUsername} {g.category ? `(${g.category})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Bid Amount *</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={addBidForm.bidAmount}
+                  onChange={(e) => setAddBidForm({ ...addBidForm, bidAmount: e.target.value })}
+                  placeholder="0.00"
+                  className="bg-white/[0.03] border-white/[0.08] pl-9"
+                  data-testid="input-add-bid-amount"
+                />
+              </div>
+              {addBidForm.bidAmount && addBidForm.orderId && (() => {
+                const selOrder = (orders || []).find((o: Order) => o.id === addBidForm.orderId);
+                if (!selOrder?.customerPrice) return null;
+                const m = Number(selOrder.customerPrice) - Number(addBidForm.bidAmount);
+                const mp = ((m / Number(selOrder.customerPrice)) * 100).toFixed(1);
+                return (
+                  <p className={`text-xs ${m >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    Margin: ${m.toFixed(2)} ({mp}%)
+                    <span className="text-muted-foreground ml-1">(Order: ${selOrder.customerPrice})</span>
+                  </p>
+                );
+              })()}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Timeline (hours)</Label>
+                <Input
+                  type="number"
+                  value={addBidForm.timeline}
+                  onChange={(e) => setAddBidForm({ ...addBidForm, timeline: e.target.value })}
+                  placeholder="e.g. 24"
+                  className="bg-white/[0.03] border-white/[0.08]"
+                  data-testid="input-add-bid-timeline"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Can Start</Label>
+                <Input
+                  value={addBidForm.canStart}
+                  onChange={(e) => setAddBidForm({ ...addBidForm, canStart: e.target.value })}
+                  placeholder="e.g. Now, Tonight"
+                  className="bg-white/[0.03] border-white/[0.08]"
+                  data-testid="input-add-bid-canstart"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Notes</Label>
+              <Textarea
+                value={addBidForm.notes}
+                onChange={(e) => setAddBidForm({ ...addBidForm, notes: e.target.value })}
+                placeholder="Optional notes about this bid..."
+                className="bg-white/[0.03] border-white/[0.08] resize-none"
+                rows={3}
+                data-testid="input-add-bid-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setAddBidOpen(false)} className="border-white/[0.08]" data-testid="button-add-bid-cancel">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddBidSubmit}
+              disabled={createBidMutation.isPending || !addBidForm.orderId || !addBidForm.grinderId || !addBidForm.bidAmount}
+              className="gap-2"
+              data-testid="button-add-bid-submit"
+            >
+              {createBidMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Create Bid
             </Button>
           </DialogFooter>
         </DialogContent>
