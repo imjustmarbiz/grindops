@@ -327,6 +327,7 @@ export const messages = pgTable("messages", {
   senderName: text("sender_name").notNull(),
   senderRole: text("sender_role").notNull().default("grinder"),
   body: text("body").notNull(),
+  attachments: text("attachments").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

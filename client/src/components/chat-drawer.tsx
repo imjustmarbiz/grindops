@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, ArrowLeft, Users, Search, UserPlus, Crown, Check } from "lucide-react";
+import { MessageCircle, X, Send, ArrowLeft, Users, Search, UserPlus, Crown, Check, Trash2, Paperclip, FileText, Image as ImageIcon, Film, Music, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,6 +25,98 @@ function formatTime(date: string | Date | null) {
   return d.toLocaleDateString();
 }
 
+function getFileType(url: string): "image" | "video" | "audio" | "file" {
+  const ext = url.split(".").pop()?.toLowerCase() || "";
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+  if (["mp4", "mov", "webm"].includes(ext)) return "video";
+  if (["mp3", "ogg", "wav", "m4a"].includes(ext)) return "audio";
+  return "file";
+}
+
+function getFileName(url: string): string {
+  const parts = url.split("/");
+  const filename = parts[parts.length - 1];
+  const underscoreIdx = filename.indexOf("_", filename.indexOf("_") + 1);
+  if (underscoreIdx > 0) {
+    return filename.substring(underscoreIdx + 1);
+  }
+  return filename;
+}
+
+function AttachmentPreview({ url, isMine }: { url: string; isMine: boolean }) {
+  const type = getFileType(url);
+  const name = getFileName(url);
+
+  if (type === "image") {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1.5">
+        <img src={url} alt={name} className="max-w-full max-h-48 rounded-lg object-cover" loading="lazy" />
+      </a>
+    );
+  }
+  if (type === "video") {
+    return (
+      <video src={url} controls className="max-w-full max-h-48 rounded-lg mt-1.5" preload="metadata" />
+    );
+  }
+  if (type === "audio") {
+    return (
+      <div className="mt-1.5 flex items-center gap-2">
+        <Music className="w-4 h-4 shrink-0" />
+        <audio src={url} controls className="h-8 w-full" preload="metadata" />
+      </div>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`mt-1.5 flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${
+        isMine ? "bg-primary-foreground/10 text-primary-foreground" : "bg-white/5 text-foreground"
+      } hover:opacity-80 transition-opacity`}
+    >
+      <FileText className="w-4 h-4 shrink-0" />
+      <span className="truncate">{name}</span>
+    </a>
+  );
+}
+
+function PendingFilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const type = getFileType(file.name);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (type === "image") {
+      const url = URL.createObjectURL(file);
+      setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file, type]);
+
+  return (
+    <div className="relative group inline-block">
+      {type === "image" && preview ? (
+        <img src={preview} alt={file.name} className="h-16 w-16 rounded-lg object-cover" />
+      ) : (
+        <div className="h-16 w-16 rounded-lg bg-white/10 flex flex-col items-center justify-center p-1">
+          {type === "video" ? <Film className="w-5 h-5 text-muted-foreground" /> :
+           type === "audio" ? <Music className="w-5 h-5 text-muted-foreground" /> :
+           <File className="w-5 h-5 text-muted-foreground" />}
+          <span className="text-[8px] text-muted-foreground truncate w-full text-center mt-0.5">{file.name.split(".").pop()}</span>
+        </div>
+      )}
+      <button
+        onClick={onRemove}
+        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+        data-testid="button-remove-pending-file"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
 export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -35,7 +127,10 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   const [searchQuery, setSearchQuery] = useState("");
   const [groupTitle, setGroupTitle] = useState("");
   const [selectedParticipants, setSelectedParticipants] = useState<Array<{ id: string; name: string; role: string; avatarUrl?: string }>>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const userId = (user as any)?.discordId || user?.id || "";
   const isStaff = user?.role === "staff" || user?.role === "owner";
 
@@ -57,12 +152,23 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   });
 
   const sendMutation = useMutation({
-    mutationFn: async (body: string) => {
-      const res = await apiRequest("POST", `/api/chat/threads/${activeThreadId}/messages`, { body });
+    mutationFn: async ({ body, attachments }: { body: string; attachments?: string[] }) => {
+      const res = await apiRequest("POST", `/api/chat/threads/${activeThreadId}/messages`, { body, attachments });
       return res.json();
     },
     onSuccess: () => {
       setMessageText("");
+      setPendingFiles([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/threads", activeThreadId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/threads"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      await apiRequest("DELETE", `/api/chat/messages/${messageId}`);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/threads", activeThreadId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/threads"] });
     },
@@ -136,10 +242,39 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
     return true;
   });
 
-  const handleSend = () => {
-    if (messageText.trim() && activeThreadId) {
-      sendMutation.mutate(messageText.trim());
+  const uploadFiles = async (files: File[]): Promise<string[]> => {
+    if (files.length === 0) return [];
+    const formData = new FormData();
+    files.forEach(f => formData.append("files", f));
+    const res = await fetch("/api/chat/upload", { method: "POST", body: formData });
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    return data.urls;
+  };
+
+  const handleSend = async () => {
+    if ((!messageText.trim() && pendingFiles.length === 0) || !activeThreadId) return;
+    try {
+      setUploading(true);
+      let attachmentUrls: string[] = [];
+      if (pendingFiles.length > 0) {
+        attachmentUrls = await uploadFiles(pendingFiles);
+      }
+      sendMutation.mutate({
+        body: messageText.trim(),
+        attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+      });
+    } catch {
+      console.error("Failed to send message with attachments");
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setPendingFiles(prev => [...prev, ...files].slice(0, 10));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleStartDM = (member: ChatMember) => {
@@ -186,6 +321,10 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
     });
   };
 
+  const canDeleteMessage = (msg: Message) => {
+    return msg.senderUserId === userId || isStaff;
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -208,7 +347,7 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               {activeThreadId && !showAddMember ? (
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <button
-                    onClick={() => { setActiveThreadId(null); setShowAddMember(false); }}
+                    onClick={() => { setActiveThreadId(null); setShowAddMember(false); setPendingFiles([]); }}
                     className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
                     data-testid="button-chat-back"
                   >
@@ -460,25 +599,46 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   <div className="space-y-3">
                     {activeMessages.map(msg => {
                       const isMine = msg.senderUserId === userId;
+                      const msgAttachments = (msg as any).attachments as string[] | null;
                       return (
                         <motion.div
                           key={msg.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                          className={`flex ${isMine ? "justify-end" : "justify-start"} group`}
                         >
-                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                            isMine
-                              ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-white/10 text-foreground rounded-bl-md"
-                          }`}>
-                            {!isMine && (
-                              <p className="text-[10px] font-medium text-muted-foreground mb-0.5">{msg.senderName}</p>
+                          <div className="relative max-w-[80%]">
+                            <div className={`rounded-2xl px-4 py-2.5 ${
+                              isMine
+                                ? "bg-primary text-primary-foreground rounded-br-md"
+                                : "bg-white/10 text-foreground rounded-bl-md"
+                            }`}>
+                              {!isMine && (
+                                <p className="text-[10px] font-medium text-muted-foreground mb-0.5">{msg.senderName}</p>
+                              )}
+                              {msg.body && <p className="text-sm leading-relaxed">{msg.body}</p>}
+                              {msgAttachments && msgAttachments.length > 0 && (
+                                <div className="space-y-1">
+                                  {msgAttachments.map((url, i) => (
+                                    <AttachmentPreview key={i} url={url} isMine={isMine} />
+                                  ))}
+                                </div>
+                              )}
+                              <p className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                                {formatTime(msg.createdAt)}
+                              </p>
+                            </div>
+                            {canDeleteMessage(msg) && (
+                              <button
+                                onClick={() => deleteMutation.mutate(msg.id)}
+                                disabled={deleteMutation.isPending}
+                                className={`absolute ${isMine ? "-left-7" : "-right-7"} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-destructive/20 text-muted-foreground hover:text-destructive`}
+                                data-testid={`button-delete-message-${msg.id}`}
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             )}
-                            <p className="text-sm leading-relaxed">{msg.body}</p>
-                            <p className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                              {formatTime(msg.createdAt)}
-                            </p>
                           </div>
                         </motion.div>
                       );
@@ -486,11 +646,44 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
+                {pendingFiles.length > 0 && (
+                  <div className="px-3 pt-2 border-t border-border/30">
+                    <div className="flex gap-2 flex-wrap">
+                      {pendingFiles.map((file, i) => (
+                        <PendingFilePreview
+                          key={`${file.name}-${i}`}
+                          file={file}
+                          onRemove={() => setPendingFiles(prev => prev.filter((_, idx) => idx !== i))}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="p-3 border-t border-border/50">
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    className="flex gap-2"
+                    className="flex gap-2 items-end"
                   >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar,.gif"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      data-testid="input-file-upload"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="shrink-0 h-9 w-9"
+                      title="Attach file"
+                      data-testid="button-attach-file"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </Button>
                     <Input
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
@@ -501,7 +694,7 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <Button
                       type="submit"
                       size="icon"
-                      disabled={!messageText.trim() || sendMutation.isPending}
+                      disabled={(!messageText.trim() && pendingFiles.length === 0) || sendMutation.isPending || uploading}
                       data-testid="button-send-message"
                       className="shrink-0"
                     >

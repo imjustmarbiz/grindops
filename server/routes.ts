@@ -9,6 +9,35 @@ import { recalcGrinderStats } from "./recalcStats";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { or, eq } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { messages as messagesTable } from "@shared/schema";
+
+const uploadsDir = path.join(process.cwd(), "uploads", "chat");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const chatUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const ext = path.extname(file.originalname);
+      cb(null, `${uniqueSuffix}${ext}`);
+    },
+  }),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mp3|ogg|wav|m4a|pdf|doc|docx|txt|zip|rar)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error("File type not allowed"));
+    }
+  },
+});
 
 async function createSystemNotification(opts: {
   userId?: string;
@@ -44,6 +73,9 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupDiscordAuth(app);
+
+  const express = await import("express");
+  app.use('/uploads', express.default.static(path.join(process.cwd(), "uploads")));
 
   app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/auth') || req.path === '/logout') {
@@ -2832,17 +2864,51 @@ export async function registerRoutes(
     if (!thread || !thread.participants.some(p => p.userId === userId)) {
       return res.status(403).json({ error: "Not a participant" });
     }
-    const { body } = req.body;
-    if (!body || !body.trim()) return res.status(400).json({ error: "Message body required" });
+    const { body, attachments } = req.body;
+    if ((!body || !body.trim()) && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: "Message body or attachment required" });
+    }
     const msg = await storage.createMessage({
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       threadId: req.params.threadId,
       senderUserId: userId,
       senderName: user.displayName || user.username || "Staff",
       senderRole: user.role || "staff",
-      body: body.trim(),
+      body: (body || "").trim(),
+      attachments: attachments || null,
     });
     res.json(msg);
+  });
+
+  app.delete('/api/chat/messages/:messageId', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const [msg] = await db.select().from(messagesTable).where(eq(messagesTable.id, req.params.messageId));
+    if (!msg) return res.status(404).json({ error: "Message not found" });
+    if (msg.senderUserId !== userId && user.role !== "owner" && user.role !== "staff") {
+      return res.status(403).json({ error: "You can only delete your own messages" });
+    }
+    if (msg.attachments) {
+      for (const url of msg.attachments) {
+        const filename = url.split("/").pop();
+        if (filename) {
+          const filePath = path.join(uploadsDir, filename);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+      }
+    }
+    await storage.deleteMessage(req.params.messageId);
+    res.json({ success: true });
+  });
+
+  app.post('/api/chat/upload', chatUpload.array('files', 10), async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
+    const urls = files.map(f => `/uploads/chat/${f.filename}`);
+    res.json({ urls });
   });
 
   app.post('/api/chat/threads/:threadId/read', async (req, res) => {
