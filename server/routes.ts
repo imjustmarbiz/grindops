@@ -1403,6 +1403,15 @@ export async function registerRoutes(
         rulesAcceptedAt: new Date(),
       });
 
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: myGrinder.id,
+        action: "rules_accepted",
+        actor: myGrinder.name || myGrinder.id,
+        details: JSON.stringify({ grinderId: myGrinder.id }),
+      });
+
       res.json({ message: "Rules accepted successfully", rulesAccepted: true });
     } catch (err) {
       res.status(500).json({ message: String(err) });
@@ -1729,6 +1738,16 @@ export async function registerRoutes(
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
 
     await storage.markAlertRead(req.params.alertId as string, myGrinder.id);
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "grinder",
+      entityId: myGrinder.id,
+      action: "alert_read",
+      actor: myGrinder.name || myGrinder.id,
+      details: JSON.stringify({ alertId: req.params.alertId }),
+    });
+
     res.json({ success: true });
   });
 
@@ -1739,6 +1758,16 @@ export async function registerRoutes(
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
 
     await storage.acknowledgeStrike(req.params.strikeId as string);
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "grinder",
+      entityId: myGrinder.id,
+      action: "strike_acknowledged",
+      actor: myGrinder.name || myGrinder.id,
+      details: JSON.stringify({ strikeId: req.params.strikeId }),
+    });
+
     res.json({ success: true });
   });
 
@@ -1759,6 +1788,16 @@ export async function registerRoutes(
       availabilityNote: note || null,
       availabilityUpdatedAt: new Date(),
     });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "grinder",
+      entityId: myGrinder.id,
+      action: "availability_changed",
+      actor: myGrinder.name || myGrinder.id,
+      details: JSON.stringify({ status, note: note || null }),
+    });
+
     res.json(updated);
   });
 
@@ -2113,6 +2152,15 @@ export async function registerRoutes(
         note: note || req.body.message || null,
       });
 
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "checkpoint",
+        entityId: checkpoint.id,
+        action: `checkpoint_${type}`,
+        actor: myGrinder.name || myGrinder.id,
+        details: JSON.stringify({ assignmentId, orderId, type, response: response || null }),
+      });
+
       res.status(201).json(checkpoint);
     } catch (err) {
       res.status(500).json({ message: String(err) });
@@ -2146,6 +2194,16 @@ export async function registerRoutes(
         resolvedAt: new Date(),
       });
       if (!updated) return res.status(404).json({ message: "Checkpoint not found" });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "checkpoint",
+        entityId: req.params.id,
+        action: "checkpoint_resolved",
+        actor: resolvedBy,
+        details: JSON.stringify({ resolvedNote }),
+      });
+
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: String(err) });
@@ -2296,6 +2354,18 @@ export async function registerRoutes(
         status: "Draft",
       });
 
+      const userId = (req as any).userId;
+      const dbUser = await authStorage.getUser(userId);
+      const actorName = dbUser?.firstName || dbUser?.discordUsername || "Staff";
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "report",
+        entityId: report.id,
+        action: "report_generated",
+        actor: actorName,
+        details: JSON.stringify({ assignmentId, grinderId: assignment.grinderId, grade: overallGrade }),
+      });
+
       res.status(201).json(report);
     } catch (err) {
       res.status(500).json({ message: String(err) });
@@ -2331,6 +2401,19 @@ export async function registerRoutes(
       }
       const updated = await storage.updatePerformanceReport(req.params.id, updateData);
       if (!updated) return res.status(404).json({ message: "Performance report not found" });
+
+      const userId2 = (req as any).userId;
+      const dbUser2 = await authStorage.getUser(userId2);
+      const actorName2 = dbUser2?.firstName || dbUser2?.discordUsername || "Staff";
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "report",
+        entityId: req.params.id,
+        action: status === "Approved" ? "report_approved" : "report_updated",
+        actor: actorName2,
+        details: JSON.stringify({ status: updateData.status, staffNotes: updateData.staffNotes }),
+      });
+
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: String(err) });
@@ -2341,6 +2424,18 @@ export async function registerRoutes(
     try {
       const deleted = await storage.deletePerformanceReport(req.params.id);
       if (!deleted) return res.status(404).json({ message: "Performance report not found" });
+
+      const userId = (req as any).userId;
+      const dbUser = await authStorage.getUser(userId);
+      const actorName = dbUser?.firstName || dbUser?.discordUsername || "Staff";
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "report",
+        entityId: req.params.id,
+        action: "report_deleted",
+        actor: actorName,
+      });
+
       res.json({ message: "Report deleted" });
     } catch (err) {
       res.status(500).json({ message: String(err) });
