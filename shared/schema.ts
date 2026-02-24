@@ -399,6 +399,7 @@ export const orderClaimRequests = pgTable("order_claim_requests", {
   id: varchar("id").primaryKey(),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   orderId: varchar("order_id").references(() => orders.id).notNull(),
+  ticketName: text("ticket_name"),
   proofLinks: text("proof_links").array().default([]),
   proofNotes: text("proof_notes"),
   status: text("status").notNull().default("pending"),

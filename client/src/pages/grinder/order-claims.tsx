@@ -28,6 +28,7 @@ export default function GrinderOrderClaims() {
   const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
 
   const [orderId, setOrderId] = useState("");
+  const [ticketName, setTicketName] = useState("");
   const [proofLinks, setProofLinks] = useState("");
   const [proofNotes, setProofNotes] = useState("");
 
@@ -36,7 +37,7 @@ export default function GrinderOrderClaims() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: { orderId: string; proofLinks: string[]; proofNotes: string }) => {
+    mutationFn: async (data: { orderId: string; ticketName?: string; proofLinks: string[]; proofNotes: string }) => {
       const res = await apiRequest("POST", "/api/order-claims", data);
       return res.json();
     },
@@ -44,6 +45,7 @@ export default function GrinderOrderClaims() {
       qc.invalidateQueries({ queryKey: ["/api/order-claims"] });
       toast({ title: "Claim submitted successfully" });
       setOrderId("");
+      setTicketName("");
       setProofLinks("");
       setProofNotes("");
     },
@@ -60,6 +62,7 @@ export default function GrinderOrderClaims() {
     const links = proofLinks.split(",").map(l => l.trim()).filter(Boolean);
     submitMutation.mutate({
       orderId: orderId.trim(),
+      ticketName: ticketName.trim() || undefined,
       proofLinks: links,
       proofNotes: proofNotes.trim(),
     });
@@ -96,6 +99,17 @@ export default function GrinderOrderClaims() {
                 className="bg-white/[0.03] border-white/10"
                 data-testid="input-claim-order-id"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Ticket Name <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <Input
+                value={ticketName}
+                onChange={(e) => setTicketName(e.target.value)}
+                placeholder="e.g. ticket-12345 or the Discord channel name"
+                className="bg-white/[0.03] border-white/10"
+                data-testid="input-claim-ticket-name"
+              />
+              <p className="text-xs text-muted-foreground mt-1">If you don't have the ticket ID, type the ticket name so staff can find it</p>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Proof Links (comma separated)</label>
@@ -163,6 +177,11 @@ export default function GrinderOrderClaims() {
                     <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
                       Order: <span className="text-foreground font-medium">{claim.orderId}</span>
                     </span>
+                    {claim.ticketName && (
+                      <span className="text-sm text-muted-foreground" data-testid={`text-claim-ticket-${claim.id}`}>
+                        Ticket: <span className="text-foreground font-medium">{claim.ticketName}</span>
+                      </span>
+                    )}
                   </div>
 
                   {(claim.proofLinks || []).length > 0 && (

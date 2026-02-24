@@ -3138,7 +3138,7 @@ export async function registerRoutes(
       const user = (req as any).user;
       if (!user.grinderId) return res.status(403).json({ error: "Only grinders can submit claims" });
 
-      const { orderId, proofLinks, proofNotes } = req.body;
+      const { orderId, ticketName, proofLinks, proofNotes } = req.body;
       if (!orderId) return res.status(400).json({ error: "Order ID is required" });
 
       const order = await storage.getOrder(orderId);
@@ -3153,6 +3153,7 @@ export async function registerRoutes(
         id,
         grinderId: user.grinderId,
         orderId,
+        ticketName: ticketName || null,
         proofLinks: proofLinks || [],
         proofNotes: proofNotes || null,
         status: "pending",
@@ -3225,6 +3226,37 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating order claim:", error);
       res.status(500).json({ error: "Failed to update order claim" });
+    }
+  });
+
+  app.get('/api/discord/channels/search', requireStaff, async (req, res) => {
+    try {
+      const query = (req.query.q as string || "").toLowerCase().trim();
+      if (!query) return res.json([]);
+
+      const { getDiscordBotClient } = await import("./discord/bot");
+      const client = getDiscordBotClient();
+      if (!client) return res.status(503).json({ error: "Discord bot is not connected" });
+
+      const results: { id: string; name: string; categoryName?: string }[] = [];
+      for (const [, guild] of client.guilds.cache) {
+        const channels = guild.channels.cache.filter(
+          ch => ch.isTextBased() && ch.name.toLowerCase().includes(query)
+        );
+        for (const [, ch] of channels) {
+          results.push({
+            id: ch.id,
+            name: ch.name,
+            categoryName: (ch as any).parent?.name || undefined,
+          });
+          if (results.length >= 25) break;
+        }
+        if (results.length >= 25) break;
+      }
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching Discord channels:", error);
+      res.status(500).json({ error: "Failed to search channels" });
     }
   });
 

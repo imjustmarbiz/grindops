@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { OrderClaimRequest } from "@shared/schema";
 import {
-  LinkIcon, Check, X, FileText, ExternalLink, Clock
+  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy
 } from "lucide-react";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -20,6 +20,95 @@ function statusBadge(status: string) {
   if (status === "approved") return <Badge className="bg-emerald-500/20 text-emerald-400 border-0">Approved</Badge>;
   if (status === "rejected") return <Badge className="bg-red-500/20 text-red-400 border-0">Rejected</Badge>;
   return <Badge className="border-0">{status}</Badge>;
+}
+
+function TicketSearch({ ticketName }: { ticketName: string }) {
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState(ticketName);
+  const [isSearching, setIsSearching] = useState(false);
+  const [results, setResults] = useState<{ id: string; name: string; categoryName?: string }[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const doSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setHasSearched(true);
+    try {
+      const res = await fetch(`/api/discord/channels/search?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      setResults(data);
+    } catch {
+      setResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const copyId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    toast({ title: "Channel ID copied" });
+  };
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && doSearch()}
+            placeholder="Search Discord channels..."
+            className="bg-white/[0.03] border-white/10 text-xs pl-8 h-8"
+            data-testid="input-ticket-search"
+          />
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-white/10 text-xs gap-1"
+          onClick={doSearch}
+          disabled={isSearching}
+          data-testid="button-ticket-search"
+        >
+          <Search className="w-3 h-3" />
+          {isSearching ? "..." : "Search"}
+        </Button>
+      </div>
+      {hasSearched && (
+        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] max-h-40 overflow-y-auto">
+          {results.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-3 text-center">No channels found</p>
+          ) : (
+            results.map(ch => (
+              <div
+                key={ch.id}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-white/[0.04] transition-colors text-xs border-b border-white/[0.04] last:border-0"
+                data-testid={`channel-result-${ch.id}`}
+              >
+                <Hash className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium flex-1 min-w-0 truncate">{ch.name}</span>
+                {ch.categoryName && (
+                  <span className="text-muted-foreground/60 text-[10px] flex-shrink-0">{ch.categoryName}</span>
+                )}
+                <code className="text-[10px] text-muted-foreground bg-white/[0.05] px-1.5 py-0.5 rounded font-mono flex-shrink-0">{ch.id}</code>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 flex-shrink-0"
+                  onClick={() => copyId(ch.id)}
+                  data-testid={`button-copy-channel-${ch.id}`}
+                >
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function StaffOrderClaims() {
@@ -129,7 +218,17 @@ export default function StaffOrderClaims() {
                         <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
                           Order: <span className="text-foreground font-medium">{claim.orderId}</span>
                         </span>
+                        {claim.ticketName && (
+                          <Badge variant="outline" className="border-violet-500/20 text-violet-400 text-[10px] gap-1" data-testid={`badge-ticket-name-${claim.id}`}>
+                            <Hash className="w-3 h-3" />
+                            {claim.ticketName}
+                          </Badge>
+                        )}
                       </div>
+
+                      {claim.ticketName && claim.status === "pending" && (
+                        <TicketSearch ticketName={claim.ticketName} />
+                      )}
 
                       {(claim.proofLinks || []).length > 0 && (
                         <div className="flex items-start gap-2 flex-wrap">
