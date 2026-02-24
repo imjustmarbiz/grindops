@@ -16,6 +16,7 @@ import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat,
   ArrowRight, CheckCircle, Loader2, Zap,
 } from "lucide-react";
+import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 
 export default function StaffAdmin() {
   const { toast } = useToast();
@@ -141,12 +142,14 @@ export default function StaffAdmin() {
             <Crown className="w-3 h-3" />
             {(eliteRequestsList || []).filter((r: any) => r.status === "Pending").length} elite pending
           </Badge>
-          <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1">
+          <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1" data-testid="badge-suspended-count">
             <AlertTriangle className="w-3 h-3" />
             {allGrinders.filter(g => g.suspended).length} suspended
           </Badge>
         </div>
       </div>
+
+      <BiddingCountdownPanel variant="compact" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-elite-requests">

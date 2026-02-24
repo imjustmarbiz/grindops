@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DollarSign, TrendingUp, Users, PieChart, Gauge, Percent, Crown, BarChart3, Award, ArrowUpRight, ArrowDownRight, Target, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useLocation } from "wouter";
+import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 
 function SplitBar({ segments, height = 10 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
@@ -113,6 +114,8 @@ export default function StaffAnalytics() {
           </div>
           <p className="text-sm text-muted-foreground">Revenue, fleet, and performance metrics</p>
         </div>
+
+        <BiddingCountdownPanel variant="compact" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-revenue-split">

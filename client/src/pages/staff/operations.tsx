@@ -15,6 +15,7 @@ import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
   CheckCircle, X, CreditCard, Package, Zap, AlertTriangle,
 } from "lucide-react";
+import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 
 export default function StaffOperations() {
   const { toast } = useToast();
@@ -150,6 +151,8 @@ export default function StaffOperations() {
           </Badge>
         </div>
       </div>
+
+      <BiddingCountdownPanel />
 
       <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-create-manual-order">
         <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />

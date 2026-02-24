@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock } from "lucide-react";
+import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 
 export default function StaffPayouts() {
   const { toast } = useToast();
@@ -59,6 +60,8 @@ export default function StaffPayouts() {
           </Badge>
         )}
       </div>
+
+      <BiddingCountdownPanel variant="compact" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
