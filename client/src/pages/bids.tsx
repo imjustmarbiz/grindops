@@ -321,12 +321,18 @@ export default function Bids() {
                   <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">${bid.bidAmount}</TableCell>
                   <TableCell className="text-right text-muted-foreground whitespace-nowrap">{order ? `$${order.customerPrice}` : "-"}</TableCell>
                   <TableCell className="text-right">
-                    {bid.margin ? (
-                      <span className="font-medium text-emerald-400 whitespace-nowrap">
-                        <DollarSign className="w-3 h-3 inline" />{bid.margin}
-                        {bid.marginPct && <span className="text-xs text-muted-foreground ml-1">({bid.marginPct}%)</span>}
-                      </span>
-                    ) : <span className="text-muted-foreground">-</span>}
+                    {(() => {
+                      const orderPrice = order?.customerPrice ? parseFloat(order.customerPrice) : 0;
+                      const bidAmt = bid.bidAmount ? parseFloat(bid.bidAmount) : 0;
+                      const liveMargin = orderPrice > 0 ? orderPrice - bidAmt : parseFloat(bid.margin || "0");
+                      const liveMarginPct = orderPrice > 0 ? ((liveMargin / orderPrice) * 100).toFixed(1) : bid.marginPct || "0";
+                      return liveMargin !== 0 || bid.margin ? (
+                        <span className={`font-medium whitespace-nowrap ${liveMargin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          ${liveMargin.toFixed(2)}
+                          <span className="text-xs text-muted-foreground ml-1">({liveMarginPct}%)</span>
+                        </span>
+                      ) : <span className="text-muted-foreground">-</span>;
+                    })()}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {bid.timeline ? (

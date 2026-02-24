@@ -233,7 +233,7 @@ export default function Assignments() {
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {a.margin ? (
-                      <span className="font-medium text-emerald-400 whitespace-nowrap">
+                      <span className={`font-medium whitespace-nowrap ${parseFloat(a.margin) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         ${a.margin}
                         {a.marginPct && <span className="text-xs text-muted-foreground ml-1">({a.marginPct}%)</span>}
                       </span>
