@@ -104,6 +104,7 @@ export const orders = pgTable("orders", {
   notes: text("notes"),
   orderBrief: text("order_brief"),
   discordBidLink: text("discord_bid_link"),
+  discordTicketChannelId: varchar("discord_ticket_channel_id"),
   isManual: boolean("is_manual").notNull().default(false),
   visibleToGrinders: boolean("visible_to_grinders").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
