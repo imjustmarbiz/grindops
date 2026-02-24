@@ -94,6 +94,19 @@ export async function registerRoutes(
     res.json(results);
   });
 
+  app.get('/api/grinders/live-streams', async (req, res) => {
+    const allGrinders = await storage.getGrinders();
+    const streaming = allGrinders.filter(g => g.twitchUsername && !g.isRemoved);
+    res.json(streaming.map(g => ({
+      id: g.id,
+      name: g.name,
+      twitchUsername: g.twitchUsername,
+      tier: g.tier,
+      avatarUrl: (g as any).discordAvatarUrl,
+      roles: g.roles,
+    })));
+  });
+
   app.get(api.grinders.get.path, requireStaff, async (req, res) => {
     const result = await storage.getGrinder(req.params.id);
     if (!result) return res.status(404).json({ message: "Grinder not found" });
@@ -2972,19 +2985,6 @@ export async function registerRoutes(
     const updated = await storage.updateGrinder(req.params.id, { twitchUsername: sanitized });
     if (!updated) return res.status(404).json({ error: "Grinder not found" });
     res.json(updated);
-  });
-
-  app.get('/api/grinders/live-streams', async (req, res) => {
-    const allGrinders = await storage.getGrinders();
-    const streaming = allGrinders.filter(g => g.twitchUsername && !g.isRemoved);
-    res.json(streaming.map(g => ({
-      id: g.id,
-      name: g.name,
-      twitchUsername: g.twitchUsername,
-      tier: g.tier,
-      avatarUrl: g.avatarUrl,
-      roles: g.roles,
-    })));
   });
 
   app.get('/api/events', async (req, res) => {
