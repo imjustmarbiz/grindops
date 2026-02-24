@@ -888,6 +888,11 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async deletePerformanceReport(id: string): Promise<boolean> {
+    const result = await db.delete(performanceReports).where(eq(performanceReports.id, id)).returning();
+    return result.length > 0;
+  }
+
   async updateOrderUpdate(id: string, data: Partial<OrderUpdate>): Promise<OrderUpdate | undefined> {
     const [result] = await db.update(orderUpdates).set(data).where(eq(orderUpdates.id, id)).returning();
     return result;

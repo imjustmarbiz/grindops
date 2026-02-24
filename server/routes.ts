@@ -2293,6 +2293,16 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/staff/performance-reports/:id", requireStaff, async (req, res) => {
+    try {
+      const deleted = await storage.deletePerformanceReport(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Performance report not found" });
+      res.json({ message: "Report deleted" });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   app.get("/api/grinder/me/performance-reports", async (req, res) => {
     try {
       const userId = (req as any).userId;

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileText, Activity, MessageSquare, Loader2, CheckCircle, Filter,
-  Plus, Clock, AlertTriangle, Eye,
+  Plus, Clock, AlertTriangle, Eye, Trash2,
 } from "lucide-react";
 
 export default function StaffReports() {
@@ -75,6 +75,20 @@ export default function StaffReports() {
     },
     onError: (err: any) => {
       toast({ title: "Failed to approve report", description: err.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/staff/performance-reports/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/performance-reports"] });
+      toast({ title: "Report deleted" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to delete report", description: err.message || "Something went wrong", variant: "destructive" });
     },
   });
 
@@ -255,7 +269,7 @@ export default function StaffReports() {
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Checkpoint Summary</div>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                       <div data-testid={`checkpoint-acks-${report.id}`}>
-                        <span className="text-muted-foreground">Ticket Acks: </span>
+                        <span className="text-muted-foreground">Ticket Asks: </span>
                         <span className="font-medium">{checkpointSummary.ticketAcks ?? 0}</span>
                       </div>
                       <div data-testid={`checkpoint-logins-${report.id}`}>
@@ -285,17 +299,34 @@ export default function StaffReports() {
                     />
                   </div>
 
-                  {report.status === "Draft" && (
+                  <div className="flex items-center gap-2">
+                    {report.status === "Draft" && (
+                      <Button
+                        data-testid={`button-approve-report-${report.id}`}
+                        className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
+                        disabled={approveReportMutation.isPending}
+                        onClick={() => approveReportMutation.mutate({ id: report.id, staffNotes: currentNotes })}
+                      >
+                        {approveReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                        Approve Report
+                      </Button>
+                    )}
                     <Button
-                      data-testid={`button-approve-report-${report.id}`}
-                      className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
-                      disabled={approveReportMutation.isPending}
-                      onClick={() => approveReportMutation.mutate({ id: report.id, staffNotes: currentNotes })}
+                      data-testid={`button-delete-report-${report.id}`}
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      disabled={deleteReportMutation.isPending}
+                      onClick={() => {
+                        if (confirm("Are you sure you want to delete this report?")) {
+                          deleteReportMutation.mutate(report.id);
+                        }
+                      }}
                     >
-                      {approveReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                      Approve Report
+                      {deleteReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                      Delete
                     </Button>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -354,7 +385,7 @@ export default function StaffReports() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="ticket_ack">Ticket Ack</SelectItem>
+                <SelectItem value="ticket_ack">Ticket Ask</SelectItem>
                 <SelectItem value="login">Login</SelectItem>
                 <SelectItem value="logoff">Logoff</SelectItem>
                 <SelectItem value="issue">Issue</SelectItem>
