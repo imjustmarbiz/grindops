@@ -2,7 +2,7 @@ import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
-  activityCheckpoints, performanceReports, messageThreads, messages, notifications, events,
+  activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
   patchNotes, customerReviews, orderClaimRequests,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
@@ -20,6 +20,7 @@ import {
   type StaffAlert, type InsertStaffAlert,
   type StrikeLog, type InsertStrikeLog,
   type MessageThread, type InsertMessageThread,
+  type ThreadParticipant, type InsertThreadParticipant,
   type Message, type InsertMessage,
   type Notification, type InsertNotification,
   type Event, type InsertEvent,
@@ -29,7 +30,7 @@ import {
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
-import { eq, sql, desc, and, or, gte, lte } from "drizzle-orm";
+import { eq, sql, desc, and, or, gte, lte, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getServices(): Promise<Service[]>;
@@ -113,8 +114,11 @@ export interface IStorage {
 
   updateOrderUpdate(id: string, data: Partial<OrderUpdate>): Promise<OrderUpdate | undefined>;
 
-  getThreadsForUser(userId: string): Promise<MessageThread[]>;
-  getOrCreateThread(data: InsertMessageThread): Promise<MessageThread>;
+  getThreadsForUser(userId: string): Promise<(MessageThread & { participants: ThreadParticipant[] })[]>;
+  createThread(data: InsertMessageThread, participants: InsertThreadParticipant[]): Promise<MessageThread & { participants: ThreadParticipant[] }>;
+  getThread(threadId: string): Promise<(MessageThread & { participants: ThreadParticipant[] }) | undefined>;
+  addParticipant(participant: InsertThreadParticipant): Promise<ThreadParticipant>;
+  removeParticipant(threadId: string, userId: string): Promise<void>;
   getMessagesForThread(threadId: string): Promise<Message[]>;
   createMessage(msg: InsertMessage): Promise<Message>;
   markThreadRead(threadId: string, userId: string): Promise<void>;
@@ -974,22 +978,48 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getThreadsForUser(userId: string): Promise<MessageThread[]> {
-    return await db.select().from(messageThreads)
-      .where(or(eq(messageThreads.userAId, userId), eq(messageThreads.userBId, userId)))
+  async getThreadsForUser(userId: string): Promise<(MessageThread & { participants: ThreadParticipant[] })[]> {
+    const userParticipations = await db.select().from(threadParticipants)
+      .where(eq(threadParticipants.userId, userId));
+    if (userParticipations.length === 0) return [];
+    const threadIds = userParticipations.map(p => p.threadId);
+    const threads = await db.select().from(messageThreads)
+      .where(inArray(messageThreads.id, threadIds))
       .orderBy(desc(messageThreads.lastMessageAt));
+    const allParticipants = await db.select().from(threadParticipants)
+      .where(inArray(threadParticipants.threadId, threadIds));
+    return threads.map(t => ({
+      ...t,
+      participants: allParticipants.filter(p => p.threadId === t.id),
+    }));
   }
 
-  async getOrCreateThread(data: InsertMessageThread): Promise<MessageThread> {
-    const existing = await db.select().from(messageThreads).where(
-      or(
-        and(eq(messageThreads.userAId, data.userAId), eq(messageThreads.userBId, data.userBId)),
-        and(eq(messageThreads.userAId, data.userBId), eq(messageThreads.userBId, data.userAId))
-      )
-    );
-    if (existing.length > 0) return existing[0];
+  async createThread(data: InsertMessageThread, participantData: InsertThreadParticipant[]): Promise<MessageThread & { participants: ThreadParticipant[] }> {
     const [created] = await db.insert(messageThreads).values(data).returning();
+    const participants: ThreadParticipant[] = [];
+    for (const p of participantData) {
+      const [inserted] = await db.insert(threadParticipants).values({ ...p, threadId: created.id }).returning();
+      participants.push(inserted);
+    }
+    return { ...created, participants };
+  }
+
+  async getThread(threadId: string): Promise<(MessageThread & { participants: ThreadParticipant[] }) | undefined> {
+    const [thread] = await db.select().from(messageThreads).where(eq(messageThreads.id, threadId));
+    if (!thread) return undefined;
+    const participants = await db.select().from(threadParticipants)
+      .where(eq(threadParticipants.threadId, threadId));
+    return { ...thread, participants };
+  }
+
+  async addParticipant(participant: InsertThreadParticipant): Promise<ThreadParticipant> {
+    const [created] = await db.insert(threadParticipants).values(participant).returning();
     return created;
+  }
+
+  async removeParticipant(threadId: string, userId: string): Promise<void> {
+    await db.delete(threadParticipants)
+      .where(and(eq(threadParticipants.threadId, threadId), eq(threadParticipants.userId, userId)));
   }
 
   async getMessagesForThread(threadId: string): Promise<Message[]> {
@@ -1000,29 +1030,26 @@ export class DatabaseStorage implements IStorage {
 
   async createMessage(msg: InsertMessage): Promise<Message> {
     const [created] = await db.insert(messages).values(msg).returning();
-    const thread = await db.select().from(messageThreads).where(eq(messageThreads.id, msg.threadId));
-    if (thread.length > 0) {
-      const t = thread[0];
-      const isUserA = t.userAId === msg.senderUserId;
-      await db.update(messageThreads).set({
-        lastMessageText: msg.body.substring(0, 100),
-        lastMessageAt: new Date(),
-        ...(isUserA ? { userBUnread: t.userBUnread + 1 } : { userAUnread: t.userAUnread + 1 }),
-      }).where(eq(messageThreads.id, msg.threadId));
+    await db.update(messageThreads).set({
+      lastMessageText: msg.body.substring(0, 100),
+      lastMessageAt: new Date(),
+    }).where(eq(messageThreads.id, msg.threadId));
+    const otherParticipants = await db.select().from(threadParticipants)
+      .where(and(
+        eq(threadParticipants.threadId, msg.threadId),
+        sql`${threadParticipants.userId} != ${msg.senderUserId}`
+      ));
+    for (const p of otherParticipants) {
+      await db.update(threadParticipants).set({
+        unreadCount: p.unreadCount + 1,
+      }).where(eq(threadParticipants.id, p.id));
     }
     return created;
   }
 
   async markThreadRead(threadId: string, userId: string): Promise<void> {
-    const thread = await db.select().from(messageThreads).where(eq(messageThreads.id, threadId));
-    if (thread.length > 0) {
-      const t = thread[0];
-      if (t.userAId === userId) {
-        await db.update(messageThreads).set({ userAUnread: 0 }).where(eq(messageThreads.id, threadId));
-      } else if (t.userBId === userId) {
-        await db.update(messageThreads).set({ userBUnread: 0 }).where(eq(messageThreads.id, threadId));
-      }
-    }
+    await db.update(threadParticipants).set({ unreadCount: 0 })
+      .where(and(eq(threadParticipants.threadId, threadId), eq(threadParticipants.userId, userId)));
   }
 
   async getNotificationsForUser(userId: string, role: string): Promise<Notification[]> {

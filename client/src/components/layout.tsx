@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { LowerThirdNotifications } from "@/components/lower-third-notification";
-import type { MessageThread, Notification } from "@shared/schema";
+import type { MessageThread, Notification, ThreadParticipant } from "@shared/schema";
 import { 
   Sidebar, 
   SidebarContent, 
@@ -172,7 +172,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     "--sidebar-width-icon": "4rem",
   } as React.CSSProperties;
 
-  const { data: threads = [] } = useQuery<MessageThread[]>({
+  const { data: threads = [] } = useQuery<(MessageThread & { participants: ThreadParticipant[] })[]>({
     queryKey: ["/api/chat/threads"],
     refetchInterval: 10000,
   });
@@ -183,7 +183,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   });
 
   const totalUnread = threads.reduce((sum, t) => {
-    return sum + (t.userAId === userId ? t.userAUnread : t.userBUnread);
+    const myParticipant = t.participants?.find(p => p.userId === userId);
+    return sum + (myParticipant?.unreadCount || 0);
   }, 0);
 
   const unreadNotifs = notifs.filter(n => {

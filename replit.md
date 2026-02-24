@@ -38,7 +38,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **MGT Bot:** An existing Discord bot that this system passively monitors for order and proposal data.
 
 ## Recent Changes (Feb 2026)
-- **Chat Messaging System:** DM-style messaging between staff and grinders via slide-out ChatDrawer panel. Tables: `message_threads`, `messages`. Routes: `/api/chat/threads`, `/api/chat/threads/:id/messages`.
+- **Chat Messaging System:** Group chat and DM messaging between staff and grinders via slide-out ChatDrawer panel. Supports group chats with owner-managed membership (only owner can add participants). Tables: `message_threads` (id, title, type, ownerId), `thread_participants` (userId, userName, userRole, unreadCount per participant), `messages`. Routes: `/api/chat/threads` (GET/POST), `/api/chat/threads/:id/messages` (GET/POST), `/api/chat/threads/:id/participants` (POST), `/api/chat/threads/:id/participants/:userId` (DELETE), `/api/chat/threads/:id/read` (POST).
 - **Lower-Third Notification Popups:** Animated toast-like notifications at bottom-right, role-scoped (staff/grinder/all). Table: `notifications`. Routes: `/api/notifications`, `/api/notifications/:id/read`.
 - **Notification Triggers:** Auto-created on order creation (grinder scope), strike events (per-user).
 - **Twitch Integration:** Grinders link Twitch username from Status page. Staff view embedded live streams on `/streams` (Content Multiplayer page). Field: `grinders.twitch_username`. Routes: `/api/grinders/:id/twitch`, `/api/grinders/live-streams`.

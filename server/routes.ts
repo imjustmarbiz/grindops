@@ -6,6 +6,9 @@ import { z } from "zod";
 import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireGrinderOrStaff } from "./discord/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats } from "./recalcStats";
+import { db } from "./db";
+import { users } from "@shared/models/auth";
+import { or, eq } from "drizzle-orm";
 
 async function createSystemNotification(opts: {
   userId?: string;
@@ -2675,6 +2678,41 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/chat/members', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const staffUsers = await db.select().from(users)
+      .where(or(eq(users.role, "staff"), eq(users.role, "owner")));
+    const allGrinders = await storage.getGrinders();
+    const members: Array<{ id: string; name: string; role: string; avatarUrl: string | null; type: string }> = [];
+    for (const s of staffUsers) {
+      const sId = s.discordId || s.id;
+      if (sId === userId) continue;
+      members.push({
+        id: sId,
+        name: s.discordUsername || s.firstName || "Staff",
+        role: "staff",
+        avatarUrl: s.discordAvatar ? `https://cdn.discordapp.com/avatars/${s.discordId}/${s.discordAvatar}.png` : s.profileImageUrl || null,
+        type: "staff",
+      });
+    }
+    for (const g of allGrinders) {
+      if (g.isRemoved) continue;
+      const gId = g.discordUserId || g.id;
+      if (gId === userId) continue;
+      if (members.some(m => m.id === gId)) continue;
+      members.push({
+        id: gId,
+        name: g.name,
+        role: "grinder",
+        avatarUrl: (g as any).discordAvatarUrl || null,
+        type: "grinder",
+      });
+    }
+    res.json(members);
+  });
+
   app.get('/api/chat/threads', async (req, res) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
@@ -2685,29 +2723,91 @@ export async function registerRoutes(
   app.post('/api/chat/threads', async (req, res) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
-    const { recipientId, recipientName, recipientRole, recipientAvatarUrl } = req.body;
-    if (!recipientId || !recipientName) return res.status(400).json({ error: "Missing recipient info" });
-    const thread = await storage.getOrCreateThread({
-      id: `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      userAId: user.discordId || user.id,
-      userBId: recipientId,
-      userAName: user.displayName || user.username || "Staff",
-      userBName: recipientName,
-      userARole: user.role || "staff",
-      userBRole: recipientRole || "grinder",
-      userAAvatarUrl: user.avatarUrl || null,
-      userBAvatarUrl: recipientAvatarUrl || null,
-    });
+    const userId = user.discordId || user.id;
+    const { title, type, participantIds, participantNames, participantRoles, participantAvatarUrls } = req.body;
+    const threadType = type || "dm";
+    if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+      return res.status(400).json({ error: "At least one participant required" });
+    }
+    if (threadType === "dm" && participantIds.length === 1) {
+      const existingThreads = await storage.getThreadsForUser(userId);
+      const existingDm = existingThreads.find(t =>
+        t.type === "dm" &&
+        t.participants.length === 2 &&
+        t.participants.some(p => p.userId === participantIds[0])
+      );
+      if (existingDm) return res.json(existingDm);
+    }
+    const threadId = `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const participants = [
+      {
+        id: `tp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        threadId,
+        userId,
+        userName: user.displayName || user.username || "Staff",
+        userRole: user.role || "staff",
+        userAvatarUrl: user.avatarUrl || null,
+      },
+      ...participantIds.map((pid: string, i: number) => ({
+        id: `tp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`,
+        threadId,
+        userId: pid,
+        userName: participantNames?.[i] || "User",
+        userRole: participantRoles?.[i] || "grinder",
+        userAvatarUrl: participantAvatarUrls?.[i] || null,
+      })),
+    ];
+    const thread = await storage.createThread(
+      { id: threadId, title: title || null, type: threadType, ownerId: userId },
+      participants
+    );
     res.json(thread);
+  });
+
+  app.post('/api/chat/threads/:threadId/participants', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const thread = await storage.getThread(req.params.threadId);
+    if (!thread) return res.status(404).json({ error: "Thread not found" });
+    if (thread.ownerId !== userId) return res.status(403).json({ error: "Only the thread owner can add participants" });
+    const { participantId, participantName, participantRole, participantAvatarUrl } = req.body;
+    if (!participantId || !participantName) return res.status(400).json({ error: "Missing participant info" });
+    if (thread.participants.some(p => p.userId === participantId)) {
+      return res.status(400).json({ error: "User is already a participant" });
+    }
+    const participant = await storage.addParticipant({
+      id: `tp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      threadId: req.params.threadId,
+      userId: participantId,
+      userName: participantName,
+      userRole: participantRole || "grinder",
+      userAvatarUrl: participantAvatarUrl || null,
+    });
+    res.json(participant);
+  });
+
+  app.delete('/api/chat/threads/:threadId/participants/:participantUserId', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const thread = await storage.getThread(req.params.threadId);
+    if (!thread) return res.status(404).json({ error: "Thread not found" });
+    if (thread.ownerId !== userId && req.params.participantUserId !== userId) {
+      return res.status(403).json({ error: "Only thread owner can remove others" });
+    }
+    await storage.removeParticipant(req.params.threadId, req.params.participantUserId);
+    res.json({ success: true });
   });
 
   app.get('/api/chat/threads/:threadId/messages', async (req, res) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
     const userId = user.discordId || user.id;
-    const threads = await storage.getThreadsForUser(userId);
-    const thread = threads.find(t => t.id === req.params.threadId);
-    if (!thread) return res.status(403).json({ error: "Not a participant" });
+    const thread = await storage.getThread(req.params.threadId);
+    if (!thread || !thread.participants.some(p => p.userId === userId)) {
+      return res.status(403).json({ error: "Not a participant" });
+    }
     const msgs = await storage.getMessagesForThread(req.params.threadId);
     await storage.markThreadRead(req.params.threadId, userId);
     res.json(msgs);
@@ -2717,9 +2817,10 @@ export async function registerRoutes(
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
     const userId = user.discordId || user.id;
-    const threads = await storage.getThreadsForUser(userId);
-    const thread = threads.find(t => t.id === req.params.threadId);
-    if (!thread) return res.status(403).json({ error: "Not a participant" });
+    const thread = await storage.getThread(req.params.threadId);
+    if (!thread || !thread.participants.some(p => p.userId === userId)) {
+      return res.status(403).json({ error: "Not a participant" });
+    }
     const { body } = req.body;
     if (!body || !body.trim()) return res.status(400).json({ error: "Message body required" });
     const msg = await storage.createMessage({
