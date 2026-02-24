@@ -17,6 +17,7 @@ import {
   ArrowRight, CheckCircle, Loader2, Zap,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function StaffAdmin() {
   const { toast } = useToast();
@@ -131,28 +132,33 @@ export default function StaffAdmin() {
   const grindersReplacedOff = Array.from(new Set(replacedAssignments.map(a => a.originalGrinderId).filter(Boolean)));
 
   return (
-    <div className="space-y-5 sm:space-y-6" data-testid="page-staff-admin">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-admin-title">
-            Admin Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Elite requests, strikes, limits, and profiles</p>
+    <AnimatedPage className="space-y-5 sm:space-y-6" data-testid="page-staff-admin">
+      <FadeInUp>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-admin-title">
+              Admin Management
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Elite requests, strikes, limits, and profiles</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
+              <Crown className="w-3 h-3" />
+              {(eliteRequestsList || []).filter((r: any) => r.status === "Pending").length} elite pending
+            </Badge>
+            <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1" data-testid="badge-suspended-count">
+              <AlertTriangle className="w-3 h-3" />
+              {allGrinders.filter(g => g.suspended).length} suspended
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
-            <Crown className="w-3 h-3" />
-            {(eliteRequestsList || []).filter((r: any) => r.status === "Pending").length} elite pending
-          </Badge>
-          <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1" data-testid="badge-suspended-count">
-            <AlertTriangle className="w-3 h-3" />
-            {allGrinders.filter(g => g.suspended).length} suspended
-          </Badge>
-        </div>
-      </div>
+      </FadeInUp>
 
-      <BiddingCountdownPanel variant="compact" />
+      <FadeInUp>
+        <BiddingCountdownPanel variant="compact" />
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-elite-requests">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />
@@ -305,7 +311,9 @@ export default function StaffAdmin() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-order-limits">
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-purple-500/[0.03] -translate-y-16 translate-x-16" />
         <CardHeader className="pb-3">
@@ -378,8 +386,10 @@ export default function StaffAdmin() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
 
       {(isOwner || user?.role === "staff") && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-owner-profiles">
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-amber-500/[0.03] -translate-y-16 translate-x-16" />
           <CardHeader className="pb-3">
@@ -446,6 +456,7 @@ export default function StaffAdmin() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
       <Dialog open={!!editProfileGrinder} onOpenChange={(open) => !open && setEditProfileGrinder(null)}>
@@ -574,6 +585,7 @@ export default function StaffAdmin() {
       </Dialog>
 
       {replacedAssignments.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-orange-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-replacement-tracker">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-orange-500/[0.03] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
@@ -622,7 +634,8 @@ export default function StaffAdmin() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
-    </div>
+    </AnimatedPage>
   );
 }

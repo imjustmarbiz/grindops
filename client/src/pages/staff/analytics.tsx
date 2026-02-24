@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency, formatCompact, AnimatedRing, MultiSegmentRing, MiniBar, LastUpdated, categoryIcon, pluralize } from "@/lib/staff-utils";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -98,26 +99,31 @@ export default function StaffAnalytics() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6" data-testid="staff-analytics-page">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-analytics-title">
-                Analytics
-              </h1>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+      <AnimatedPage className="space-y-6" data-testid="staff-analytics-page">
+        <FadeInUp>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-analytics-title">
+                  Analytics
+                </h1>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                </div>
               </div>
+              <LastUpdated date={lastUpdatedDate} />
             </div>
-            <LastUpdated date={lastUpdatedDate} />
+            <p className="text-sm text-muted-foreground">Revenue, fleet, and performance metrics</p>
           </div>
-          <p className="text-sm text-muted-foreground">Revenue, fleet, and performance metrics</p>
-        </div>
+        </FadeInUp>
 
-        <BiddingCountdownPanel variant="compact" />
+        <FadeInUp>
+          <BiddingCountdownPanel variant="compact" />
+        </FadeInUp>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <FadeInUp>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden flex flex-col" data-testid="card-revenue-split">
             <CardHeader className="pb-2">
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
@@ -291,9 +297,11 @@ export default function StaffAnalytics() {
               ]} />
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </FadeInUp>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <FadeInUp>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-top-earners">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -396,18 +404,20 @@ export default function StaffAnalytics() {
               </div>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </FadeInUp>
 
-        <Card className="border-white/[0.06] bg-gradient-to-br from-purple-500/[0.04] via-transparent to-amber-500/[0.04] overflow-hidden" data-testid="card-elite-vs-grinder">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
-                <Award className="w-4 h-4 text-purple-400" />
-              </div>
-              Elite vs Grinder Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <FadeInUp>
+          <Card className="border-white/[0.06] bg-gradient-to-br from-purple-500/[0.04] via-transparent to-amber-500/[0.04] overflow-hidden" data-testid="card-elite-vs-grinder">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                  <Award className="w-4 h-4 text-purple-400" />
+                </div>
+                Elite vs Grinder Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
             {eliteVsGrinderMetrics ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
@@ -490,7 +500,8 @@ export default function StaffAnalytics() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </FadeInUp>
+      </AnimatedPage>
     </TooltipProvider>
   );
 }

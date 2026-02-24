@@ -20,6 +20,7 @@ import {
   FileText, Activity, MessageSquare, Loader2, CheckCircle, Filter,
   Plus, Clock, AlertTriangle, Eye, Trash2,
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function StaffReports() {
   const { toast } = useToast();
@@ -151,26 +152,29 @@ export default function StaffReports() {
   ];
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-            Reports & Monitoring
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Performance reports, activity checkpoints, and order updates</p>
+    <AnimatedPage className="space-y-5 sm:space-y-6">
+      <FadeInUp>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+              Reports & Monitoring
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Performance reports, activity checkpoints, and order updates</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-violet-500/15 text-violet-400 border border-violet-500/20 gap-1">
+              <FileText className="w-3 h-3" />
+              {reportsList.length} reports
+            </Badge>
+            <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
+              <Activity className="w-3 h-3" />
+              {checkpointsList.length} checkpoints
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className="bg-violet-500/15 text-violet-400 border border-violet-500/20 gap-1">
-            <FileText className="w-3 h-3" />
-            {reportsList.length} reports
-          </Badge>
-          <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
-            <Activity className="w-3 h-3" />
-            {checkpointsList.length} checkpoints
-          </Badge>
-        </div>
-      </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-fit">
         {tabs.map(tab => (
           <button
@@ -189,8 +193,10 @@ export default function StaffReports() {
           </button>
         ))}
       </div>
+      </FadeInUp>
 
       {activeTab === "reports" && (
+        <FadeInUp>
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Performance Reports</span>
@@ -372,9 +378,11 @@ export default function StaffReports() {
             </DialogContent>
           </Dialog>
         </div>
+        </FadeInUp>
       )}
 
       {activeTab === "checkpoints" && (
+        <FadeInUp>
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Activity Checkpoints</span>
@@ -500,9 +508,11 @@ export default function StaffReports() {
             </DialogContent>
           </Dialog>
         </div>
+        </FadeInUp>
       )}
 
       {activeTab === "updates" && (
+        <FadeInUp>
         <div className="space-y-4">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Order Updates</span>
 
@@ -571,7 +581,8 @@ export default function StaffReports() {
             })}
           </div>
         </div>
+        </FadeInUp>
       )}
-    </div>
+    </AnimatedPage>
   );
 }

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } from "@/lib/animations";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Activity, Search, X, BarChart3, Gauge, Target, Timer,
@@ -125,8 +126,9 @@ export default function StaffOverview() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
+    <AnimatedPage className="space-y-6">
+      <FadeInUp>
+        <div className="flex flex-col gap-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-page-title">
@@ -140,8 +142,10 @@ export default function StaffOverview() {
           <LastUpdated date={lastUpdatedDate} />
         </div>
         <p className="text-sm text-muted-foreground">Real-time analytics and operations overview</p>
-      </div>
+        </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -157,6 +161,7 @@ export default function StaffOverview() {
           </button>
         )}
       </div>
+      </FadeInUp>
 
       {searchQuery.trim().length > 0 && (() => {
         const q = searchQuery.toLowerCase().trim();
@@ -250,6 +255,7 @@ export default function StaffOverview() {
         );
       })()}
 
+      <FadeInUp>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
           gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
@@ -260,8 +266,11 @@ export default function StaffOverview() {
         <StatCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} subtitle={`avg margin ${(analytics?.avgMargin || 0).toFixed(1)}%`} icon={BarChart3}
           gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <BiddingCountdownPanel />
+      </FadeInUp>
 
       <Card className="border-white/[0.06] bg-white/[0.02]">
         <CardHeader className="pb-3">
@@ -307,6 +316,7 @@ export default function StaffOverview() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <FadeInUp>
         <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02] flex flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -372,7 +382,9 @@ export default function StaffOverview() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
 
+        <FadeInUp>
         <Card className="lg:col-span-2 border-white/[0.06] bg-white/[0.02]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
@@ -420,8 +432,10 @@ export default function StaffOverview() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       </div>
 
+      <FadeInUp>
       <Card className="border-white/[0.06] bg-white/[0.02]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
@@ -498,7 +512,8 @@ export default function StaffOverview() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
     </TooltipProvider>
   );
 }

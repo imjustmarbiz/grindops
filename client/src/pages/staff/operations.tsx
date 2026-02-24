@@ -16,6 +16,7 @@ import {
   CheckCircle, X, CreditCard, Package, Zap, AlertTriangle,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function StaffOperations() {
   const { toast } = useToast();
@@ -132,28 +133,33 @@ export default function StaffOperations() {
   const selectedGrinder = allGrinders.find(g => g.id === assignGrinderId);
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-            Operations
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+    <AnimatedPage className="space-y-5 sm:space-y-6">
+      <FadeInUp>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+              Operations
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
+              <Package className="w-3 h-3" />
+              {pluralize(allOrders.length, 'order')}
+            </Badge>
+            <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
+              <Target className="w-3 h-3" />
+              {assignableOrders.length} assignable
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
-            <Package className="w-3 h-3" />
-            {pluralize(allOrders.length, 'order')}
-          </Badge>
-          <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
-            <Target className="w-3 h-3" />
-            {assignableOrders.length} assignable
-          </Badge>
-        </div>
-      </div>
+      </FadeInUp>
 
-      <BiddingCountdownPanel />
+      <FadeInUp>
+        <BiddingCountdownPanel />
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-create-manual-order">
         <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />
         <CardHeader className="pb-3">
@@ -285,8 +291,10 @@ export default function StaffOperations() {
           </Button>
         </CardContent>
       </Card>
+      </FadeInUp>
 
       {assignableOrders.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-staff-assign">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
@@ -441,8 +449,10 @@ export default function StaffOperations() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-900/[0.04] overflow-hidden relative" data-testid="card-alert-composer">
         <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.04] -translate-y-12 translate-x-12" />
         <CardHeader className="pb-3">
@@ -570,6 +580,7 @@ export default function StaffOperations() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
   );
 }

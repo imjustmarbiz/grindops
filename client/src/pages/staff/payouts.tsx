@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function StaffPayouts() {
   const { toast } = useToast();
@@ -59,38 +60,43 @@ export default function StaffPayouts() {
   const allGrinders = grinders || [];
 
   return (
-    <div className="space-y-5 sm:space-y-6" data-testid="page-staff-payouts">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-            Payout Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
+    <AnimatedPage className="space-y-5 sm:space-y-6" data-testid="page-staff-payouts">
+      <FadeInUp>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+              Payout Management
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {disputedPayouts.length > 0 && (
+              <Badge className="bg-orange-500/15 text-orange-400 border border-orange-500/20 gap-1 animate-pulse">
+                <AlertTriangle className="w-3 h-3" />
+                {disputedPayouts.length} disputed
+              </Badge>
+            )}
+            {pendingGrinderApproval.length > 0 && (
+              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
+                <Clock className="w-3 h-3" />
+                {pendingGrinderApproval.length} awaiting grinder
+              </Badge>
+            )}
+            {pendingPayouts.length > 0 && (
+              <Badge className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 gap-1 animate-pulse">
+                <Clock className="w-3 h-3" />
+                {pendingPayouts.length} pending review
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {disputedPayouts.length > 0 && (
-            <Badge className="bg-orange-500/15 text-orange-400 border border-orange-500/20 gap-1 animate-pulse">
-              <AlertTriangle className="w-3 h-3" />
-              {disputedPayouts.length} disputed
-            </Badge>
-          )}
-          {pendingGrinderApproval.length > 0 && (
-            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
-              <Clock className="w-3 h-3" />
-              {pendingGrinderApproval.length} awaiting grinder
-            </Badge>
-          )}
-          {pendingPayouts.length > 0 && (
-            <Badge className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 gap-1 animate-pulse">
-              <Clock className="w-3 h-3" />
-              {pendingPayouts.length} pending review
-            </Badge>
-          )}
-        </div>
-      </div>
+      </FadeInUp>
 
-      <BiddingCountdownPanel variant="compact" />
+      <FadeInUp>
+        <BiddingCountdownPanel variant="compact" />
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "Outstanding", value: formatCurrency(totalOwed), icon: Clock, gradient: "from-yellow-500/[0.08] via-background to-yellow-900/[0.04]", iconBg: "bg-yellow-500/15", textColor: "text-yellow-400", testId: "text-total-owed" },
@@ -113,8 +119,10 @@ export default function StaffPayouts() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
       {disputedPayouts.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-orange-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-disputed-payouts">
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-orange-500/[0.03] -translate-y-16 translate-x-16" />
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
@@ -170,9 +178,11 @@ export default function StaffPayouts() {
             })}
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
       {pendingGrinderApproval.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-pending-grinder-approval">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.03] -translate-y-12 translate-x-12" />
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
@@ -203,8 +213,10 @@ export default function StaffPayouts() {
             })}
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-payout-management">
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-emerald-500/[0.03] -translate-y-16 translate-x-16" />
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
@@ -294,8 +306,10 @@ export default function StaffPayouts() {
           )}
         </CardContent>
       </Card>
+      </FadeInUp>
 
       {grinderUpdates && grinderUpdates.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-blue-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-grinder-updates">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.03] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
@@ -328,7 +342,8 @@ export default function StaffPayouts() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
-    </div>
+    </AnimatedPage>
   );
 }
