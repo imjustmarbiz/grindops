@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX } from "lucide-react";
+import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX, CircleHelp } from "lucide-react";
 import type { Notification } from "@shared/schema";
 import { playNotificationSound } from "@/lib/notification-sounds";
 
@@ -107,16 +107,70 @@ export function LowerThirdNotifications() {
     });
   }, []);
 
+  const [showSoundInfo, setShowSoundInfo] = useState(false);
+  const soundInfoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showSoundInfo) return;
+    const handler = (e: MouseEvent) => {
+      if (soundInfoRef.current && !soundInfoRef.current.contains(e.target as Node)) {
+        setShowSoundInfo(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSoundInfo]);
+
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
-      <button
-        onClick={toggleSound}
-        className="pointer-events-auto self-end mb-1 p-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 text-muted-foreground hover:text-foreground transition-colors"
-        title={soundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
-        data-testid="button-toggle-notif-sound"
-      >
-        {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-      </button>
+      <div className="pointer-events-auto self-end mb-1 flex items-center gap-1.5 relative" ref={soundInfoRef}>
+        <div className="relative">
+          <button
+            onClick={() => setShowSoundInfo(prev => !prev)}
+            onMouseEnter={() => setShowSoundInfo(true)}
+            className="p-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="button-sound-info"
+          >
+            <CircleHelp className="w-3 h-3" />
+          </button>
+          <AnimatePresence>
+            {showSoundInfo && (
+              <motion.div
+                initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full right-0 mb-2 w-56 rounded-lg border border-white/10 bg-black/80 backdrop-blur-md p-3 shadow-xl"
+                data-testid="popup-sound-info"
+              >
+                <p className="text-xs font-medium text-foreground mb-1.5">Sound Alerts</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Get audio alerts for new orders, strikes, payouts, messages, and other important updates. Each event has a unique sound so you can tell what happened without looking.
+                </p>
+                <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-0.5">
+                  <p>🔔 New Order — rising ding</p>
+                  <p>⚠️ Strike — descending warning</p>
+                  <p>💰 Payout — ascending chime</p>
+                  <p>📨 Message — soft pop</p>
+                  <p>ℹ️ Info — gentle ding</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <button
+          onClick={toggleSound}
+          className={`p-1.5 rounded-full backdrop-blur-sm border transition-colors ${
+            soundEnabled
+              ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+              : "bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
+          }`}
+          title={soundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
+          data-testid="button-toggle-notif-sound"
+        >
+          {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+        </button>
+      </div>
       <AnimatePresence mode="popLayout">
         {visibleNotifs.map(notif => {
           const IconComponent = iconMap[notif.icon || "bell"] || Bell;
