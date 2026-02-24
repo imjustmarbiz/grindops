@@ -1,5 +1,9 @@
 import { Crown, Zap, Shield, Users, ArrowRight, Clock, Target, Timer, CheckCircle, AlertTriangle } from "lucide-react";
 
+export function pluralize(count: number, singular: string, plural?: string): string {
+  return count === 1 ? `${count} ${singular}` : `${count} ${plural || singular + 's'}`;
+}
+
 export function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
 }

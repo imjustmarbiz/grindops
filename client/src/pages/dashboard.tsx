@@ -22,6 +22,7 @@ import {
   Search, X, CreditCard, Wallet, Plus, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
+import { pluralize } from "@/lib/staff-utils";
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
@@ -455,7 +456,7 @@ export default function Dashboard() {
                         <span className="font-medium">{g.name}</span>
                         {g.discordUsername && <span className="text-xs text-muted-foreground">@{g.discordUsername}</span>}
                         <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
-                        <span className="text-xs text-muted-foreground ml-auto">{g.activeOrders}/{g.capacity} orders</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{pluralize(g.activeOrders, 'order')}/{g.capacity}</span>
                       </div>
                     ))}
                   </div>
@@ -493,7 +494,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
                 <p className="text-2xl font-bold text-emerald-400" data-testid="text-total-revenue">{formatCurrency(revenue)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{totalOrders} orders total</p>
+                <p className="text-xs text-muted-foreground mt-1">{pluralize(totalOrders, 'order')} total</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-emerald-400" />
@@ -937,7 +938,7 @@ export default function Dashboard() {
                       <span className="text-[10px] font-mono w-6 text-right">{g.activeOrders}/{g.capacity}</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>{g.name}: {g.activeOrders}/{g.capacity} orders ({g.category}) - {(g as any).availabilityStatus || "available"}</TooltipContent>
+                  <TooltipContent>{g.name}: {pluralize(g.activeOrders, 'order')}/{g.capacity} ({g.category}) - {(g as any).availabilityStatus || "available"}</TooltipContent>
                 </Tooltip>
               ))}
             </div>
@@ -1058,7 +1059,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{s.name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{s.count} orders</span>
+                      <span className="text-xs text-muted-foreground">{pluralize(s.count, 'order')}</span>
                       <span className="text-xs font-medium text-emerald-400">{formatCurrency(s.revenue)}</span>
                     </div>
                   </div>
@@ -1171,7 +1172,7 @@ export default function Dashboard() {
               {openOrders > 5 && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
                   <Package className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-blue-400">{openOrders} orders waiting for assignment</span>
+                  <span className="text-sm text-blue-400">{pluralize(openOrders, 'order')} waiting for assignment</span>
                 </div>
               )}
             </div>

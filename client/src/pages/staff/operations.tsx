@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency } from "@/lib/staff-utils";
+import { formatCurrency, pluralize } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,7 +143,7 @@ export default function StaffOperations() {
         <div className="flex items-center gap-2">
           <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
             <Package className="w-3 h-3" />
-            {allOrders.length} orders
+            {pluralize(allOrders.length, 'order')}
           </Badge>
           <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
             <Target className="w-3 h-3" />

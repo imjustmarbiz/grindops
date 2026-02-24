@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency, formatCompact, AnimatedRing, LastUpdated, categoryIcon } from "@/lib/staff-utils";
+import { formatCurrency, formatCompact, AnimatedRing, LastUpdated, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -219,7 +219,7 @@ export default function StaffOverview() {
                         <span className="font-medium">{g.name}</span>
                         {g.discordUsername && <span className="text-xs text-muted-foreground">@{g.discordUsername}</span>}
                         <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
-                        <span className="text-xs text-muted-foreground ml-auto">{g.activeOrders}/{g.capacity} orders</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{pluralize(g.activeOrders, 'order')}/{g.capacity}</span>
                       </div>
                     ))}
                   </div>
@@ -251,7 +251,7 @@ export default function StaffOverview() {
       })()}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={`${nonCancelledOrders.length} orders`} icon={DollarSign}
+        <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
           gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
         <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${allGrinders.length} grinders`} icon={Users}
           gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
@@ -491,7 +491,7 @@ export default function StaffOverview() {
               {openOrders > 5 && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
                   <Package className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                  <span className="text-sm text-blue-400">{openOrders} orders waiting for assignment</span>
+                  <span className="text-sm text-blue-400">{pluralize(openOrders, 'order')} waiting for assignment</span>
                 </div>
               )}
             </div>

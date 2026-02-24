@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency, categoryIcon } from "@/lib/staff-utils";
+import { formatCurrency, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -401,7 +401,7 @@ export default function StaffAdmin() {
                       {g.isRemoved && <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[10px]">Removed</Badge>}
                       <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
                       <span className="text-[10px] text-muted-foreground">
-                        {g.activeOrders}/{g.capacity} orders · {g.completedOrders} completed · {g.strikes} strikes
+                        {pluralize(g.activeOrders, 'order')}/{g.capacity} · {g.completedOrders} completed · {pluralize(g.strikes, 'strike')}
                       </span>
                     </div>
                     {g.isRemoved && g.removedAt && <p className="text-[10px] text-red-400/60 mt-0.5">Removed {new Date(g.removedAt).toLocaleDateString()}</p>}
