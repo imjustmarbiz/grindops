@@ -944,10 +944,25 @@ export async function registerRoutes(
     const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
     let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+
+    const authUser = await authStorage.getUser(userId);
+
+    if (!myGrinder && authUser && (authUser.role === "grinder" || authUser.role === "owner" || authUser.role === "staff")) {
+      const displayName = authUser.firstName || authUser.discordUsername || authUser.username || "Unknown";
+      myGrinder = await storage.createGrinder({
+        id: `G-${Date.now().toString(36)}`,
+        name: displayName,
+        discordUserId: userId,
+        discordUsername: authUser.discordUsername || authUser.username || null,
+        category: "Grinder",
+        tier: "New",
+        capacity: 3,
+      });
+    }
+
     if (!myGrinder) return res.json(null);
     if (myGrinder.isRemoved) return res.status(403).json({ message: "Your access has been revoked. Contact staff for more information." });
 
-    const authUser = await authStorage.getUser(userId);
     if (authUser && myGrinder.name === "Unknown") {
       const displayName = authUser.firstName || authUser.discordUsername || "Unknown";
       if (displayName !== "Unknown") {
