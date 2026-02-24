@@ -243,44 +243,45 @@ export default function StaffAnalytics() {
             <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
                 <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={110} stroke={10} />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+                <div className="flex-1 space-y-2.5">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-3 h-3 text-yellow-400" />
-                      <span className="text-xs text-muted-foreground">Pending</span>
+                      <Clock className="w-3.5 h-3.5 text-yellow-400" />
+                      <span className="text-sm text-muted-foreground">Pending</span>
                     </div>
-                    <span className="text-sm font-bold text-yellow-400" data-testid="text-pending-bids">{pendingBids}</span>
+                    <span className="text-base font-bold text-yellow-400" data-testid="text-pending-bids">{pendingBids}</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3 text-emerald-400" />
-                      <span className="text-xs text-muted-foreground">Accepted</span>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-sm text-muted-foreground">Accepted</span>
                     </div>
-                    <span className="text-sm font-bold text-emerald-400" data-testid="text-accepted-bids">{acceptedBids}</span>
+                    <span className="text-base font-bold text-emerald-400" data-testid="text-accepted-bids">{acceptedBids}</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10">
                     <div className="flex items-center gap-2">
-                      <XCircle className="w-3 h-3 text-red-400" />
-                      <span className="text-xs text-muted-foreground">Rejected</span>
+                      <XCircle className="w-3.5 h-3.5 text-red-400" />
+                      <span className="text-sm text-muted-foreground">Rejected</span>
                     </div>
-                    <span className="text-sm font-bold text-red-400" data-testid="text-rejected-bids">{rejectedBids}</span>
+                    <span className="text-base font-bold text-red-400" data-testid="text-rejected-bids">{rejectedBids}</span>
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <SplitBar height={10} segments={[
-                  { value: acceptedBids, color: "bg-emerald-500", label: "Accepted" },
-                  { value: rejectedBids, color: "bg-red-500", label: "Rejected" },
-                  { value: pendingBids, color: "bg-yellow-500", label: "Pending" },
-                ]} />
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Total Bids: {totalBids}</span>
-                  <span className="flex items-center gap-1">
-                    <Target className="w-3 h-3" />
-                    On-Time: <span className={onTimeRate >= 80 ? "text-emerald-400" : "text-amber-400"}>{onTimeRate.toFixed(0)}%</span>
-                  </span>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Total Bids</p>
+                  <p className="text-xl font-bold text-white">{totalBids}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">On-Time Rate</p>
+                  <p className={`text-xl font-bold ${onTimeRate >= 80 ? "text-emerald-400" : "text-amber-400"}`}>{onTimeRate.toFixed(0)}%</p>
                 </div>
               </div>
+              <SplitBar height={10} segments={[
+                { value: acceptedBids, color: "bg-emerald-500", label: "Accepted" },
+                { value: rejectedBids, color: "bg-red-500", label: "Rejected" },
+                { value: pendingBids, color: "bg-yellow-500", label: "Pending" },
+              ]} />
             </CardContent>
           </Card>
         </div>
