@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Grinder } from "@shared/schema";
 
 function formatCurrency(val: number) {
@@ -310,7 +311,8 @@ export default function Grinders() {
   };
 
   return (
-    <div className="space-y-5">
+    <AnimatedPage className="space-y-5">
+      <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-grinders-title">
@@ -332,7 +334,9 @@ export default function Grinders() {
           </Button>
         </div>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Grinder", count: filterGrinders("Grinder").length, icon: Users, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
@@ -354,7 +358,9 @@ export default function Grinders() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Tabs defaultValue="All">
         <TabsList className="bg-white/[0.03] border border-white/[0.06]">
           {categories.map(cat => (
@@ -479,6 +485,7 @@ export default function Grinders() {
           </TabsContent>
         ))}
       </Tabs>
+      </FadeInUp>
 
       <Dialog open={!!selectedGrinder} onOpenChange={() => setSelectedGrinder(null)}>
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto border-white/10 bg-background/95 backdrop-blur-xl">
@@ -581,6 +588,6 @@ export default function Grinders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
   );
 }

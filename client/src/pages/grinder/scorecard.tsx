@@ -9,6 +9,7 @@ import {
   BarChart3, FileText, MessageSquare, LogIn, AlertTriangle, Send,
   ScrollText, CheckSquare
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 function getGradeLetter(score: number): { letter: string; color: string } {
   if (score >= 90) return { letter: "A", color: "text-emerald-400" };
@@ -71,14 +72,17 @@ export default function GrinderScorecard() {
   ];
 
   return (
-    <div className="space-y-6" data-testid="scorecard-page">
+    <AnimatedPage className="space-y-6" data-testid="scorecard-page">
+      <FadeInUp>
       <div className="flex items-center gap-3">
         <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
           <ClipboardCheck className={`w-5 h-5 ${eliteAccent}`} />
         </div>
         <h1 className="text-2xl font-bold tracking-tight" data-testid="text-scorecard-header">My Scorecard</h1>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className={`border-0 overflow-hidden relative bg-gradient-to-r ${eliteGradient} border ${eliteBorder} ${eliteGlow}`} data-testid="card-quality-score">
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/[0.02] -translate-y-12 translate-x-12" />
         <CardContent className="p-6 sm:p-8">
@@ -105,7 +109,9 @@ export default function GrinderScorecard() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric, i) => (
           <Card key={i} className={`${metric.gradient} border-0 overflow-hidden relative`} data-testid={`card-metric-${metric.label.toLowerCase().replace(/\s/g, '-')}`}>
@@ -125,7 +131,9 @@ export default function GrinderScorecard() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-performance-reports">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
         <CardHeader className="pb-2">
@@ -209,7 +217,9 @@ export default function GrinderScorecard() {
           )}
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-order-logs">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
         <CardHeader className="pb-2">
@@ -268,8 +278,10 @@ export default function GrinderScorecard() {
           )}
         </CardContent>
       </Card>
+      </FadeInUp>
 
       {checkpointStats && (
+        <FadeInUp>
         <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-activity-summary">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
           <CardHeader className="pb-2">
@@ -300,7 +312,8 @@ export default function GrinderScorecard() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
-    </div>
+    </AnimatedPage>
   );
 }

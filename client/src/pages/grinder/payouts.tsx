@@ -11,6 +11,7 @@ import { PAYOUT_PLATFORMS } from "@shared/schema";
 import {
   Loader2, Banknote, DollarSign, CheckCircle, AlertCircle, X
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function GrinderPayouts() {
   const {
@@ -27,13 +28,16 @@ export default function GrinderPayouts() {
   if (!grinder) return null;
 
   return (
-    <div className="space-y-4">
+    <AnimatedPage className="space-y-4">
+      <FadeInUp>
       <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
         <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
           <Banknote className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         </div>
         Payout Requests
       </h2>
+      </FadeInUp>
+      <FadeInUp>
       {(!payoutRequests || payoutRequests.length === 0) ? (
         <Card className="border-0 bg-white/[0.03]">
           <CardContent className="p-8 sm:p-12 text-center">
@@ -122,6 +126,7 @@ export default function GrinderPayouts() {
           ))}
         </div>
       )}
+      </FadeInUp>
 
       <Dialog open={!!disputeDialog} onOpenChange={(open) => { if (!open) { setDisputeDialog(null); setDisputeReason(""); setDisputePlatform(""); setDisputeDetails(""); setDisputeAmount(""); } }}>
         <DialogContent className="max-w-md">
@@ -207,6 +212,6 @@ export default function GrinderPayouts() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
   );
 }

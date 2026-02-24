@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { BiddingCountdownPanel, InlineCountdown } from "@/components/bidding-countdown";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import {
   Loader2, FileCheck, Gavel, TrendingUp, Clock, CheckCircle, AlertCircle,
   ExternalLink, X, DollarSign, Star, Zap, Send, CalendarClock,
@@ -358,7 +359,8 @@ export default function GrinderProfile() {
   const eliteAccent = isElite ? "text-cyan-400" : "text-[#5865F2]";
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <AnimatedPage className="space-y-4 sm:space-y-6">
+      <FadeInUp>
       <div className={`relative rounded-2xl bg-gradient-to-r ${eliteGradient} border ${eliteBorder} p-4 sm:p-6 ${eliteGlow} overflow-hidden`}>
         {isElite && (
           <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/5 rounded-full blur-3xl pointer-events-none" />
@@ -430,6 +432,7 @@ export default function GrinderProfile() {
           </div>
         </div>
       </div>
+      </FadeInUp>
 
       {!grinder.rulesAccepted && (
         <Card className="border-amber-500/40 bg-amber-500/5" data-testid="card-rules-banner">
@@ -507,6 +510,7 @@ export default function GrinderProfile() {
         </Card>
       )}
 
+      <FadeInUp>
       <Card className={`border-0 ${isElite ? "bg-gradient-to-r from-cyan-500/[0.06] to-transparent" : "bg-gradient-to-r from-[#5865F2]/[0.06] to-transparent"}`} data-testid="card-availability">
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
@@ -550,7 +554,9 @@ export default function GrinderProfile() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5">
         {[
           { label: "Active Orders", value: stats.activeAssignments, icon: Clock, gradient: "bg-gradient-to-br from-yellow-500/[0.08] via-background to-yellow-500/[0.04]", iconBg: "bg-yellow-500/15", textColor: "text-yellow-400" },
@@ -575,6 +581,7 @@ export default function GrinderProfile() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
       {aiTips.length > 0 && (
         <Card className={`border-0 overflow-hidden relative ${isElite ? "bg-gradient-to-r from-cyan-500/[0.08] via-background to-teal-500/[0.04]" : "bg-gradient-to-r from-blue-500/[0.08] via-background to-indigo-500/[0.04]"}`}>
@@ -602,6 +609,7 @@ export default function GrinderProfile() {
 
       <BiddingCountdownPanel variant="compact" />
 
+      <FadeInUp>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`flex w-full overflow-x-auto ${isElite ? "bg-cyan-500/5" : "bg-muted/50"}`}>
           <TabsTrigger value="overview" data-testid="tab-overview" className={`flex-shrink-0 text-xs sm:text-sm ${isElite ? "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300" : ""}`}>
@@ -1468,6 +1476,7 @@ export default function GrinderProfile() {
           </Card>
         </TabsContent>
       </Tabs>
+      </FadeInUp>
 
       <Dialog open={!!updateDialog} onOpenChange={(open) => !open && setUpdateDialog(null)}>
         <DialogContent>
@@ -1868,6 +1877,6 @@ export default function GrinderProfile() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
   );
 }

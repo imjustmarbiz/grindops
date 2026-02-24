@@ -14,6 +14,7 @@ import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
   MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function GrinderAssignments() {
   const {
@@ -56,7 +57,8 @@ export default function GrinderAssignments() {
   if (!grinder) return null;
 
   return (
-    <div className="space-y-4">
+    <AnimatedPage className="space-y-4">
+      <FadeInUp>
       <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
         <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
           <FileCheck className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
@@ -64,6 +66,8 @@ export default function GrinderAssignments() {
         My Assignments
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
       </h2>
+      </FadeInUp>
+      <FadeInUp>
       {assignments.length === 0 ? (
         <Card className="border-0 bg-white/[0.03]">
           <CardContent className="p-8 sm:p-12 text-center">
@@ -187,8 +191,10 @@ export default function GrinderAssignments() {
           ))}
         </div>
       )}
+      </FadeInUp>
 
       {orderUpdates && orderUpdates.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-white/[0.03] mt-6 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
           <CardHeader className="pb-2">
@@ -214,6 +220,7 @@ export default function GrinderAssignments() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
       <Dialog open={!!updateDialog} onOpenChange={(open) => !open && setUpdateDialog(null)}>
@@ -525,7 +532,7 @@ export default function GrinderAssignments() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
   );
 }
 

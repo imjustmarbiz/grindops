@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 import { pluralize } from "@/lib/staff-utils";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
@@ -362,7 +363,8 @@ export default function Dashboard() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-4 sm:space-y-6">
+    <AnimatedPage className="space-y-4 sm:space-y-6">
+      <FadeInUp>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
@@ -378,7 +380,9 @@ export default function Dashboard() {
           <LastUpdated date={lastUpdatedDate} />
         </div>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -394,6 +398,7 @@ export default function Dashboard() {
           </button>
         )}
       </div>
+      </FadeInUp>
 
       {searchQuery.trim().length > 0 && (() => {
         const q = searchQuery.toLowerCase().trim();
@@ -487,6 +492,7 @@ export default function Dashboard() {
         );
       })()}
 
+      <FadeInUp>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
           <CardContent className="p-5">
@@ -548,9 +554,13 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <BiddingCountdownPanel />
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="glass-panel border-amber-500/20" data-testid="card-create-manual-order">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -678,7 +688,9 @@ export default function Dashboard() {
           </Button>
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       {(() => {
         const assignableOrders = allOrders.filter(o => o.status === "Open" || o.status === "Bidding Closed");
         const selectedOrder = assignableOrders.find(o => o.id === assignOrderId);
@@ -838,7 +850,9 @@ export default function Dashboard() {
           </Card>
         ) : null;
       })()}
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -866,7 +880,9 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="border-border/50">
           <CardHeader className="pb-3">
@@ -999,7 +1015,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-border/50">
           <CardHeader className="pb-3">
@@ -1072,7 +1090,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-border/50">
           <CardHeader className="pb-3">
@@ -1179,7 +1199,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {(grinderUpdates && grinderUpdates.length > 0) && (
           <Card className="border-blue-500/20">
@@ -1265,8 +1287,9 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+      </FadeInUp>
 
-      {/* Elite vs Grinder Performance Comparison */}
+      <FadeInUp>
       <Card className="bg-gradient-to-r from-purple-500/5 to-amber-500/5 border-purple-500/20" data-testid="card-elite-vs-grinder">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -1351,8 +1374,9 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+      </FadeInUp>
 
-      {/* Elite Requests + Strike Management */}
+      <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-amber-500/20" data-testid="card-elite-requests">
           <CardHeader className="pb-3">
@@ -1489,7 +1513,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-purple-500/20" data-testid="card-order-limits">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -1559,7 +1585,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       {(isOwner || user?.role === "staff") && (
         <Card className="border-amber-500/20" data-testid="card-owner-profiles">
           <CardHeader className="pb-3">
@@ -1601,6 +1629,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+      </FadeInUp>
 
       <Dialog open={!!editProfileGrinder} onOpenChange={(open) => !open && setEditProfileGrinder(null)}>
         <DialogContent>
@@ -1657,7 +1686,7 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Alert Composer */}
+      <FadeInUp>
       <Card className="border-blue-500/20" data-testid="card-alert-composer">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -1758,7 +1787,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       {replacedAssignments.length > 0 && (
         <Card className="border-border/50">
           <CardHeader className="pb-3">
@@ -1823,6 +1854,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+      </FadeInUp>
+
+      <FadeInUp>
       <Card className="glass-panel border-green-500/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -1923,7 +1957,9 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="glass-panel border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -1967,7 +2003,8 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
     </TooltipProvider>
   );
 }

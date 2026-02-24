@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollText, Filter, Clock, Activity, FileText, Package, Gavel, Users, Settings, ClipboardCheck, BarChart3, DollarSign, Star, AlertTriangle } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { AuditLog } from "@shared/schema";
 
 export default function AuditLogPage() {
@@ -89,7 +90,8 @@ export default function AuditLogPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <AnimatedPage className="space-y-5">
+      <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-audit-title">
@@ -117,7 +119,9 @@ export default function AuditLogPage() {
           </Select>
         </div>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {summaryCards.map(s => {
           const count = (logs || []).filter(l => l.entityType === s.key).length;
@@ -137,7 +141,9 @@ export default function AuditLogPage() {
           );
         })}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <CardHeader className="pb-2 border-b border-white/[0.04]">
           <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
@@ -213,6 +219,7 @@ export default function AuditLogPage() {
           </Table>
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
   );
 }

@@ -17,6 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Order, Service, Grinder } from "@shared/schema";
 
 const formSchema = z.object({
@@ -347,7 +348,8 @@ export default function Orders() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-5">
+    <AnimatedPage className="space-y-5">
+      <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-orders-title">
@@ -453,7 +455,9 @@ export default function Orders() {
           </DialogContent>
         </Dialog>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Open", value: openCount, icon: Package, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", textColor: "text-blue-400" },
@@ -475,7 +479,9 @@ export default function Orders() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-x-auto">
         <Table className="min-w-[950px]">
@@ -702,7 +708,8 @@ export default function Orders() {
         </Table>
         </div>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
     </TooltipProvider>
   );
 }

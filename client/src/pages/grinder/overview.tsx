@@ -13,6 +13,7 @@ import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
   Signal, ScrollText, Sparkles, Crown, ShieldCheck
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function GrinderOverview() {
   const {
@@ -29,7 +30,8 @@ export default function GrinderOverview() {
   const avatarUrl = grinder.discordAvatarUrl || user?.profileImageUrl || undefined;
 
   return (
-    <div className="space-y-6">
+    <AnimatedPage className="space-y-6">
+      <FadeInUp>
       <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${eliteGradient} border ${eliteBorder} ${eliteGlow}`}>
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/[0.02] -translate-y-16 translate-x-16" />
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6 relative">
@@ -68,8 +70,10 @@ export default function GrinderOverview() {
           </div>
         </div>
       </div>
+      </FadeInUp>
 
       {!grinder.rulesAccepted && (
+        <FadeInUp>
         <Card className="border-amber-500/40 bg-amber-500/5" data-testid="card-rules-banner">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -114,9 +118,11 @@ export default function GrinderOverview() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
       {grinder.suspended && (
+        <FadeInUp>
         <Card className="border-red-500/40 bg-red-500/5" data-testid="card-suspension-banner">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -133,8 +139,10 @@ export default function GrinderOverview() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
+      <FadeInUp>
       <Card className={`border-0 ${isElite ? "bg-gradient-to-r from-cyan-500/[0.06] to-transparent" : "bg-gradient-to-r from-[#5865F2]/[0.06] to-transparent"}`} data-testid="card-availability">
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
@@ -173,7 +181,9 @@ export default function GrinderOverview() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5">
         {[
           { label: "Active Orders", value: stats.activeAssignments, icon: Clock, gradient: "bg-gradient-to-br from-yellow-500/[0.08] via-background to-yellow-500/[0.04]", iconBg: "bg-yellow-500/15", textColor: "text-yellow-400" },
@@ -198,9 +208,13 @@ export default function GrinderOverview() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <BiddingCountdownPanel variant="compact" />
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
@@ -296,8 +310,10 @@ export default function GrinderOverview() {
           </CardContent>
         </Card>
       </div>
+      </FadeInUp>
 
       {aiTips.length > 0 && (
+        <FadeInUp>
         <Card className={`border-0 ${isElite ? "bg-gradient-to-r from-cyan-500/[0.06] via-background to-teal-500/[0.03]" : "bg-gradient-to-r from-[#5865F2]/[0.06] via-background to-[#5865F2]/[0.03]"} overflow-hidden relative`}>
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
           <CardHeader className="pb-2">
@@ -319,9 +335,11 @@ export default function GrinderOverview() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
       {lostBids.length > 0 && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-r from-red-500/[0.06] via-background to-red-500/[0.03] overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
           <CardHeader className="pb-2">
@@ -353,7 +371,8 @@ export default function GrinderOverview() {
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
-    </div>
+    </AnimatedPage>
   );
 }

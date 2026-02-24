@@ -9,6 +9,7 @@ import { InlineCountdown } from "@/components/bidding-countdown";
 import {
   Loader2, Gavel, Zap, Target, ExternalLink, Sparkles
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function GrinderOrders() {
   const {
@@ -23,7 +24,8 @@ export default function GrinderOrders() {
   if (!grinder) return null;
 
   return (
-    <div className="space-y-4">
+    <AnimatedPage className="space-y-4">
+      <FadeInUp>
       <div className="flex items-center justify-between">
         <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
           <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
@@ -33,6 +35,8 @@ export default function GrinderOrders() {
           <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{availableOrders.length}</Badge>
         </h2>
       </div>
+      </FadeInUp>
+      <FadeInUp>
       {availableOrders.length === 0 ? (
         <Card className="border-0 bg-white/[0.03]">
           <CardContent className="p-8 sm:p-12 text-center">
@@ -117,6 +121,7 @@ export default function GrinderOrders() {
           ))}
         </div>
       )}
+      </FadeInUp>
 
       <Dialog open={!!placeBidDialog} onOpenChange={(open) => !open && setPlaceBidDialog(null)}>
         <DialogContent>
@@ -180,6 +185,6 @@ export default function GrinderOrders() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
   );
 }

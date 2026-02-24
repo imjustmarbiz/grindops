@@ -4,6 +4,7 @@ import {
   Eye, Gavel, Clock, FileCheck, DollarSign, Signal, Bell, Crown,
   Target, Lightbulb, TrendingUp, CalendarClock, Send, Star, Zap, ArrowUpCircle
 } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function GrinderGuide() {
   const { grinder, isElite, eliteAccent } = useGrinderData();
@@ -11,7 +12,8 @@ export default function GrinderGuide() {
   if (!grinder) return null;
 
   return (
-    <div className="space-y-4">
+    <AnimatedPage className="space-y-4">
+      <FadeInUp>
       <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
         <CardHeader className="pb-2">
@@ -46,7 +48,9 @@ export default function GrinderGuide() {
           ))}
         </CardContent>
       </Card>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
         <CardHeader className="pb-2">
@@ -75,6 +79,7 @@ export default function GrinderGuide() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
   );
 }
