@@ -394,10 +394,11 @@ export async function registerRoutes(
 
       const order = await storage.getOrder(orderId);
       if (!order) return res.status(404).json({ message: "Order not found" });
-      if (order.status !== "Open" && order.status !== "Bidding Closed") {
-        return res.status(400).json({ message: `Cannot assign order with status "${order.status}". Order must be Open or Bidding Closed.` });
+      const isReplacement = order.status === "Need Replacement";
+      if (!isReplacement && order.status !== "Open" && order.status !== "Bidding Closed") {
+        return res.status(400).json({ message: `Cannot assign order with status "${order.status}". Order must be Open, Bidding Closed, or Need Replacement.` });
       }
-      if (order.assignedGrinderId) {
+      if (!isReplacement && order.assignedGrinderId) {
         return res.status(400).json({ message: "Order already has a grinder assigned" });
       }
 
@@ -412,25 +413,40 @@ export async function registerRoutes(
       if (isNaN(bidAmount) || bidAmount < 0) return res.status(400).json({ message: "Invalid bid/pay amount" });
 
       const customerPrice = Number(order.customerPrice || 0);
-      const margin = customerPrice - bidAmount;
-      const marginPct = customerPrice > 0 ? (margin / customerPrice) * 100 : 0;
-      const companyProfit = margin;
       const now = new Date();
 
       const { db } = await import("./db");
       const { orders: ordersTable } = await import("@shared/schema");
       const { eq, sql, and } = await import("drizzle-orm");
 
+      let originalGrinderId: string | null = null;
+      let originalGrinderPay = 0;
+      let cancelledAssignment: any = null;
+
+      if (isReplacement) {
+        const allAssignments = await storage.getAssignments();
+        cancelledAssignment = allAssignments
+          .filter((a: any) => a.orderId === orderId && a.status === "Cancelled")
+          .sort((a: any, b: any) => new Date(b.assignedDateTime).getTime() - new Date(a.assignedDateTime).getTime())[0];
+        if (cancelledAssignment) {
+          originalGrinderId = cancelledAssignment.grinderId;
+          originalGrinderPay = Number(cancelledAssignment.grinderEarnings || cancelledAssignment.bidAmount || 0);
+        }
+      }
+
+      const totalGrinderCost = isReplacement ? (originalGrinderPay + bidAmount) : bidAmount;
+      const margin = customerPrice - totalGrinderCost;
+      const marginPct = customerPrice > 0 ? (margin / customerPrice) * 100 : 0;
+      const companyProfit = margin;
+
       const [lockedOrder] = await db.update(ordersTable).set({
         status: "Assigned",
         assignedGrinderId: input.grinderId,
         companyProfit: companyProfit.toFixed(2),
       }).where(
-        and(
-          eq(ordersTable.id, orderId),
-          sql`${ordersTable.status} IN ('Open', 'Bidding Closed')`,
-          sql`${ordersTable.assignedGrinderId} IS NULL`
-        )
+        isReplacement
+          ? and(eq(ordersTable.id, orderId), sql`${ordersTable.status} = 'Need Replacement'`)
+          : and(eq(ordersTable.id, orderId), sql`${ordersTable.status} IN ('Open', 'Bidding Closed')`, sql`${ordersTable.assignedGrinderId} IS NULL`)
       ).returning();
 
       if (!lockedOrder) {
@@ -438,7 +454,7 @@ export async function registerRoutes(
       }
 
       const assignmentId = `ASN-${Date.now().toString(36)}`;
-      const assignment = await storage.createAssignment({
+      const assignmentData: any = {
         id: assignmentId,
         grinderId: input.grinderId,
         orderId: orderId,
@@ -451,8 +467,20 @@ export async function registerRoutes(
         companyProfit: companyProfit.toFixed(2),
         grinderEarnings: input.bidAmount,
         dueDateTime: order.orderDueDate,
-        notes: input.notes || "Staff override assignment",
-      });
+        notes: input.notes || (isReplacement ? "Replacement grinder assignment" : "Staff override assignment"),
+      };
+
+      if (isReplacement && originalGrinderId) {
+        assignmentData.wasReassigned = true;
+        assignmentData.originalGrinderId = originalGrinderId;
+        assignmentData.replacementGrinderId = input.grinderId;
+        assignmentData.originalGrinderPay = originalGrinderPay.toFixed(2);
+        assignmentData.replacementGrinderPay = bidAmount.toFixed(2);
+        assignmentData.replacedAt = now;
+        assignmentData.replacementReason = input.notes || "Need Replacement";
+      }
+
+      const assignment = await storage.createAssignment(assignmentData);
 
       if (order.firstBidAt && order.biddingClosesAt && new Date(order.biddingClosesAt) > now) {
         const existingStages = (order.biddingNotifiedStages as string[]) || [];
