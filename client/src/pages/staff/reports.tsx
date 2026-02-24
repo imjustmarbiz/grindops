@@ -218,7 +218,7 @@ export default function StaffReports() {
 
           {reportsList.map((report: any) => {
             const currentNotes = staffNotesMap[report.id] ?? (report.staffNotes || "");
-            const metrics = report.metrics || {};
+            const metrics = report.metricsSnapshot || {};
             const checkpointSummary = report.checkpointSummary || {};
 
             return (
@@ -261,7 +261,7 @@ export default function StaffReports() {
                     </div>
                     <div className="p-2 rounded-lg bg-white/[0.03]" data-testid={`metric-compliance-${report.id}`}>
                       <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Daily Updates</div>
-                      <div className="text-sm font-semibold text-amber-400">{metrics.dailyUpdateCompliance != null ? `${metrics.dailyUpdateCompliance}%` : "—"}</div>
+                      <div className="text-sm font-semibold text-amber-400">{report.dailyUpdateCompliance != null ? `${report.dailyUpdateCompliance}%` : "—"}</div>
                     </div>
                   </div>
 

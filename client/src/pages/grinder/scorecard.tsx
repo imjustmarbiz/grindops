@@ -180,7 +180,7 @@ export default function GrinderScorecard() {
                     {report.metricsSnapshot && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
                         {[
-                          { label: "Quality", value: report.metricsSnapshot.quality },
+                          { label: "Quality", value: report.metricsSnapshot.qualityScore },
                           { label: "Completion", value: report.metricsSnapshot.completionRate },
                           { label: "Win Rate", value: report.metricsSnapshot.winRate },
                           { label: "On-Time", value: report.metricsSnapshot.onTimeRate },
