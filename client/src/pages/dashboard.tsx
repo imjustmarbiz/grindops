@@ -294,6 +294,7 @@ export default function Dashboard() {
   const assignedOrders = allOrders.filter(o => o.status === "Assigned").length;
   const inProgressOrders = allOrders.filter(o => o.status === "In Progress").length;
   const completedOrders = allOrders.filter(o => o.status === "Completed").length;
+  const paidOutOrders = allOrders.filter(o => o.status === "Paid Out").length;
   const cancelledOrders = allOrders.filter(o => o.status === "Cancelled").length;
   const totalOrders = allOrders.length;
 
@@ -854,6 +855,7 @@ export default function Dashboard() {
             <PipelineStep label="Assigned" count={assignedOrders} total={totalOrders} color="border-amber-500/30 bg-amber-500/5 text-amber-400" icon={Target} hideArrow />
             <PipelineStep label="In Progress" count={inProgressOrders} total={totalOrders} color="border-purple-500/30 bg-purple-500/5 text-purple-400" icon={Timer} hideArrow />
             <PipelineStep label="Completed" count={completedOrders} total={totalOrders} color="border-emerald-500/30 bg-emerald-500/5 text-emerald-400" icon={CheckCircle} hideArrow />
+            <PipelineStep label="Paid Out" count={paidOutOrders} total={totalOrders} color="border-cyan-500/30 bg-cyan-500/5 text-cyan-400" icon={DollarSign} hideArrow />
             <PipelineStep label="Cancelled" count={cancelledOrders} total={totalOrders} color="border-red-500/30 bg-red-500/5 text-red-400" icon={AlertTriangle} isLast hideArrow />
           </div>
           {(rushOrders > 0 || emergencyOrders > 0) && (

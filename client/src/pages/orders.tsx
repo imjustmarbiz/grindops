@@ -575,13 +575,14 @@ export default function Orders() {
                         order.status === "Assigned" ? "text-amber-400" :
                         order.status === "In Progress" ? "text-purple-400" :
                         order.status === "Completed" ? "text-emerald-400" :
+                        order.status === "Paid Out" ? "text-cyan-400" :
                         order.status === "Cancelled" ? "text-red-400" :
                         "text-muted-foreground"
                       }`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {["Open", "Assigned", "In Progress", "Completed", "Cancelled", "Bidding Closed"].map(s => (
+                        {["Open", "Assigned", "In Progress", "Completed", "Paid Out", "Need Replacement", "Cancelled", "Bidding Closed"].map(s => (
                           <SelectItem key={s} value={s}>{s}</SelectItem>
                         ))}
                       </SelectContent>

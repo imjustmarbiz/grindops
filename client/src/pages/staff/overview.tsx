@@ -89,6 +89,7 @@ export default function StaffOverview() {
   const assignedOrders = allOrders.filter(o => o.status === "Assigned").length;
   const inProgressOrders = allOrders.filter(o => o.status === "In Progress").length;
   const completedOrders = allOrders.filter(o => o.status === "Completed").length;
+  const paidOutOrders = allOrders.filter(o => o.status === "Paid Out").length;
   const cancelledOrders = allOrders.filter(o => o.status === "Cancelled").length;
   const totalOrders = allOrders.length;
 
@@ -118,6 +119,7 @@ export default function StaffOverview() {
     { label: "Assigned", count: assignedOrders, icon: Target, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", ring: "bg-amber-500" },
     { label: "In Progress", count: inProgressOrders, icon: Timer, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", ring: "bg-purple-500" },
     { label: "Completed", count: completedOrders, icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", ring: "bg-emerald-500" },
+    { label: "Paid Out", count: paidOutOrders, icon: DollarSign, color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20", ring: "bg-cyan-500" },
     { label: "Cancelled", count: cancelledOrders, icon: AlertTriangle, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", ring: "bg-red-500" },
   ];
 

@@ -4,6 +4,12 @@
 A fullstack web dashboard + Discord bot for managing a gaming services queue system. Staff can manage grinders (workers), orders, bids, and assignments through both a web interface and Discord slash commands. The Grinder Bot passively monitors an existing MGT Bot in Discord to automatically build the database from real order and proposal data.
 
 ## Recent Changes
+- 2026-02-24: Added Need Replacement, Auto-Payout, and Paid Out order flow
+  - "Need Replacement" status: unassigns grinder, marks order as emergency, re-opens for bidding in emergency AI queue
+  - Auto-payout: when grinder marks assignment complete, payout request is auto-created using saved payout method
+  - "Paid Out" status: when staff marks payout as Paid, order automatically moves to "Paid Out"
+  - Full order lifecycle: Open → Assigned → In Progress → Completed → Paid Out
+  - Pipeline displays updated with "Paid Out" step (cyan theme) on all dashboards
 - 2026-02-24: Added Order Completion Tracking & In Progress Status
   - New `completedAt` timestamp on orders, auto-set when order status changes to Completed
   - "In Progress" status counts as active/assigned for capacity, analytics, and all dashboards

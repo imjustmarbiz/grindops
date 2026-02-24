@@ -262,6 +262,15 @@ export class DatabaseStorage implements IStorage {
     if (status === "Completed") {
       setData.completedAt = new Date();
     }
+    if (status === "Need Replacement") {
+      setData.isEmergency = true;
+      setData.assignedGrinderId = null;
+      setData.acceptedBidId = null;
+      setData.firstBidAt = null;
+      setData.biddingClosesAt = null;
+      setData.biddingNotifiedStages = [];
+      setData.status = "Open";
+    }
     const [updated] = await db.update(orders).set(setData).where(eq(orders.id, id)).returning();
     return updated;
   }
@@ -554,7 +563,7 @@ export class DatabaseStorage implements IStorage {
       totalCompanyProfit,
       avgMargin,
       totalOrders: allOrders.length,
-      completedOrders: allOrders.filter(o => o.status === "Completed").length,
+      completedOrders: allOrders.filter(o => o.status === "Completed" || o.status === "Paid Out").length,
       activeOrders: allOrders.filter(o => o.status === "Assigned" || o.status === "In Progress").length,
       openOrders: allOrders.filter(o => o.status === "Open").length,
       totalGrinders: allGrinders.length,

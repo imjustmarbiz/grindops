@@ -208,15 +208,31 @@ export async function registerRoutes(
   app.patch(api.orders.updateStatus.path, requireStaff, async (req, res) => {
     try {
       const { status } = api.orders.updateStatus.input.parse(req.body);
+      const order = await storage.getOrder(req.params.id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      if (status === "Need Replacement" && order.assignedGrinderId) {
+        const grinder = await storage.getGrinder(order.assignedGrinderId);
+        if (grinder) {
+          await storage.updateGrinder(grinder.id, {
+            activeOrders: Math.max(0, (grinder.activeOrders || 0) - 1),
+          });
+        }
+        const allAssignments = await storage.getAssignments();
+        const activeAssignment = allAssignments.find((a: any) => a.orderId === order.id && a.status === "Active");
+        if (activeAssignment) {
+          await storage.updateAssignment(activeAssignment.id, { status: "Cancelled" });
+        }
+      }
+
       const result = await storage.updateOrderStatus(req.params.id, status);
-      if (!result) return res.status(404).json({ message: "Order not found" });
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
         entityType: "order",
         entityId: req.params.id,
         action: `status_changed_to_${status}`,
         actor: "admin",
-        details: JSON.stringify({ newStatus: status }),
+        details: JSON.stringify({ newStatus: status, previousStatus: order.status, previousGrinderId: order.assignedGrinderId }),
       });
       res.json(result);
     } catch (err) {
@@ -1424,13 +1440,35 @@ export async function registerRoutes(
       ...(newAvgTurnaround ? { avgTurnaroundDays: newAvgTurnaround } : {}),
     });
 
+    const payoutAmount = assignment.grinderEarnings || assignment.bidAmount || "0";
+    const payoutMethods = await storage.getGrinderPayoutMethods(myGrinder.id);
+    const defaultMethod = payoutMethods.find((m: any) => m.isDefault) || payoutMethods[0];
+
+    const existingPayouts = await storage.getPayoutRequests(myGrinder.id);
+    const alreadyRequested = existingPayouts.find((p: any) => p.assignmentId === assignment.id);
+
+    if (!alreadyRequested && Number(payoutAmount) > 0) {
+      await storage.createPayoutRequest({
+        id: `PR-${Date.now().toString(36)}`,
+        assignmentId: assignment.id,
+        orderId: assignment.orderId,
+        grinderId: myGrinder.id,
+        amount: String(payoutAmount),
+        payoutPlatform: defaultMethod?.platform || null,
+        payoutDetails: defaultMethod?.details || null,
+        status: "Pending",
+        notes: "Auto-created on order completion",
+        reviewedBy: null,
+      });
+    }
+
     await storage.createAuditLog({
       id: `AL-${Date.now().toString(36)}`,
       entityType: "assignment",
       entityId: assignment.id,
       action: "marked_complete_by_grinder",
       actor: myGrinder.name,
-      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), onTimeRate: newOnTimeRate, avgTurnaroundDays: newAvgTurnaround }),
+      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), onTimeRate: newOnTimeRate, avgTurnaroundDays: newAvgTurnaround, autoPayoutCreated: !alreadyRequested }),
     });
 
     res.json(updated);
@@ -1470,6 +1508,9 @@ export async function registerRoutes(
         const newEarnings = (Number(grinder.totalEarnings || 0) + payoutAmount).toFixed(2);
         await storage.updateGrinder(grinder.id, { totalEarnings: newEarnings });
       }
+      if (payoutReq.orderId) {
+        await storage.updateOrderStatus(payoutReq.orderId, "Paid Out");
+      }
     }
 
     await storage.createAuditLog({
@@ -1478,7 +1519,7 @@ export async function registerRoutes(
       entityId: req.params.id,
       action: `payout_${status.toLowerCase()}`,
       actor: reviewedBy || "staff",
-      details: JSON.stringify({ status, grinderId: payoutReq.grinderId, amount: payoutReq.amount }),
+      details: JSON.stringify({ status, grinderId: payoutReq.grinderId, amount: payoutReq.amount, orderId: payoutReq.orderId }),
     });
 
     res.json(updated);
