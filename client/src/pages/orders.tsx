@@ -136,6 +136,95 @@ function InlineDateEdit({ value, orderId, onSave }: {
   );
 }
 
+function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
+  value: Date | string | null;
+  orderId: string;
+  orderDueDate: Date | string | null;
+  onSave: (id: string, data: Record<string, any>) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const dateStr = value ? new Date(value).toISOString().slice(0, 16) : "";
+  const [editValue, setEditValue] = useState(dateStr);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  const save = () => {
+    if (editValue !== dateStr) {
+      onSave(orderId, { completedAt: editValue ? new Date(editValue).toISOString() : null });
+    }
+    setEditing(false);
+  };
+
+  const clear = () => {
+    onSave(orderId, { completedAt: null });
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex flex-col gap-1">
+        <Input
+          ref={inputRef}
+          type="datetime-local"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="text-sm bg-background/50 border-white/10 w-44"
+          data-testid={`input-edit-completed-${orderId}`}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") { setEditValue(dateStr); setEditing(false); }
+          }}
+          onBlur={save}
+        />
+        {value && (
+          <button
+            className="text-[10px] text-red-400 hover:text-red-300 text-left"
+            onMouseDown={(e) => { e.preventDefault(); clear(); }}
+            data-testid={`button-clear-completed-${orderId}`}
+          >
+            Clear date
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (!value) {
+    return (
+      <div
+        className="group flex items-center gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
+        onClick={() => { setEditValue(""); setEditing(true); }}
+        data-testid={`editable-completed-${orderId}`}
+      >
+        <span className="text-muted-foreground">-</span>
+        <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+      </div>
+    );
+  }
+
+  const completedDate = new Date(value);
+  const isOnTime = orderDueDate ? completedDate <= new Date(orderDueDate) : null;
+
+  return (
+    <div
+      className="group flex flex-col cursor-pointer rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
+      onClick={() => { setEditValue(dateStr); setEditing(true); }}
+      data-testid={`editable-completed-${orderId}`}
+    >
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-emerald-400">{format(completedDate, "MMM d, yyyy")}</span>
+        <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+      </div>
+      <span className="text-[10px] text-muted-foreground">{format(completedDate, "h:mm a")}</span>
+      {isOnTime === true && <span className="text-[10px] text-emerald-400 font-medium">On Time</span>}
+      {isOnTime === false && <span className="text-[10px] text-red-400 font-medium">Late</span>}
+    </div>
+  );
+}
+
 export default function Orders() {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
@@ -499,17 +588,12 @@ export default function Orders() {
                     <InlineDateEdit value={order.orderDueDate} orderId={order.id} onSave={saveField} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {order.completedAt ? (
-                      <div className="flex flex-col">
-                        <span className="text-xs text-emerald-400">{format(new Date(order.completedAt), "MMM d, yyyy")}</span>
-                        <span className="text-[10px] text-muted-foreground">{format(new Date(order.completedAt), "h:mm a")}</span>
-                        {order.orderDueDate && new Date(order.completedAt) <= new Date(order.orderDueDate) ? (
-                          <span className="text-[10px] text-emerald-400 font-medium">On Time</span>
-                        ) : order.orderDueDate ? (
-                          <span className="text-[10px] text-red-400 font-medium">Late</span>
-                        ) : null}
-                      </div>
-                    ) : <span className="text-muted-foreground">-</span>}
+                    <InlineCompletionDateEdit
+                      value={order.completedAt}
+                      orderId={order.id}
+                      orderDueDate={order.orderDueDate}
+                      onSave={saveField}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     {editingPriceId === order.id ? (

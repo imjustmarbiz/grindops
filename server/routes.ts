@@ -226,6 +226,52 @@ export async function registerRoutes(
       }
 
       const result = await storage.updateOrderStatus(req.params.id, status);
+
+      if (status === "Completed" && order.assignedGrinderId) {
+        const allAssignments = await storage.getAssignments();
+        const activeAssignment = allAssignments.find((a: any) => a.orderId === order.id && (a.status === "Active" || a.status === "Completed"));
+        if (activeAssignment) {
+          if (activeAssignment.status === "Active") {
+            const now = new Date();
+            const dueDate = order.orderDueDate ? new Date(order.orderDueDate) : (activeAssignment.dueDateTime ? new Date(activeAssignment.dueDateTime) : null);
+            const isOnTime = dueDate ? now <= dueDate : true;
+            await storage.updateAssignment(activeAssignment.id, {
+              status: "Completed",
+              deliveredDateTime: now,
+              isOnTime,
+            });
+            const grinder = await storage.getGrinder(order.assignedGrinderId);
+            if (grinder) {
+              await storage.updateGrinder(grinder.id, {
+                completedOrders: (grinder.completedOrders || 0) + 1,
+                activeOrders: Math.max(0, (grinder.activeOrders || 0) - 1),
+              });
+            }
+          }
+
+          const payoutAmount = activeAssignment.grinderEarnings || activeAssignment.bidAmount || "0";
+          const payoutMethods = await storage.getGrinderPayoutMethods(order.assignedGrinderId);
+          const defaultMethod = payoutMethods.find((m: any) => m.isDefault) || payoutMethods[0];
+          const existingPayouts = await storage.getPayoutRequests(order.assignedGrinderId);
+          const alreadyRequested = existingPayouts.find((p: any) => p.assignmentId === activeAssignment.id);
+
+          if (!alreadyRequested && Number(payoutAmount) > 0) {
+            await storage.createPayoutRequest({
+              id: `PR-${Date.now().toString(36)}`,
+              assignmentId: activeAssignment.id,
+              orderId: order.id,
+              grinderId: order.assignedGrinderId,
+              amount: String(payoutAmount),
+              payoutPlatform: defaultMethod?.platform || null,
+              payoutDetails: defaultMethod?.details || null,
+              status: "Pending",
+              notes: "Auto-created on staff completion",
+              reviewedBy: null,
+            });
+          }
+        }
+      }
+
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
         entityType: "order",
@@ -447,6 +493,9 @@ export async function registerRoutes(
       const updateData: any = { ...input };
       if (input.orderDueDate) {
         updateData.orderDueDate = new Date(input.orderDueDate);
+      }
+      if (input.completedAt !== undefined) {
+        updateData.completedAt = input.completedAt ? new Date(input.completedAt) : null;
       }
       const result = await storage.updateOrder(req.params.id, updateData);
       if (!result) return res.status(404).json({ message: "Order not found" });

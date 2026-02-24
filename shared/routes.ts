@@ -78,6 +78,7 @@ export const api = {
         platform: z.string().nullable().optional(),
         gamertag: z.string().nullable().optional(),
         orderDueDate: z.string().optional(),
+        completedAt: z.string().nullable().optional(),
         isRush: z.boolean().optional(),
         isEmergency: z.boolean().optional(),
         complexity: z.number().min(1).max(5).optional(),
