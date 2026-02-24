@@ -116,3 +116,26 @@
     text-shadow: 0 0 20px hsla(var(--primary)/0.5);
   }
 }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(240 10% 16%) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(240 10% 16%);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(240 10% 22%);
+}
