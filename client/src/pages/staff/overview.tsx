@@ -386,8 +386,8 @@ export default function StaffOverview() {
         </Card>
         </FadeInUp>
 
-        <FadeInUp className="h-full">
-        <Card className="lg:col-span-2 border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
+        <FadeInUp className="h-full lg:col-span-2">
+        <Card className="border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-lg flex items-center gap-2">
