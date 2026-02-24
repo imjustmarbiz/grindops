@@ -93,19 +93,19 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-4 gap-2">
           <div className="text-center">
             <p className="text-lg font-bold">{total}</p>
-            <p className="text-[10px] text-muted-foreground">Total Orders</p>
+            <p className="text-[10px] text-muted-foreground">Total</p>
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-green-400">{completed}</p>
-            <p className="text-[10px] text-muted-foreground">Completed</p>
+            <p className="text-[10px] text-muted-foreground">Done</p>
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-blue-400">{inProgress}</p>
-            <p className="text-[10px] text-muted-foreground">In Progress</p>
+            <p className="text-[10px] text-muted-foreground">Active</p>
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-yellow-400">{open}</p>
@@ -113,7 +113,7 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Completion</span>
             <span className="font-medium">{completionRate.toFixed(0)}%</span>
@@ -121,61 +121,53 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
           <ProgressBar value={completed} max={total || 1} color="bg-green-500" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="grid grid-cols-4 gap-2 text-xs">
+          <div className="flex items-center gap-1.5">
+            <DollarSign className="w-3 h-3 text-emerald-400 shrink-0" />
             <div>
-              <p className="text-muted-foreground">Revenue</p>
+              <p className="text-[10px] text-muted-foreground">Revenue</p>
               <p className="font-medium">{formatCurrency(revenue)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="w-3 h-3 text-blue-400 shrink-0" />
             <div>
-              <p className="text-muted-foreground">Avg Price</p>
+              <p className="text-[10px] text-muted-foreground">Avg Price</p>
               <p className="font-medium">{formatCurrency(avgPrice)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3 h-3 text-amber-400 shrink-0" />
             <div>
-              <p className="text-muted-foreground">Avg Days</p>
+              <p className="text-[10px] text-muted-foreground">Avg Days</p>
               <p className="font-medium">{avgCompletionDays > 0 ? `${avgCompletionDays.toFixed(1)}d` : "N/A"}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+          <div className="flex items-center gap-1.5">
+            <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
             <div>
-              <p className="text-muted-foreground">Replacements</p>
+              <p className="text-[10px] text-muted-foreground">Replace</p>
               <p className="font-medium">{needsReplacement}</p>
             </div>
           </div>
         </div>
 
-        {Object.keys(platforms).length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Platform Breakdown</p>
-            <div className="flex gap-1.5 flex-wrap">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/20">
+          <div className="flex items-center gap-2">
+            <span>SLA: {service.slaDays}d</span>
+            <span className="text-border">|</span>
+            <span>Complexity: {service.defaultComplexity}/5</span>
+          </div>
+          {Object.keys(platforms).length > 0 && (
+            <div className="flex gap-1 flex-wrap">
               {Object.entries(platforms).sort((a, b) => b[1] - a[1]).map(([platform, count]) => (
-                <Badge key={platform} variant="outline" className="text-[10px] gap-1">
-                  {platform === "PlayStation" && <Gamepad2 className="w-3 h-3 text-blue-400" />}
-                  {platform === "Xbox" && <Monitor className="w-3 h-3 text-green-400" />}
+                <Badge key={platform} variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
+                  {platform === "PlayStation" && <Gamepad2 className="w-2.5 h-2.5 text-blue-400" />}
+                  {platform === "Xbox" && <Monitor className="w-2.5 h-2.5 text-green-400" />}
                   {platform} ({count})
                 </Badge>
               ))}
             </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span>SLA: {service.slaDays}d</span>
-          <span className="text-border">|</span>
-          <span>Complexity: {service.defaultComplexity}/5</span>
-          {service.notes && (
-            <>
-              <span className="text-border">|</span>
-              <span className="truncate">{service.notes}</span>
-            </>
           )}
         </div>
       </CardContent>
