@@ -72,16 +72,16 @@ function KpiCard({ title, value, subtitle, icon: Icon, iconColor, trend }: {
 }) {
   return (
     <Card className="bg-card/50 border-border/30" data-testid={`kpi-${title.toLowerCase().replace(/\s+/g, '-')}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
+      <CardContent className="p-4 sm:p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1 min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{title}</p>
-            <p className="text-xl font-bold tracking-tight">{value}</p>
-            {subtitle && <p className="text-[10px] text-muted-foreground">{subtitle}</p>}
+            <p className="text-2xl sm:text-xl font-bold tracking-tight">{value}</p>
+            {subtitle && <p className="text-[11px] sm:text-[10px] text-muted-foreground">{subtitle}</p>}
             {trend && <ChangeIndicator current={trend.current} previous={trend.previous} />}
           </div>
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${iconColor}`}>
-            <Icon className="w-4.5 h-4.5" />
+          <div className={`h-10 w-10 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center shrink-0 ${iconColor}`}>
+            <Icon className="w-5 h-5 sm:w-4.5 sm:h-4.5" />
           </div>
         </div>
       </CardContent>
@@ -506,9 +506,9 @@ export default function BusinessPerformance() {
                         <div className="h-full bg-red-500 rounded-full" style={{ width: `${totalGrinderCost > 0 ? (replacementOverhead / totalGrinderCost) * 100 : 0}%` }} />
                       </div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
                       <span>Avg extra cost per replacement: {formatCurrency(replacementCount > 0 ? replacementOverhead / replacementCount : 0)}</span>
-                      <span className="ml-3">Replacement rate: {filteredAssignments.length > 0 ? ((replacementCount / filteredAssignments.length) * 100).toFixed(1) : "0"}%</span>
+                      <span>Replacement rate: {filteredAssignments.length > 0 ? ((replacementCount / filteredAssignments.length) * 100).toFixed(1) : "0"}%</span>
                     </div>
                   </div>
                 )}
@@ -583,7 +583,7 @@ export default function BusinessPerformance() {
                     const profitPct = data.revenue > 0 ? (data.profit / data.revenue) * 100 : 0;
                     return (
                       <div key={month} className="group" data-testid={`row-month-${month}`}>
-                        <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-3">
                           <span className="text-xs text-muted-foreground w-14 font-mono">{label}</span>
                           <div className="flex-1 space-y-0.5">
                             <Tooltip>
@@ -615,6 +615,31 @@ export default function BusinessPerformance() {
                             </span>
                           </div>
                         </div>
+                        <div className="flex sm:hidden flex-col gap-1.5 p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{label}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{formatCurrency(data.revenue)}</span>
+                              <span className={`text-xs ${profitPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                {profitPct.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="h-3.5 bg-white/5 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500/70 rounded-full transition-all duration-700" style={{ width: `${(data.revenue / maxMonthlyRevenue) * 100}%` }} />
+                            </div>
+                            <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500/70 rounded-full transition-all duration-700" style={{ width: `${(data.cost / maxMonthlyRevenue) * 100}%` }} />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>Cost: {formatCurrency(data.cost)}</span>
+                            <span className={data.profit >= 0 ? "text-emerald-400" : "text-red-400"}>
+                              Profit: {data.profit >= 0 ? "+" : ""}{formatCurrency(data.profit)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -642,15 +667,15 @@ export default function BusinessPerformance() {
                 {serviceBreakdown.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No data for selected period</p>
                 ) : serviceBreakdown.map(s => (
-                  <div key={s.service.id} className="space-y-1.5" data-testid={`row-service-${s.service.id}`}>
+                  <div key={s.service.id} className="space-y-2 p-3 sm:p-0 rounded-xl sm:rounded-none border border-border/20 sm:border-0 bg-white/[0.02] sm:bg-transparent" data-testid={`row-service-${s.service.id}`}>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium truncate max-w-[200px]">{s.service.name}</span>
-                      <div className="flex items-center gap-3 text-muted-foreground">
+                      <span className="font-medium truncate max-w-[160px] sm:max-w-[200px] text-sm sm:text-xs">{s.service.name}</span>
+                      <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground">
                         <span>{s.orderCount} orders</span>
-                        <span className="font-medium text-foreground">{formatCurrency(s.revenue)}</span>
+                        <span className="font-medium text-foreground text-sm sm:text-xs">{formatCurrency(s.revenue)}</span>
                       </div>
                     </div>
-                    <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden flex">
+                    <div className="w-full h-5 sm:h-4 bg-white/5 rounded-full overflow-hidden flex">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="h-full bg-blue-500 transition-all duration-700"
@@ -666,7 +691,7 @@ export default function BusinessPerformance() {
                         <TooltipContent><p>Profit: {formatCurrency(s.profit)} ({s.marginPct.toFixed(1)}%)</p></TooltipContent>
                       </Tooltip>
                     </div>
-                    <div className="flex gap-3 text-[10px] text-muted-foreground">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] sm:text-[10px] text-muted-foreground">
                       <span>Avg: {formatCurrency(s.avgOrderValue)}</span>
                       <span>Cost: {formatCurrency(s.grinderCost)}</span>
                       <span className={s.profit >= 0 ? "text-emerald-400" : "text-red-400"}>
@@ -704,22 +729,22 @@ export default function BusinessPerformance() {
                           <Badge variant="outline" className="text-[10px]">{stats.orders} orders</Badge>
                         </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-2 text-xs">
                         <div>
                           <p className="text-muted-foreground text-[10px]">Revenue</p>
-                          <p className="font-medium text-emerald-400">{formatCurrency(stats.revenue)}</p>
+                          <p className="font-medium text-emerald-400 text-sm sm:text-xs">{formatCurrency(stats.revenue)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-[10px]">Grinder Cost</p>
-                          <p className="font-medium text-blue-400">{formatCurrency(stats.grinderCost)}</p>
+                          <p className="font-medium text-blue-400 text-sm sm:text-xs">{formatCurrency(stats.grinderCost)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-[10px]">Profit</p>
-                          <p className={`font-medium ${stats.profit >= 0 ? "text-purple-400" : "text-red-400"}`}>{formatCurrency(stats.profit)}</p>
+                          <p className={`font-medium text-sm sm:text-xs ${stats.profit >= 0 ? "text-purple-400" : "text-red-400"}`}>{formatCurrency(stats.profit)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-[10px]">Margin</p>
-                          <p className={`font-medium ${margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>{margin.toFixed(1)}%</p>
+                          <p className={`font-medium text-sm sm:text-xs ${margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>{margin.toFixed(1)}%</p>
                         </div>
                       </div>
                     </div>
@@ -733,7 +758,7 @@ export default function BusinessPerformance() {
         <FadeInUp delay={0.15}>
           <Card className="bg-card/50 border-border/30" data-testid="card-grinder-economics">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Users className="w-4 h-4 text-primary" />
                   Grinder Economics
@@ -749,10 +774,10 @@ export default function BusinessPerformance() {
               {grinderPerformance.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No data for selected period</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4 sm:space-y-3">
                   {grinderPerformance.slice(0, 15).map((gp, idx) => (
                     <div key={gp.grinder.id} className="group" data-testid={`row-grinder-${gp.grinder.id}`}>
-                      <div className="flex items-center gap-3">
+                      <div className="hidden sm:flex items-center gap-3">
                         <span className="text-xs text-muted-foreground w-5 text-right font-mono">{idx + 1}</span>
                         <div className="flex items-center gap-1 w-32">
                           <span className="text-xs font-medium truncate">{gp.grinder.name}</span>
@@ -783,8 +808,41 @@ export default function BusinessPerformance() {
                           </div>
                         </div>
                       </div>
+                      <div className="flex sm:hidden flex-col gap-2 p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground font-mono">{idx + 1}</span>
+                            <span className="text-sm font-medium truncate">{gp.grinder.name}</span>
+                            {gp.wasReplacedCount > 0 && <Badge variant="outline" className="text-[8px] px-1 py-0 border-orange-500/30 text-orange-400 shrink-0">{gp.wasReplacedCount}R</Badge>}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500/70 rounded-full transition-all duration-700"
+                              style={{ width: `${(gp.totalEarnings / maxGrinderEarnings) * 100}%` }} />
+                          </div>
+                          {gp.totalProfit !== 0 && (
+                            <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-700 ${gp.totalProfit >= 0 ? "bg-emerald-500/60" : "bg-red-500/60"}`}
+                                style={{ width: `${(Math.abs(gp.totalProfit) / maxGrinderEarnings) * 100}%` }} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium text-blue-400">{formatCurrency(gp.totalEarnings)}</span>
+                            <span className={`${gp.totalProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                              {gp.totalProfit >= 0 ? "+" : ""}{formatCurrency(gp.totalProfit)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <span>{gp.assignmentCount} jobs</span>
+                            <span>~{formatCurrency(gp.costPerOrder)}/order</span>
+                          </div>
+                        </div>
+                      </div>
                       {Object.keys(gp.serviceBreakdown).length > 1 && (
-                        <div className="ml-8 mt-1 flex gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="ml-8 mt-1 flex gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
                           {Object.entries(gp.serviceBreakdown).sort((a, b) => b[1].earnings - a[1].earnings).map(([sId, sd]) => {
                             const svc = allServices.find(s => s.id === sId);
                             return (
@@ -812,36 +870,36 @@ export default function BusinessPerformance() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                <div className="text-center p-4 sm:p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Gross Margin</p>
-                  <p className={`text-2xl font-bold mt-1 ${totalRevenue > 0 && totalCompanyProfit / totalRevenue >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  <p className={`text-3xl sm:text-2xl font-bold mt-1.5 sm:mt-1 ${totalRevenue > 0 && totalCompanyProfit / totalRevenue >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                     {totalRevenue > 0 ? ((totalCompanyProfit / totalRevenue) * 100).toFixed(1) : "0"}%
                   </p>
                 </div>
-                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                <div className="text-center p-4 sm:p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue/Order</p>
-                  <p className="text-2xl font-bold mt-1">{formatCurrency(avgOrderValue)}</p>
+                  <p className="text-3xl sm:text-2xl font-bold mt-1.5 sm:mt-1">{formatCurrency(avgOrderValue)}</p>
                 </div>
-                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                <div className="text-center p-4 sm:p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Cost/Order</p>
-                  <p className="text-2xl font-bold mt-1 text-blue-400">{formatCurrency(avgGrinderPay)}</p>
+                  <p className="text-3xl sm:text-2xl font-bold mt-1.5 sm:mt-1 text-blue-400">{formatCurrency(avgGrinderPay)}</p>
                 </div>
-                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                <div className="text-center p-4 sm:p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Profit/Order</p>
-                  <p className={`text-2xl font-bold mt-1 ${(avgOrderValue - avgGrinderPay) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  <p className={`text-3xl sm:text-2xl font-bold mt-1.5 sm:mt-1 ${(avgOrderValue - avgGrinderPay) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                     {formatCurrency(avgOrderValue - avgGrinderPay)}
                   </p>
                 </div>
-                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                <div className="text-center p-4 sm:p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Replacement Cost</p>
-                  <p className="text-2xl font-bold mt-1 text-orange-400">{formatCurrency(replacementOverhead)}</p>
-                  <p className="text-[10px] text-muted-foreground">{replacementCount} orders</p>
+                  <p className="text-3xl sm:text-2xl font-bold mt-1.5 sm:mt-1 text-orange-400">{formatCurrency(replacementOverhead)}</p>
+                  <p className="text-[11px] sm:text-[10px] text-muted-foreground mt-0.5">{replacementCount} orders</p>
                 </div>
-                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                <div className="text-center p-4 sm:p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Unpaid Balance</p>
-                  <p className={`text-2xl font-bold mt-1 ${unpaidLiability > 0 ? "text-yellow-400" : "text-emerald-400"}`}>{formatCurrency(Math.max(unpaidLiability, 0))}</p>
-                  <p className="text-[10px] text-muted-foreground">{totalGrinderCost > 0 ? ((totalPaidOut / totalGrinderCost) * 100).toFixed(0) : "100"}% paid</p>
+                  <p className={`text-3xl sm:text-2xl font-bold mt-1.5 sm:mt-1 ${unpaidLiability > 0 ? "text-yellow-400" : "text-emerald-400"}`}>{formatCurrency(Math.max(unpaidLiability, 0))}</p>
+                  <p className="text-[11px] sm:text-[10px] text-muted-foreground mt-0.5">{totalGrinderCost > 0 ? ((totalPaidOut / totalGrinderCost) * 100).toFixed(0) : "100"}% paid</p>
                 </div>
               </div>
             </CardContent>
