@@ -179,7 +179,7 @@ export default function StaffReports() {
       </FadeInUp>
 
       <FadeInUp>
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-fit">
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-fit max-w-full overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -191,8 +191,8 @@ export default function StaffReports() {
             }`}
             data-testid={`tab-${tab.id}`}
           >
-            <tab.icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{tab.label}</span>
+            <tab.icon className="w-4 h-4 flex-shrink-0" />
+            <span className="text-xs sm:text-sm whitespace-nowrap">{tab.label}</span>
             <Badge variant="outline" className="text-[10px] ml-1">{tab.count}</Badge>
           </button>
         ))}
