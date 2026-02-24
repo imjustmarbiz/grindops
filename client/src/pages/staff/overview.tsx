@@ -11,9 +11,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } from "@/lib/animations";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
-  CheckCircle, Clock, Activity, Search, X, BarChart3, Gauge, Target, Timer,
+  CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame,
 } from "lucide-react";
+import spLogo from "@assets/image_1771930905137.png";
 
 function SparkBar({ segments, height = 6 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
@@ -131,6 +132,7 @@ export default function StaffOverview() {
         <div className="flex flex-col gap-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
+            <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
             <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-page-title">
               {isOwner ? "Owner Command Center" : "Staff Command Center"}
             </h1>

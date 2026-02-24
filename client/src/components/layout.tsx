@@ -2,7 +2,8 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart } from "lucide-react";
+import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -65,9 +66,7 @@ function AppSidebar() {
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
       <SidebarContent>
         <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-            <Activity className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <img src={spLogo} alt="SP Logo" className="w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
           <span className="font-display font-bold text-xl tracking-tight text-glow">GrindOps</span>
         </div>
         

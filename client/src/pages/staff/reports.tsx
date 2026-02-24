@@ -21,6 +21,7 @@ import {
   Plus, Clock, AlertTriangle, Eye, Trash2,
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import spLogo from "@assets/image_1771930905137.png";
 
 export default function StaffReports() {
   const { toast } = useToast();
@@ -155,11 +156,14 @@ export default function StaffReports() {
     <AnimatedPage className="space-y-5 sm:space-y-6">
       <FadeInUp>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-              Reports & Monitoring
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">Performance reports, activity checkpoints, and order updates</p>
+          <div className="flex items-center gap-3">
+            <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+                Reports & Monitoring
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">Performance reports, activity checkpoints, and order updates</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge className="bg-violet-500/15 text-violet-400 border border-violet-500/20 gap-1">

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import spLogo from "@assets/image_1771930905137.png";
 
 export default function StaffOperations() {
   const { toast } = useToast();
@@ -136,11 +137,14 @@ export default function StaffOperations() {
     <AnimatedPage className="space-y-5 sm:space-y-6">
       <FadeInUp>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-              Operations
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+          <div className="flex items-center gap-3">
+            <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+                Operations
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">

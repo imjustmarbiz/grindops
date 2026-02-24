@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Activity, Shield, Zap, Target } from "lucide-react";
+import { Shield, Zap, Target } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
+import spLogo from "@assets/image_1771930905137.png";
 
 export default function AuthPage() {
   const handleLogin = () => {
@@ -27,9 +28,7 @@ export default function AuthPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-16">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-[0_0_30px_rgba(139,92,246,0.3)]">
-              <Activity className="w-7 h-7 text-white" />
-            </div>
+            <img src={spLogo} alt="SP Logo" className="w-14 h-14 object-contain drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />
             <span className="font-display font-bold text-3xl tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
               GrindOps
             </span>
@@ -84,9 +83,7 @@ export default function AuthPage() {
           className="w-full max-w-md space-y-8 relative z-10"
         >
           <div className="flex items-center gap-3 mb-12 lg:hidden justify-center">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
+            <img src={spLogo} alt="SP Logo" className="w-11 h-11 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
             <span className="font-display font-bold text-2xl tracking-tight text-white">GrindOps</span>
           </div>
 

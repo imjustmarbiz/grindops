@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 import { pluralize } from "@/lib/staff-utils";
+import spLogo from "@assets/image_1771930905137.png";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 function formatCurrency(val: number) {
@@ -366,11 +367,14 @@ export default function Dashboard() {
     <AnimatedPage className="space-y-4 sm:space-y-6">
       <FadeInUp>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
-            {isOwner ? "Owner Command Center" : "Staff Command Center"}
-          </h1>
-          <p className="text-muted-foreground mt-1">Real-time analytics and operations overview</p>
+        <div className="flex items-center gap-3">
+          <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+          <div>
+            <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+              {isOwner ? "Owner Command Center" : "Staff Command Center"}
+            </h1>
+            <p className="text-muted-foreground mt-1">Real-time analytics and operations overview</p>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-2">
