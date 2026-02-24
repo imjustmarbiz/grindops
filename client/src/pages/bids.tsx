@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter } from "lucide-react";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
 export default function Bids() {
@@ -25,6 +26,7 @@ export default function Bids() {
   const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
 
+  const [filterOrderId, setFilterOrderId] = useState<string>("all");
   const [editingBid, setEditingBid] = useState<Bid | null>(null);
   const [editForm, setEditForm] = useState({ bidAmount: "", timeline: "", canStart: "", notes: "" });
 
@@ -108,9 +110,20 @@ export default function Bids() {
     }
   };
 
+  const filteredBids = filterOrderId === "all" ? bids : bids?.filter(b => b.orderId === filterOrderId);
   const pendingCount = bids?.filter(b => b.status === "Pending").length || 0;
   const acceptedCount = bids?.filter(b => b.status === "Accepted").length || 0;
   const rejectedCount = bids?.filter(b => b.status === "Rejected" || b.status === "Denied").length || 0;
+
+  const ordersWithBids = Array.from(new Set(bids?.map(b => b.orderId) || [])).map(orderId => {
+    const order = (orders || []).find((o: Order) => o.id === orderId);
+    const bidCount = bids?.filter(b => b.orderId === orderId).length || 0;
+    return {
+      orderId,
+      label: order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId,
+      bidCount,
+    };
+  }).sort((a, b) => b.bidCount - a.bidCount);
 
   const editOrder = editingBid ? (orders || []).find((o: Order) => o.id === editingBid.orderId) : null;
   const editGrinder = editingBid ? (grinders || []).find((g: Grinder) => g.id === editingBid.grinderId) : null;
@@ -161,6 +174,39 @@ export default function Bids() {
         ))}
       </div>
 
+      {ordersWithBids.length > 1 && (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Filter className="w-4 h-4" />
+            <span>Filter by Order:</span>
+          </div>
+          <Select value={filterOrderId} onValueChange={setFilterOrderId}>
+            <SelectTrigger className="w-56 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-order">
+              <SelectValue placeholder="All Orders" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+              <SelectItem value="all" data-testid="select-filter-all">All Orders ({bids?.length || 0} bids)</SelectItem>
+              {ordersWithBids.map(o => (
+                <SelectItem key={o.orderId} value={o.orderId} data-testid={`select-filter-order-${o.orderId}`}>
+                  Order {o.label} ({o.bidCount} {o.bidCount === 1 ? "bid" : "bids"})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filterOrderId !== "all" && (
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setFilterOrderId("all")} data-testid="button-clear-filter">
+              Clear
+            </Button>
+          )}
+          {filterOrderId !== "all" && (
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1">
+              Showing {filteredBids?.length || 0} of {bids?.length || 0} bids
+            </Badge>
+          )}
+        </div>
+      )}
+
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-x-auto">
         <Table className="min-w-[1100px]">
@@ -184,7 +230,7 @@ export default function Bids() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={13} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : bids && bids.length > 0 ? bids.map((bid: Bid) => {
+            ) : filteredBids && filteredBids.length > 0 ? filteredBids.map((bid: Bid) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
               const order = (orders || []).find((o: Order) => o.id === bid.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
@@ -332,7 +378,9 @@ export default function Bids() {
               <TableRow>
                 <TableCell colSpan={13} className="text-center h-24 text-muted-foreground">
                   <Gavel className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                  No bids yet. Proposals appear when grinders submit via MGT Bot.
+                  {filterOrderId !== "all"
+                    ? "No bids found for this order."
+                    : "No bids yet. Proposals appear when grinders submit via MGT Bot."}
                 </TableCell>
               </TableRow>
             )}
