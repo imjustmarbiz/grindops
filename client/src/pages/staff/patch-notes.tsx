@@ -203,7 +203,7 @@ export default function StaffPatchNotes() {
       </FadeInUp>
 
       <FadeInUp>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] to-transparent">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center">

@@ -48,7 +48,7 @@ export default function AuthPage() {
           </motion.div>
         </div>
 
-        <div className="relative z-10 grid grid-cols-2 gap-8 mt-12">
+        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-8 mt-12">
           {[
             { icon: Target, title: "Smart Priority", desc: "Algorithmic queue scoring" },
             { icon: Zap, title: "Fast Dispatch", desc: "Instant assignment routing" },

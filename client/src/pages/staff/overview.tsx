@@ -12,7 +12,7 @@ import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } fro
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
-  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame,
+  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity,
 } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 
@@ -337,7 +337,7 @@ export default function StaffOverview() {
                 stroke={12}
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="text-center p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 cursor-default">

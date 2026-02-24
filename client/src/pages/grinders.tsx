@@ -46,7 +46,7 @@ function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; h
 
   return (
     <div className="space-y-4 mt-2">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { icon: DollarSign, value: formatCurrency(Number(grinder.totalEarnings)), label: "Total Earned", color: "text-emerald-400", bg: "bg-emerald-500/15" },
           { icon: Target, value: `${grinder.completedOrders}/${grinder.totalOrders}`, label: "Completed", color: "text-blue-400", bg: "bg-blue-500/15" },
@@ -152,7 +152,7 @@ function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; h
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                     {[
                       { label: "Quality", value: metrics.qualityScore, color: "text-violet-400" },
                       { label: "Completion", value: metrics.completionRate, color: "text-emerald-400" },

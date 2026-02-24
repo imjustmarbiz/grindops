@@ -347,7 +347,7 @@ export default function StaffAnalytics() {
                         <div className="flex items-center gap-3 mb-1.5">
                           <span className="text-[10px] text-muted-foreground">{g.completedOrders} completed</span>
                           <span className="text-[10px] text-muted-foreground">{g.activeOrders} active</span>
-                          <span className="text-[10px] text-muted-foreground">Q: {g.qualityScore ?? 0}</span>
+                          <span className="text-[10px] text-muted-foreground">Q: {g.avgQualityRating ?? 0}</span>
                         </div>
                         <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700" style={{ width: `${maxEarnings > 0 ? (earnings / maxEarnings) * 100 : 0}%` }} />

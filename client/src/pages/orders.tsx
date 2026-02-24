@@ -423,7 +423,7 @@ export default function Orders() {
                   )} />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                   <FormField control={form.control} name="complexity" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Complexity</FormLabel>
