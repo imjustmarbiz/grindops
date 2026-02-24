@@ -288,6 +288,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     }
     (req as any).userId = userId;
     (req as any).userRole = user.role || "none";
+    (req as any).user = user;
     next();
   } catch {
     return res.status(500).json({ message: "Auth check failed" });
