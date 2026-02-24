@@ -335,6 +335,23 @@ export const notifications = pgTable("notifications", {
   expiresAt: timestamp("expires_at"),
 });
 
+export const events = pgTable("events", {
+  id: varchar("id").primaryKey(),
+  type: text("type").notNull().default("event"),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  discountPercent: integer("discount_percent"),
+  tags: text("tags").array().default([]),
+  priority: text("priority").notNull().default("normal"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],
@@ -384,6 +401,7 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ created
 export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ createdAt: true });
+export const insertEventSchema = createInsertSchema(events).omit({ createdAt: true, updatedAt: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -421,6 +439,8 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export type GrinderScorecard = {
   grinder: Grinder;

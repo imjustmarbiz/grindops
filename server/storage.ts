@@ -2,7 +2,7 @@ import { db } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
-  activityCheckpoints, performanceReports, messageThreads, messages, notifications,
+  activityCheckpoints, performanceReports, messageThreads, messages, notifications, events,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -21,6 +21,7 @@ import {
   type MessageThread, type InsertMessageThread,
   type Message, type InsertMessage,
   type Notification, type InsertNotification,
+  type Event, type InsertEvent,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -117,6 +118,12 @@ export interface IStorage {
   getNotificationsForUser(userId: string, role: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(notificationId: string, userId: string): Promise<void>;
+
+  getEvents(): Promise<Event[]>;
+  getEvent(id: string): Promise<Event | undefined>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event | undefined>;
+  deleteEvent(id: string): Promise<boolean>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1025,6 +1032,32 @@ export class DatabaseStorage implements IStorage {
         }).where(eq(notifications.id, notificationId));
       }
     }
+  }
+  async getEvents(): Promise<Event[]> {
+    return await db.select().from(events).orderBy(desc(events.startDate));
+  }
+
+  async getEvent(id: string): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event;
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const [created] = await db.insert(events).values(event).returning();
+    return created;
+  }
+
+  async updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [updated] = await db.update(events)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEvent(id: string): Promise<boolean> {
+    const result = await db.delete(events).where(eq(events.id, id));
+    return true;
   }
 }
 
