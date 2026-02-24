@@ -585,11 +585,36 @@ export async function registerRoutes(
     }
   });
 
+  async function recalcMarginsForOrder(orderId: string, newPrice: number) {
+    const allBids = await storage.getBids();
+    const orderBids = allBids.filter(b => b.orderId === orderId);
+    for (const bid of orderBids) {
+      const bidAmt = Number(bid.bidAmount) || 0;
+      const margin = newPrice - bidAmt;
+      const marginPct = newPrice > 0 ? ((margin / newPrice) * 100).toFixed(2) : "0";
+      await storage.updateBid(bid.id, { margin: String(margin.toFixed(2)), marginPct } as any);
+    }
+    const allAssignments = await storage.getAssignments();
+    const orderAssignments = allAssignments.filter(a => a.orderId === orderId);
+    for (const assignment of orderAssignments) {
+      const bidAmt = Number(assignment.bidAmount) || 0;
+      const margin = newPrice - bidAmt;
+      const marginPct = newPrice > 0 ? ((margin / newPrice) * 100).toFixed(2) : "0";
+      const companyProfit = newPrice - (Number(assignment.grinderEarnings) || bidAmt);
+      await storage.updateAssignment(assignment.id, {
+        margin: String(margin.toFixed(2)),
+        marginPct,
+        companyProfit: String(companyProfit.toFixed(2)),
+      } as any);
+    }
+  }
+
   app.patch(api.orders.updatePrice.path, requireStaff, async (req, res) => {
     try {
       const { customerPrice } = api.orders.updatePrice.input.parse(req.body);
       const result = await storage.updateOrder(req.params.id, { customerPrice });
       if (!result) return res.status(404).json({ message: "Order not found" });
+      await recalcMarginsForOrder(req.params.id, Number(customerPrice));
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
         entityType: "order",
@@ -619,6 +644,9 @@ export async function registerRoutes(
       }
       const result = await storage.updateOrder(req.params.id, updateData);
       if (!result) return res.status(404).json({ message: "Order not found" });
+      if (input.customerPrice !== undefined) {
+        await recalcMarginsForOrder(req.params.id, Number(input.customerPrice));
+      }
       const changedFields = Object.keys(input).join(", ");
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
