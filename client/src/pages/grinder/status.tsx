@@ -204,11 +204,11 @@ export default function GrinderStatus() {
                       </thead>
                       <tbody>
                         {[
-                          { label: "Win Rate", yours: `${eliteCoaching.yourMetrics.winRate}%`, elite: `${eliteCoaching.eliteAverages.winRate}%`, good: eliteCoaching.yourMetrics.winRate >= eliteCoaching.eliteAverages.winRate },
+                          { label: "Win Rate", yours: `${Number(eliteCoaching.yourMetrics.winRate).toFixed(1)}%`, elite: `${Number(eliteCoaching.eliteAverages.winRate).toFixed(1)}%`, good: eliteCoaching.yourMetrics.winRate >= eliteCoaching.eliteAverages.winRate },
                           { label: "Quality", yours: `${(Number(eliteCoaching.yourMetrics.quality) / 20).toFixed(1)}/5`, elite: `${(Number(eliteCoaching.eliteAverages.quality) / 20).toFixed(1)}/5`, good: eliteCoaching.yourMetrics.quality >= eliteCoaching.eliteAverages.quality },
                           { label: "On-Time", yours: `${Number(eliteCoaching.yourMetrics.onTime).toFixed(0)}%`, elite: `${Number(eliteCoaching.eliteAverages.onTime).toFixed(0)}%`, good: eliteCoaching.yourMetrics.onTime >= eliteCoaching.eliteAverages.onTime },
                           { label: "Completion", yours: `${Number(eliteCoaching.yourMetrics.completion).toFixed(0)}%`, elite: `${Number(eliteCoaching.eliteAverages.completion).toFixed(0)}%`, good: eliteCoaching.yourMetrics.completion >= eliteCoaching.eliteAverages.completion },
-                          { label: "Turnaround", yours: `${eliteCoaching.yourMetrics.turnaround}h`, elite: `${eliteCoaching.eliteAverages.turnaround}h`, good: eliteCoaching.yourMetrics.turnaround <= eliteCoaching.eliteAverages.turnaround },
+                          { label: "Turnaround", yours: `${Number(eliteCoaching.yourMetrics.turnaround).toFixed(1)}h`, elite: `${Number(eliteCoaching.eliteAverages.turnaround).toFixed(1)}h`, good: eliteCoaching.yourMetrics.turnaround <= eliteCoaching.eliteAverages.turnaround },
                           { label: "Completed", yours: String(eliteCoaching.yourMetrics.completed), elite: String(eliteCoaching.eliteAverages.completed), good: eliteCoaching.yourMetrics.completed >= eliteCoaching.eliteAverages.completed },
                           { label: "Strikes", yours: String(eliteCoaching.yourMetrics.strikes), elite: "0", good: eliteCoaching.yourMetrics.strikes === 0 },
                         ].map((row) => (
