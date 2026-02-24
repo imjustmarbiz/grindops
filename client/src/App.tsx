@@ -39,6 +39,8 @@ import StaffOrderClaims from "@/pages/staff/order-claims";
 import GrinderPatchNotes from "@/pages/grinder/patch-notes";
 import GrinderReviews from "@/pages/grinder/reviews";
 import GrinderOrderClaims from "@/pages/grinder/order-claims";
+import StaffCalendar from "@/pages/staff/calendar";
+import GrinderCalendar from "@/pages/grinder/calendar";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false }: { component: React.ComponentType; staffOnly?: boolean }) {
@@ -142,6 +144,7 @@ function Router() {
       <Route path="/patch-notes" component={() => <ProtectedRoute component={StaffPatchNotes} staffOnly />} />
       <Route path="/reviews" component={() => <ProtectedRoute component={StaffReviews} staffOnly />} />
       <Route path="/order-claims" component={() => <ProtectedRoute component={StaffOrderClaims} staffOnly />} />
+      <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
@@ -154,6 +157,7 @@ function Router() {
       <Route path="/grinder/patch-notes" component={() => <ProtectedRoute component={GrinderPatchNotes} />} />
       <Route path="/grinder/reviews" component={() => <ProtectedRoute component={GrinderReviews} />} />
       <Route path="/grinder/order-claims" component={() => <ProtectedRoute component={GrinderOrderClaims} />} />
+      <Route path="/grinder/calendar" component={() => <ProtectedRoute component={GrinderCalendar} />} />
       
       <Route component={NotFound} />
     </Switch>

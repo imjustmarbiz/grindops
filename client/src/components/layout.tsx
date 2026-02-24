@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart, MessageCircle, Tv, Calendar, Newspaper, Star, LinkIcon } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart, MessageCircle, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,7 @@ const staffNavItems = [
   { title: "Patch Notes", url: "/patch-notes", icon: Newspaper },
   { title: "Reviews", url: "/reviews", icon: Star },
   { title: "Order Claims", url: "/order-claims", icon: LinkIcon },
+  { title: "Calendar", url: "/calendar", icon: CalendarDays },
 ];
 
 const grinderNavItems = [
@@ -55,6 +56,7 @@ const grinderNavItems = [
   { title: "Patch Notes", url: "/grinder/patch-notes", icon: Newspaper },
   { title: "Submit Review", url: "/grinder/reviews", icon: Star },
   { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
+  { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
   { title: "Guide", url: "/grinder/guide", icon: BookOpen },
 ];
 
