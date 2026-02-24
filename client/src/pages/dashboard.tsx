@@ -206,7 +206,6 @@ export default function Dashboard() {
   const [editProfileGrinder, setEditProfileGrinder] = useState<any>(null);
   const [editProfileName, setEditProfileName] = useState("");
   const [editProfileCategory, setEditProfileCategory] = useState("");
-  const [editProfileTier, setEditProfileTier] = useState("");
   const [editProfileCapacity, setEditProfileCapacity] = useState("");
   const [editProfileNotes, setEditProfileNotes] = useState("");
   const [manualOrderService, setManualOrderService] = useState("");
@@ -1025,7 +1024,6 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2 mb-1">
                         {categoryIcon(g.category)}
                         <span className="font-medium text-sm truncate">{g.name}</span>
-                        <Badge variant="outline" className="text-[10px] h-4">{g.tier}</Badge>
                       </div>
                       <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
                         <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700" style={{ width: `${maxEarnings > 0 ? (earnings / maxEarnings) * 100 : 0}%` }} />
@@ -1578,7 +1576,6 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium">{g.name}</span>
                       <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
-                      <Badge variant="outline" className="text-[10px]">{g.tier}</Badge>
                       <span className="text-[10px] text-muted-foreground">
                         {g.activeOrders}/{g.capacity} orders · {g.completedOrders} completed · {g.strikes} strikes
                       </span>
@@ -1591,7 +1588,7 @@ export default function Dashboard() {
                       setEditProfileGrinder(g);
                       setEditProfileName(g.name);
                       setEditProfileCategory(g.category);
-                      setEditProfileTier(g.tier);
+
                       setEditProfileCapacity(String(g.capacity));
                       setEditProfileNotes(g.notes || "");
                     }}>
@@ -1617,37 +1614,19 @@ export default function Dashboard() {
               <label className="text-sm font-medium mb-1 block">Name</label>
               <Input value={editProfileName} onChange={(e) => setEditProfileName(e.target.value)} data-testid="input-profile-name" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Category</label>
-                <Select value={editProfileCategory} onValueChange={setEditProfileCategory}>
-                  <SelectTrigger data-testid="select-profile-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Grinder">Grinder</SelectItem>
-                    <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
-                    <SelectItem value="VC Grinder">VC Grinder</SelectItem>
-                    <SelectItem value="Event Grinder">Event Grinder</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Tier</label>
-                <Select value={editProfileTier} onValueChange={setEditProfileTier}>
-                  <SelectTrigger data-testid="select-profile-tier">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Bronze">Bronze</SelectItem>
-                    <SelectItem value="Silver">Silver</SelectItem>
-                    <SelectItem value="Gold">Gold</SelectItem>
-                    <SelectItem value="Platinum">Platinum</SelectItem>
-                    <SelectItem value="Diamond">Diamond</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Tier</label>
+              <Select value={editProfileCategory} onValueChange={setEditProfileCategory}>
+                <SelectTrigger data-testid="select-profile-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Grinder">Grinder</SelectItem>
+                  <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
+                  <SelectItem value="VC Grinder">VC Grinder</SelectItem>
+                  <SelectItem value="Event Grinder">Event Grinder</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Order Limit</label>
@@ -1664,7 +1643,6 @@ export default function Dashboard() {
                 const data: any = {};
                 if (editProfileName && editProfileName !== editProfileGrinder?.name) data.name = editProfileName;
                 if (editProfileCategory && editProfileCategory !== editProfileGrinder?.category) data.category = editProfileCategory;
-                if (editProfileTier && editProfileTier !== editProfileGrinder?.tier) data.tier = editProfileTier;
                 const capNum = parseInt(editProfileCapacity);
                 if (!isNaN(capNum) && capNum > 0 && capNum !== editProfileGrinder?.capacity) data.capacity = capNum;
                 if (editProfileNotes !== (editProfileGrinder?.notes || "")) data.notes = editProfileNotes;

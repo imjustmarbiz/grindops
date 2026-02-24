@@ -175,7 +175,6 @@ export default function Grinders() {
                 <TableHeader className="bg-white/[0.03]">
                   <TableRow className="border-white/[0.06]">
                     <TableHead className="whitespace-nowrap">Grinder</TableHead>
-                    <TableHead className="whitespace-nowrap">Category</TableHead>
                     <TableHead className="whitespace-nowrap">Tier</TableHead>
                     <TableHead className="text-center whitespace-nowrap">Capacity</TableHead>
                     <TableHead className="text-center whitespace-nowrap">Orders</TableHead>
@@ -210,11 +209,6 @@ export default function Grinders() {
                               <Badge variant="outline" className="text-xs bg-white/[0.03]">{g.category || "Grinder"}</Badge>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-xs ${g.tier === "New" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : g.tier === "Pro" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : g.tier === "Elite" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "bg-white/[0.03]"}`}>
-                            {g.tier}
-                          </Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <span className={g.activeOrders >= g.capacity ? "text-red-400 font-bold" : "text-muted-foreground"}>
@@ -321,8 +315,7 @@ export default function Grinders() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "Roles", value: ((selectedGrinder as any).roles as string[] | null)?.join(", ") || selectedGrinder.category || "Grinder" },
-                    { label: "Tier", value: selectedGrinder.tier },
+                    { label: "Tier", value: ((selectedGrinder as any).roles as string[] | null)?.join(", ") || selectedGrinder.category || "Grinder" },
                     { label: "Capacity", value: `${selectedGrinder.activeOrders}/${selectedGrinder.capacity}` },
                     { label: "Utilization", value: selectedGrinder.utilization ? `${Number(selectedGrinder.utilization).toFixed(0)}%` : "0%" },
                     { label: "Orders (Last 7d)", value: String(selectedGrinder.ordersAssignedL7D) },

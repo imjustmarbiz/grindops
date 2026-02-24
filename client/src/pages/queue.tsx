@@ -133,7 +133,7 @@ export default function Queue() {
                       {[
                         { label: "Active", value: `${s.activeOrders}/${s.capacity}`, color: "text-blue-400" },
                         { label: "Strikes", value: `${s.strikes}/3`, color: s.strikes > 0 ? "text-red-400" : "text-emerald-400" },
-                        { label: "Tier", value: s.tier, color: "text-amber-400" },
+                        { label: "Tier", value: s.category, color: "text-amber-400" },
                         { label: "Base Score", value: (s.scores.total * 100).toFixed(0), color: "text-primary" },
                       ].map(stat => (
                         <div key={stat.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">

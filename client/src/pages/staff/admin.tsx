@@ -40,7 +40,6 @@ export default function StaffAdmin() {
   const [editProfileGrinder, setEditProfileGrinder] = useState<any>(null);
   const [editProfileName, setEditProfileName] = useState("");
   const [editProfileCategory, setEditProfileCategory] = useState("");
-  const [editProfileTier, setEditProfileTier] = useState("");
   const [editProfileCapacity, setEditProfileCapacity] = useState("");
   const [editProfileNotes, setEditProfileNotes] = useState("");
 
@@ -401,7 +400,6 @@ export default function StaffAdmin() {
                       <span className={`text-sm font-medium ${g.isRemoved ? "line-through text-muted-foreground" : ""}`}>{g.name}</span>
                       {g.isRemoved && <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[10px]">Removed</Badge>}
                       <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
-                      <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.tier}</Badge>
                       <span className="text-[10px] text-muted-foreground">
                         {g.activeOrders}/{g.capacity} orders · {g.completedOrders} completed · {g.strikes} strikes
                       </span>
@@ -428,7 +426,7 @@ export default function StaffAdmin() {
                             setEditProfileGrinder(g);
                             setEditProfileName(g.name);
                             setEditProfileCategory(g.category);
-                            setEditProfileTier(g.tier);
+
                             setEditProfileCapacity(String(g.capacity));
                             setEditProfileNotes(g.notes || "");
                           }}>
@@ -465,37 +463,19 @@ export default function StaffAdmin() {
               <label className="text-sm font-medium mb-1 block">Name</label>
               <Input value={editProfileName} onChange={(e) => setEditProfileName(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-profile-name" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Category</label>
-                <Select value={editProfileCategory} onValueChange={setEditProfileCategory}>
-                  <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-profile-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Grinder">Grinder</SelectItem>
-                    <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
-                    <SelectItem value="VC Grinder">VC Grinder</SelectItem>
-                    <SelectItem value="Event Grinder">Event Grinder</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Tier</label>
-                <Select value={editProfileTier} onValueChange={setEditProfileTier}>
-                  <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-profile-tier">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Bronze">Bronze</SelectItem>
-                    <SelectItem value="Silver">Silver</SelectItem>
-                    <SelectItem value="Gold">Gold</SelectItem>
-                    <SelectItem value="Pro">Pro</SelectItem>
-                    <SelectItem value="Elite">Elite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Tier</label>
+              <Select value={editProfileCategory} onValueChange={setEditProfileCategory}>
+                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-profile-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Grinder">Grinder</SelectItem>
+                  <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
+                  <SelectItem value="VC Grinder">VC Grinder</SelectItem>
+                  <SelectItem value="Event Grinder">Event Grinder</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Order Limit</label>
@@ -516,7 +496,6 @@ export default function StaffAdmin() {
                   data: {
                     name: editProfileName,
                     category: editProfileCategory,
-                    tier: editProfileTier,
                     capacity: parseInt(editProfileCapacity),
                     notes: editProfileNotes || null,
                   },

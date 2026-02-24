@@ -640,7 +640,10 @@ export class DatabaseStorage implements IStorage {
       const daysSinceAssigned = lastAssigned > 0 ? (now - lastAssigned) / (1000 * 60 * 60 * 24) : 30;
       const fairnessScore = Math.min(1, daysSinceAssigned / 14);
 
-      const newGrinderScore = g.completedOrders === 0 ? 1 : 0;
+      const grinderCreatedAt = (g as any).createdAt ? new Date((g as any).createdAt).getTime() : 0;
+      const daysSinceCreated = grinderCreatedAt > 0 ? (now - grinderCreatedAt) / (1000 * 60 * 60 * 24) : 999;
+      const hasNoAssignments = g.totalOrders === 0;
+      const newGrinderScore = (hasNoAssignments && daysSinceCreated < 14) ? 1 : 0;
 
       const onTimeRate = (Number(g.onTimeRate) || 0) / 100;
       const completionRate = (Number(g.completionRate) || 100) / 100;

@@ -303,7 +303,7 @@ export default function StaffAnalytics() {
                           <span className="font-medium text-sm truncate cursor-pointer hover:underline"
                             data-testid={`link-earner-${g.id}`}
                             onClick={() => navigate(`/grinders?scorecard=${g.id}`)}>{g.name}</span>
-                          <Badge variant="outline" className="text-[9px] h-4">{g.tier}</Badge>
+                          <Badge variant="outline" className="text-[9px] h-4">{g.category}</Badge>
                         </div>
                         <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700" style={{ width: `${maxEarnings > 0 ? (earnings / maxEarnings) * 100 : 0}%` }} />
