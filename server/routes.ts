@@ -1626,12 +1626,7 @@ export async function registerRoutes(
     if (!updated) return res.status(404).json({ message: "Payout request not found" });
 
     if (status === "Paid" && payoutReq.grinderId) {
-      const grinder = await storage.getGrinder(payoutReq.grinderId);
-      if (grinder) {
-        const payoutAmount = Number(payoutReq.amount) || 0;
-        const newEarnings = (Number(grinder.totalEarnings || 0) + payoutAmount).toFixed(2);
-        await storage.updateGrinder(grinder.id, { totalEarnings: newEarnings });
-      }
+      await recalcGrinderStats(payoutReq.grinderId);
       if (payoutReq.orderId) {
         await storage.updateOrderStatus(payoutReq.orderId, "Paid Out");
       }
