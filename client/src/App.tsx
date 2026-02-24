@@ -15,6 +15,7 @@ import StaffAnalytics from "@/pages/staff/analytics";
 import StaffPayouts from "@/pages/staff/payouts";
 import StaffAdmin from "@/pages/staff/admin";
 import StaffReports from "@/pages/staff/reports";
+import StaffStreams from "@/pages/staff/streams";
 import Queue from "@/pages/queue";
 import Orders from "@/pages/orders";
 import Grinders from "@/pages/grinders";
@@ -127,6 +128,7 @@ function Router() {
       <Route path="/bids" component={() => <ProtectedRoute component={Bids} staffOnly />} />
       <Route path="/assignments" component={() => <ProtectedRoute component={Assignments} staffOnly />} />
       <Route path="/reports" component={() => <ProtectedRoute component={StaffReports} staffOnly />} />
+      <Route path="/streams" component={() => <ProtectedRoute component={StaffStreams} staffOnly />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLogPage} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />

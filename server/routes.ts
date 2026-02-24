@@ -2614,20 +2614,28 @@ export async function registerRoutes(
   app.get('/api/chat/threads/:threadId/messages', async (req, res) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const threads = await storage.getThreadsForUser(userId);
+    const thread = threads.find(t => t.id === req.params.threadId);
+    if (!thread) return res.status(403).json({ error: "Not a participant" });
     const msgs = await storage.getMessagesForThread(req.params.threadId);
-    await storage.markThreadRead(req.params.threadId, user.discordId || user.id);
+    await storage.markThreadRead(req.params.threadId, userId);
     res.json(msgs);
   });
 
   app.post('/api/chat/threads/:threadId/messages', async (req, res) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const userId = user.discordId || user.id;
+    const threads = await storage.getThreadsForUser(userId);
+    const thread = threads.find(t => t.id === req.params.threadId);
+    if (!thread) return res.status(403).json({ error: "Not a participant" });
     const { body } = req.body;
     if (!body || !body.trim()) return res.status(400).json({ error: "Message body required" });
     const msg = await storage.createMessage({
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       threadId: req.params.threadId,
-      senderUserId: user.discordId || user.id,
+      senderUserId: userId,
       senderName: user.displayName || user.username || "Staff",
       senderRole: user.role || "staff",
       body: body.trim(),
@@ -2658,7 +2666,8 @@ export async function registerRoutes(
 
   app.patch('/api/grinders/:id/twitch', async (req, res) => {
     const { twitchUsername } = req.body;
-    const updated = await storage.updateGrinder(req.params.id, { twitchUsername: twitchUsername || null });
+    const sanitized = twitchUsername ? twitchUsername.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 25) : null;
+    const updated = await storage.updateGrinder(req.params.id, { twitchUsername: sanitized });
     if (!updated) return res.status(404).json({ error: "Grinder not found" });
     res.json(updated);
   });

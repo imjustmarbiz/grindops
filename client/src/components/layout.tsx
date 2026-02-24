@@ -1,11 +1,14 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart, MessageCircle, Tv } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ChatDrawer } from "@/components/chat-drawer";
+import { LowerThirdNotifications } from "@/components/lower-third-notification";
+import type { MessageThread, Notification } from "@shared/schema";
 import { 
   Sidebar, 
   SidebarContent, 
@@ -32,6 +35,7 @@ const staffNavItems = [
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Assignments", url: "/assignments", icon: FileCheck },
   { title: "Reports", url: "/reports", icon: FileBarChart },
+  { title: "Streams", url: "/streams", icon: Tv },
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
 ];
 
@@ -150,11 +154,32 @@ function AppSidebar() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const [chatOpen, setChatOpen] = useState(false);
+  const userId = (user as any)?.discordId || user?.id || "";
   const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : "";
   const sidebarStyle = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",
   } as React.CSSProperties;
+
+  const { data: threads = [] } = useQuery<MessageThread[]>({
+    queryKey: ["/api/chat/threads"],
+    refetchInterval: 10000,
+  });
+
+  const { data: notifs = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    refetchInterval: 10000,
+  });
+
+  const totalUnread = threads.reduce((sum, t) => {
+    return sum + (t.userAId === userId ? t.userAUnread : t.userBUnread);
+  }, 0);
+
+  const unreadNotifs = notifs.filter(n => {
+    const readBy = (n.readBy as string[]) || [];
+    return !readBy.includes(userId);
+  }).length;
 
   return (
     <SidebarProvider style={sidebarStyle}>
@@ -167,6 +192,28 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-6 backdrop-blur-md bg-background/50 relative z-10">
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
             <div className="ml-auto flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setChatOpen(true)}
+                className="relative hover-elevate hover:bg-white/10"
+                data-testid="button-open-chat"
+              >
+                <MessageCircle className="w-5 h-5" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {totalUnread}
+                  </span>
+                )}
+              </Button>
+              {unreadNotifs > 0 && (
+                <div className="relative">
+                  <Bell className="w-5 h-5 text-muted-foreground" />
+                  <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-amber-500 text-black text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {unreadNotifs}
+                  </span>
+                </div>
+              )}
             </div>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 relative z-10">
@@ -176,6 +223,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
+      <LowerThirdNotifications />
     </SidebarProvider>
   );
 }

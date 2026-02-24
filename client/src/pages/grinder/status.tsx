@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Loader2, Bell, AlertOctagon, Crown, CheckCircle, DollarSign,
-  Eye, Sparkles, Lightbulb, ArrowUpCircle
+  Eye, Sparkles, Lightbulb, ArrowUpCircle, Tv, ExternalLink
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -273,6 +277,83 @@ export default function GrinderStatus() {
         </CardContent>
       </Card>
       </FadeInUp>
+
+      <FadeInUp>
+        <TwitchLinkSection grinderId={grinder.id} currentUsername={(grinder as any).twitchUsername} isElite={isElite} />
+      </FadeInUp>
     </AnimatedPage>
+  );
+}
+
+function TwitchLinkSection({ grinderId, currentUsername, isElite }: { grinderId: string; currentUsername: string | null; isElite: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [username, setUsername] = useState(currentUsername || "");
+
+  const updateMutation = useMutation({
+    mutationFn: async (twitchUsername: string) => {
+      const res = await apiRequest("PATCH", `/api/grinders/${grinderId}/twitch`, { twitchUsername: twitchUsername || null });
+      return res.json();
+    },
+    onSuccess: () => {
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+    },
+  });
+
+  return (
+    <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-purple-500/[0.03] -translate-y-8 translate-x-8" />
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <div className={`w-9 h-9 rounded-xl bg-purple-500/15 flex items-center justify-center`}>
+            <Tv className="w-5 h-5 text-purple-400" />
+          </div>
+          Twitch Integration
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-4">Link your Twitch account so staff can watch your streams on the Content Multiplayer page.</p>
+        {currentUsername && !editing ? (
+          <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <div className="flex items-center gap-2">
+              <Tv className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium">{currentUsername}</span>
+              <a href={`https://twitch.tv/${currentUsername}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setEditing(true); setUsername(currentUsername); }} className="text-xs" data-testid="button-edit-twitch">
+                Edit
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => updateMutation.mutate("")} className="text-xs text-destructive hover:text-destructive" data-testid="button-unlink-twitch">
+                Unlink
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Your Twitch username"
+              className="bg-background/50"
+              data-testid="input-twitch-username"
+            />
+            <Button
+              onClick={() => updateMutation.mutate(username.trim())}
+              disabled={!username.trim() || updateMutation.isPending}
+              data-testid="button-link-twitch"
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Link"}
+            </Button>
+            {editing && (
+              <Button variant="ghost" onClick={() => setEditing(false)} data-testid="button-cancel-twitch">Cancel</Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

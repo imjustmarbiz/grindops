@@ -36,3 +36,10 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **PostgreSQL:** Primary database for all application data, managed with Drizzle ORM.
 - **Discord API:** Used for OAuth2 authentication, Discord bot interactions, slash commands, and real-time monitoring of MGT Bot messages.
 - **MGT Bot:** An existing Discord bot that this system passively monitors for order and proposal data.
+
+## Recent Changes (Feb 2026)
+- **Chat Messaging System:** DM-style messaging between staff and grinders via slide-out ChatDrawer panel. Tables: `message_threads`, `messages`. Routes: `/api/chat/threads`, `/api/chat/threads/:id/messages`.
+- **Lower-Third Notification Popups:** Animated toast-like notifications at bottom-right, role-scoped (staff/grinder/all). Table: `notifications`. Routes: `/api/notifications`, `/api/notifications/:id/read`.
+- **Notification Triggers:** Auto-created on order creation (grinder scope), strike events (per-user).
+- **Twitch Integration:** Grinders link Twitch username from Status page. Staff view embedded live streams on `/streams` (Content Multiplayer page). Field: `grinders.twitch_username`. Routes: `/api/grinders/:id/twitch`, `/api/grinders/live-streams`.
+- **Framer Motion Animations:** All 19+ pages use AnimatedPage/FadeInUp stagger animations. SP logo across sidebar, auth, headers.

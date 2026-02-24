@@ -1,0 +1,116 @@
+import { useQuery } from "@tanstack/react-query";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tv, Radio, Users, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import spLogo from "@assets/image_1771930905137.png";
+
+type StreamGrinder = {
+  id: string;
+  name: string;
+  twitchUsername: string;
+  tier: string;
+  avatarUrl?: string;
+  roles?: string[];
+};
+
+export default function StaffStreams() {
+  const { data: streamers = [], isLoading } = useQuery<StreamGrinder[]>({
+    queryKey: ["/api/grinders/live-streams"],
+    refetchInterval: 30000,
+  });
+
+  return (
+    <AnimatedPage className="space-y-6">
+      <FadeInUp>
+        <div className="flex items-center gap-3 mb-2">
+          <img src={spLogo} alt="SP" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-glow" data-testid="text-streams-title">
+              Content Multiplayer
+            </h1>
+            <p className="text-sm text-muted-foreground">Watch grinder live streams together</p>
+          </div>
+        </div>
+      </FadeInUp>
+
+      <FadeInUp>
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
+          <Radio className="w-5 h-5 text-purple-400 animate-pulse" />
+          <span className="text-sm font-medium">{streamers.length} grinder{streamers.length !== 1 ? "s" : ""} with Twitch linked</span>
+        </div>
+      </FadeInUp>
+
+      {isLoading ? (
+        <FadeInUp>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[1, 2, 3, 4].map(i => (
+              <Card key={i} className="bg-card/50 border-border/50 animate-pulse h-64" />
+            ))}
+          </div>
+        </FadeInUp>
+      ) : streamers.length === 0 ? (
+        <FadeInUp>
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Tv className="w-16 h-16 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground font-medium">No grinders have linked Twitch yet</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">Grinders can link their Twitch accounts from their Status page</p>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      ) : (
+        <FadeInUp>
+          <div className="grid gap-4 md:grid-cols-2">
+            {streamers.map(streamer => (
+              <Card key={streamer.id} className="bg-card/50 border-border/50 overflow-hidden group" data-testid={`card-stream-${streamer.id}`}>
+                <div className="aspect-video bg-black/80 relative">
+                  <iframe
+                    src={`https://player.twitch.tv/?channel=${streamer.twitchUsername}&parent=${window.location.hostname}&muted=true`}
+                    height="100%"
+                    width="100%"
+                    allowFullScreen
+                    className="absolute inset-0"
+                    title={`${streamer.name}'s Twitch Stream`}
+                  />
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border border-purple-500/20">
+                        <AvatarImage src={streamer.avatarUrl} />
+                        <AvatarFallback className="bg-purple-500/20 text-purple-300 text-sm">{streamer.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{streamer.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-300 border-purple-500/20">
+                            {streamer.tier}
+                          </Badge>
+                          {streamer.roles?.map(role => (
+                            <Badge key={role} variant="outline" className="text-[9px] px-1 py-0">{role}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <a
+                      href={`https://twitch.tv/${streamer.twitchUsername}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-purple-400 transition-colors"
+                      data-testid={`link-twitch-${streamer.id}`}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </FadeInUp>
+      )}
+    </AnimatedPage>
+  );
+}
