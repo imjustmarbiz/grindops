@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2 } from "lucide-react";
+import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Grinder } from "@shared/schema";
@@ -28,6 +28,203 @@ function daysAgo(date: string | Date | null | undefined): { label: string; days:
   if (diffDays === 0) return { label: "Today", days: 0 };
   if (diffDays === 1) return { label: "1 day ago", days: 1 };
   return { label: `${diffDays}d ago`, days: diffDays };
+}
+
+function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; handleStrikeChange: (g: Grinder, delta: number) => void }) {
+  const { data: scorecardData, isLoading: scorecardLoading } = useQuery<any>({
+    queryKey: ["/api/staff/grinder-scorecard", grinder.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/grinder-scorecard/${grinder.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch scorecard");
+      return res.json();
+    },
+  });
+
+  const reports: any[] = scorecardData?.reports || [];
+  const orderLogs: any[] = scorecardData?.orderLogs || [];
+
+  return (
+    <div className="space-y-4 mt-2">
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { icon: DollarSign, value: formatCurrency(Number(grinder.totalEarnings)), label: "Total Earned", color: "text-emerald-400", bg: "bg-emerald-500/15" },
+          { icon: Target, value: `${grinder.completedOrders}/${grinder.totalOrders}`, label: "Completed", color: "text-blue-400", bg: "bg-blue-500/15" },
+          { icon: Trophy, value: grinder.winRate ? Number(grinder.winRate).toFixed(0) + "%" : "N/A", label: "Win Rate", color: "text-yellow-400", bg: "bg-yellow-500/15" },
+        ].map(s => (
+          <Card key={s.label} className="border-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01]">
+            <CardContent className="p-3 text-center">
+              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-1`}>
+                <s.icon className={`w-4 h-4 ${s.color}`} />
+              </div>
+              <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: "Tier", value: ((grinder as any).roles as string[] | null)?.join(", ") || grinder.category || "Grinder" },
+            { label: "Capacity", value: `${grinder.activeOrders}/${grinder.capacity}` },
+            { label: "Utilization", value: grinder.utilization ? `${Number(grinder.utilization).toFixed(0)}%` : "0%" },
+            { label: "Orders (Last 7d)", value: String(grinder.ordersAssignedL7D) },
+            { label: "Total Reviews", value: String(grinder.totalReviews) },
+            { label: "On-Time Rate", value: grinder.onTimeRate ? `${Number(grinder.onTimeRate).toFixed(0)}%` : "N/A" },
+            { label: "Completion Rate", value: grinder.completionRate ? `${Number(grinder.completionRate).toFixed(0)}%` : "N/A" },
+            { label: "Quality Rating", value: grinder.avgQualityRating ? `${(Number(grinder.avgQualityRating) / 20).toFixed(1)}/5` : "N/A" },
+            { label: "Avg Turnaround", value: grinder.avgTurnaroundDays ? `${Number(grinder.avgTurnaroundDays).toFixed(1)} days` : "N/A" },
+            { label: "Last Order", value: (() => { const info = daysAgo(grinder.lastAssigned); return grinder.lastAssigned ? `${new Date(grinder.lastAssigned).toLocaleDateString()} (${info.label})` : "Never"; })() },
+            { label: "Reassignments", value: String(grinder.reassignmentCount) },
+            { label: "Cancel Rate", value: grinder.cancelRate ? `${Number(grinder.cancelRate).toFixed(0)}%` : "N/A" },
+          ].map(m => (
+            <div key={m.label} className="flex justify-between p-2 rounded-lg bg-white/[0.03]">
+              <span className="text-xs text-muted-foreground">{m.label}</span>
+              <span className="text-sm font-medium">{m.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <div>
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Strikes</h3>
+          <p className="text-xs text-muted-foreground mt-1">More strikes = lower AI suggestion score</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(grinder, -1)} disabled={grinder.strikes <= 0}>
+            <Minus className="w-4 h-4" />
+          </Button>
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className={`w-5 h-5 rounded-full ${i < grinder.strikes ? "bg-red-500" : "bg-white/10"}`} />
+            ))}
+          </div>
+          <span className="text-lg font-bold ml-2">{grinder.strikes}/3</span>
+          <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(grinder, 1)} disabled={grinder.strikes >= 3}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {grinder.notes && (
+        <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-1">Notes</h3>
+          <p className="text-sm">{grinder.notes}</p>
+        </div>
+      )}
+
+      <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <FileText className="w-4 h-4 text-violet-400" />
+          Performance Reports
+          <Badge variant="outline" className="text-[10px] ml-auto">{reports.length}</Badge>
+        </h3>
+        {scorecardLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : reports.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No performance reports yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {reports.map((report: any) => {
+              const metrics = report.metricsSnapshot || {};
+              return (
+                <div key={report.id} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`staff-report-${report.id}`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-violet-400" />
+                      <span className="text-sm font-medium">#{report.assignmentId}</span>
+                      <span className="text-xs text-muted-foreground">{report.createdAt ? new Date(report.createdAt).toLocaleDateString() : ""}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Badge className={`border-0 text-[10px] ${report.status === "Approved" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>
+                        {report.status}
+                      </Badge>
+                      {report.overallGrade && (
+                        <Badge className={`border-0 text-[10px] ${report.overallGrade === "A" ? "bg-emerald-500/20 text-emerald-400" : report.overallGrade === "B" ? "bg-blue-500/20 text-blue-400" : report.overallGrade === "C" ? "bg-yellow-500/20 text-yellow-400" : "bg-red-500/20 text-red-400"}`}>
+                          {report.overallGrade}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[
+                      { label: "Quality", value: metrics.qualityScore, color: "text-violet-400" },
+                      { label: "Completion", value: metrics.completionRate, color: "text-emerald-400" },
+                      { label: "Win Rate", value: metrics.winRate, color: "text-blue-400" },
+                      { label: "On-Time", value: metrics.onTimeRate, color: "text-cyan-400" },
+                      { label: "Updates", value: report.dailyUpdateCompliance, color: "text-amber-400" },
+                    ].map(m => (
+                      <div key={m.label} className="text-center p-1.5 rounded bg-white/[0.03]">
+                        <p className="text-[9px] text-muted-foreground uppercase">{m.label}</p>
+                        <p className={`text-xs font-semibold ${m.color}`}>{m.value != null ? `${Number(m.value).toFixed(0)}%` : "—"}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {report.staffNotes && (
+                    <div className="mt-2 flex items-start gap-1.5">
+                      <MessageSquare className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
+                      <p className="text-xs text-muted-foreground">{report.staffNotes}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <ScrollText className="w-4 h-4 text-blue-400" />
+          Order Logs
+          <Badge variant="outline" className="text-[10px] ml-auto">{orderLogs.length}</Badge>
+        </h3>
+        {scorecardLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : orderLogs.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No order logs yet.</p>
+        ) : (
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {orderLogs.map((log: any, idx: number) => (
+              <div key={log.id || idx} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`staff-order-log-${log.id || idx}`}>
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className="flex items-start gap-2">
+                    <div className={`w-7 h-7 rounded-lg ${log.updateType === "progress" ? "bg-blue-500/15" : log.updateType === "completion" ? "bg-emerald-500/15" : "bg-yellow-500/15"} flex items-center justify-center shrink-0 mt-0.5`}>
+                      {log.updateType === "completion" ? (
+                        <CheckSquare className={`w-3.5 h-3.5 text-emerald-400`} />
+                      ) : (
+                        <Send className={`w-3.5 h-3.5 ${log.updateType === "progress" ? "text-blue-400" : "text-yellow-400"}`} />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{log.orderTitle}</p>
+                      <p className="text-[10px] text-muted-foreground">{log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge className={`border-0 text-[10px] ${log.updateType === "progress" ? "bg-blue-500/20 text-blue-400" : log.updateType === "completion" ? "bg-emerald-500/20 text-emerald-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                      {log.updateType === "progress" ? "Progress" : log.updateType === "completion" ? "Completion" : log.updateType}
+                    </Badge>
+                    {log.acknowledgedAt && (
+                      <Badge className="border-0 text-[10px] bg-emerald-500/10 text-emerald-400">Ack'd</Badge>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-1.5 ml-9 text-xs text-muted-foreground whitespace-pre-wrap">{log.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Grinders() {
@@ -284,7 +481,7 @@ export default function Grinders() {
       </Tabs>
 
       <Dialog open={!!selectedGrinder} onOpenChange={() => setSelectedGrinder(null)}>
-        <DialogContent className="sm:max-w-[600px] border-white/10 bg-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto border-white/10 bg-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
               {selectedGrinder && categoryIcon(selectedGrinder.category || "Grinder")}
@@ -292,78 +489,7 @@ export default function Grinders() {
             </DialogTitle>
           </DialogHeader>
           {selectedGrinder && (
-            <div className="space-y-4 mt-2">
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { icon: DollarSign, value: formatCurrency(Number(selectedGrinder.totalEarnings)), label: "Total Earned", color: "text-emerald-400", bg: "bg-emerald-500/15" },
-                  { icon: Target, value: `${selectedGrinder.completedOrders}/${selectedGrinder.totalOrders}`, label: "Completed", color: "text-blue-400", bg: "bg-blue-500/15" },
-                  { icon: Trophy, value: selectedGrinder.winRate ? Number(selectedGrinder.winRate).toFixed(0) + "%" : "N/A", label: "Win Rate", color: "text-yellow-400", bg: "bg-yellow-500/15" },
-                ].map(s => (
-                  <Card key={s.label} className="border-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01]">
-                    <CardContent className="p-3 text-center">
-                      <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-1`}>
-                        <s.icon className={`w-4 h-4 ${s.color}`} />
-                      </div>
-                      <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-                      <p className="text-xs text-muted-foreground">{s.label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "Tier", value: ((selectedGrinder as any).roles as string[] | null)?.join(", ") || selectedGrinder.category || "Grinder" },
-                    { label: "Capacity", value: `${selectedGrinder.activeOrders}/${selectedGrinder.capacity}` },
-                    { label: "Utilization", value: selectedGrinder.utilization ? `${Number(selectedGrinder.utilization).toFixed(0)}%` : "0%" },
-                    { label: "Orders (Last 7d)", value: String(selectedGrinder.ordersAssignedL7D) },
-                    { label: "Total Reviews", value: String(selectedGrinder.totalReviews) },
-                    { label: "On-Time Rate", value: selectedGrinder.onTimeRate ? `${Number(selectedGrinder.onTimeRate).toFixed(0)}%` : "N/A" },
-                    { label: "Completion Rate", value: selectedGrinder.completionRate ? `${Number(selectedGrinder.completionRate).toFixed(0)}%` : "N/A" },
-                    { label: "Quality Rating", value: selectedGrinder.avgQualityRating ? `${(Number(selectedGrinder.avgQualityRating) / 20).toFixed(1)}/5` : "N/A" },
-                    { label: "Avg Turnaround", value: selectedGrinder.avgTurnaroundDays ? `${Number(selectedGrinder.avgTurnaroundDays).toFixed(1)} days` : "N/A" },
-                    { label: "Last Order", value: (() => { const info = daysAgo(selectedGrinder.lastAssigned); return selectedGrinder.lastAssigned ? `${new Date(selectedGrinder.lastAssigned).toLocaleDateString()} (${info.label})` : "Never"; })() },
-                    { label: "Reassignments", value: String(selectedGrinder.reassignmentCount) },
-                    { label: "Cancel Rate", value: selectedGrinder.cancelRate ? `${Number(selectedGrinder.cancelRate).toFixed(0)}%` : "N/A" },
-                  ].map(m => (
-                    <div key={m.label} className="flex justify-between p-2 rounded-lg bg-white/[0.03]">
-                      <span className="text-xs text-muted-foreground">{m.label}</span>
-                      <span className="text-sm font-medium">{m.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                <div>
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Strikes</h3>
-                  <p className="text-xs text-muted-foreground mt-1">More strikes = lower AI suggestion score</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(selectedGrinder, -1)} disabled={selectedGrinder.strikes <= 0}>
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <div className="flex gap-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className={`w-5 h-5 rounded-full ${i < selectedGrinder.strikes ? "bg-red-500" : "bg-white/10"}`} />
-                    ))}
-                  </div>
-                  <span className="text-lg font-bold ml-2">{selectedGrinder.strikes}/3</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(selectedGrinder, 1)} disabled={selectedGrinder.strikes >= 3}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {selectedGrinder.notes && (
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-1">Notes</h3>
-                  <p className="text-sm">{selectedGrinder.notes}</p>
-                </div>
-              )}
-            </div>
+            <ScorecardContent grinder={selectedGrinder} handleStrikeChange={handleStrikeChange} />
           )}
         </DialogContent>
       </Dialog>

@@ -2180,6 +2180,50 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/staff/grinder-scorecard/:grinderId", requireStaff, async (req, res) => {
+    try {
+      const { grinderId } = req.params;
+      const grinder = await storage.getGrinder(grinderId);
+      if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+
+      const reports = await storage.getPerformanceReports(grinderId);
+      const sortedReports = reports
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 20);
+
+      const orderUpdateLogs = await storage.getOrderUpdates(grinderId);
+      const orders = await storage.getOrders();
+      const orderMap = new Map(orders.map((o: any) => [o.id, o]));
+
+      const enrichedLogs = orderUpdateLogs.map((log: any) => {
+        const order = orderMap.get(log.orderId);
+        return {
+          ...log,
+          orderTitle: order?.title || order?.id || log.orderId,
+          orderStatus: order?.status || "Unknown",
+        };
+      });
+
+      const checkpoints = await storage.getActivityCheckpoints(undefined, grinderId);
+
+      const checkpointCompliance = {
+        totalCheckpoints: checkpoints.length,
+        issuesReported: checkpoints.filter((c: any) => c.type === "issue").length,
+        resolvedIssues: checkpoints.filter((c: any) => c.type === "issue" && c.resolvedAt).length,
+        totalLogins: checkpoints.filter((c: any) => c.type === "login").length,
+        updatesSubmitted: orderUpdateLogs.length,
+      };
+
+      res.json({
+        reports: sortedReports,
+        orderLogs: enrichedLogs,
+        checkpointCompliance,
+      });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   // ============ PERFORMANCE REPORTS ============
 
   app.post("/api/staff/performance-reports/generate", requireStaff, async (req, res) => {
