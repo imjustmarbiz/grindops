@@ -45,7 +45,7 @@ import BusinessPerformance from "@/pages/staff/business";
 import GrinderCalendar from "@/pages/grinder/calendar";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ component: Component, staffOnly = false }: { component: React.ComponentType; staffOnly?: boolean }) {
+function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean }) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
@@ -58,6 +58,10 @@ function ProtectedRoute({ component: Component, staffOnly = false }: { component
 
   if (!isAuthenticated) {
     return <Redirect to="/login" />;
+  }
+
+  if (ownerOnly && user?.role !== "owner") {
+    return <Redirect to="/" />;
   }
 
   if (staffOnly && user?.role !== "staff" && user?.role !== "owner") {
@@ -148,7 +152,7 @@ function Router() {
       <Route path="/order-claims" component={() => <ProtectedRoute component={StaffOrderClaims} staffOnly />} />
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
-      <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} staffOnly />} />
+      <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />

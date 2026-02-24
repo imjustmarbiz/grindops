@@ -128,20 +128,36 @@ export default function BusinessPerformance() {
   }, [allAssignments, filteredOrders]);
 
   const totalRevenue = filteredOrders.reduce((s, o) => s + parseFloat(o.customerPrice || "0"), 0);
-  const totalGrinderCost = filteredAssignments.reduce((s, a) => s + parseFloat(a.grinderEarnings || "0"), 0);
-  const totalCompanyProfit = filteredAssignments.reduce((s, a) => s + parseFloat(a.companyProfit || "0"), 0);
-  const avgMarginPct = filteredAssignments.length > 0
-    ? filteredAssignments.reduce((s, a) => s + parseFloat(a.marginPct || "0"), 0) / filteredAssignments.length : 0;
+
+  const reassignedAssignments = filteredAssignments.filter(a => a.wasReassigned);
+  const replacementCount = reassignedAssignments.length;
+  const originalGrinderCostTotal = reassignedAssignments.reduce((s, a) => s + parseFloat(a.originalGrinderPay || "0"), 0);
+  const replacementGrinderCostTotal = reassignedAssignments.reduce((s, a) => s + parseFloat(a.replacementGrinderPay || "0"), 0);
+  const replacementOverhead = originalGrinderCostTotal + replacementGrinderCostTotal;
+
+  const normalAssignments = filteredAssignments.filter(a => !a.wasReassigned);
+  const normalGrinderCost = normalAssignments.reduce((s, a) => s + parseFloat(a.grinderEarnings || "0"), 0);
+  const totalGrinderCost = normalGrinderCost + replacementOverhead;
+
+  const totalCompanyProfit = totalRevenue - totalGrinderCost;
+  const avgMarginPct = totalRevenue > 0 ? (totalCompanyProfit / totalRevenue) * 100 : 0;
   const completedOrders = filteredOrders.filter(o => o.status === "Completed" || o.status === "Paid Out").length;
   const completionRate = filteredOrders.length > 0 ? (completedOrders / filteredOrders.length) * 100 : 0;
   const avgOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
   const avgGrinderPay = filteredAssignments.length > 0 ? totalGrinderCost / filteredAssignments.length : 0;
   const costToRevenueRatio = totalRevenue > 0 ? (totalGrinderCost / totalRevenue) * 100 : 0;
 
-  const paidPayouts = (allPayouts || []).filter((p: any) => p.status === "Paid" && isInRange(p.paidAt || p.createdAt, range));
+  const filteredPayouts = useMemo(() => {
+    const orderIds = new Set(filteredOrders.map(o => o.id));
+    return (allPayouts || []).filter((p: any) => orderIds.has(p.orderId));
+  }, [allPayouts, filteredOrders]);
+  const paidPayouts = filteredPayouts.filter((p: any) => p.status === "Paid");
   const totalPaidOut = paidPayouts.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
-  const pendingPayouts = (allPayouts || []).filter((p: any) => p.status === "Pending" || p.status === "Approved");
+  const pendingPayouts = filteredPayouts.filter((p: any) => p.status === "Pending" || p.status === "Approved" || p.status === "Pending Grinder Approval");
   const totalPending = pendingPayouts.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
+  const disputedPayouts = filteredPayouts.filter((p: any) => p.status === "Disputed");
+  const totalDisputed = disputedPayouts.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
+  const unpaidLiability = totalGrinderCost - totalPaidOut;
 
   const previousRange = useMemo(() => {
     if (!range.start) return null;
@@ -163,8 +179,11 @@ export default function BusinessPerformance() {
   }, [allAssignments, previousRange, prevOrders]);
 
   const prevRevenue = prevOrders.reduce((s, o) => s + parseFloat(o.customerPrice || "0"), 0);
-  const prevProfit = prevAssignments.reduce((s, a) => s + parseFloat(a.companyProfit || "0"), 0);
-  const prevGrinderCost = prevAssignments.reduce((s, a) => s + parseFloat(a.grinderEarnings || "0"), 0);
+  const prevReassigned = prevAssignments.filter(a => a.wasReassigned);
+  const prevNormal = prevAssignments.filter(a => !a.wasReassigned);
+  const prevGrinderCost = prevNormal.reduce((s, a) => s + parseFloat(a.grinderEarnings || "0"), 0)
+    + prevReassigned.reduce((s, a) => s + parseFloat(a.originalGrinderPay || "0") + parseFloat(a.replacementGrinderPay || "0"), 0);
+  const prevProfit = prevRevenue - prevGrinderCost;
 
   const serviceBreakdown = useMemo(() => {
     return allServices.map(s => {
@@ -174,10 +193,14 @@ export default function BusinessPerformance() {
         return order?.serviceId === s.id;
       });
       const revenue = sOrders.reduce((sum, o) => sum + parseFloat(o.customerPrice || "0"), 0);
-      const grinderCost = sAssigns.reduce((sum, a) => sum + parseFloat(a.grinderEarnings || "0"), 0);
-      const profit = sAssigns.reduce((sum, a) => sum + parseFloat(a.companyProfit || "0"), 0);
+      const sNormal = sAssigns.filter(a => !a.wasReassigned);
+      const sReassigned = sAssigns.filter(a => a.wasReassigned);
+      const grinderCost = sNormal.reduce((sum, a) => sum + parseFloat(a.grinderEarnings || "0"), 0)
+        + sReassigned.reduce((sum, a) => sum + parseFloat(a.originalGrinderPay || "0") + parseFloat(a.replacementGrinderPay || "0"), 0);
+      const profit = revenue - grinderCost;
       const marginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
       const completed = sOrders.filter(o => o.status === "Completed" || o.status === "Paid Out").length;
+      const replacements = sReassigned.length;
       return {
         service: s,
         orderCount: sOrders.length,
@@ -188,6 +211,7 @@ export default function BusinessPerformance() {
         completedCount: completed,
         completionRate: sOrders.length > 0 ? (completed / sOrders.length) * 100 : 0,
         avgOrderValue: sOrders.length > 0 ? revenue / sOrders.length : 0,
+        replacements,
       };
     }).filter(s => s.orderCount > 0).sort((a, b) => b.revenue - a.revenue);
   }, [allServices, filteredOrders, filteredAssignments]);
@@ -196,15 +220,32 @@ export default function BusinessPerformance() {
 
   const grinderPerformance = useMemo(() => {
     return allGrinders.map(g => {
-      const gAssigns = filteredAssignments.filter(a => a.grinderId === g.id);
-      const totalEarnings = gAssigns.reduce((s, a) => s + parseFloat(a.grinderEarnings || "0"), 0);
-      const totalProfit = gAssigns.reduce((s, a) => s + parseFloat(a.companyProfit || "0"), 0);
-      const completedCount = gAssigns.filter(a => a.status === "Completed").length;
-      const orderRevenue = gAssigns.reduce((s, a) => s + parseFloat(a.orderPrice || "0"), 0);
-      const avgMargin = gAssigns.length > 0 ? gAssigns.reduce((s, a) => s + parseFloat(a.marginPct || "0"), 0) / gAssigns.length : 0;
+      const gAssignsCurrent = filteredAssignments.filter(a => a.grinderId === g.id);
+      const gAssignsOriginal = filteredAssignments.filter(a => a.wasReassigned && a.originalGrinderId === g.id);
+      const gAssignsReplacement = filteredAssignments.filter(a => a.wasReassigned && a.replacementGrinderId === g.id);
+
+      let totalEarnings = 0;
+      gAssignsCurrent.forEach(a => {
+        if (a.wasReassigned) {
+          if (a.replacementGrinderId === g.id) totalEarnings += parseFloat(a.replacementGrinderPay || "0");
+          else if (a.originalGrinderId === g.id) totalEarnings += parseFloat(a.originalGrinderPay || "0");
+        } else {
+          totalEarnings += parseFloat(a.grinderEarnings || "0");
+        }
+      });
+      gAssignsOriginal.forEach(a => {
+        if (a.grinderId !== g.id) totalEarnings += parseFloat(a.originalGrinderPay || "0");
+      });
+
+      const totalJobs = gAssignsCurrent.length + gAssignsOriginal.filter(a => a.grinderId !== g.id).length;
+      const completedCount = gAssignsCurrent.filter(a => a.status === "Completed").length;
+      const orderRevenue = gAssignsCurrent.reduce((s, a) => s + parseFloat(a.orderPrice || "0"), 0);
+      const totalProfit = orderRevenue - totalEarnings;
+      const replacementJobs = gAssignsReplacement.length;
+      const wasReplacedCount = gAssignsOriginal.filter(a => a.grinderId !== g.id).length;
 
       const serviceMap: Record<string, { count: number; earnings: number }> = {};
-      gAssigns.forEach(a => {
+      gAssignsCurrent.forEach(a => {
         const order = filteredOrders.find(o => o.id === a.orderId);
         const sId = order?.serviceId || "unknown";
         if (!serviceMap[sId]) serviceMap[sId] = { count: 0, earnings: 0 };
@@ -214,14 +255,15 @@ export default function BusinessPerformance() {
 
       return {
         grinder: g,
-        assignmentCount: gAssigns.length,
+        assignmentCount: totalJobs,
         totalEarnings,
         totalProfit,
         completedCount,
         orderRevenue,
-        avgMargin,
-        costPerOrder: gAssigns.length > 0 ? totalEarnings / gAssigns.length : 0,
+        costPerOrder: totalJobs > 0 ? totalEarnings / totalJobs : 0,
         serviceBreakdown: serviceMap,
+        replacementJobs,
+        wasReplacedCount,
       };
     }).filter(g => g.assignmentCount > 0).sort((a, b) => b.totalEarnings - a.totalEarnings);
   }, [allGrinders, filteredAssignments, filteredOrders]);
@@ -229,10 +271,10 @@ export default function BusinessPerformance() {
   const maxGrinderEarnings = Math.max(...grinderPerformance.map(g => g.totalEarnings), 1);
 
   const platformBreakdown = useMemo(() => {
-    const platforms: Record<string, { orders: number; revenue: number; grinderCost: number; profit: number; completed: number }> = {};
+    const platforms: Record<string, { orders: number; revenue: number; grinderCost: number; profit: number; completed: number; replacements: number }> = {};
     filteredOrders.forEach(o => {
       const p = normalizePlatform(o.platform);
-      if (!platforms[p]) platforms[p] = { orders: 0, revenue: 0, grinderCost: 0, profit: 0, completed: 0 };
+      if (!platforms[p]) platforms[p] = { orders: 0, revenue: 0, grinderCost: 0, profit: 0, completed: 0, replacements: 0 };
       platforms[p].orders += 1;
       platforms[p].revenue += parseFloat(o.customerPrice || "0");
       if (o.status === "Completed" || o.status === "Paid Out") platforms[p].completed += 1;
@@ -241,27 +283,37 @@ export default function BusinessPerformance() {
       const order = filteredOrders.find(o => o.id === a.orderId);
       const p = normalizePlatform(order?.platform);
       if (platforms[p]) {
-        platforms[p].grinderCost += parseFloat(a.grinderEarnings || "0");
-        platforms[p].profit += parseFloat(a.companyProfit || "0");
+        if (a.wasReassigned) {
+          platforms[p].grinderCost += parseFloat(a.originalGrinderPay || "0") + parseFloat(a.replacementGrinderPay || "0");
+          platforms[p].replacements += 1;
+        } else {
+          platforms[p].grinderCost += parseFloat(a.grinderEarnings || "0");
+        }
       }
     });
+    Object.values(platforms).forEach(p => { p.profit = p.revenue - p.grinderCost; });
     return Object.entries(platforms).sort((a, b) => b[1].revenue - a[1].revenue);
   }, [filteredOrders, filteredAssignments]);
 
   const monthlyTrend = useMemo(() => {
-    const months: Record<string, { revenue: number; cost: number; profit: number; orders: number }> = {};
+    const months: Record<string, { revenue: number; cost: number; profit: number; orders: number; replacements: number }> = {};
     allOrders.forEach(o => {
       if (!o.createdAt) return;
       const d = new Date(o.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!months[key]) months[key] = { revenue: 0, cost: 0, profit: 0, orders: 0 };
+      if (!months[key]) months[key] = { revenue: 0, cost: 0, profit: 0, orders: 0, replacements: 0 };
       months[key].revenue += parseFloat(o.customerPrice || "0");
       months[key].orders += 1;
       const orderAssignments = allAssignments.filter(a => a.orderId === o.id);
       orderAssignments.forEach(a => {
-        months[key].cost += parseFloat(a.grinderEarnings || "0");
-        months[key].profit += parseFloat(a.companyProfit || "0");
+        if (a.wasReassigned) {
+          months[key].cost += parseFloat(a.originalGrinderPay || "0") + parseFloat(a.replacementGrinderPay || "0");
+          months[key].replacements += 1;
+        } else {
+          months[key].cost += parseFloat(a.grinderEarnings || "0");
+        }
       });
+      months[key].profit = months[key].revenue - months[key].cost;
     });
     return Object.entries(months).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
   }, [allOrders, allAssignments]);
@@ -344,7 +396,7 @@ export default function BusinessPerformance() {
             <KpiCard title="Avg Order Value" value={formatCurrency(avgOrderValue)} icon={Target} iconColor="bg-cyan-500/20 text-cyan-400"
               subtitle={`Avg pay: ${formatCurrency(avgGrinderPay)}`} />
             <KpiCard title="Paid Out" value={formatCurrency(totalPaidOut)} icon={Wallet} iconColor="bg-pink-500/20 text-pink-400"
-              subtitle={totalPending > 0 ? `${formatCurrency(totalPending)} pending` : "No pending"} />
+              subtitle={`${formatCurrency(totalPending)} pending${totalDisputed > 0 ? ` · ${formatCurrency(totalDisputed)} disputed` : ""}`} />
           </div>
         </FadeInUp>
 
@@ -411,6 +463,109 @@ export default function BusinessPerformance() {
             </CardContent>
           </Card>
         </FadeInUp>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <FadeInUp delay={0.07}>
+            <Card className="bg-card/50 border-border/30 h-full" data-testid="card-replacement-analytics">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" />
+                  Replacement Grinder Impact
+                  {replacementCount > 0 && <Badge variant="destructive" className="text-[10px]">{replacementCount} replacements</Badge>}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {replacementCount === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No replacements in this period</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl p-3 border border-amber-500/20 bg-amber-500/5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Original Grinder Pay</p>
+                        <p className="text-lg font-bold text-amber-400 mt-1">{formatCurrency(originalGrinderCostTotal)}</p>
+                        <p className="text-[10px] text-muted-foreground">Partial pay to removed grinders</p>
+                      </div>
+                      <div className="rounded-xl p-3 border border-orange-500/20 bg-orange-500/5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Replacement Grinder Pay</p>
+                        <p className="text-lg font-bold text-orange-400 mt-1">{formatCurrency(replacementGrinderCostTotal)}</p>
+                        <p className="text-[10px] text-muted-foreground">Pay to replacement grinders</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-3 border border-red-500/20 bg-red-500/5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Replacement Overhead</p>
+                          <p className="text-xl font-bold text-red-400 mt-1">{formatCurrency(replacementOverhead)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-muted-foreground">% of Total Costs</p>
+                          <p className="text-sm font-medium text-red-400">{totalGrinderCost > 0 ? ((replacementOverhead / totalGrinderCost) * 100).toFixed(1) : "0"}%</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-red-500 rounded-full" style={{ width: `${totalGrinderCost > 0 ? (replacementOverhead / totalGrinderCost) * 100 : 0}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      <span>Avg extra cost per replacement: {formatCurrency(replacementCount > 0 ? replacementOverhead / replacementCount : 0)}</span>
+                      <span className="ml-3">Replacement rate: {filteredAssignments.length > 0 ? ((replacementCount / filteredAssignments.length) * 100).toFixed(1) : "0"}%</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </FadeInUp>
+
+          <FadeInUp delay={0.07}>
+            <Card className="bg-card/50 border-border/30 h-full" data-testid="card-payout-analytics">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  Payout Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl p-3 border border-emerald-500/20 bg-emerald-500/5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Paid Out</p>
+                      <p className="text-lg font-bold text-emerald-400 mt-1">{formatCurrency(totalPaidOut)}</p>
+                      <p className="text-[10px] text-muted-foreground">{paidPayouts.length} payouts completed</p>
+                    </div>
+                    <div className="rounded-xl p-3 border border-yellow-500/20 bg-yellow-500/5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pending Payouts</p>
+                      <p className="text-lg font-bold text-yellow-400 mt-1">{formatCurrency(totalPending)}</p>
+                      <p className="text-[10px] text-muted-foreground">{pendingPayouts.length} awaiting action</p>
+                    </div>
+                  </div>
+                  {totalDisputed > 0 && (
+                    <div className="rounded-xl p-3 border border-red-500/20 bg-red-500/5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Disputed Payouts</p>
+                      <p className="text-lg font-bold text-red-400 mt-1">{formatCurrency(totalDisputed)}</p>
+                      <p className="text-[10px] text-muted-foreground">{disputedPayouts.length} disputes requiring resolution</p>
+                    </div>
+                  )}
+                  <div className="rounded-xl p-3 border border-blue-500/20 bg-blue-500/5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Outstanding Liability</p>
+                        <p className={`text-xl font-bold mt-1 ${unpaidLiability > 0 ? "text-blue-400" : "text-emerald-400"}`}>{formatCurrency(Math.max(unpaidLiability, 0))}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground">Payout Coverage</p>
+                        <p className="text-sm font-medium text-blue-400">{totalGrinderCost > 0 ? ((totalPaidOut / totalGrinderCost) * 100).toFixed(1) : "100"}%</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${totalGrinderCost > 0 ? Math.min((totalPaidOut / totalGrinderCost) * 100, 100) : 100}%` }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">Owed to grinders minus already paid</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        </div>
 
         {monthlyTrend.length > 1 && (
           <FadeInUp delay={0.09}>
@@ -517,6 +672,7 @@ export default function BusinessPerformance() {
                       <span className={s.profit >= 0 ? "text-emerald-400" : "text-red-400"}>
                         Margin: {s.marginPct.toFixed(1)}%
                       </span>
+                      {s.replacements > 0 && <span className="text-orange-400">{s.replacements} replacement{s.replacements !== 1 ? "s" : ""}</span>}
                     </div>
                   </div>
                 ))}
@@ -598,7 +754,10 @@ export default function BusinessPerformance() {
                     <div key={gp.grinder.id} className="group" data-testid={`row-grinder-${gp.grinder.id}`}>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground w-5 text-right font-mono">{idx + 1}</span>
-                        <span className="text-xs font-medium w-32 truncate">{gp.grinder.name}</span>
+                        <div className="flex items-center gap-1 w-32">
+                          <span className="text-xs font-medium truncate">{gp.grinder.name}</span>
+                          {gp.wasReplacedCount > 0 && <Badge variant="outline" className="text-[8px] px-1 py-0 border-orange-500/30 text-orange-400 shrink-0">{gp.wasReplacedCount}R</Badge>}
+                        </div>
                         <div className="flex-1 space-y-0.5">
                           <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
                             <div className="h-full bg-blue-500/70 rounded-full transition-all duration-700"
@@ -653,7 +812,7 @@ export default function BusinessPerformance() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Gross Margin</p>
                   <p className={`text-2xl font-bold mt-1 ${totalRevenue > 0 && totalCompanyProfit / totalRevenue >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -673,6 +832,16 @@ export default function BusinessPerformance() {
                   <p className={`text-2xl font-bold mt-1 ${(avgOrderValue - avgGrinderPay) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                     {formatCurrency(avgOrderValue - avgGrinderPay)}
                   </p>
+                </div>
+                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Replacement Cost</p>
+                  <p className="text-2xl font-bold mt-1 text-orange-400">{formatCurrency(replacementOverhead)}</p>
+                  <p className="text-[10px] text-muted-foreground">{replacementCount} orders</p>
+                </div>
+                <div className="text-center p-3 rounded-xl border border-border/20 bg-white/[0.02]">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Unpaid Balance</p>
+                  <p className={`text-2xl font-bold mt-1 ${unpaidLiability > 0 ? "text-yellow-400" : "text-emerald-400"}`}>{formatCurrency(Math.max(unpaidLiability, 0))}</p>
+                  <p className="text-[10px] text-muted-foreground">{totalGrinderCost > 0 ? ((totalPaidOut / totalGrinderCost) * 100).toFixed(0) : "100"}% paid</p>
                 </div>
               </div>
             </CardContent>
