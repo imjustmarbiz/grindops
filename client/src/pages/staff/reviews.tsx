@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CustomerReview } from "@shared/schema";
+import type { CustomerReview, Grinder, Order, Service } from "@shared/schema";
 import {
-  Star, Check, X, MessageSquare, User, ExternalLink
+  Star, Check, X, MessageSquare, User, ExternalLink, Filter
 } from "lucide-react";
 
 function StatusBadge({ status }: { status: string }) {
@@ -32,7 +33,7 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function ReviewCard({ review, onAction }: { review: CustomerReview; onAction: (id: string, status: string, note: string) => void }) {
+function ReviewCard({ review, onAction, grinderName }: { review: CustomerReview; onAction: (id: string, status: string, note: string) => void; grinderName?: string }) {
   const [decisionNote, setDecisionNote] = useState("");
   const [showNote, setShowNote] = useState(false);
 
@@ -58,7 +59,7 @@ function ReviewCard({ review, onAction }: { review: CustomerReview; onAction: (i
             <p className="text-sm text-muted-foreground mb-3" data-testid={`text-review-body-${review.id}`}>{review.body}</p>
 
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-              <span data-testid={`text-grinder-id-${review.id}`}>Grinder: {review.grinderId}</span>
+              <span data-testid={`text-grinder-id-${review.id}`}>Grinder: {grinderName || review.grinderId}</span>
               {review.orderId && <span>Order: {review.orderId}</span>}
               <span>{new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
             </div>
@@ -145,10 +146,8 @@ export default function StaffReviews() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
-
-  const queryKey = statusFilter === "all"
-    ? ["/api/reviews"]
-    : ["/api/reviews", `?status=${statusFilter}`];
+  const [grinderFilter, setGrinderFilter] = useState("all");
+  const [serviceFilter, setServiceFilter] = useState("all");
 
   const { data: reviews = [], isLoading } = useQuery<CustomerReview[]>({
     queryKey: ["/api/reviews", statusFilter],
@@ -159,6 +158,53 @@ export default function StaffReviews() {
       return res.json();
     },
   });
+
+  const { data: grinders = [] } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
+  const { data: orders = [] } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+
+  const grinderMap = useMemo(() => {
+    const map = new Map<string, string>();
+    grinders.forEach(g => map.set(g.id, g.name));
+    return map;
+  }, [grinders]);
+
+  const orderServiceMap = useMemo(() => {
+    const map = new Map<string, string>();
+    orders.forEach(o => map.set(o.id, o.serviceId));
+    return map;
+  }, [orders]);
+
+  const reviewGrinders = useMemo(() => {
+    const ids = new Set(reviews.map(r => r.grinderId));
+    return Array.from(ids).map(id => ({ id, name: grinderMap.get(id) || id })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [reviews, grinderMap]);
+
+  const reviewServices = useMemo(() => {
+    const svcIds = new Set<string>();
+    reviews.forEach(r => {
+      if (r.orderId) {
+        const svcId = orderServiceMap.get(r.orderId);
+        if (svcId) svcIds.add(svcId);
+      }
+    });
+    return Array.from(svcIds).map(id => {
+      const svc = services.find(s => s.id === id);
+      return { id, name: svc?.name || id };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [reviews, orderServiceMap, services]);
+
+  const filteredReviews = useMemo(() => {
+    return reviews.filter(r => {
+      if (grinderFilter !== "all" && r.grinderId !== grinderFilter) return false;
+      if (serviceFilter !== "all") {
+        if (!r.orderId) return false;
+        const svcId = orderServiceMap.get(r.orderId);
+        if (svcId !== serviceFilter) return false;
+      }
+      return true;
+    });
+  }, [reviews, grinderFilter, serviceFilter, orderServiceMap]);
 
   const actionMutation = useMutation({
     mutationFn: async ({ id, status, decisionNote }: { id: string; status: string; decisionNote: string }) => {
@@ -178,9 +224,10 @@ export default function StaffReviews() {
     actionMutation.mutate({ id, status, decisionNote: note });
   };
 
-  const pendingCount = reviews.filter(r => r.status === "pending").length;
-  const approvedCount = reviews.filter(r => r.status === "approved").length;
-  const rejectedCount = reviews.filter(r => r.status === "rejected").length;
+  const pendingCount = filteredReviews.filter(r => r.status === "pending").length;
+  const approvedCount = filteredReviews.filter(r => r.status === "approved").length;
+  const rejectedCount = filteredReviews.filter(r => r.status === "rejected").length;
+  const hasActiveFilters = grinderFilter !== "all" || serviceFilter !== "all";
 
   const filters = [
     { label: "All", value: "all" },
@@ -246,18 +293,58 @@ export default function StaffReviews() {
       </FadeInUp>
 
       <FadeInUp>
-        <div className="flex items-center gap-2">
-          {filters.map(f => (
-            <Button
-              key={f.value}
-              variant={statusFilter === f.value ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setStatusFilter(f.value)}
-              data-testid={`button-filter-${f.value}`}
-            >
-              {f.label}
-            </Button>
-          ))}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {filters.map(f => (
+              <Button
+                key={f.value}
+                variant={statusFilter === f.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusFilter(f.value)}
+                data-testid={`button-filter-${f.value}`}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Filter className="w-3.5 h-3.5" />
+            </div>
+            <Select value={grinderFilter} onValueChange={setGrinderFilter}>
+              <SelectTrigger className="w-[160px] h-8 text-xs bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-grinder">
+                <SelectValue placeholder="All Grinders" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+                <SelectItem value="all" data-testid="select-grinder-all">All Grinders</SelectItem>
+                {reviewGrinders.map(g => (
+                  <SelectItem key={g.id} value={g.id} data-testid={`select-grinder-${g.id}`}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={serviceFilter} onValueChange={setServiceFilter}>
+              <SelectTrigger className="w-[160px] h-8 text-xs bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-service">
+                <SelectValue placeholder="All Services" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+                <SelectItem value="all" data-testid="select-service-all">All Services</SelectItem>
+                {reviewServices.map(s => (
+                  <SelectItem key={s.id} value={s.id} data-testid={`select-service-${s.id}`}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground"
+                onClick={() => { setGrinderFilter("all"); setServiceFilter("all"); }}
+                data-testid="button-clear-filters"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
       </FadeInUp>
 
@@ -267,14 +354,14 @@ export default function StaffReviews() {
             {[1, 2, 3].map(i => <Card key={i} className="border-0 bg-white/[0.03] animate-pulse h-32" />)}
           </div>
         </FadeInUp>
-      ) : reviews.length === 0 ? (
+      ) : filteredReviews.length === 0 ? (
         <FadeInUp>
           <Card className="border-0 bg-white/[0.03]">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <MessageSquare className="w-14 h-14 text-white/10 mb-4" />
               <p className="text-muted-foreground font-medium" data-testid="text-empty-reviews">No reviews found</p>
               <p className="text-sm text-muted-foreground/70 mt-1">
-                {statusFilter !== "all" ? `No ${statusFilter} reviews` : "No reviews have been submitted yet"}
+                {hasActiveFilters ? "No reviews match your filters" : statusFilter !== "all" ? `No ${statusFilter} reviews` : "No reviews have been submitted yet"}
               </p>
             </CardContent>
           </Card>
@@ -282,11 +369,12 @@ export default function StaffReviews() {
       ) : (
         <FadeInUp>
           <div className="space-y-3">
-            {reviews.map(review => (
+            {filteredReviews.map(review => (
               <ReviewCard
                 key={review.id}
                 review={review}
                 onAction={handleAction}
+                grinderName={grinderMap.get(review.grinderId)}
               />
             ))}
           </div>
