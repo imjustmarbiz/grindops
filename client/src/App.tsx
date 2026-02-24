@@ -40,6 +40,7 @@ import GrinderPatchNotes from "@/pages/grinder/patch-notes";
 import GrinderReviews from "@/pages/grinder/reviews";
 import GrinderOrderClaims from "@/pages/grinder/order-claims";
 import StaffCalendar from "@/pages/staff/calendar";
+import StaffServices from "@/pages/staff/services";
 import GrinderCalendar from "@/pages/grinder/calendar";
 import { Loader2 } from "lucide-react";
 
@@ -145,6 +146,7 @@ function Router() {
       <Route path="/reviews" component={() => <ProtectedRoute component={StaffReviews} staffOnly />} />
       <Route path="/order-claims" component={() => <ProtectedRoute component={StaffOrderClaims} staffOnly />} />
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
+      <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
