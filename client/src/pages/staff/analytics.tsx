@@ -307,7 +307,7 @@ export default function StaffAnalytics() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {topEarners.length === 0 && (
                   <div className="flex flex-col items-center py-6 text-muted-foreground">
                     <Crown className="w-8 h-8 mb-2 opacity-30" />
@@ -322,24 +322,29 @@ export default function StaffAnalytics() {
                     "bg-gradient-to-br from-orange-500/25 to-orange-600/15 text-orange-400 ring-1 ring-orange-500/30",
                   ];
                   return (
-                    <div key={g.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] sm:hover:bg-white/[0.05] transition-colors" data-testid={`card-top-earner-${i}`}>
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${i < 3 ? medalColors[i] : "bg-white/5 text-muted-foreground"}`}>
+                    <div key={g.id} className="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] sm:hover:bg-white/[0.05] transition-colors" data-testid={`card-top-earner-${i}`}>
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${i < 3 ? medalColors[i] : "bg-white/5 text-muted-foreground"}`}>
                         #{i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           {categoryIcon(g.category)}
                           <span className="font-medium text-sm truncate cursor-pointer hover:underline"
                             data-testid={`link-earner-${g.id}`}
                             onClick={() => navigate(`/grinders?scorecard=${g.id}`)}>{g.name}</span>
                           <Badge variant="outline" className="text-[9px] h-4">{g.category}</Badge>
                         </div>
-                        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <span className="text-[10px] text-muted-foreground">{g.completedOrders} completed</span>
+                          <span className="text-[10px] text-muted-foreground">{g.activeOrders} active</span>
+                          <span className="text-[10px] text-muted-foreground">Q: {g.qualityScore ?? 0}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700" style={{ width: `${maxEarnings > 0 ? (earnings / maxEarnings) * 100 : 0}%` }} />
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-emerald-400 text-sm" data-testid={`text-earnings-${i}`}>{formatCurrency(earnings)}</p>
+                        <p className="font-bold text-emerald-400 text-base" data-testid={`text-earnings-${i}`}>{formatCurrency(earnings)}</p>
                         <p className="text-[10px] text-muted-foreground">{g.completedOrders} done</p>
                       </div>
                     </div>
