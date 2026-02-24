@@ -16,11 +16,15 @@ export function useStaffData() {
   const staffAlerts = useQuery<any[]>({ queryKey: ["/api/staff/alerts"], refetchInterval: 10000 });
   const strikeLogs = useQuery<any[]>({ queryKey: ["/api/staff/strike-logs"], refetchInterval: 10000 });
 
+  const allGrindersData = grinders.data || [];
+  const activeGrindersData = allGrindersData.filter(g => !g.isRemoved);
+
   return {
     analytics: analytics.data,
     analyticsLoading: analytics.isLoading,
     analyticsUpdatedAt: analytics.dataUpdatedAt,
-    grinders: grinders.data || [],
+    grinders: activeGrindersData,
+    allGrindersIncludingRemoved: allGrindersData,
     grindersUpdatedAt: grinders.dataUpdatedAt,
     auditLogs: auditLogs.data || [],
     auditLogsUpdatedAt: auditLogs.dataUpdatedAt,

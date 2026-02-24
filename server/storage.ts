@@ -31,6 +31,7 @@ export interface IStorage {
   createGrinder(grinder: InsertGrinder): Promise<Grinder>;
   updateGrinder(id: string, data: Partial<InsertGrinder>): Promise<Grinder | undefined>;
   deleteGrinder(id: string): Promise<boolean>;
+  softRemoveGrinder(id: string, removedBy: string): Promise<Grinder | undefined>;
   upsertGrinderByDiscordId(discordUserId: string, data: Partial<InsertGrinder>): Promise<Grinder>;
 
   getOrders(): Promise<Order[]>;
@@ -164,6 +165,16 @@ export class DatabaseStorage implements IStorage {
     await db.delete(staffAlerts).where(eq(staffAlerts.grinderId, id));
     const [deleted] = await db.delete(grinders).where(eq(grinders.id, id)).returning();
     return !!deleted;
+  }
+
+  async softRemoveGrinder(id: string, removedBy: string): Promise<Grinder | undefined> {
+    const [updated] = await db.update(grinders).set({
+      isRemoved: true,
+      removedAt: new Date(),
+      removedBy,
+      availabilityStatus: "removed",
+    }).where(eq(grinders.id, id)).returning();
+    return updated;
   }
 
   async upsertGrinderByDiscordId(discordUserId: string, data: Partial<InsertGrinder>): Promise<Grinder> {

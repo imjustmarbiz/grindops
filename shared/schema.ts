@@ -74,6 +74,9 @@ export const grinders = pgTable("grinders", {
   availabilityNote: text("availability_note"),
   availabilityUpdatedAt: timestamp("availability_updated_at"),
   notes: text("notes"),
+  isRemoved: boolean("is_removed").notNull().default(false),
+  removedAt: timestamp("removed_at"),
+  removedBy: text("removed_by"),
 });
 
 export const orders = pgTable("orders", {

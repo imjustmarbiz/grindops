@@ -287,7 +287,7 @@ export default function Dashboard() {
   const allOrders = ordersList || [];
   const allBids = bidsList || [];
   const allAssignments = assignmentsList || [];
-  const allGrinders = grindersList || [];
+  const allGrinders = (grindersList || []).filter(g => !g.isRemoved);
   const allServices = servicesList || [];
 
   const openOrders = allOrders.filter(o => o.status === "Open").length;

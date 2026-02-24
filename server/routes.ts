@@ -157,17 +157,35 @@ export async function registerRoutes(
     try {
       const grinder = await storage.getGrinder(req.params.id);
       if (!grinder) return res.status(404).json({ message: "Grinder not found" });
-      const deleted = await storage.deleteGrinder(req.params.id);
-      if (!deleted) return res.status(500).json({ message: "Failed to delete grinder" });
-      await storage.createAuditLog({
-        id: `AL-${Date.now().toString(36)}`,
-        entityType: "grinder",
-        entityId: req.params.id,
-        action: "grinder_removed",
-        actor: (req as any).userId || "owner",
-        details: JSON.stringify({ name: grinder.name, discordUsername: grinder.discordUsername }),
-      });
-      res.json({ success: true });
+
+      const deleteHistory = req.query.deleteHistory === "true";
+      const actor = (req as any).userId || "owner";
+
+      if (deleteHistory) {
+        const deleted = await storage.deleteGrinder(req.params.id);
+        if (!deleted) return res.status(500).json({ message: "Failed to delete grinder" });
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "grinder",
+          entityId: req.params.id,
+          action: "grinder_permanently_deleted",
+          actor,
+          details: JSON.stringify({ name: grinder.name, discordUsername: grinder.discordUsername, historicalDataDeleted: true }),
+        });
+      } else {
+        const removed = await storage.softRemoveGrinder(req.params.id, actor);
+        if (!removed) return res.status(500).json({ message: "Failed to remove grinder" });
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "grinder",
+          entityId: req.params.id,
+          action: "grinder_removed",
+          actor,
+          details: JSON.stringify({ name: grinder.name, discordUsername: grinder.discordUsername, historicalDataPreserved: true }),
+        });
+      }
+
+      res.json({ success: true, deleteHistory });
     } catch (err) {
       res.status(400).json({ message: String(err) });
     }
@@ -927,6 +945,7 @@ export async function registerRoutes(
     const allGrinders = await storage.getGrinders();
     let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
     if (!myGrinder) return res.json(null);
+    if (myGrinder.isRemoved) return res.status(403).json({ message: "Your access has been revoked. Contact staff for more information." });
 
     const authUser = await authStorage.getUser(userId);
     if (authUser && myGrinder.name === "Unknown") {

@@ -24,7 +24,7 @@ export default function StaffAdmin() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
   const {
-    grinders: allGrinders,
+    allGrindersIncludingRemoved: allGrinders,
     assignments: allAssignments,
     orders: allOrders,
     eliteRequests: eliteRequestsList,
@@ -36,6 +36,7 @@ export default function StaffAdmin() {
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
   const [removeGrinder, setRemoveGrinder] = useState<any>(null);
+  const [deleteHistoricalData, setDeleteHistoricalData] = useState(false);
   const [editProfileGrinder, setEditProfileGrinder] = useState<any>(null);
   const [editProfileName, setEditProfileName] = useState("");
   const [editProfileCategory, setEditProfileCategory] = useState("");
@@ -108,16 +109,18 @@ export default function StaffAdmin() {
   });
 
   const removeGrinderMutation = useMutation({
-    mutationFn: async (grinderId: string) => {
-      const res = await apiRequest("DELETE", `/api/grinders/${grinderId}`);
+    mutationFn: async ({ grinderId, deleteHistory }: { grinderId: string; deleteHistory: boolean }) => {
+      const res = await apiRequest("DELETE", `/api/grinders/${grinderId}?deleteHistory=${deleteHistory}`);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payout-requests"] });
       setRemoveGrinder(null);
-      toast({ title: "Grinder removed permanently" });
+      setDeleteHistoricalData(false);
+      toast({ title: variables.deleteHistory ? "Grinder and all historical data permanently deleted" : "Grinder access removed (historical data preserved)" });
     },
     onError: () => toast({ title: "Failed to remove grinder", variant: "destructive" }),
   });
@@ -386,43 +389,59 @@ export default function StaffAdmin() {
                 <Shield className="w-4 h-4 text-amber-400" />
               </div>
               Edit Grinder Profiles
-              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 ml-auto text-xs">{allGrinders.length} grinders</Badge>
+              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 ml-auto text-xs">{allGrinders.filter(g => !g.isRemoved).length} active · {allGrinders.filter(g => g.isRemoved).length} removed</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="relative">
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {allGrinders.map(g => (
-                <div key={g.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] sm:hover:bg-white/[0.05] transition-colors" data-testid={`row-profile-${g.id}`}>
+                <div key={g.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${g.isRemoved ? "bg-red-500/[0.03] border-red-500/10 opacity-60" : "bg-white/[0.03] border-white/[0.06] sm:hover:bg-white/[0.05]"}`} data-testid={`row-profile-${g.id}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium">{g.name}</span>
+                      <span className={`text-sm font-medium ${g.isRemoved ? "line-through text-muted-foreground" : ""}`}>{g.name}</span>
+                      {g.isRemoved && <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[10px]">Removed</Badge>}
                       <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
                       <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.tier}</Badge>
                       <span className="text-[10px] text-muted-foreground">
                         {g.activeOrders}/{g.capacity} orders · {g.completedOrders} completed · {g.strikes} strikes
                       </span>
                     </div>
-                    {g.notes && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{g.notes}</p>}
+                    {g.isRemoved && g.removedAt && <p className="text-[10px] text-red-400/60 mt-0.5">Removed {new Date(g.removedAt).toLocaleDateString()}</p>}
+                    {g.notes && !g.isRemoved && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{g.notes}</p>}
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="text-amber-400 text-xs hover:bg-amber-500/10"
-                      data-testid={`button-edit-profile-${g.id}`}
-                      onClick={() => {
-                        setEditProfileGrinder(g);
-                        setEditProfileName(g.name);
-                        setEditProfileCategory(g.category);
-                        setEditProfileTier(g.tier);
-                        setEditProfileCapacity(String(g.capacity));
-                        setEditProfileNotes(g.notes || "");
-                      }}>
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-red-400 text-xs hover:text-red-300 hover:bg-red-500/10"
-                      data-testid={`button-remove-grinder-${g.id}`}
-                      onClick={() => setRemoveGrinder(g)}>
-                      <Ban className="w-3 h-3 mr-1" />
-                      Remove
-                    </Button>
+                    {g.isRemoved ? (
+                      <Button size="sm" variant="ghost" className="text-green-400 text-xs hover:bg-green-500/10"
+                        data-testid={`button-restore-grinder-${g.id}`}
+                        onClick={() => {
+                          updateProfileMutation.mutate({ grinderId: g.id, data: { isRemoved: false, removedAt: null, removedBy: null, availabilityStatus: "available" } });
+                          toast({ title: `${g.name} has been restored` });
+                        }}>
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Restore
+                      </Button>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="ghost" className="text-amber-400 text-xs hover:bg-amber-500/10"
+                          data-testid={`button-edit-profile-${g.id}`}
+                          onClick={() => {
+                            setEditProfileGrinder(g);
+                            setEditProfileName(g.name);
+                            setEditProfileCategory(g.category);
+                            setEditProfileTier(g.tier);
+                            setEditProfileCapacity(String(g.capacity));
+                            setEditProfileNotes(g.notes || "");
+                          }}>
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-400 text-xs hover:text-red-300 hover:bg-red-500/10"
+                          data-testid={`button-remove-grinder-${g.id}`}
+                          onClick={() => setRemoveGrinder(g)}>
+                          <Ban className="w-3 h-3 mr-1" />
+                          Remove
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -511,7 +530,7 @@ export default function StaffAdmin() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!removeGrinder} onOpenChange={(open) => !open && setRemoveGrinder(null)}>
+      <Dialog open={!!removeGrinder} onOpenChange={(open) => { if (!open) { setRemoveGrinder(null); setDeleteHistoricalData(false); } }}>
         <DialogContent className="border-red-500/20 bg-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-400 font-display">
@@ -524,16 +543,51 @@ export default function StaffAdmin() {
           {removeGrinder && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Permanently remove <span className="text-foreground font-medium">{removeGrinder.name}</span>? This deletes their profile, bids, and assignment history.
+                Remove <span className="text-foreground font-medium">{removeGrinder.name}</span> from the system? This will revoke their dashboard access immediately.
               </p>
-              <div className="flex items-center gap-2">
-                <Button className="bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/20" data-testid="button-confirm-remove"
+
+              <div className="space-y-3 rounded-lg border border-border/50 p-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Historical Data</p>
+
+                <label className="flex items-start gap-3 p-2.5 rounded-md border border-border/50 cursor-pointer hover:bg-muted/30 transition-colors" data-testid="option-preserve-history">
+                  <input type="radio" name="deleteHistory" checked={!deleteHistoricalData} onChange={() => setDeleteHistoricalData(false)}
+                    className="mt-0.5 accent-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Preserve historical data</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Keep all revenue, payouts, completed orders, bids, and performance records. The grinder will appear as inactive in reports.</p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-2.5 rounded-md border border-red-500/20 cursor-pointer hover:bg-red-500/5 transition-colors" data-testid="option-delete-history">
+                  <input type="radio" name="deleteHistory" checked={deleteHistoricalData} onChange={() => setDeleteHistoricalData(true)}
+                    className="mt-0.5 accent-red-500" />
+                  <div>
+                    <p className="text-sm font-medium text-red-400">Delete all historical data</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Permanently erase all records including assignments, payouts, bids, strikes, and earnings. This cannot be undone.</p>
+                  </div>
+                </label>
+              </div>
+
+              {deleteHistoricalData && (
+                <div className="flex items-center gap-2 p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                  <p className="text-xs text-red-300">This will permanently delete all of {removeGrinder.name}'s data including revenue records, payout history, and completed orders. This action cannot be reversed.</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  className={deleteHistoricalData
+                    ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/20"
+                    : "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg shadow-amber-500/20"
+                  }
+                  data-testid="button-confirm-remove"
                   disabled={removeGrinderMutation.isPending}
-                  onClick={() => removeGrinderMutation.mutate(removeGrinder.id)}>
+                  onClick={() => removeGrinderMutation.mutate({ grinderId: removeGrinder.id, deleteHistory: deleteHistoricalData })}>
                   {removeGrinderMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
-                  Remove Permanently
+                  {deleteHistoricalData ? "Delete Permanently" : "Remove Access"}
                 </Button>
-                <Button variant="ghost" onClick={() => setRemoveGrinder(null)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => { setRemoveGrinder(null); setDeleteHistoricalData(false); }}>Cancel</Button>
               </div>
             </div>
           )}
