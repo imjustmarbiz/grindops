@@ -243,6 +243,24 @@ export function setupDiscordAuth(app: Express) {
         }
       }
 
+      if (!user.profileImageUrl && user.discordId) {
+        let computedAvatar: string | null = null;
+        if (user.discordAvatar) {
+          computedAvatar = `https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png?size=128`;
+        } else {
+          try {
+            computedAvatar = `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.discordId) >> BigInt(22)) % 6}.png`;
+          } catch { computedAvatar = null; }
+        }
+        if (computedAvatar) {
+          const updated = await authStorage.upsertUser({
+            ...user,
+            profileImageUrl: computedAvatar,
+          });
+          return res.json(updated);
+        }
+      }
+
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
