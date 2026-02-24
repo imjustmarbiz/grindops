@@ -62,6 +62,25 @@ export async function recalcGrinderStats(grinderId: string) {
     qualityScore = Math.max(0, Math.min(100, qualityScore));
   }
 
+  let lastAssigned: Date | null = null;
+  for (const a of myAssignments) {
+    const assignedDate = a.assignedDateTime ? new Date(a.assignedDateTime) : null;
+    if (assignedDate && (!lastAssigned || assignedDate > lastAssigned)) {
+      lastAssigned = assignedDate;
+    }
+  }
+
+  const now7dAgo = new Date();
+  now7dAgo.setDate(now7dAgo.getDate() - 7);
+  const ordersAssignedL7D = myAssignments.filter((a: any) => {
+    const d = a.assignedDateTime ? new Date(a.assignedDateTime) : null;
+    return d && d >= now7dAgo;
+  }).length;
+
+  const utilization = grinder.capacity > 0
+    ? ((active.length / grinder.capacity) * 100).toFixed(0)
+    : "0";
+
   const updates: any = {
     completedOrders: completedCount,
     activeOrders: active.length,
@@ -71,7 +90,10 @@ export async function recalcGrinderStats(grinderId: string) {
     avgQualityRating: qualityScore.toString(),
     winRate: winRate.toFixed(1),
     totalEarnings: totalEarnings.toFixed(2),
+    ordersAssignedL7D,
+    utilization,
     ...(avgTurnaroundDays ? { avgTurnaroundDays } : {}),
+    ...(lastAssigned ? { lastAssigned } : {}),
   };
 
   await storage.updateGrinder(grinderId, updates);

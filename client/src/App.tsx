@@ -21,6 +21,13 @@ import Bids from "@/pages/bids";
 import Assignments from "@/pages/assignments";
 import AuditLogPage from "@/pages/audit-log";
 import GrinderProfile from "@/pages/grinder-profile";
+import GrinderOverview from "@/pages/grinder/overview";
+import GrinderOrders from "@/pages/grinder/orders";
+import GrinderAssignments from "@/pages/grinder/assignments";
+import GrinderBids from "@/pages/grinder/bids";
+import GrinderPayouts from "@/pages/grinder/payouts";
+import GrinderStatus from "@/pages/grinder/status";
+import GrinderGuide from "@/pages/grinder/guide";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false }: { component: React.ComponentType; staffOnly?: boolean }) {
@@ -93,7 +100,7 @@ function HomeRedirect() {
 
   return (
     <AppLayout>
-      <GrinderProfile />
+      <GrinderOverview />
     </AppLayout>
   );
 }
@@ -118,6 +125,13 @@ function Router() {
       <Route path="/bids" component={() => <ProtectedRoute component={Bids} staffOnly />} />
       <Route path="/assignments" component={() => <ProtectedRoute component={Assignments} staffOnly />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLogPage} staffOnly />} />
+      
+      <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
+      <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
+      <Route path="/grinder/bids" component={() => <ProtectedRoute component={GrinderBids} />} />
+      <Route path="/grinder/payouts" component={() => <ProtectedRoute component={GrinderPayouts} />} />
+      <Route path="/grinder/status" component={() => <ProtectedRoute component={GrinderStatus} />} />
+      <Route path="/grinder/guide" component={() => <ProtectedRoute component={GrinderGuide} />} />
       
       <Route component={NotFound} />
     </Switch>

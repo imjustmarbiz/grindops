@@ -11,7 +11,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 
 **UI/UX Decisions:**
 - **Staff Dashboard:** Refactored into five focused pages (Overview, Operations, Analytics, Payouts, Admin) with sidebar navigation for clarity and ease of use. Key Performance Indicators (KPIs), order pipelines, bidding countdowns, and risk alerts are prominently displayed.
-- **Grinder Dashboard:** Enhanced with order viewing, bidding, updates, payout management, and AI coaching. Features an onboarding preview and dashboard guides. Grinders can set availability statuses. Theming adjusts based on role: regular grinders use Discord purple, while elite grinders use cyan for an elevated feel.
+- **Grinder Dashboard:** Refactored into seven focused pages (Overview, Available Orders, My Work, My Bids, Payouts, Status, Guide) with sidebar navigation, mirroring the staff dashboard structure. Uses shared `use-grinder-data` hook for data fetching. Grinders can set availability statuses. Theming adjusts based on role: regular grinders use Discord purple, while elite grinders use cyan for an elevated feel.
 - **Order Flow:** Comprehensive lifecycle management including "Need Replacement", "In Progress", "Completed", and "Paid Out" statuses, each with distinct visual indicators.
 - **Payout Workflow:** A multi-step payout confirmation process involving grinder approval, dispute resolution, and staff review ensures accurate and fair compensation.
 
@@ -26,6 +26,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Live Bidding Countdown Timer:** A 10-minute countdown starts on the first bid, with live updates and Discord notifications, automatically closing bidding upon expiration.
 - **Staff Override Assign:** Staff can manually assign grinders to orders, automatically handling bid acceptance and denial, and updating grinder stats.
 - **Manual Order Creation:** Staff can create orders directly from the dashboard, with options for public visibility or private assignment.
+- **Centralized Stats Recalculation:** `server/recalcStats.ts` provides `recalcGrinderStats()` used by routes.ts, mgtWatcher.ts, and repairSync.ts for consistent quality score (0-100), completion rate, win rate, and earnings calculations.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database for all application data, managed with Drizzle ORM.

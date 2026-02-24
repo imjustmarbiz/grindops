@@ -1,6 +1,7 @@
 import { type Message, type PartialMessage, type GuildMember } from "discord.js";
 import { storage } from "../storage";
 import { GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS } from "@shared/schema";
+import { recalcGrinderStats } from "../recalcStats";
 
 const MGT_BOT_USER_ID = "1466336342521937930";
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
@@ -472,15 +473,8 @@ export async function handleProposalMessage(message: Message) {
         companyProfit: companyProfit.toFixed(2),
       });
 
-      const grinder = await storage.getGrinder(grinderId);
-      if (grinder) {
-        const newEarnings = Number(grinder.totalEarnings) + grinderEarnings;
-        await storage.updateGrinder(grinderId, {
-          activeOrders: grinder.activeOrders + 1,
-          totalEarnings: newEarnings.toFixed(2),
-          lastAssigned: new Date(),
-        });
-      }
+      await storage.updateGrinder(grinderId, { lastAssigned: new Date() });
+      await recalcGrinderStats(grinderId);
 
       const allBidsForOrder = await storage.getBids();
       const otherPending = allBidsForOrder.filter(b => b.orderId === order.id && b.id !== bid.id && (b.status === "Pending" || b.status === "Countered"));
@@ -596,15 +590,8 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
             companyProfit: companyProfit.toFixed(2),
           });
 
-          const grinder = await storage.getGrinder(existingBid.grinderId);
-          if (grinder) {
-            const newEarnings = Number(grinder.totalEarnings) + grinderEarnings;
-            await storage.updateGrinder(existingBid.grinderId, {
-              activeOrders: grinder.activeOrders + 1,
-              totalEarnings: newEarnings.toFixed(2),
-              lastAssigned: new Date(),
-            });
-          }
+          await storage.updateGrinder(existingBid.grinderId, { lastAssigned: new Date() });
+          await recalcGrinderStats(existingBid.grinderId);
 
           const allBidsForOrder = await storage.getBids();
           const otherPending = allBidsForOrder.filter(b => b.orderId === order.id && b.id !== existingBid.id && (b.status === "Pending" || b.status === "Countered"));

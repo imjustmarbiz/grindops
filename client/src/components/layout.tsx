@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Activity, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -34,7 +34,13 @@ const staffNavItems = [
 ];
 
 const grinderNavItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Overview", url: "/", icon: LayoutDashboard },
+  { title: "Available Orders", url: "/grinder/orders", icon: Zap },
+  { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
+  { title: "My Bids", url: "/grinder/bids", icon: Gavel },
+  { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
+  { title: "Status", url: "/grinder/status", icon: Bell },
+  { title: "Guide", url: "/grinder/guide", icon: BookOpen },
 ];
 
 function AppSidebar() {
