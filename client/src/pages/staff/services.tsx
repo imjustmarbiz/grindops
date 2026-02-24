@@ -29,9 +29,9 @@ function ProgressBar({ value, max, color }: { value: number; max: number; color:
 
 function StatCard({ label, value, icon: Icon, color, subtitle }: { label: string; value: string | number; icon: any; color: string; subtitle?: string }) {
   return (
-    <Card className="bg-card/50 border-border/30">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
+    <Card className="bg-card/50 border-border/30 h-full">
+      <CardContent className="p-4 h-full">
+        <div className="flex items-center justify-between h-full">
           <div>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className="text-xl font-bold mt-0.5">{value}</p>
@@ -233,8 +233,8 @@ export default function StaffServices() {
         </FadeInUp>
 
         <FadeInUp delay={0.05}>
-          <div className={`grid gap-4 items-start ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 content-start">
+          <div className={`grid gap-4 ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="Total Services" value={allServices.length} icon={Package} color="bg-primary/20 text-primary" />
               <StatCard label="Total Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} color="bg-emerald-500/20 text-emerald-400" />
               <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${totalOrders} orders`} />

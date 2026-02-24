@@ -317,9 +317,9 @@ export default function StaffOverview() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
         <FadeInUp className="h-full">
-        <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
+        <Card className="border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Gauge className="w-5 h-5 text-cyan-400" />
@@ -386,7 +386,7 @@ export default function StaffOverview() {
         </Card>
         </FadeInUp>
 
-        <FadeInUp className="h-full lg:col-span-2">
+        <FadeInUp className="h-full">
         <Card className="border-white/[0.06] bg-white/[0.02] h-full flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
