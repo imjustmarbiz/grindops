@@ -4,6 +4,14 @@
 A fullstack web dashboard + Discord bot for managing a gaming services queue system. Staff can manage grinders (workers), orders, bids, and assignments through both a web interface and Discord slash commands. The Grinder Bot passively monitors an existing MGT Bot in Discord to automatically build the database from real order and proposal data.
 
 ## Recent Changes
+- 2026-02-24: Added Order Completion Tracking & In Progress Status
+  - New `completedAt` timestamp on orders, auto-set when order status changes to Completed
+  - "In Progress" status counts as active/assigned for capacity, analytics, and all dashboards
+  - On-time calculation uses order.orderDueDate vs actual completion time
+  - Grinder onTimeRate and avgTurnaroundDays recalculated on each completion
+  - Completion date/time column on orders table with On Time/Late indicator
+  - Grinder profile shows completion date on finished assignments
+  - Purple color theme for "In Progress" status across all pages
 - 2026-02-23: Added Multi-Role Grinder Support
   - Grinders can now have multiple roles simultaneously (e.g., Elite + VC + Event)
   - New `roles` text array column on grinders table

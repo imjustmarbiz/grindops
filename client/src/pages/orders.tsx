@@ -252,7 +252,7 @@ export default function Orders() {
   };
 
   const openCount = (orders || []).filter(o => o.status === "Open").length;
-  const assignedCount = (orders || []).filter(o => o.status === "Assigned").length;
+  const assignedCount = (orders || []).filter(o => o.status === "Assigned" || o.status === "In Progress").length;
   const completedCount = (orders || []).filter(o => o.status === "Completed").length;
   const totalRevenue = (orders || []).reduce((s, o) => s + Number(o.customerPrice || 0), 0);
 
@@ -399,6 +399,7 @@ export default function Orders() {
               <TableHead className="text-center whitespace-nowrap">Cx</TableHead>
               <TableHead className="whitespace-nowrap">Assigned To</TableHead>
               <TableHead className="whitespace-nowrap">Due Date</TableHead>
+              <TableHead className="whitespace-nowrap">Completed</TableHead>
               <TableHead className="text-right whitespace-nowrap">Price</TableHead>
               <TableHead className="text-right whitespace-nowrap">Profit</TableHead>
               <TableHead className="whitespace-nowrap">Status</TableHead>
@@ -497,6 +498,19 @@ export default function Orders() {
                   <TableCell>
                     <InlineDateEdit value={order.orderDueDate} orderId={order.id} onSave={saveField} />
                   </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {order.completedAt ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs text-emerald-400">{format(new Date(order.completedAt), "MMM d, yyyy")}</span>
+                        <span className="text-[10px] text-muted-foreground">{format(new Date(order.completedAt), "h:mm a")}</span>
+                        {order.orderDueDate && new Date(order.completedAt) <= new Date(order.orderDueDate) ? (
+                          <span className="text-[10px] text-emerald-400 font-medium">On Time</span>
+                        ) : order.orderDueDate ? (
+                          <span className="text-[10px] text-red-400 font-medium">Late</span>
+                        ) : null}
+                      </div>
+                    ) : <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell className="text-right">
                     {editingPriceId === order.id ? (
                       <div className="flex items-center justify-end gap-1">
@@ -559,6 +573,7 @@ export default function Orders() {
                       <SelectTrigger className={`h-7 text-xs bg-transparent border-transparent w-auto min-w-[90px] ${
                         order.status === "Open" ? "text-blue-400" :
                         order.status === "Assigned" ? "text-amber-400" :
+                        order.status === "In Progress" ? "text-purple-400" :
                         order.status === "Completed" ? "text-emerald-400" :
                         order.status === "Cancelled" ? "text-red-400" :
                         "text-muted-foreground"
@@ -592,7 +607,7 @@ export default function Orders() {
               );
             }) : (
               <TableRow>
-                <TableCell colSpan={11} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center h-24 text-muted-foreground">
                   <Package className="w-8 h-8 mx-auto mb-2 opacity-20" />
                   No orders yet. Orders are auto-imported from MGT Bot.
                 </TableCell>

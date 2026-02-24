@@ -258,7 +258,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
-    const [updated] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    const setData: any = { status };
+    if (status === "Completed") {
+      setData.completedAt = new Date();
+    }
+    const [updated] = await db.update(orders).set(setData).where(eq(orders.id, id)).returning();
     return updated;
   }
 

@@ -844,6 +844,7 @@ export default function GrinderProfile() {
                         <div className="flex items-center gap-3 mt-1 text-sm text-white/40 flex-wrap">
                           <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
                           <span>Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</span>
+                          {a.deliveredDateTime && <span>Completed: {new Date(a.deliveredDateTime).toLocaleDateString()}</span>}
                           {a.grinderEarnings && <span className="text-emerald-400 font-medium">${Number(a.grinderEarnings).toFixed(2)}</span>}
                         </div>
                       </div>

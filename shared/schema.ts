@@ -97,6 +97,7 @@ export const orders = pgTable("orders", {
   isManual: boolean("is_manual").notNull().default(false),
   visibleToGrinders: boolean("visible_to_grinders").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
   firstBidAt: timestamp("first_bid_at"),
   biddingClosesAt: timestamp("bidding_closes_at"),
   biddingNotifiedStages: jsonb("bidding_notified_stages").notNull().default([]),

@@ -1377,7 +1377,10 @@ export async function registerRoutes(
     }
 
     const now = new Date();
-    const isOnTime = assignment.dueDateTime ? now <= new Date(assignment.dueDateTime) : true;
+
+    const order = assignment.orderId ? await storage.getOrder(assignment.orderId) : null;
+    const dueDate = order?.orderDueDate ? new Date(order.orderDueDate) : (assignment.dueDateTime ? new Date(assignment.dueDateTime) : null);
+    const isOnTime = dueDate ? now <= dueDate : true;
 
     const updated = await storage.updateAssignment(assignment.id, {
       status: "Completed",
@@ -1385,16 +1388,41 @@ export async function registerRoutes(
       isOnTime,
     });
 
-    const newCompleted = (myGrinder.completedOrders || 0) + 1;
-    const newActive = Math.max(0, (myGrinder.activeOrders || 0) - 1);
-    await storage.updateGrinder(myGrinder.id, {
-      completedOrders: newCompleted,
-      activeOrders: newActive,
-    });
-
     if (assignment.orderId) {
       await storage.updateOrderStatus(assignment.orderId, "Completed");
     }
+
+    const newCompleted = (myGrinder.completedOrders || 0) + 1;
+    const newActive = Math.max(0, (myGrinder.activeOrders || 0) - 1);
+
+    const allAssignments = await storage.getAssignments();
+    const myCompletedAssignments = allAssignments.filter((a: any) => a.grinderId === myGrinder.id && a.status === "Completed");
+    const onTimeCount = myCompletedAssignments.filter((a: any) => a.isOnTime === true).length + (isOnTime ? 1 : 0);
+    const totalCompleted = myCompletedAssignments.length + 1;
+    const newOnTimeRate = totalCompleted > 0 ? ((onTimeCount / totalCompleted) * 100).toFixed(1) : "100";
+
+    let totalTurnaroundDays = 0;
+    let turnaroundCount = 0;
+    for (const a of myCompletedAssignments) {
+      if (a.assignedDateTime && a.deliveredDateTime) {
+        const days = (new Date(a.deliveredDateTime).getTime() - new Date(a.assignedDateTime).getTime()) / (1000 * 60 * 60 * 24);
+        totalTurnaroundDays += days;
+        turnaroundCount++;
+      }
+    }
+    if (assignment.assignedDateTime) {
+      const thisTurnaround = (now.getTime() - new Date(assignment.assignedDateTime).getTime()) / (1000 * 60 * 60 * 24);
+      totalTurnaroundDays += thisTurnaround;
+      turnaroundCount++;
+    }
+    const newAvgTurnaround = turnaroundCount > 0 ? (totalTurnaroundDays / turnaroundCount).toFixed(2) : null;
+
+    await storage.updateGrinder(myGrinder.id, {
+      completedOrders: newCompleted,
+      activeOrders: newActive,
+      onTimeRate: newOnTimeRate,
+      ...(newAvgTurnaround ? { avgTurnaroundDays: newAvgTurnaround } : {}),
+    });
 
     await storage.createAuditLog({
       id: `AL-${Date.now().toString(36)}`,
@@ -1402,7 +1430,7 @@ export async function registerRoutes(
       entityId: assignment.id,
       action: "marked_complete_by_grinder",
       actor: myGrinder.name,
-      details: JSON.stringify({ orderId: assignment.orderId, isOnTime }),
+      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), onTimeRate: newOnTimeRate, avgTurnaroundDays: newAvgTurnaround }),
     });
 
     res.json(updated);
