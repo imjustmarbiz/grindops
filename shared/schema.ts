@@ -74,6 +74,7 @@ export const grinders = pgTable("grinders", {
   availabilityNote: text("availability_note"),
   availabilityUpdatedAt: timestamp("availability_updated_at"),
   notes: text("notes"),
+  twitchUsername: text("twitch_username"),
   isRemoved: boolean("is_removed").notNull().default(false),
   removedAt: timestamp("removed_at"),
   removedBy: text("removed_by"),
@@ -292,6 +293,48 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const messageThreads = pgTable("message_threads", {
+  id: varchar("id").primaryKey(),
+  userAId: varchar("user_a_id").notNull(),
+  userBId: varchar("user_b_id").notNull(),
+  userAName: text("user_a_name").notNull(),
+  userBName: text("user_b_name").notNull(),
+  userARole: text("user_a_role").notNull().default("grinder"),
+  userBRole: text("user_b_role").notNull().default("grinder"),
+  userAAvatarUrl: text("user_a_avatar_url"),
+  userBAvatarUrl: text("user_b_avatar_url"),
+  lastMessageText: text("last_message_text"),
+  lastMessageAt: timestamp("last_message_at"),
+  userAUnread: integer("user_a_unread").notNull().default(0),
+  userBUnread: integer("user_b_unread").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey(),
+  threadId: varchar("thread_id").references(() => messageThreads.id).notNull(),
+  senderUserId: varchar("sender_user_id").notNull(),
+  senderName: text("sender_name").notNull(),
+  senderRole: text("sender_role").notNull().default("grinder"),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id"),
+  roleScope: text("role_scope").notNull().default("all"),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  linkUrl: text("link_url"),
+  icon: text("icon"),
+  severity: text("severity").notNull().default("info"),
+  readBy: jsonb("read_by").notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+});
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],
@@ -338,6 +381,9 @@ export const insertEliteRequestSchema = createInsertSchema(eliteRequests).omit({
 export const insertStaffAlertSchema = createInsertSchema(staffAlerts).omit({ createdAt: true });
 export const insertStrikeLogSchema = createInsertSchema(strikeLogs).omit({ createdAt: true, acknowledgedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ createdAt: true });
+export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ createdAt: true });
+export const insertMessageSchema = createInsertSchema(messages).omit({ createdAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ createdAt: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -369,6 +415,12 @@ export type StrikeLog = typeof strikeLogs.$inferSelect;
 export type InsertStrikeLog = z.infer<typeof insertStrikeLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type MessageThread = typeof messageThreads.$inferSelect;
+export type InsertMessageThread = z.infer<typeof insertMessageThreadSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 export type GrinderScorecard = {
   grinder: Grinder;
