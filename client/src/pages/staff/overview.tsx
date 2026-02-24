@@ -317,31 +317,31 @@ export default function StaffOverview() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         <FadeInUp>
-        <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02] flex flex-col">
-          <CardHeader className="pb-3">
+        <Card className="lg:col-span-1 border-white/[0.06] bg-white/[0.02]">
+          <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Gauge className="w-5 h-5 text-cyan-400" />
               Fleet Health
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
+          <CardContent className="space-y-3">
             <div className="flex items-center justify-center">
               <AnimatedRing
                 percent={fleetUtilization}
                 color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"}
                 label="Fleet Utilization"
                 value={`${fleetUtilization.toFixed(0)}%`}
-                size={120}
-                stroke={12}
+                size={110}
+                stroke={10}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="text-center p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 cursor-default">
-                    <p className="text-xl font-bold text-emerald-400" data-testid="text-available-grinders">{availableGrinders}</p>
+                  <div className="text-center p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10 cursor-default">
+                    <p className="text-lg font-bold text-emerald-400" data-testid="text-available-grinders">{availableGrinders}</p>
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Available</p>
                   </div>
                 </TooltipTrigger>
@@ -349,8 +349,8 @@ export default function StaffOverview() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="text-center p-3 rounded-lg bg-red-500/5 border border-red-500/10 cursor-default">
-                    <p className="text-xl font-bold text-red-400" data-testid="text-at-limit">{atCapacity}</p>
+                  <div className="text-center p-2 rounded-lg bg-red-500/5 border border-red-500/10 cursor-default">
+                    <p className="text-lg font-bold text-red-400" data-testid="text-at-limit">{atCapacity}</p>
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground">At Limit</p>
                   </div>
                 </TooltipTrigger>
@@ -358,25 +358,25 @@ export default function StaffOverview() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="text-center p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 cursor-default">
-                    <p className="text-lg sm:text-xl font-bold text-blue-400" data-testid="text-total-slots">{totalActive}<span className="text-white/30">/{totalCapacity}</span></p>
+                  <div className="text-center p-2 rounded-lg bg-blue-500/5 border border-blue-500/10 cursor-default">
+                    <p className="text-lg font-bold text-blue-400" data-testid="text-total-slots">{totalActive}<span className="text-white/30">/{totalCapacity}</span></p>
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Slots</p>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>Active orders / total capacity</TooltipContent>
               </Tooltip>
             </div>
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-sm p-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
                 <span className="text-muted-foreground">Pending Bids</span>
                 <span className="font-bold text-yellow-400">{pendingBids}</span>
               </div>
-              <div className="flex items-center justify-between text-sm p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+              <div className="flex items-center justify-between text-sm p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
                 <span className="text-muted-foreground">Accepted Bids</span>
                 <span className="font-bold text-emerald-400">{acceptedBids}</span>
               </div>
               {suspendedGrinders.length > 0 && (
-                <div className="flex items-center justify-between text-sm p-2.5 rounded-lg bg-red-500/5 border border-red-500/10">
+                <div className="flex items-center justify-between text-sm p-2 rounded-lg bg-red-500/5 border border-red-500/10">
                   <span className="text-muted-foreground">Suspended</span>
                   <span className="font-bold text-red-400">{suspendedGrinders.length}</span>
                 </div>
