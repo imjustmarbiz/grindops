@@ -2335,10 +2335,25 @@ export async function registerRoutes(
         issueResolutionRate: issueCheckpoints > 0 ? Math.round((resolvedIssues / issueCheckpoints) * 100) : 100,
       };
 
+      const orderUpdateLogs = await storage.getOrderUpdates(myGrinder.id);
+
+      const orders = await storage.getOrders();
+      const orderMap = new Map(orders.map((o: any) => [o.id, o]));
+
+      const enrichedLogs = orderUpdateLogs.map((log: any) => {
+        const order = orderMap.get(log.orderId);
+        return {
+          ...log,
+          orderTitle: order?.title || order?.id || log.orderId,
+          orderStatus: order?.status || "Unknown",
+        };
+      });
+
       res.json({
         grinder: myGrinder,
         recentReports: approvedReports,
         checkpointCompliance,
+        orderLogs: enrichedLogs,
       });
     } catch (err) {
       res.status(500).json({ message: String(err) });

@@ -6,7 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ClipboardCheck, Star, Clock, CheckCircle, Trophy, CalendarCheck,
-  BarChart3, FileText, MessageSquare, LogIn, AlertTriangle, Send
+  BarChart3, FileText, MessageSquare, LogIn, AlertTriangle, Send,
+  ScrollText, CheckSquare
 } from "lucide-react";
 
 function getGradeLetter(score: number): { letter: string; color: string } {
@@ -50,8 +51,9 @@ export default function GrinderScorecard() {
 
   if (!grinder) return null;
 
-  const checkpointStats = scorecardData?.checkpointStats;
+  const checkpointStats = scorecardData?.checkpointCompliance || scorecardData?.checkpointStats;
   const reports = performanceReports || [];
+  const orderLogs: any[] = scorecardData?.orderLogs || [];
 
   const qualityScore = grinder.avgQualityRating != null ? Number(grinder.avgQualityRating) : 0;
   const onTimeRate = grinder.onTimeRate != null ? Number(grinder.onTimeRate) : 0;
@@ -203,6 +205,65 @@ export default function GrinderScorecard() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-order-logs">
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+              <ScrollText className={`w-5 h-5 ${eliteAccent}`} />
+            </div>
+            Order Logs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {orderLogs.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">
+                <ScrollText className="w-6 h-6 text-white/20" />
+              </div>
+              <p className="text-white/40 text-sm" data-testid="text-no-order-logs">No order logs yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {orderLogs.map((log: any, idx: number) => (
+                <div key={log.id || idx} className={`p-4 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} transition-all duration-200`} data-testid={`card-order-log-${log.id || idx}`}>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-lg ${log.updateType === "progress" ? "bg-blue-500/15" : log.updateType === "completion" ? "bg-emerald-500/15" : "bg-yellow-500/15"} flex items-center justify-center shrink-0 mt-0.5`}>
+                        {log.updateType === "completion" ? (
+                          <CheckSquare className={`w-4 h-4 ${log.updateType === "completion" ? "text-emerald-400" : "text-blue-400"}`} />
+                        ) : (
+                          <Send className={`w-4 h-4 ${log.updateType === "progress" ? "text-blue-400" : "text-yellow-400"}`} />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate" data-testid={`text-order-log-title-${log.id || idx}`}>{log.orderTitle}</p>
+                        <p className="text-xs text-white/40 mt-0.5">
+                          {log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                      <Badge className={`border-0 text-[10px] ${log.updateType === "progress" ? "bg-blue-500/20 text-blue-400" : log.updateType === "completion" ? "bg-emerald-500/20 text-emerald-400" : "bg-yellow-500/20 text-yellow-400"}`} data-testid={`badge-update-type-${log.id || idx}`}>
+                        {log.updateType === "progress" ? "Progress" : log.updateType === "completion" ? "Completion" : log.updateType}
+                      </Badge>
+                      {log.acknowledgedAt && (
+                        <Badge className="border-0 text-[10px] bg-emerald-500/10 text-emerald-400" data-testid={`badge-ack-${log.id || idx}`}>
+                          Acknowledged
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-2 ml-11">
+                    <p className="text-sm text-white/60 whitespace-pre-wrap" data-testid={`text-order-log-message-${log.id || idx}`}>{log.message}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
