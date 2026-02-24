@@ -274,6 +274,36 @@ export function setupDiscordAuth(app: Express) {
       res.redirect("/login");
     });
   });
+
+  if (process.env.NODE_ENV === "development") {
+    app.get("/api/auth/dev/login", async (req, res) => {
+      const role = (req.query.role as string) || "grinder";
+      const devUserId = `dev-${role}-user`;
+      try {
+        const user = await authStorage.upsertUser({
+          id: devUserId,
+          email: `dev-${role}@test.local`,
+          firstName: "Demo",
+          lastName: role === "grinder" ? "Grinder" : role === "staff" ? "Staff" : "Owner",
+          profileImageUrl: null,
+          discordId: `dev-${role}-discord`,
+          discordUsername: role === "grinder" ? "DemoGrinder" : role === "staff" ? "DemoStaff" : "DemoOwner",
+          discordAvatar: null,
+          role,
+          discordRoles: [],
+        });
+        (req.session as any).userId = user.id;
+        (req.session as any).userRole = role;
+        req.session.save(() => {
+          const redirect = (req.query.redirect as string) || "/";
+          res.redirect(redirect);
+        });
+      } catch (error) {
+        console.error("[dev-auth] Error:", error);
+        res.status(500).json({ message: "Dev login failed" });
+      }
+    });
+  }
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
