@@ -2741,6 +2741,302 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  // ===== PATCH NOTES =====
+  app.get('/api/patch-notes', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const publishedOnly = user.role === "grinder";
+      const notes = await storage.getPatchNotes(publishedOnly);
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching patch notes:", error);
+      res.status(500).json({ error: "Failed to fetch patch notes" });
+    }
+  });
+
+  app.post('/api/patch-notes', requireStaff, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { title, rawText } = req.body;
+      if (!title || !rawText) return res.status(400).json({ error: "Title and raw text required" });
+
+      const id = `PN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const note = await storage.createPatchNote({
+        id,
+        title,
+        rawText,
+        status: "draft",
+        createdBy: user.id,
+        createdByName: user.displayName || user.username,
+      });
+      res.json(note);
+    } catch (error) {
+      console.error("Error creating patch note:", error);
+      res.status(500).json({ error: "Failed to create patch note" });
+    }
+  });
+
+  app.post('/api/patch-notes/:id/ai-rewrite', requireStaff, async (req, res) => {
+    try {
+      const note = await storage.getPatchNote(req.params.id);
+      if (!note) return res.status(404).json({ error: "Patch note not found" });
+
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a patch notes writer for a gaming service platform. Rewrite the following raw update notes into polished, grinder-friendly patch notes. Use clear headings and bullet points. Keep it concise, professional yet friendly. Focus on what matters to grinders (service providers). Format with markdown."
+          },
+          {
+            role: "user",
+            content: `Title: ${note.title}\n\nRaw Notes:\n${note.rawText}`
+          }
+        ],
+        max_tokens: 1500,
+      });
+
+      const polishedText = completion.choices[0]?.message?.content || note.rawText;
+      const updated = await storage.updatePatchNote(note.id, { polishedText });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error AI rewriting patch note:", error);
+      res.status(500).json({ error: "Failed to AI rewrite patch note" });
+    }
+  });
+
+  app.patch('/api/patch-notes/:id', requireStaff, async (req, res) => {
+    try {
+      const { title, rawText, polishedText, status } = req.body;
+      const data: any = {};
+      if (title !== undefined) data.title = title;
+      if (rawText !== undefined) data.rawText = rawText;
+      if (polishedText !== undefined) data.polishedText = polishedText;
+      if (status !== undefined) {
+        data.status = status;
+        if (status === "published") data.publishedAt = new Date();
+      }
+      const updated = await storage.updatePatchNote(req.params.id, data);
+      if (!updated) return res.status(404).json({ error: "Patch note not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating patch note:", error);
+      res.status(500).json({ error: "Failed to update patch note" });
+    }
+  });
+
+  app.delete('/api/patch-notes/:id', requireStaff, async (req, res) => {
+    try {
+      await storage.deletePatchNote(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting patch note:", error);
+      res.status(500).json({ error: "Failed to delete patch note" });
+    }
+  });
+
+  // ===== CUSTOMER REVIEWS =====
+  app.get('/api/reviews', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const grinderId = req.query.grinderId as string | undefined;
+      const status = req.query.status as string | undefined;
+      if (user.role === "grinder") {
+        const reviews = await storage.getCustomerReviews(user.grinderId, undefined);
+        return res.json(reviews);
+      }
+      const reviews = await storage.getCustomerReviews(grinderId, status);
+      res.json(reviews);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      res.status(500).json({ error: "Failed to fetch reviews" });
+    }
+  });
+
+  app.post('/api/reviews', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { grinderId, orderId, rating, title, body, proofLinks, proofNotes } = req.body;
+      if (!grinderId || !rating || !title || !body) {
+        return res.status(400).json({ error: "Grinder ID, rating, title, and body are required" });
+      }
+      if (rating < 1 || rating > 5) return res.status(400).json({ error: "Rating must be 1-5" });
+
+      const id = `REV-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const review = await storage.createCustomerReview({
+        id,
+        grinderId,
+        orderId: orderId || null,
+        reviewerId: user.id,
+        reviewerName: user.displayName || user.username,
+        reviewerRole: user.role,
+        rating,
+        title,
+        body,
+        proofLinks: proofLinks || [],
+        proofNotes: proofNotes || null,
+        status: "pending",
+      });
+
+      await storage.createNotification({
+        id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        title: "New Review Submitted",
+        message: `A new review has been submitted for review.`,
+        type: "info",
+        roleScope: "staff",
+        userId: null,
+        readBy: [],
+      });
+
+      res.json(review);
+    } catch (error) {
+      console.error("Error creating review:", error);
+      res.status(500).json({ error: "Failed to create review" });
+    }
+  });
+
+  app.patch('/api/reviews/:id', requireStaff, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { status, decisionNote } = req.body;
+      if (!status) return res.status(400).json({ error: "Status required" });
+
+      const review = await storage.getCustomerReview(req.params.id);
+      if (!review) return res.status(404).json({ error: "Review not found" });
+
+      const updated = await storage.updateCustomerReview(req.params.id, {
+        status,
+        decisionBy: user.id,
+        decisionByName: user.displayName || user.username,
+        decisionNote: decisionNote || null,
+        decisionAt: new Date(),
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating review:", error);
+      res.status(500).json({ error: "Failed to update review" });
+    }
+  });
+
+  // ===== ORDER CLAIM REQUESTS =====
+  app.get('/api/order-claims', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const grinderId = req.query.grinderId as string | undefined;
+      const status = req.query.status as string | undefined;
+      if (user.role === "grinder") {
+        const claims = await storage.getOrderClaimRequests(user.grinderId, status);
+        return res.json(claims);
+      }
+      const claims = await storage.getOrderClaimRequests(grinderId, status);
+      res.json(claims);
+    } catch (error) {
+      console.error("Error fetching order claims:", error);
+      res.status(500).json({ error: "Failed to fetch order claims" });
+    }
+  });
+
+  app.post('/api/order-claims', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user.grinderId) return res.status(403).json({ error: "Only grinders can submit claims" });
+
+      const { orderId, proofLinks, proofNotes } = req.body;
+      if (!orderId) return res.status(400).json({ error: "Order ID is required" });
+
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+
+      const existing = await storage.getOrderClaimRequests(user.grinderId, "pending");
+      const alreadyClaimed = existing.find(c => c.orderId === orderId);
+      if (alreadyClaimed) return res.status(400).json({ error: "You already have a pending claim for this order" });
+
+      const id = `OCR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const claim = await storage.createOrderClaimRequest({
+        id,
+        grinderId: user.grinderId,
+        orderId,
+        proofLinks: proofLinks || [],
+        proofNotes: proofNotes || null,
+        status: "pending",
+      });
+
+      await storage.createNotification({
+        id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        title: "New Order Claim Request",
+        message: `A grinder has submitted a claim request for order ${order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId}.`,
+        type: "info",
+        roleScope: "staff",
+        userId: null,
+        readBy: [],
+      });
+
+      res.json(claim);
+    } catch (error) {
+      console.error("Error creating order claim:", error);
+      res.status(500).json({ error: "Failed to create order claim" });
+    }
+  });
+
+  app.patch('/api/order-claims/:id', requireStaff, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { status, decisionNote } = req.body;
+      if (!status) return res.status(400).json({ error: "Status required" });
+
+      const claim = await storage.getOrderClaimRequest(req.params.id);
+      if (!claim) return res.status(404).json({ error: "Claim not found" });
+
+      if (status === "approved") {
+        await storage.updateOrder(claim.orderId, { assignedGrinderId: claim.grinderId });
+
+        const existingAssignments = (await storage.getAssignments()).filter(a => a.orderId === claim.orderId);
+        if (existingAssignments.length === 0) {
+          const order = await storage.getOrder(claim.orderId);
+          await storage.createAssignment({
+            id: `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            orderId: claim.orderId,
+            grinderId: claim.grinderId,
+            assignedBy: user.id,
+            grinderPay: order?.grinderPay || "0",
+            status: order?.status === "Completed" ? "completed" : "active",
+          });
+        }
+
+        const { recalcGrinderStats } = await import("./recalcStats");
+        await recalcGrinderStats(claim.grinderId);
+
+        await storage.createAuditLog({
+          id: `AL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          action: "order_claim_approved",
+          performedBy: user.id,
+          performedByName: user.displayName || user.username,
+          entityType: "order_claim",
+          entityId: claim.id,
+          details: `Approved order claim for order ${claim.orderId} by grinder ${claim.grinderId}`,
+        });
+      }
+
+      const updated = await storage.updateOrderClaimRequest(req.params.id, {
+        status,
+        decidedBy: user.id,
+        decidedByName: user.displayName || user.username,
+        decisionNote: decisionNote || null,
+        decidedAt: new Date(),
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating order claim:", error);
+      res.status(500).json({ error: "Failed to update order claim" });
+    }
+  });
+
   return httpServer;
 }
 

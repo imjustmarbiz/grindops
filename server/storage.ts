@@ -3,6 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, messages, notifications, events,
+  patchNotes, customerReviews, orderClaimRequests,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -22,6 +23,9 @@ import {
   type Message, type InsertMessage,
   type Notification, type InsertNotification,
   type Event, type InsertEvent,
+  type PatchNote, type InsertPatchNote,
+  type CustomerReview, type InsertCustomerReview,
+  type OrderClaimRequest, type InsertOrderClaimRequest,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -124,6 +128,22 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<boolean>;
+
+  getPatchNotes(publishedOnly?: boolean): Promise<PatchNote[]>;
+  getPatchNote(id: string): Promise<PatchNote | undefined>;
+  createPatchNote(note: InsertPatchNote): Promise<PatchNote>;
+  updatePatchNote(id: string, data: Partial<PatchNote>): Promise<PatchNote | undefined>;
+  deletePatchNote(id: string): Promise<boolean>;
+
+  getCustomerReviews(grinderId?: string, status?: string): Promise<CustomerReview[]>;
+  getCustomerReview(id: string): Promise<CustomerReview | undefined>;
+  createCustomerReview(review: InsertCustomerReview): Promise<CustomerReview>;
+  updateCustomerReview(id: string, data: Partial<CustomerReview>): Promise<CustomerReview | undefined>;
+
+  getOrderClaimRequests(grinderId?: string, status?: string): Promise<OrderClaimRequest[]>;
+  getOrderClaimRequest(id: string): Promise<OrderClaimRequest | undefined>;
+  createOrderClaimRequest(request: InsertOrderClaimRequest): Promise<OrderClaimRequest>;
+  updateOrderClaimRequest(id: string, data: Partial<OrderClaimRequest>): Promise<OrderClaimRequest | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1058,6 +1078,89 @@ export class DatabaseStorage implements IStorage {
   async deleteEvent(id: string): Promise<boolean> {
     const result = await db.delete(events).where(eq(events.id, id));
     return true;
+  }
+
+  async getPatchNotes(publishedOnly?: boolean): Promise<PatchNote[]> {
+    if (publishedOnly) {
+      return await db.select().from(patchNotes)
+        .where(eq(patchNotes.status, "published"))
+        .orderBy(desc(patchNotes.publishedAt));
+    }
+    return await db.select().from(patchNotes).orderBy(desc(patchNotes.createdAt));
+  }
+
+  async getPatchNote(id: string): Promise<PatchNote | undefined> {
+    const [note] = await db.select().from(patchNotes).where(eq(patchNotes.id, id));
+    return note;
+  }
+
+  async createPatchNote(note: InsertPatchNote): Promise<PatchNote> {
+    const [created] = await db.insert(patchNotes).values(note).returning();
+    return created;
+  }
+
+  async updatePatchNote(id: string, data: Partial<PatchNote>): Promise<PatchNote | undefined> {
+    const [updated] = await db.update(patchNotes).set(data).where(eq(patchNotes.id, id)).returning();
+    return updated;
+  }
+
+  async deletePatchNote(id: string): Promise<boolean> {
+    await db.delete(patchNotes).where(eq(patchNotes.id, id));
+    return true;
+  }
+
+  async getCustomerReviews(grinderId?: string, status?: string): Promise<CustomerReview[]> {
+    const conditions = [];
+    if (grinderId) conditions.push(eq(customerReviews.grinderId, grinderId));
+    if (status) conditions.push(eq(customerReviews.status, status));
+    if (conditions.length > 0) {
+      return await db.select().from(customerReviews)
+        .where(and(...conditions))
+        .orderBy(desc(customerReviews.createdAt));
+    }
+    return await db.select().from(customerReviews).orderBy(desc(customerReviews.createdAt));
+  }
+
+  async getCustomerReview(id: string): Promise<CustomerReview | undefined> {
+    const [review] = await db.select().from(customerReviews).where(eq(customerReviews.id, id));
+    return review;
+  }
+
+  async createCustomerReview(review: InsertCustomerReview): Promise<CustomerReview> {
+    const [created] = await db.insert(customerReviews).values(review).returning();
+    return created;
+  }
+
+  async updateCustomerReview(id: string, data: Partial<CustomerReview>): Promise<CustomerReview | undefined> {
+    const [updated] = await db.update(customerReviews).set({ ...data, updatedAt: new Date() }).where(eq(customerReviews.id, id)).returning();
+    return updated;
+  }
+
+  async getOrderClaimRequests(grinderId?: string, status?: string): Promise<OrderClaimRequest[]> {
+    const conditions = [];
+    if (grinderId) conditions.push(eq(orderClaimRequests.grinderId, grinderId));
+    if (status) conditions.push(eq(orderClaimRequests.status, status));
+    if (conditions.length > 0) {
+      return await db.select().from(orderClaimRequests)
+        .where(and(...conditions))
+        .orderBy(desc(orderClaimRequests.requestedAt));
+    }
+    return await db.select().from(orderClaimRequests).orderBy(desc(orderClaimRequests.requestedAt));
+  }
+
+  async getOrderClaimRequest(id: string): Promise<OrderClaimRequest | undefined> {
+    const [request] = await db.select().from(orderClaimRequests).where(eq(orderClaimRequests.id, id));
+    return request;
+  }
+
+  async createOrderClaimRequest(request: InsertOrderClaimRequest): Promise<OrderClaimRequest> {
+    const [created] = await db.insert(orderClaimRequests).values(request).returning();
+    return created;
+  }
+
+  async updateOrderClaimRequest(id: string, data: Partial<OrderClaimRequest>): Promise<OrderClaimRequest | undefined> {
+    const [updated] = await db.update(orderClaimRequests).set(data).where(eq(orderClaimRequests.id, id)).returning();
+    return updated;
   }
 }
 

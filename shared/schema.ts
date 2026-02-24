@@ -357,6 +357,53 @@ export const events = pgTable("events", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const patchNotes = pgTable("patch_notes", {
+  id: varchar("id").primaryKey(),
+  rawText: text("raw_text").notNull(),
+  polishedText: text("polished_text"),
+  title: text("title").notNull(),
+  status: text("status").notNull().default("draft"),
+  createdBy: varchar("created_by").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  publishedAt: timestamp("published_at"),
+});
+
+export const customerReviews = pgTable("customer_reviews", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id),
+  reviewerId: varchar("reviewer_id").notNull(),
+  reviewerName: text("reviewer_name").notNull(),
+  reviewerRole: text("reviewer_role").notNull(),
+  rating: integer("rating").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  proofLinks: text("proof_links").array().default([]),
+  proofNotes: text("proof_notes"),
+  status: text("status").notNull().default("pending"),
+  decisionBy: varchar("decision_by"),
+  decisionByName: text("decision_by_name"),
+  decisionNote: text("decision_note"),
+  decisionAt: timestamp("decision_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const orderClaimRequests = pgTable("order_claim_requests", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  orderId: varchar("order_id").references(() => orders.id).notNull(),
+  proofLinks: text("proof_links").array().default([]),
+  proofNotes: text("proof_notes"),
+  status: text("status").notNull().default("pending"),
+  decidedBy: varchar("decided_by"),
+  decidedByName: text("decided_by_name"),
+  decisionNote: text("decision_note"),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  decidedAt: timestamp("decided_at"),
+});
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],
@@ -407,6 +454,9 @@ export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit
 export const insertMessageSchema = createInsertSchema(messages).omit({ createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ createdAt: true, updatedAt: true });
+export const insertPatchNoteSchema = createInsertSchema(patchNotes).omit({ createdAt: true, publishedAt: true });
+export const insertCustomerReviewSchema = createInsertSchema(customerReviews).omit({ createdAt: true, updatedAt: true, decisionBy: true, decisionByName: true, decisionNote: true, decisionAt: true });
+export const insertOrderClaimRequestSchema = createInsertSchema(orderClaimRequests).omit({ requestedAt: true, decidedAt: true, decidedBy: true, decidedByName: true, decisionNote: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -446,6 +496,12 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type PatchNote = typeof patchNotes.$inferSelect;
+export type InsertPatchNote = z.infer<typeof insertPatchNoteSchema>;
+export type CustomerReview = typeof customerReviews.$inferSelect;
+export type InsertCustomerReview = z.infer<typeof insertCustomerReviewSchema>;
+export type OrderClaimRequest = typeof orderClaimRequests.$inferSelect;
+export type InsertOrderClaimRequest = z.infer<typeof insertOrderClaimRequestSchema>;
 
 export type GrinderScorecard = {
   grinder: Grinder;

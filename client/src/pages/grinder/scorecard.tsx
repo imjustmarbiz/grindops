@@ -7,9 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ClipboardCheck, Star, Clock, CheckCircle, Trophy, CalendarCheck,
   BarChart3, FileText, MessageSquare, LogIn, AlertTriangle, Send,
-  ScrollText, CheckSquare
+  ScrollText, CheckSquare, ExternalLink
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import type { CustomerReview } from "@shared/schema";
 
 function getGradeLetter(score: number): { letter: string; color: string } {
   if (score >= 90) return { letter: "A", color: "text-emerald-400" };
@@ -32,6 +33,12 @@ export default function GrinderScorecard() {
   const { data: performanceReports, isLoading: reportsLoading } = useQuery<any[]>({
     queryKey: ["/api/grinder/me/performance-reports"],
   });
+
+  const { data: customerReviews = [] } = useQuery<CustomerReview[]>({
+    queryKey: ["/api/reviews"],
+  });
+
+  const approvedReviews = customerReviews.filter(r => r.status === "approved");
 
   const isLoading = profileLoading || scorecardLoading || reportsLoading;
 
@@ -306,6 +313,56 @@ export default function GrinderScorecard() {
                   <div>
                     <p className="text-xl font-bold" data-testid={`text-activity-${item.label.toLowerCase().replace(/\s/g, '-')}`}>{item.value}</p>
                     <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">{item.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        </FadeInUp>
+      )}
+
+      {approvedReviews.length > 0 && (
+        <FadeInUp>
+        <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-customer-reviews">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+                <Star className={`w-5 h-5 ${eliteAccent}`} />
+              </div>
+              Customer Reviews
+              <Badge className={`${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} border-0 text-xs`}>
+                {approvedReviews.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {approvedReviews.map((review) => (
+                <div key={review.id} className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`card-review-${review.id}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-sm truncate" data-testid={`text-review-title-${review.id}`}>{review.title}</h4>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? "text-amber-400 fill-amber-400" : "text-white/10"}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-white/60 line-clamp-2" data-testid={`text-review-body-${review.id}`}>{review.body}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-[10px] text-white/30">By {review.reviewerName}</span>
+                        <span className="text-[10px] text-white/30">{new Date(review.createdAt).toLocaleDateString()}</span>
+                        {review.proofLinks && (review.proofLinks as string[]).length > 0 && (
+                          <span className="text-[10px] text-white/30 flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            {(review.proofLinks as string[]).length} proof{(review.proofLinks as string[]).length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

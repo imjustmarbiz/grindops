@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart, MessageCircle, Tv, Calendar } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart, MessageCircle, Tv, Calendar, Newspaper, Star, LinkIcon } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,9 @@ const staffNavItems = [
   { title: "Streams", url: "/streams", icon: Tv },
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
   { title: "Events & Promos", url: "/events", icon: Calendar },
+  { title: "Patch Notes", url: "/patch-notes", icon: Newspaper },
+  { title: "Reviews", url: "/reviews", icon: Star },
+  { title: "Order Claims", url: "/order-claims", icon: LinkIcon },
 ];
 
 const grinderNavItems = [
@@ -49,6 +52,9 @@ const grinderNavItems = [
   { title: "Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Status", url: "/grinder/status", icon: Bell },
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
+  { title: "Patch Notes", url: "/grinder/patch-notes", icon: Newspaper },
+  { title: "Submit Review", url: "/grinder/reviews", icon: Star },
+  { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
   { title: "Guide", url: "/grinder/guide", icon: BookOpen },
 ];
 
