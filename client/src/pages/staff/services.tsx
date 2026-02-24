@@ -262,7 +262,7 @@ export default function StaffServices() {
                 <p className="text-sm text-muted-foreground text-center py-4">No platform data available</p>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className={`grid gap-3 ${sortedPlatforms.length === 1 ? "grid-cols-1 max-w-sm" : sortedPlatforms.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
                     {sortedPlatforms.map(([platform, stats]) => {
                       const pctOfTotal = totalOrders > 0 ? (stats.total / totalOrders) * 100 : 0;
                       const completionRate = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
