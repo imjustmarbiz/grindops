@@ -301,19 +301,23 @@ export const auditLogs = pgTable("audit_logs", {
 
 export const messageThreads = pgTable("message_threads", {
   id: varchar("id").primaryKey(),
-  userAId: varchar("user_a_id").notNull(),
-  userBId: varchar("user_b_id").notNull(),
-  userAName: text("user_a_name").notNull(),
-  userBName: text("user_b_name").notNull(),
-  userARole: text("user_a_role").notNull().default("grinder"),
-  userBRole: text("user_b_role").notNull().default("grinder"),
-  userAAvatarUrl: text("user_a_avatar_url"),
-  userBAvatarUrl: text("user_b_avatar_url"),
+  title: text("title"),
+  type: text("type").notNull().default("dm"),
+  ownerId: varchar("owner_id").notNull(),
   lastMessageText: text("last_message_text"),
   lastMessageAt: timestamp("last_message_at"),
-  userAUnread: integer("user_a_unread").notNull().default(0),
-  userBUnread: integer("user_b_unread").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const threadParticipants = pgTable("thread_participants", {
+  id: varchar("id").primaryKey(),
+  threadId: varchar("thread_id").references(() => messageThreads.id).notNull(),
+  userId: varchar("user_id").notNull(),
+  userName: text("user_name").notNull(),
+  userRole: text("user_role").notNull().default("grinder"),
+  userAvatarUrl: text("user_avatar_url"),
+  unreadCount: integer("unread_count").notNull().default(0),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 
 export const messages = pgTable("messages", {
@@ -452,6 +456,7 @@ export const insertStaffAlertSchema = createInsertSchema(staffAlerts).omit({ cre
 export const insertStrikeLogSchema = createInsertSchema(strikeLogs).omit({ createdAt: true, acknowledgedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ createdAt: true });
 export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ createdAt: true });
+export const insertThreadParticipantSchema = createInsertSchema(threadParticipants).omit({ joinedAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ createdAt: true, updatedAt: true });
@@ -491,6 +496,8 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type MessageThread = typeof messageThreads.$inferSelect;
 export type InsertMessageThread = z.infer<typeof insertMessageThreadSchema>;
+export type ThreadParticipant = typeof threadParticipants.$inferSelect;
+export type InsertThreadParticipant = z.infer<typeof insertThreadParticipantSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Notification = typeof notifications.$inferSelect;
