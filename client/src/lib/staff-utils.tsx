@@ -29,6 +29,47 @@ export function AnimatedRing({ percent, size = 80, stroke = 8, color, label, val
   );
 }
 
+export function MultiSegmentRing({ segments, size = 80, stroke = 8, label, value }: { segments: { percent: number; color: string }[]; size?: number; stroke?: number; label: string; value: string }) {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  let accumulated = 0;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-white/5" />
+          {segments.map((seg, i) => {
+            const segLen = (Math.min(seg.percent, 100) / 100) * circumference;
+            const segOffset = circumference - segLen;
+            const rotation = (accumulated / 100) * 360;
+            accumulated += seg.percent;
+            return (
+              <circle
+                key={i}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth={stroke}
+                strokeDasharray={`${segLen} ${circumference - segLen}`}
+                strokeDashoffset={0}
+                strokeLinecap="butt"
+                className="transition-all duration-1000 ease-out"
+                style={{ transform: `rotate(${rotation}deg)`, transformOrigin: '50% 50%' }}
+              />
+            );
+          })}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs font-bold">{value}</span>
+        </div>
+      </div>
+      <span className="text-[10px] text-muted-foreground text-center leading-tight">{label}</span>
+    </div>
+  );
+}
+
 export function MiniBar({ value, max, color, label }: { value: number; max: number; color: string; label?: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (

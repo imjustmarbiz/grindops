@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency, formatCompact, AnimatedRing, MiniBar, LastUpdated, categoryIcon } from "@/lib/staff-utils";
+import { formatCurrency, formatCompact, AnimatedRing, MultiSegmentRing, MiniBar, LastUpdated, categoryIcon } from "@/lib/staff-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -129,7 +129,10 @@ export default function StaffAnalytics() {
             </CardHeader>
             <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
-                <AnimatedRing percent={100} color="#34d399" label="Total Revenue" value={formatCompact(revenue)} size={110} stroke={10} />
+                <MultiSegmentRing segments={[
+                  { percent: payoutPct, color: "#60a5fa" },
+                  { percent: profitMarginPct, color: "#a78bfa" },
+                ]} label="Total Revenue" value={formatCompact(revenue)} size={110} stroke={10} />
                 <div className="flex-1 space-y-2.5">
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10">
                     <div className="flex items-center gap-2">
@@ -242,7 +245,11 @@ export default function StaffAnalytics() {
             </CardHeader>
             <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
-                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={110} stroke={10} />
+                <MultiSegmentRing segments={[
+                  { percent: totalBids > 0 ? (acceptedBids / totalBids) * 100 : 0, color: "#34d399" },
+                  { percent: totalBids > 0 ? (rejectedBids / totalBids) * 100 : 0, color: "#f87171" },
+                  { percent: totalBids > 0 ? (pendingBids / totalBids) * 100 : 0, color: "#fbbf24" },
+                ]} label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={110} stroke={10} />
                 <div className="flex-1 space-y-2.5">
                   <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
                     <div className="flex items-center gap-2">
