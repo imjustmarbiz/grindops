@@ -425,12 +425,16 @@ export async function registerRoutes(
 
       if (isReplacement) {
         const allAssignments = await storage.getAssignments();
-        cancelledAssignment = allAssignments
+        const cancelledAssignments = allAssignments
           .filter((a: any) => a.orderId === orderId && a.status === "Cancelled")
-          .sort((a: any, b: any) => new Date(b.assignedDateTime).getTime() - new Date(a.assignedDateTime).getTime())[0];
-        if (cancelledAssignment) {
-          originalGrinderId = cancelledAssignment.grinderId;
-          originalGrinderPay = Number(cancelledAssignment.grinderEarnings || cancelledAssignment.bidAmount || 0);
+          .sort((a: any, b: any) => new Date(a.assignedDateTime).getTime() - new Date(b.assignedDateTime).getTime());
+
+        if (cancelledAssignments.length > 0) {
+          originalGrinderId = cancelledAssignments[0].grinderId;
+          originalGrinderPay = cancelledAssignments.reduce((sum: number, a: any) => {
+            return sum + Number(a.grinderEarnings || a.bidAmount || 0);
+          }, 0);
+          cancelledAssignment = cancelledAssignments[cancelledAssignments.length - 1];
         }
       }
 

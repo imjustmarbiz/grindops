@@ -445,12 +445,14 @@ export class DatabaseStorage implements IStorage {
     if (!assignment) return undefined;
 
     const originalGrinderId = assignment.grinderId;
+    const priorOriginalPay = Number(assignment.originalGrinderPay || 0);
+    const cumulativeOriginalPay = priorOriginalPay + (Number(data.originalGrinderPay) || 0);
 
     const [updated] = await db.update(assignments).set({
       grinderId: data.replacementGrinderId,
-      originalGrinderId: originalGrinderId,
+      originalGrinderId: assignment.originalGrinderId || originalGrinderId,
       replacementGrinderId: data.replacementGrinderId,
-      originalGrinderPay: data.originalGrinderPay,
+      originalGrinderPay: cumulativeOriginalPay.toFixed(2),
       replacementGrinderPay: data.replacementGrinderPay,
       grinderEarnings: data.replacementGrinderPay,
       replacedAt: new Date(),
@@ -496,7 +498,7 @@ export class DatabaseStorage implements IStorage {
     const order = assignment.orderId ? await this.getOrder(assignment.orderId) : null;
     if (order) {
       const orderPrice = Number(order.customerPrice) || 0;
-      const totalGrinderCost = origPay + replPay;
+      const totalGrinderCost = cumulativeOriginalPay + replPay;
       const newProfit = orderPrice - totalGrinderCost;
       const newMarginPct = orderPrice > 0 ? ((newProfit / orderPrice) * 100).toFixed(2) : "0";
 
