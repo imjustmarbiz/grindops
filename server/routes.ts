@@ -2539,6 +2539,97 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/chat/threads', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const threads = await storage.getThreadsForUser(user.discordId || user.id);
+    res.json(threads);
+  });
+
+  app.post('/api/chat/threads', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const { recipientId, recipientName, recipientRole, recipientAvatarUrl } = req.body;
+    if (!recipientId || !recipientName) return res.status(400).json({ error: "Missing recipient info" });
+    const thread = await storage.getOrCreateThread({
+      id: `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userAId: user.discordId || user.id,
+      userBId: recipientId,
+      userAName: user.displayName || user.username || "Staff",
+      userBName: recipientName,
+      userARole: user.role || "staff",
+      userBRole: recipientRole || "grinder",
+      userAAvatarUrl: user.avatarUrl || null,
+      userBAvatarUrl: recipientAvatarUrl || null,
+    });
+    res.json(thread);
+  });
+
+  app.get('/api/chat/threads/:threadId/messages', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const msgs = await storage.getMessagesForThread(req.params.threadId);
+    await storage.markThreadRead(req.params.threadId, user.discordId || user.id);
+    res.json(msgs);
+  });
+
+  app.post('/api/chat/threads/:threadId/messages', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const { body } = req.body;
+    if (!body || !body.trim()) return res.status(400).json({ error: "Message body required" });
+    const msg = await storage.createMessage({
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      threadId: req.params.threadId,
+      senderUserId: user.discordId || user.id,
+      senderName: user.displayName || user.username || "Staff",
+      senderRole: user.role || "staff",
+      body: body.trim(),
+    });
+    res.json(msg);
+  });
+
+  app.post('/api/chat/threads/:threadId/read', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    await storage.markThreadRead(req.params.threadId, user.discordId || user.id);
+    res.json({ success: true });
+  });
+
+  app.get('/api/notifications', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const notifs = await storage.getNotificationsForUser(user.discordId || user.id, user.role || "grinder");
+    res.json(notifs);
+  });
+
+  app.post('/api/notifications/:id/read', async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    await storage.markNotificationRead(req.params.id, user.discordId || user.id);
+    res.json({ success: true });
+  });
+
+  app.patch('/api/grinders/:id/twitch', async (req, res) => {
+    const { twitchUsername } = req.body;
+    const updated = await storage.updateGrinder(req.params.id, { twitchUsername: twitchUsername || null });
+    if (!updated) return res.status(404).json({ error: "Grinder not found" });
+    res.json(updated);
+  });
+
+  app.get('/api/grinders/live-streams', async (req, res) => {
+    const allGrinders = await storage.getGrinders();
+    const streaming = allGrinders.filter(g => g.twitchUsername && !g.isRemoved);
+    res.json(streaming.map(g => ({
+      id: g.id,
+      name: g.name,
+      twitchUsername: g.twitchUsername,
+      tier: g.tier,
+      avatarUrl: g.avatarUrl,
+      roles: g.roles,
+    })));
+  });
+
   return httpServer;
 }
 
