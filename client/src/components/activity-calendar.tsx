@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
   Filter,
+  SlidersHorizontal,
 } from "lucide-react";
 
 export interface CalendarActivity {
@@ -339,7 +341,7 @@ export function ActivityCalendar({
                   return (
                     <div
                       key={`empty-${idx}`}
-                      className="bg-background/50 min-h-[72px]"
+                      className="bg-background/50 min-h-[52px] sm:min-h-[72px]"
                     />
                   );
                 }
@@ -364,7 +366,7 @@ export function ActivityCalendar({
                     key={k}
                     onClick={() => handleDayClick(day)}
                     className={`
-                      relative bg-background/50 min-h-[72px] p-1.5 text-left transition-all hover:bg-white/10 group
+                      relative bg-background/50 min-h-[52px] sm:min-h-[72px] p-1 sm:p-1.5 text-left transition-all hover:bg-white/10 group
                       ${isToday && !isSelected ? accent.todayRing : ""}
                       ${isSelected ? accent.selectedBg : ""}
                       ${isHighlighted && !isSelected ? "bg-white/[0.04]" : ""}
@@ -404,7 +406,7 @@ export function ActivityCalendar({
 
         <Card className="border-white/10 bg-white/[0.02]">
           <CardContent className="pt-4">
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="hidden sm:flex flex-wrap gap-2 mb-4">
               {quickFilters.map((f) => (
                 <Button
                   key={f.key}
@@ -437,7 +439,77 @@ export function ActivityCalendar({
               )}
             </div>
 
-            <div className="flex items-center gap-2 mb-3">
+            <div className="sm:hidden flex items-center gap-2 mb-4">
+              <div className="flex-1">
+                <Select
+                  value={activeFilter === "custom" ? "custom" : activeFilter}
+                  onValueChange={(val) => {
+                    if (val !== "custom") handleQuickFilter(val);
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-xs bg-white/[0.03] border-white/[0.08]" data-testid="select-quick-filter-mobile">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+                      <SelectValue />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+                    {quickFilters.map((f) => (
+                      <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                    ))}
+                    {activeFilter === "custom" && selectedDay && (
+                      <SelectItem value="custom">
+                        {selectedDay.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Select
+                  value={
+                    activeTypes.size === Object.keys(typeConfig).length
+                      ? "all"
+                      : activeTypes.size === 0
+                        ? "none"
+                        : Array.from(activeTypes)[0]
+                  }
+                  onValueChange={(val) => {
+                    if (val === "all") {
+                      setActiveTypes(new Set(Object.keys(typeConfig)));
+                    } else if (val === "none") {
+                      setActiveTypes(new Set());
+                    } else {
+                      setActiveTypes(new Set([val]));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-xs bg-white/[0.03] border-white/[0.08]" data-testid="select-type-filter-mobile">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                      <SelectValue placeholder="Filter type" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+                    <SelectItem value="all">All Types</SelectItem>
+                    {Object.entries(typeConfig).map(([type, config]) => (
+                      <SelectItem key={type} value={type}>
+                        <span className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
+                          {config.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2 mb-3">
               <Filter className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Filter by type:</span>
               <div className="flex flex-wrap gap-1.5">
