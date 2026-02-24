@@ -1,10 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft, Home } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background">
+    <AnimatedPage className="min-h-screen w-full flex items-center justify-center bg-background">
+      <FadeInUp>
       <Card className="w-full max-w-md mx-4 border-0 bg-white/[0.03] overflow-hidden relative">
         <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-10 translate-x-10" />
         <CardContent className="pt-8 pb-8 px-6 relative">
@@ -40,6 +42,7 @@ export default function NotFound() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
   );
 }

@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
 export default function Bids() {
@@ -133,7 +134,8 @@ export default function Bids() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-5">
+    <AnimatedPage className="space-y-5">
+      <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-bids-title">
@@ -151,7 +153,9 @@ export default function Bids() {
           </Badge>
         )}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total", value: bids?.length || 0, gradient: "from-white/[0.04] via-background to-white/[0.01]", color: "text-foreground", iconBg: "bg-white/10", icon: Gavel },
@@ -173,6 +177,7 @@ export default function Bids() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
       {ordersWithBids.length > 1 && (
         <div className="flex items-center gap-3">
@@ -482,7 +487,7 @@ export default function Bids() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
     </TooltipProvider>
   );
 }

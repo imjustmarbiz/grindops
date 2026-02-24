@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Assignment, Order, Grinder } from "@shared/schema";
 
 function formatCurrency(val: number) {
@@ -97,7 +98,8 @@ export default function Assignments() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-5">
+    <AnimatedPage className="space-y-5">
+      <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-assignments-title">
@@ -109,7 +111,9 @@ export default function Assignments() {
           <p className="text-sm text-muted-foreground mt-1">Auto-created when bids are accepted. Replace grinders with custom pay splits.</p>
         </div>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: "Active", value: active.length, icon: Clock, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
@@ -132,7 +136,9 @@ export default function Assignments() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-x-auto">
         <Table className="min-w-[1100px]">
@@ -291,6 +297,7 @@ export default function Assignments() {
         </Table>
         </div>
       </Card>
+      </FadeInUp>
 
       <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
         <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[520px]">
@@ -448,7 +455,7 @@ export default function Assignments() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </AnimatedPage>
     </TooltipProvider>
   );
 }

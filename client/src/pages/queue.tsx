@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, DollarSign } from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Order, SuggestionResult } from "@shared/schema";
 
 function ScoreBar({ label, value, color }: { label: string; value: number; color: string }) {
@@ -39,7 +40,8 @@ export default function Queue() {
   };
 
   return (
-    <div className="space-y-5">
+    <AnimatedPage className="space-y-5">
+      <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-queue-title">
@@ -52,7 +54,9 @@ export default function Queue() {
         </div>
         <Badge className="bg-primary/15 text-primary border border-primary/20 font-bold">WEIGHTED</Badge>
       </div>
+      </FadeInUp>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-primary/[0.06] via-background to-primary/[0.02] overflow-hidden relative">
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/[0.03] -translate-y-16 translate-x-16" />
         <CardHeader className="pb-3">
@@ -79,8 +83,10 @@ export default function Queue() {
           </Select>
         </CardContent>
       </Card>
+      </FadeInUp>
 
       {selectedOrderId && (
+        <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-blue-500/[0.06] via-background to-background overflow-hidden relative">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.03] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
@@ -163,8 +169,10 @@ export default function Queue() {
             )}
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] via-background to-background overflow-hidden relative">
         <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.03] -translate-y-12 translate-x-12" />
         <CardHeader className="pb-3">
@@ -218,6 +226,7 @@ export default function Queue() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </FadeInUp>
+    </AnimatedPage>
   );
 }
