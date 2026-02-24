@@ -118,7 +118,7 @@ export default function StaffAnalytics() {
         <BiddingCountdownPanel variant="compact" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-revenue-split">
+          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden flex flex-col" data-testid="card-revenue-split">
             <CardHeader className="pb-2">
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
@@ -127,11 +127,11 @@ export default function StaffAnalytics() {
                 Revenue Split
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-5 flex-1 flex flex-col justify-between">
               <div className="flex items-center justify-around gap-2">
-                <AnimatedRing percent={payoutPct} color="#60a5fa" label="Grinder Pay" value={formatCompact(payouts)} />
-                <AnimatedRing percent={profitMarginPct} color="#a78bfa" label="Company Profit" value={formatCompact(profit)} />
-                <AnimatedRing percent={100} color="#34d399" label="Total Revenue" value={formatCompact(revenue)} size={90} />
+                <AnimatedRing percent={payoutPct} color="#60a5fa" label="Grinder Pay" value={formatCompact(payouts)} size={90} stroke={10} />
+                <AnimatedRing percent={profitMarginPct} color="#a78bfa" label="Company Profit" value={formatCompact(profit)} size={90} stroke={10} />
+                <AnimatedRing percent={100} color="#34d399" label="Total Revenue" value={formatCompact(revenue)} size={100} stroke={10} />
               </div>
               <div className="space-y-3">
                 <SplitBar height={10} segments={[
@@ -139,20 +139,20 @@ export default function StaffAnalytics() {
                   { value: profit, color: "bg-purple-500", label: "Profit" },
                 ]} />
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                  <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Grinder Share</p>
-                    <p className="text-lg font-bold text-blue-400">{payoutPct.toFixed(1)}%</p>
+                    <p className="text-xl font-bold text-blue-400">{payoutPct.toFixed(1)}%</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                  <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Profit Margin</p>
-                    <p className="text-lg font-bold text-purple-400">{profitMarginPct.toFixed(1)}%</p>
+                    <p className="text-xl font-bold text-purple-400">{profitMarginPct.toFixed(1)}%</p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-fleet-utilization">
+          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden flex flex-col" data-testid="card-fleet-utilization">
             <CardHeader className="pb-2">
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
@@ -161,7 +161,7 @@ export default function StaffAnalytics() {
                 Fleet Utilization
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
                 <AnimatedRing percent={fleetUtilization} color={fleetUtilization > 80 ? "#f87171" : fleetUtilization > 60 ? "#fbbf24" : "#34d399"} label="Limit Used" value={`${fleetUtilization.toFixed(0)}%`} size={90} stroke={10} />
                 <div className="flex-1 space-y-2">
@@ -207,7 +207,7 @@ export default function StaffAnalytics() {
             </CardContent>
           </Card>
 
-          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden" data-testid="card-bid-conversion">
+          <Card className="border-white/[0.06] bg-white/[0.02] overflow-hidden flex flex-col" data-testid="card-bid-conversion">
             <CardHeader className="pb-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <CardTitle className="text-base sm:text-lg flex items-center gap-2">
@@ -219,25 +219,25 @@ export default function StaffAnalytics() {
                 <LastUpdated date={bidsUpdatedAt ? new Date(bidsUpdatedAt) : null} />
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
-                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={90} stroke={10} />
+                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={100} stroke={10} />
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
                     <div className="flex items-center gap-2">
                       <Clock className="w-3 h-3 text-yellow-400" />
                       <span className="text-xs text-muted-foreground">Pending</span>
                     </div>
                     <span className="text-sm font-bold text-yellow-400" data-testid="text-pending-bids">{pendingBids}</span>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-3 h-3 text-emerald-400" />
                       <span className="text-xs text-muted-foreground">Accepted</span>
                     </div>
                     <span className="text-sm font-bold text-emerald-400" data-testid="text-accepted-bids">{acceptedBids}</span>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-red-500/5 border border-red-500/10">
                     <div className="flex items-center gap-2">
                       <XCircle className="w-3 h-3 text-red-400" />
                       <span className="text-xs text-muted-foreground">Rejected</span>
