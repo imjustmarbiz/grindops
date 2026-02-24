@@ -233,16 +233,15 @@ export default function StaffServices() {
         </FadeInUp>
 
         <FadeInUp delay={0.05}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard label="Total Services" value={allServices.length} icon={Package} color="bg-primary/20 text-primary" />
-            <StatCard label="Total Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} color="bg-emerald-500/20 text-emerald-400" />
-            <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${totalOrders} orders`} />
-            <StatCard label="Top Service" value={topService?.name?.replace(/\s*[^\w\s]+$/g, '').trim() || "N/A"} icon={TrendingUp} color="bg-blue-500/20 text-blue-400" subtitle={topServiceOrders > 0 ? `${topServiceOrders} orders` : undefined} />
-          </div>
-        </FadeInUp>
+          <div className={`grid gap-4 ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="Total Services" value={allServices.length} icon={Package} color="bg-primary/20 text-primary" />
+              <StatCard label="Total Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} color="bg-emerald-500/20 text-emerald-400" />
+              <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${totalOrders} orders`} />
+              <StatCard label="Top Service" value={topService?.name?.replace(/\s*[^\w\s]+$/g, '').trim() || "N/A"} icon={TrendingUp} color="bg-blue-500/20 text-blue-400" subtitle={topServiceOrders > 0 ? `${topServiceOrders} orders` : undefined} />
+            </div>
 
-        <FadeInUp delay={0.1}>
-          <Card className={`bg-card/50 border-border/30 ${sortedPlatforms.length === 1 ? "max-w-md" : ""}`}>
+          <Card className="bg-card/50 border-border/30 lg:min-w-[320px]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Gamepad2 className="w-4 h-4 text-primary" />
@@ -355,6 +354,7 @@ export default function StaffServices() {
               )}
             </CardContent>
           </Card>
+          </div>
         </FadeInUp>
 
         <FadeInUp delay={0.15}>
