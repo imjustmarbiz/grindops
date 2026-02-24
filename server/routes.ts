@@ -264,8 +264,8 @@ export async function registerRoutes(
               amount: String(payoutAmount),
               payoutPlatform: defaultMethod?.platform || null,
               payoutDetails: defaultMethod?.details || null,
-              status: "Pending",
-              notes: "Auto-created on staff completion",
+              status: "Pending Grinder Approval",
+              notes: "Auto-created on staff completion - awaiting grinder confirmation",
               reviewedBy: null,
             });
           }
@@ -1299,6 +1299,81 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.patch("/api/grinder/me/payout-requests/:id/approve", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+
+      const payouts = await storage.getPayoutRequests(myGrinder.id);
+      const payout = payouts.find((p: any) => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Payout request not found" });
+      if (payout.status !== "Pending Grinder Approval") {
+        return res.status(400).json({ message: "Payout is not pending your approval" });
+      }
+
+      await storage.updatePayoutRequest(payout.id, {
+        status: "Pending",
+        grinderApprovedAt: new Date(),
+        notes: "Grinder approved payout details",
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "payout",
+        entityId: payout.id,
+        action: "grinder_approved_payout",
+        actor: myGrinder.name,
+        details: JSON.stringify({ orderId: payout.orderId, amount: payout.amount }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/grinder/me/payout-requests/:id/dispute", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+
+      const payouts = await storage.getPayoutRequests(myGrinder.id);
+      const payout = payouts.find((p: any) => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Payout request not found" });
+      if (payout.status !== "Pending Grinder Approval") {
+        return res.status(400).json({ message: "Payout is not pending your approval" });
+      }
+
+      const { reason, requestedPlatform, requestedDetails, requestedAmount } = req.body;
+      if (!reason) return res.status(400).json({ message: "Dispute reason is required" });
+
+      await storage.updatePayoutRequest(payout.id, {
+        status: "Grinder Disputed",
+        disputeReason: reason,
+        requestedPlatform: requestedPlatform || null,
+        requestedDetails: requestedDetails || null,
+        requestedAmount: requestedAmount ? String(requestedAmount) : null,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "payout",
+        entityId: payout.id,
+        action: "grinder_disputed_payout",
+        actor: myGrinder.name,
+        details: JSON.stringify({ reason, requestedPlatform, requestedDetails, requestedAmount }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   app.post("/api/grinder/me/accept-rules", async (req, res) => {
     try {
       const userId = (req as any).userId;
@@ -1572,6 +1647,52 @@ export async function registerRoutes(
     });
 
     res.json(updated);
+  });
+
+  app.patch("/api/staff/payout-requests/:id/resolve-dispute", requireStaff, async (req, res) => {
+    try {
+      const { action, reviewedBy } = req.body;
+      const payoutReq = await storage.getPayoutRequest(req.params.id);
+      if (!payoutReq) return res.status(404).json({ message: "Payout request not found" });
+      if (payoutReq.status !== "Grinder Disputed") {
+        return res.status(400).json({ message: "Payout is not in disputed state" });
+      }
+
+      if (action === "accept_changes") {
+        await storage.updatePayoutRequest(req.params.id, {
+          status: "Pending",
+          amount: payoutReq.requestedAmount || payoutReq.amount,
+          payoutPlatform: payoutReq.requestedPlatform || payoutReq.payoutPlatform,
+          payoutDetails: payoutReq.requestedDetails || payoutReq.payoutDetails,
+          reviewedBy: reviewedBy || "staff",
+          reviewedAt: new Date(),
+          notes: "Dispute resolved - grinder's requested changes accepted",
+        });
+      } else if (action === "resend") {
+        await storage.updatePayoutRequest(req.params.id, {
+          status: "Pending Grinder Approval",
+          disputeReason: null,
+          requestedPlatform: null,
+          requestedDetails: null,
+          requestedAmount: null,
+          notes: "Resent for grinder approval after dispute review",
+        });
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "payout_request",
+        entityId: req.params.id,
+        action: `dispute_${action}`,
+        actor: reviewedBy || "staff",
+        details: JSON.stringify({ payoutId: req.params.id, action }),
+      });
+
+      const updated = await storage.getPayoutRequest(req.params.id);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
   });
 
   app.get("/api/staff/grinder-payout-methods/:grinderId", requireStaff, async (req, res) => {

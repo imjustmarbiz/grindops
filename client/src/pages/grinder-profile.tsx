@@ -64,6 +64,11 @@ export default function GrinderProfile() {
   const [savePayoutMethod, setSavePayoutMethod] = useState(true);
   const [availStatus, setAvailStatus] = useState("available");
   const [availNote, setAvailNote] = useState("");
+  const [disputeDialog, setDisputeDialog] = useState<any>(null);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputePlatform, setDisputePlatform] = useState("");
+  const [disputeDetails, setDisputeDetails] = useState("");
+  const [disputeAmount, setDisputeAmount] = useState("");
   const [placeBidDialog, setPlaceBidDialog] = useState<any>(null);
   const [placeBidAmount, setPlaceBidAmount] = useState("");
   const [placeBidTimeline, setPlaceBidTimeline] = useState("");
@@ -110,6 +115,35 @@ export default function GrinderProfile() {
       setPayoutPlatform("");
       setPayoutDetails("");
       toast({ title: "Payout requested", description: "Staff will review your request." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const approvePayoutMutation = useMutation({
+    mutationFn: async (payoutId: string) => {
+      const res = await apiRequest("PATCH", `/api/grinder/me/payout-requests/${payoutId}/approve`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      toast({ title: "Payout approved", description: "Staff will now process your payment." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const disputePayoutMutation = useMutation({
+    mutationFn: async ({ payoutId, data }: { payoutId: string; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/grinder/me/payout-requests/${payoutId}/dispute`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      setDisputeDialog(null);
+      setDisputeReason("");
+      setDisputePlatform("");
+      setDisputeDetails("");
+      setDisputeAmount("");
+      toast({ title: "Dispute submitted", description: "Staff will review your request." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -1025,8 +1059,21 @@ export default function GrinderProfile() {
             </Card>
           ) : (
             <div className="space-y-3">
+              {payoutRequests.filter((p: any) => p.status === "Pending Grinder Approval").length > 0 && (
+                <Card className={`border ${isElite ? "border-cyan-500/30 bg-cyan-500/[0.06]" : "border-amber-500/30 bg-amber-500/[0.06]"}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+                      <span className={`text-sm font-medium ${isElite ? "text-cyan-300" : "text-amber-300"}`}>
+                        {payoutRequests.filter((p: any) => p.status === "Pending Grinder Approval").length} payout(s) need your approval
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/50">Review the payout details below and confirm they are correct before staff sends payment.</p>
+                  </CardContent>
+                </Card>
+              )}
               {payoutRequests.map((p: any) => (
-                <Card key={p.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-payout-${p.id}`}>
+                <Card key={p.id} className={`border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200 ${p.status === "Pending Grinder Approval" ? (isElite ? "ring-1 ring-cyan-500/30" : "ring-1 ring-amber-500/30") : ""}`} data-testid={`card-payout-${p.id}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -1035,18 +1082,55 @@ export default function GrinderProfile() {
                           Amount: <span className="text-emerald-400 font-medium">${Number(p.amount).toFixed(2)}</span>
                           {p.payoutPlatform && <span className="ml-2">via {p.payoutPlatform}</span>}
                         </p>
+                        {p.payoutDetails && <p className="text-xs text-white/40">Details: {p.payoutDetails}</p>}
                         {p.notes && <p className="text-xs text-white/40">{p.notes}</p>}
                         <p className="text-xs text-white/30">{new Date(p.createdAt).toLocaleString()}</p>
                       </div>
                       <Badge className={`border-0 ${
                         p.status === "Paid" ? "bg-emerald-500/20 text-emerald-400" :
-                        p.status === "Approved" ? "bg-blue-500/20 text-blue-400" :
+                        p.status === "Approved" || p.status === "Pending" ? "bg-blue-500/20 text-blue-400" :
                         p.status === "Denied" ? "bg-red-500/20 text-red-400" :
+                        p.status === "Pending Grinder Approval" ? "bg-amber-500/20 text-amber-400" :
+                        p.status === "Grinder Disputed" ? "bg-orange-500/20 text-orange-400" :
                         "bg-yellow-500/20 text-yellow-400"
                       }`}>
-                        {p.status}
+                        {p.status === "Pending Grinder Approval" ? "Needs Your Approval" : p.status === "Grinder Disputed" ? "Disputed" : p.status}
                       </Badge>
                     </div>
+                    {p.status === "Pending Grinder Approval" && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                        <p className="text-xs text-white/60 mb-3">Please confirm the payout details are correct. If anything needs to change, you can dispute and request adjustments.</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            data-testid={`button-approve-payout-${p.id}`}
+                            disabled={approvePayoutMutation.isPending}
+                            onClick={() => approvePayoutMutation.mutate(p.id)}>
+                            {approvePayoutMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                            Approve Payout
+                          </Button>
+                          <Button size="sm" variant="outline" className="gap-1 border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+                            data-testid={`button-dispute-payout-${p.id}`}
+                            onClick={() => {
+                              setDisputeDialog(p);
+                              setDisputeAmount(p.amount?.toString() || "");
+                              setDisputePlatform(p.payoutPlatform || "");
+                              setDisputeDetails(p.payoutDetails || "");
+                            }}>
+                            <X className="w-3 h-3" />
+                            Dispute
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {p.status === "Grinder Disputed" && p.disputeReason && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                        <p className="text-xs text-orange-400 font-medium mb-1">Your dispute reason:</p>
+                        <p className="text-xs text-white/50">{p.disputeReason}</p>
+                        {p.requestedAmount && <p className="text-xs text-white/50 mt-1">Requested amount: <span className="text-emerald-400">${Number(p.requestedAmount).toFixed(2)}</span></p>}
+                        {p.requestedPlatform && <p className="text-xs text-white/50">Requested method: {p.requestedPlatform}</p>}
+                        <p className="text-xs text-white/30 mt-1">Waiting for staff review...</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -1607,6 +1691,67 @@ export default function GrinderProfile() {
               }}>
               {requestPayoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Banknote className="w-4 h-4 mr-2" />}
               Request Payout
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!disputeDialog} onOpenChange={(open) => { if (!open) { setDisputeDialog(null); setDisputeReason(""); setDisputePlatform(""); setDisputeDetails(""); setDisputeAmount(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-orange-400" />
+              Dispute Payout - Order {disputeDialog?.orderId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+              <p className="text-sm text-white/60">Current payout details:</p>
+              <p className="text-sm">Amount: <span className="text-emerald-400 font-medium">${Number(disputeDialog?.amount || 0).toFixed(2)}</span></p>
+              {disputeDialog?.payoutPlatform && <p className="text-sm">Method: {disputeDialog.payoutPlatform} - {disputeDialog.payoutDetails}</p>}
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Reason for Dispute *</label>
+              <Textarea value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder="Explain what needs to be changed..." data-testid="input-dispute-reason" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Requested Amount ($) <span className="text-xs text-white/40">(leave blank to keep current)</span></label>
+              <Input type="number" value={disputeAmount} onChange={(e) => setDisputeAmount(e.target.value)} data-testid="input-dispute-amount" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Preferred Payout Platform <span className="text-xs text-white/40">(leave blank to keep current)</span></label>
+              <Select value={disputePlatform} onValueChange={setDisputePlatform}>
+                <SelectTrigger data-testid="select-dispute-platform">
+                  <SelectValue placeholder="Select platform..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYOUT_PLATFORMS.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {disputePlatform && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">Payout Details</label>
+                <Input value={disputeDetails} onChange={(e) => setDisputeDetails(e.target.value)} placeholder="Enter your payout details..." data-testid="input-dispute-details" />
+              </div>
+            )}
+            <Button className="w-full bg-orange-600 hover:bg-orange-700" data-testid="button-submit-dispute"
+              disabled={!disputeReason || disputePayoutMutation.isPending}
+              onClick={() => {
+                disputePayoutMutation.mutate({
+                  payoutId: disputeDialog.id,
+                  data: {
+                    reason: disputeReason,
+                    requestedAmount: disputeAmount || undefined,
+                    requestedPlatform: disputePlatform || undefined,
+                    requestedDetails: disputeDetails || undefined,
+                  },
+                });
+              }}>
+              {disputePayoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              Submit Dispute
             </Button>
           </div>
         </DialogContent>

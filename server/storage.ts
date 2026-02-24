@@ -72,7 +72,7 @@ export interface IStorage {
   getPayoutRequests(grinderId?: string): Promise<PayoutRequest[]>;
   getPayoutRequest(id: string): Promise<PayoutRequest | undefined>;
   createPayoutRequest(request: InsertPayoutRequest): Promise<PayoutRequest>;
-  updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date }>): Promise<PayoutRequest | undefined>;
+  updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date; paidAt: Date; grinderApprovedAt: Date; disputeReason: string | null; requestedPlatform: string | null; requestedDetails: string | null; requestedAmount: string | null }>): Promise<PayoutRequest | undefined>;
 
   updateBid(id: string, data: Partial<InsertBid>): Promise<Bid | undefined>;
 
@@ -730,7 +730,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date; paidAt: Date }>): Promise<PayoutRequest | undefined> {
+  async updatePayoutRequest(id: string, data: Partial<InsertPayoutRequest & { reviewedAt: Date; paidAt: Date; grinderApprovedAt: Date; disputeReason: string | null; requestedPlatform: string | null; requestedDetails: string | null; requestedAmount: string | null }>): Promise<PayoutRequest | undefined> {
     const [updated] = await db.update(payoutRequests).set(data).where(eq(payoutRequests.id, id)).returning();
     return updated;
   }

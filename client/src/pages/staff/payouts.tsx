@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock } from "lucide-react";
+import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 
 export default function StaffPayouts() {
@@ -18,13 +18,25 @@ export default function StaffPayouts() {
 
   const payoutMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const reviewedBy = user?.username || user?.discordUsername || "staff";
+      const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
       const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
       toast({ title: "Payout request updated" });
+    },
+  });
+
+  const resolveDisputeMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: string }) => {
+      const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}/resolve-dispute`, { action, reviewedBy });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      toast({ title: "Dispute resolved" });
     },
   });
 
@@ -37,6 +49,8 @@ export default function StaffPayouts() {
   }
 
   const allPayoutReqs = payoutReqs || [];
+  const pendingGrinderApproval = allPayoutReqs.filter((p: any) => p.status === "Pending Grinder Approval");
+  const disputedPayouts = allPayoutReqs.filter((p: any) => p.status === "Grinder Disputed");
   const pendingPayouts = allPayoutReqs.filter((p: any) => p.status === "Pending");
   const approvedPayouts = allPayoutReqs.filter((p: any) => p.status === "Approved");
   const paidPayouts = allPayoutReqs.filter((p: any) => p.status === "Paid");
@@ -53,12 +67,26 @@ export default function StaffPayouts() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
         </div>
-        {pendingPayouts.length > 0 && (
-          <Badge className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 gap-1 animate-pulse">
-            <Clock className="w-3 h-3" />
-            {pendingPayouts.length} pending review
-          </Badge>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {disputedPayouts.length > 0 && (
+            <Badge className="bg-orange-500/15 text-orange-400 border border-orange-500/20 gap-1 animate-pulse">
+              <AlertTriangle className="w-3 h-3" />
+              {disputedPayouts.length} disputed
+            </Badge>
+          )}
+          {pendingGrinderApproval.length > 0 && (
+            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
+              <Clock className="w-3 h-3" />
+              {pendingGrinderApproval.length} awaiting grinder
+            </Badge>
+          )}
+          {pendingPayouts.length > 0 && (
+            <Badge className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 gap-1 animate-pulse">
+              <Clock className="w-3 h-3" />
+              {pendingPayouts.length} pending review
+            </Badge>
+          )}
+        </div>
       </div>
 
       <BiddingCountdownPanel variant="compact" />
@@ -85,6 +113,97 @@ export default function StaffPayouts() {
           </Card>
         ))}
       </div>
+
+      {disputedPayouts.length > 0 && (
+        <Card className="border-0 bg-gradient-to-br from-orange-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-disputed-payouts">
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-orange-500/[0.03] -translate-y-16 translate-x-16" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-orange-400" />
+              </div>
+              Disputed Payouts
+              <Badge className="bg-orange-500/15 text-orange-400 border border-orange-500/20 ml-2 text-xs">{disputedPayouts.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 relative">
+            {disputedPayouts.map((p: any) => {
+              const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
+              return (
+                <div key={p.id} className="p-4 rounded-xl bg-white/[0.03] border border-orange-500/20 space-y-3" data-testid={`disputed-payout-${p.id}`}>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{grinder?.name || p.grinderId}</span>
+                        <span className="text-emerald-400 font-bold">{formatCurrency(Number(p.amount))}</span>
+                        <Badge className="bg-orange-500/15 text-orange-400 border border-orange-500/20 text-[10px]">Disputed</Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Order {p.orderId}</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15">
+                    <p className="text-xs font-medium text-orange-400 mb-1">Grinder's dispute reason:</p>
+                    <p className="text-sm text-white/70">{p.disputeReason}</p>
+                    {p.requestedAmount && (
+                      <p className="text-xs text-white/50 mt-1.5">Requested amount: <span className="text-emerald-400 font-medium">{formatCurrency(Number(p.requestedAmount))}</span></p>
+                    )}
+                    {p.requestedPlatform && (
+                      <p className="text-xs text-white/50">Requested platform: {p.requestedPlatform}{p.requestedDetails ? ` - ${p.requestedDetails}` : ""}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 gap-1"
+                      data-testid={`button-accept-dispute-${p.id}`}
+                      disabled={resolveDisputeMutation.isPending}
+                      onClick={() => resolveDisputeMutation.mutate({ id: p.id, action: "accept_changes" })}>
+                      <ThumbsUp className="w-3 h-3" /> Accept Changes
+                    </Button>
+                    <Button size="sm" className="text-xs bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/20 gap-1"
+                      data-testid={`button-resend-approval-${p.id}`}
+                      disabled={resolveDisputeMutation.isPending}
+                      onClick={() => resolveDisputeMutation.mutate({ id: p.id, action: "resend" })}>
+                      <RefreshCw className="w-3 h-3" /> Resend for Approval
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {pendingGrinderApproval.length > 0 && (
+        <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-pending-grinder-approval">
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.03] -translate-y-12 translate-x-12" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-amber-400" />
+              </div>
+              Awaiting Grinder Approval
+              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 ml-2 text-xs">{pendingGrinderApproval.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 relative">
+            {pendingGrinderApproval.map((p: any) => {
+              const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
+              return (
+                <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]" data-testid={`pending-approval-${p.id}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{grinder?.name || p.grinderId}</span>
+                      <span className="text-emerald-400 font-bold">{formatCurrency(Number(p.amount))}</span>
+                      {p.payoutPlatform && <span className="text-xs text-muted-foreground">via {p.payoutPlatform}</span>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">Order {p.orderId} - Waiting for grinder to confirm details</span>
+                  </div>
+                  <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[10px]">Awaiting Grinder</Badge>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-payout-management">
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-emerald-500/[0.03] -translate-y-16 translate-x-16" />

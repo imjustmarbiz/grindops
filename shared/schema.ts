@@ -187,6 +187,11 @@ export const payoutRequests = pgTable("payout_requests", {
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
   paidAt: timestamp("paid_at"),
+  grinderApprovedAt: timestamp("grinder_approved_at"),
+  disputeReason: text("dispute_reason"),
+  requestedPlatform: text("requested_platform"),
+  requestedDetails: text("requested_details"),
+  requestedAmount: numeric("requested_amount"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
