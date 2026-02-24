@@ -11,6 +11,7 @@ export const GRINDER_ROLES = {
   VC_1: "1468501279478255708",
   VC_2: "1468501106916065363",
   EVENT: "1468796147136073922",
+  INTERNATIONAL: "1469613880073257125",
 } as const;
 
 export const ROLE_CAPACITY: Record<string, number> = {
@@ -19,6 +20,7 @@ export const ROLE_CAPACITY: Record<string, number> = {
   [GRINDER_ROLES.VC_1]: 3,
   [GRINDER_ROLES.VC_2]: 3,
   [GRINDER_ROLES.EVENT]: 3,
+  [GRINDER_ROLES.INTERNATIONAL]: 3,
 };
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -27,6 +29,7 @@ export const ROLE_LABELS: Record<string, string> = {
   [GRINDER_ROLES.VC_1]: "VC Grinder",
   [GRINDER_ROLES.VC_2]: "VC Grinder",
   [GRINDER_ROLES.EVENT]: "Event Grinder",
+  [GRINDER_ROLES.INTERNATIONAL]: "International Grinder",
 };
 
 export const PAYOUT_PLATFORMS = ["Zelle", "PayPal", "Apple Pay", "Cash App", "Venmo"] as const;
