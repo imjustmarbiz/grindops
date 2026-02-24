@@ -287,7 +287,7 @@ export default function StaffOverview() {
         </CardHeader>
         <CardContent className="space-y-4">
           <SparkBar height={8} segments={pipelineData.map(p => ({ value: p.count, color: p.ring, label: p.label }))} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {pipelineData.map((p) => {
               const pct = totalOrders > 0 ? ((p.count / totalOrders) * 100).toFixed(0) : "0";
               const Icon = p.icon;
