@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap } from "lucide-react";
+import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX } from "lucide-react";
 import type { Notification } from "@shared/schema";
+import { playNotificationSound } from "@/lib/notification-sounds";
 
 const iconMap: Record<string, any> = {
   package: Package,
@@ -36,6 +37,11 @@ export function LowerThirdNotifications() {
   const userId = (user as any)?.discordId || user?.id || "";
   const [visibleNotifs, setVisibleNotifs] = useState<Notification[]>([]);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem("notif-sound-enabled");
+    return stored !== "false";
+  });
+  const hasInitialized = useRef(false);
 
   const { data: allNotifs = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -63,6 +69,10 @@ export function LowerThirdNotifications() {
       setVisibleNotifs(prev => {
         const existingIds = new Set(prev.map(n => n.id));
         const newOnes = latest.filter(n => !existingIds.has(n.id));
+        if (newOnes.length > 0 && soundEnabled && hasInitialized.current) {
+          const topNotif = newOnes[0];
+          playNotificationSound(topNotif.type || "info");
+        }
         return [...prev, ...newOnes].slice(-3);
       });
       setSeenIds(prev => {
@@ -71,7 +81,10 @@ export function LowerThirdNotifications() {
         return next;
       });
     }
-  }, [allNotifs, userId, seenIds]);
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+    }
+  }, [allNotifs, userId, seenIds, soundEnabled]);
 
   const dismiss = useCallback((id: string) => {
     setVisibleNotifs(prev => prev.filter(n => n.id !== id));
@@ -86,8 +99,24 @@ export function LowerThirdNotifications() {
     return () => timers.forEach(clearTimeout);
   }, [visibleNotifs, dismiss]);
 
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem("notif-sound-enabled", String(next));
+      return next;
+    });
+  }, []);
+
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
+      <button
+        onClick={toggleSound}
+        className="pointer-events-auto self-end mb-1 p-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 text-muted-foreground hover:text-foreground transition-colors"
+        title={soundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
+        data-testid="button-toggle-notif-sound"
+      >
+        {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+      </button>
       <AnimatePresence mode="popLayout">
         {visibleNotifs.map(notif => {
           const IconComponent = iconMap[notif.icon || "bell"] || Bell;
