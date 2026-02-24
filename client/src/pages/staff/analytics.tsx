@@ -127,11 +127,32 @@ export default function StaffAnalytics() {
                 Revenue Split
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5 flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-around gap-2">
-                <AnimatedRing percent={payoutPct} color="#60a5fa" label="Grinder Pay" value={formatCompact(payouts)} size={90} stroke={10} />
-                <AnimatedRing percent={profitMarginPct} color="#a78bfa" label="Company Profit" value={formatCompact(profit)} size={90} stroke={10} />
-                <AnimatedRing percent={100} color="#34d399" label="Total Revenue" value={formatCompact(revenue)} size={100} stroke={10} />
+            <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
+              <div className="flex items-center gap-4 sm:gap-6">
+                <AnimatedRing percent={100} color="#34d399" label="Total Revenue" value={formatCompact(revenue)} size={110} stroke={10} />
+                <div className="flex-1 space-y-2.5">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                      <span className="text-xs text-muted-foreground">Grinder Pay</span>
+                    </div>
+                    <span className="text-sm font-bold text-blue-400">{formatCompact(payouts)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+                      <span className="text-xs text-muted-foreground">Company Profit</span>
+                    </div>
+                    <span className="text-sm font-bold text-purple-400">{formatCompact(profit)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                      <span className="text-xs text-muted-foreground">Total Revenue</span>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-400">{formatCompact(revenue)}</span>
+                  </div>
+                </div>
               </div>
               <div className="space-y-3">
                 <SplitBar height={10} segments={[
@@ -221,7 +242,7 @@ export default function StaffAnalytics() {
             </CardHeader>
             <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
-                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={100} stroke={10} />
+                <AnimatedRing percent={bidConversionRate} color="#34d399" label="Win Rate" value={`${bidConversionRate.toFixed(0)}%`} size={110} stroke={10} />
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
                     <div className="flex items-center gap-2">
