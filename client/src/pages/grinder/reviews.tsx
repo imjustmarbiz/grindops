@@ -48,7 +48,8 @@ export default function GrinderReviews() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"] });
+  const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
 
   const { data: reviews = [], isLoading } = useQuery<CustomerReview[]>({
     queryKey: ["/api/reviews"],

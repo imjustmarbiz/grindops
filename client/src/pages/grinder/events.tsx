@@ -10,7 +10,8 @@ import {
 
 export default function GrinderEvents() {
   const { user } = useAuth();
-  const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"] });
+  const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
   const { data: events = [], isLoading } = useQuery<Event[]>({ queryKey: ["/api/events"] });
 
   const activeEvents = events.filter(e => e.isActive);

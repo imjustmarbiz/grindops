@@ -25,7 +25,8 @@ export default function GrinderOrderClaims() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const isElite = (user as any)?.discordRoles?.includes?.("1466370965016412316");
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"] });
+  const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
 
   const [orderId, setOrderId] = useState("");
   const [ticketName, setTicketName] = useState("");
