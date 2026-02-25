@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileText, Activity, MessageSquare, Loader2, CheckCircle, Filter,
-  Plus, Clock, AlertTriangle, Eye, Trash2,
+  Plus, Clock, AlertTriangle, Eye, Trash2, Pencil,
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
@@ -49,6 +50,10 @@ export default function StaffReports() {
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolveCheckpointId, setResolveCheckpointId] = useState("");
   const [resolveNote, setResolveNote] = useState("");
+
+  const [editTimeDialogOpen, setEditTimeDialogOpen] = useState(false);
+  const [editTimeCheckpointId, setEditTimeCheckpointId] = useState("");
+  const [editTimeValue, setEditTimeValue] = useState("");
 
   const generateReportMutation = useMutation({
     mutationFn: async (data: { assignmentId: string }) => {
@@ -108,6 +113,23 @@ export default function StaffReports() {
     },
     onError: (err: any) => {
       toast({ title: "Failed to resolve checkpoint", description: err.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+
+  const editTimeMutation = useMutation({
+    mutationFn: async ({ id, createdAt }: { id: string; createdAt: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/checkpoints/${id}/edit-time`, { createdAt });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/checkpoints"] });
+      setEditTimeDialogOpen(false);
+      setEditTimeCheckpointId("");
+      setEditTimeValue("");
+      toast({ title: "Checkpoint time updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to update time", description: err.message || "Something went wrong", variant: "destructive" });
     },
   });
 
@@ -400,6 +422,7 @@ export default function StaffReports() {
                 <SelectItem value="ticket_ack">Ticket Ask</SelectItem>
                 <SelectItem value="login">Login</SelectItem>
                 <SelectItem value="logoff">Logoff</SelectItem>
+                <SelectItem value="start_order">Start Order</SelectItem>
                 <SelectItem value="issue">Issue</SelectItem>
                 <SelectItem value="order_update">Order Update</SelectItem>
                 <SelectItem value="missed_update">Missed Update</SelectItem>
@@ -426,6 +449,7 @@ export default function StaffReports() {
                 ticket_ack: "bg-blue-500/15 text-blue-400 border-blue-500/20",
                 login: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
                 logoff: "bg-slate-500/15 text-slate-400 border-slate-500/20",
+                start_order: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
                 issue: "bg-red-500/15 text-red-400 border-red-500/20",
                 order_update: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
                 missed_update: "bg-amber-500/15 text-amber-400 border-amber-500/20",
@@ -450,9 +474,27 @@ export default function StaffReports() {
                     {cp.note && (
                       <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-checkpoint-note-${cp.id}`}>{cp.note}</p>
                     )}
-                    <p className="text-[10px] text-muted-foreground mt-1" data-testid={`text-checkpoint-time-${cp.id}`}>
-                      <Clock className="w-3 h-3 inline mr-1" />
-                      {cp.timestamp ? new Date(cp.timestamp).toLocaleString() : "—"}
+                    <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1" data-testid={`text-checkpoint-time-${cp.id}`}>
+                      <Clock className="w-3 h-3" />
+                      {cp.timestamp ? new Date(cp.timestamp).toLocaleString() : (cp.createdAt ? new Date(cp.createdAt).toLocaleString() : "—")}
+                      <button
+                        className="ml-1 p-0.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                        data-testid={`button-edit-time-${cp.id}`}
+                        onClick={() => {
+                          setEditTimeCheckpointId(cp.id);
+                          const dt = cp.timestamp || cp.createdAt;
+                          if (dt) {
+                            const d = new Date(dt);
+                            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                            setEditTimeValue(local);
+                          } else {
+                            setEditTimeValue("");
+                          }
+                          setEditTimeDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
                     </p>
                   </div>
                   {isUnresolvedIssue && (
@@ -507,6 +549,41 @@ export default function StaffReports() {
                 >
                   {resolveCheckpointMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                   Resolve
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={editTimeDialogOpen} onOpenChange={setEditTimeDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Checkpoint Time</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <label className="text-xs text-muted-foreground font-medium">Date & Time</label>
+                <Input
+                  type="datetime-local"
+                  value={editTimeValue}
+                  onChange={(e) => setEditTimeValue(e.target.value)}
+                  className="bg-background/50 border-white/10"
+                  data-testid="input-edit-checkpoint-time"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditTimeDialogOpen(false)} data-testid="button-cancel-edit-time">
+                  Cancel
+                </Button>
+                <Button
+                  data-testid="button-confirm-edit-time"
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white"
+                  disabled={!editTimeValue || editTimeMutation.isPending}
+                  onClick={() => editTimeMutation.mutate({
+                    id: editTimeCheckpointId,
+                    createdAt: new Date(editTimeValue).toISOString(),
+                  })}
+                >
+                  {editTimeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
+                  Save Time
                 </Button>
               </DialogFooter>
             </DialogContent>

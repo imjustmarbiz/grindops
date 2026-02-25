@@ -195,27 +195,27 @@ export default function GrinderAssignments() {
                           <CheckCircle className="w-3 h-3 mr-1" /> Ticket Responded
                         </Badge>
                       )}
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
-                        disabled={checkpointMutation.isPending}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
-                        disabled={checkpointMutation.isPending}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
-                      </Button>
                       {!a.hasStarted ? (
                         <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
-                          disabled={checkpointMutation.isPending}
+                          disabled={checkpointMutation.isPending || !a.isLoggedIn}
                           onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
                           <Play className="w-3 h-3" /> Start Order
                         </Button>
                       ) : (
                         <Badge className="text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
-                          <Play className="w-3 h-3 mr-1" /> Started {a.startedAt ? new Date(a.startedAt).toLocaleDateString() : ""}
+                          <Play className="w-3 h-3 mr-1" /> Order Started
                         </Badge>
                       )}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
+                        disabled={checkpointMutation.isPending || a.isLoggedIn}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
+                        disabled={checkpointMutation.isPending || !a.isLoggedIn}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
+                      </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
@@ -756,6 +756,7 @@ function CheckpointHistory({ assignmentId }: { assignmentId: string }) {
     issue: "⚠️",
     order_update: "📝",
     missed_update: "❌",
+    start_order: "▶️",
   };
 
   return (

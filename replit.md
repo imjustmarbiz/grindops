@@ -32,6 +32,8 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Completion Video Proof:** Grinders must upload video proof (order completion + account removal from console) via `/api/grinder/me/upload-proof` when marking an order complete. Stored in `payoutRequests.completionProofUrl`. Staff can view proof links on the Payouts page. Videos stored in `uploads/proofs/` with 100MB limit.
 - **Activity Checkpoint Ticket Response:** Accept/Decline ticket buttons disappear after response (tracked via `hasTicketAck` flag from API). Confirmation modal required before submitting. Declined tickets require a reason note.
 - **Platform-Specific Icons:** Log In/Log Off buttons on grinder assignment cards show platform logos (Xbox, PS5, Steam, Nintendo Switch) based on the order's platform field. Uses `react-icons/fa6` (FaXbox) and `react-icons/si` (SiPlaystation5, SiSteam, SiNintendoswitch).
+- **Start Order Flow:** Grinder assignment cards have button order: Ticket → Start Order → Log In → Log Off → Issue → History. Start Order and Log Off are disabled until Log In is clicked. Log In and Log Off are mutually exclusive (only one enabled at a time based on `isLoggedIn` state from API). Start Order can only be clicked once, then shows "Order Started" badge. Sets `startedAt` on assignment and updates order status to "In Progress". `start_order` checkpoint type validated server-side.
+- **Checkpoint Time Editing:** Staff/owners can edit checkpoint timestamps via pencil icon in Reports → Activity Checkpoints tab. Route: `PATCH /api/staff/checkpoints/:id/edit-time`. Creates audit log entry for accountability.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database for all application data, managed with Drizzle ORM.

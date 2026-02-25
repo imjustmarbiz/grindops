@@ -1409,6 +1409,10 @@ export async function registerRoutes(
         const order = allOrders.find((o: any) => o.id === a.orderId);
         const checkpoints = await storage.getActivityCheckpoints(a.id);
         const hasTicketAck = checkpoints.some((cp: any) => cp.type === "ticket_ack");
+        const loginLogoffs = checkpoints
+          .filter((cp: any) => cp.type === "login" || cp.type === "logoff")
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const isLoggedIn = loginLogoffs.length > 0 && loginLogoffs[0].type === "login";
         return {
           id: a.id,
           orderId: a.orderId,
@@ -1427,6 +1431,7 @@ export async function registerRoutes(
           platform: order?.platform || null,
           startedAt: a.startedAt || null,
           hasStarted: !!a.startedAt,
+          isLoggedIn,
         };
       })),
       bids: myBids.map((b: any) => ({
@@ -2536,6 +2541,37 @@ export async function registerRoutes(
         action: "checkpoint_resolved",
         actor: resolvedBy,
         details: JSON.stringify({ resolvedNote }),
+      });
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/staff/checkpoints/:id/edit-time", requireStaff, async (req, res) => {
+    try {
+      const { createdAt } = req.body;
+      if (!createdAt) {
+        return res.status(400).json({ message: "createdAt is required" });
+      }
+      const newDate = new Date(createdAt);
+      if (isNaN(newDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      const updated = await storage.updateActivityCheckpoint(req.params.id, {
+        createdAt: newDate,
+      } as any);
+      if (!updated) return res.status(404).json({ message: "Checkpoint not found" });
+
+      const user = (req as any).user;
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "checkpoint",
+        entityId: req.params.id,
+        action: "checkpoint_time_edited",
+        actor: user?.username || "staff",
+        details: JSON.stringify({ newTime: createdAt }),
       });
 
       res.json(updated);
