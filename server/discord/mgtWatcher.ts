@@ -647,6 +647,11 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
   const allOrders = await storage.getOrders();
   const allBids = await storage.getBids();
 
+  if (allOrders.length === 0 && allBids.length === 0) {
+    console.log("[mgt-watcher] Database is empty — skipping backfill to avoid re-importing old data. Only new real-time messages will be captured.");
+    return;
+  }
+
   const knownOrderMessageIds = new Set(allOrders.map((o: any) => o.discordMessageId).filter(Boolean));
   const knownBidMessageIds = new Set(allBids.map((b: any) => b.discordMessageId).filter(Boolean));
 
