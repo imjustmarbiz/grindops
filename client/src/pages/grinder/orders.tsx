@@ -8,10 +8,10 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InlineCountdown } from "@/components/bidding-countdown";
+import { InlineCountdown, useBiddingRemaining } from "@/components/bidding-countdown";
 import {
   Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign, AlertTriangle,
-  Brain, ChevronDown, ChevronUp, Crown, Gauge, Scale, Shield, Star, Lightbulb, TrendingUp, Info, Filter, ArrowUpDown
+  Brain, ChevronDown, ChevronUp, Crown, Gauge, Scale, Shield, Star, Lightbulb, TrendingUp, Info, Filter, ArrowUpDown, Lock
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -97,94 +97,109 @@ export default function GrinderOrders() {
   const regularOrders = filteredOrders.filter((o: any) => !o.isEmergency);
   const activeFilterCount = (filterService !== "all" ? 1 : 0) + (filterPlatform !== "all" ? 1 : 0);
 
-  const renderOrderCard = (order: any, isReplacement?: boolean) => (
-    <Card
-      key={order.id}
-      className={`border-0 ${isReplacement ? "border border-red-500/20 bg-red-500/[0.04]" : "bg-white/[0.03]"} ${isElite ? "sm:hover:bg-cyan-500/[0.05]" : "sm:hover:bg-[#5865F2]/[0.05]"} transition-all duration-200`}
-      data-testid={`card-order-${order.id}`}
-    >
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <span className="font-bold text-lg">
-                {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
-              </span>
-              <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
-              {isReplacement && <Badge className="bg-red-500/20 text-red-400 border-red-500/30">REPLACEMENT</Badge>}
-              {order.elitePriority && isElite && <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30"><Sparkles className="w-3 h-3 mr-0.5" />Elite Early Access</Badge>}
-              {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
-              {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
-              {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
-              <Badge variant="outline" className="text-muted-foreground">{serviceName(order.serviceId)}</Badge>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              {order.platform && <span>Platform: {order.platform}</span>}
-              {order.gamertag && <span>GT: {order.gamertag}</span>}
-              <span>Due: {new Date(order.orderDueDate).toLocaleDateString()}</span>
-              <span>Complexity: {order.complexity}/5</span>
-              <span>{order.totalBids} bid{order.totalBids !== 1 ? "s" : ""}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 ml-0 sm:ml-4">
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 border-white/10 text-muted-foreground hover:text-foreground"
-              data-testid={`button-details-${order.id}`}
-              onClick={() => setViewDetailsOrder(order)}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Details
-            </Button>
-            {order.hasBid ? (
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-500/20 text-blue-400">
-                  Bid: ${order.myBidAmount}
-                </Badge>
-                {order.myBidStatus === "Pending" && (
-                  <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
-                )}
+  const OrderCard = ({ order, isReplacement }: { order: any; isReplacement?: boolean }) => {
+    const biddingRemaining = useBiddingRemaining(order.biddingClosesAt);
+    const biddingExpired = order.biddingClosesAt && biddingRemaining <= 0;
+
+    return (
+      <Card
+        className={`border-0 ${isReplacement ? "border border-red-500/20 bg-red-500/[0.04]" : "bg-white/[0.03]"} ${isElite ? "sm:hover:bg-cyan-500/[0.05]" : "sm:hover:bg-[#5865F2]/[0.05]"} transition-all duration-200`}
+        data-testid={`card-order-${order.id}`}
+      >
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <span className="font-bold text-lg">
+                  {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
+                </span>
+                <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
+                {isReplacement && <Badge className="bg-red-500/20 text-red-400 border-red-500/30">REPLACEMENT</Badge>}
+                {order.elitePriority && isElite && <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30"><Sparkles className="w-3 h-3 mr-0.5" />Elite Early Access</Badge>}
+                {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
+                {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
+                {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
+                <Badge variant="outline" className="text-muted-foreground">{serviceName(order.serviceId)}</Badge>
               </div>
-            ) : order.isManual ? (
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                {order.platform && <span>Platform: {order.platform}</span>}
+                {order.gamertag && <span>GT: {order.gamertag}</span>}
+                <span>Due: {new Date(order.orderDueDate).toLocaleDateString()}</span>
+                <span>Complexity: {order.complexity}/5</span>
+                <span>{order.totalBids} bid{order.totalBids !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 ml-0 sm:ml-4">
               <Button
                 size="sm"
-                className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
-                data-testid={`button-bid-${order.id}`}
-                onClick={() => {
-                  setPlaceBidDialog(order);
-                  setPlaceBidAmount("");
-                  setPlaceBidTimeline("");
-                  setPlaceBidCanStart("");
-                }}
+                variant="outline"
+                className="gap-1.5 border-white/10 text-muted-foreground hover:text-foreground"
+                data-testid={`button-details-${order.id}`}
+                onClick={() => setViewDetailsOrder(order)}
               >
-                <Gavel className="w-4 h-4" />
-                Place Bid
+                <FileText className="w-3.5 h-3.5" />
+                Details
               </Button>
-            ) : (
-              <Button
-                size="sm"
-                className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
-                data-testid={`button-bid-${order.id}`}
-                onClick={() => {
-                  const link = order.discordBidLink
-                    ? order.discordBidLink
-                    : order.discordMessageId
-                      ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
-                      : getBidWarLink();
-                  window.open(link, "_blank");
-                }}
-              >
-                <Gavel className="w-4 h-4" />
-                Place Bid
-                <ExternalLink className="w-3 h-3" />
-              </Button>
-            )}
+              {order.hasBid ? (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-blue-500/20 text-blue-400">
+                    Bid: ${order.myBidAmount}
+                  </Badge>
+                  {order.myBidStatus === "Pending" && (
+                    <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
+                  )}
+                </div>
+              ) : biddingExpired ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="gap-2 opacity-50 cursor-not-allowed"
+                  data-testid={`button-bid-closed-${order.id}`}
+                >
+                  <Lock className="w-4 h-4" />
+                  Bidding Closed
+                </Button>
+              ) : order.isManual ? (
+                <Button
+                  size="sm"
+                  className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
+                  data-testid={`button-bid-${order.id}`}
+                  onClick={() => {
+                    setPlaceBidDialog(order);
+                    setPlaceBidAmount("");
+                    setPlaceBidTimeline("");
+                    setPlaceBidCanStart("");
+                  }}
+                >
+                  <Gavel className="w-4 h-4" />
+                  Place Bid
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
+                  data-testid={`button-bid-${order.id}`}
+                  onClick={() => {
+                    const link = order.discordBidLink
+                      ? order.discordBidLink
+                      : order.discordMessageId
+                        ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
+                        : getBidWarLink();
+                    window.open(link, "_blank");
+                  }}
+                >
+                  <Gavel className="w-4 h-4" />
+                  Place Bid
+                  <ExternalLink className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <AnimatedPage className="space-y-4">
@@ -428,7 +443,7 @@ export default function GrinderOrders() {
             </div>
             <p className="text-sm text-muted-foreground">High-priority orders needing immediate attention</p>
             <div className="grid gap-4" data-testid="section-replacement-orders">
-              {replacementOrders.map((order: any) => renderOrderCard(order, true))}
+              {replacementOrders.map((order: any) => <OrderCard key={order.id} order={order} isReplacement />)}
             </div>
           </div>
         </FadeInUp>
@@ -460,7 +475,7 @@ export default function GrinderOrders() {
             </Card>
           ) : (
             <div className="grid gap-4" data-testid="section-regular-orders">
-              {regularOrders.map((order: any) => renderOrderCard(order, false))}
+              {regularOrders.map((order: any) => <OrderCard key={order.id} order={order} />)}
             </div>
           )}
         </div>

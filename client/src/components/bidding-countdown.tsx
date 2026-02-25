@@ -47,18 +47,11 @@ function getTimerPulse(ms: number): string {
   return "";
 }
 
-function SingleTimer({ timer, serverOffset }: { timer: TimerData; serverOffset: number }) {
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+function SingleTimer({ timer }: { timer: TimerData }) {
+  const remaining = useBiddingRemaining(timer.biddingClosesAt);
 
   if (!timer.biddingClosesAt) return null;
 
-  const closesAt = new Date(timer.biddingClosesAt).getTime();
-  const remaining = closesAt - (now + serverOffset);
   const orderLabel = timer.mgtOrderNumber ? `#${timer.mgtOrderNumber}` : timer.orderId.substring(0, 8);
 
   if (remaining <= 0) {
@@ -94,10 +87,6 @@ export function BiddingCountdownPanel({ variant = "full" }: { variant?: "full" |
     refetchInterval: 10_000,
   });
 
-  const serverOffset = data?.serverTime
-    ? new Date(data.serverTime).getTime() - Date.now()
-    : 0;
-
   const activeTimers = data?.activeTimers || [];
   const recentlyClosed = data?.recentlyClosed || [];
 
@@ -107,10 +96,10 @@ export function BiddingCountdownPanel({ variant = "full" }: { variant?: "full" |
     return (
       <div className="space-y-2" data-testid="bidding-timers-compact">
         {activeTimers.map(timer => (
-          <SingleTimer key={timer.orderId} timer={timer} serverOffset={serverOffset} />
+          <SingleTimer key={timer.orderId} timer={timer} />
         ))}
         {recentlyClosed.map(timer => (
-          <SingleTimer key={timer.orderId} timer={timer} serverOffset={serverOffset} />
+          <SingleTimer key={timer.orderId} timer={timer} />
         ))}
       </div>
     );
@@ -129,10 +118,10 @@ export function BiddingCountdownPanel({ variant = "full" }: { variant?: "full" |
       </CardHeader>
       <CardContent className="space-y-2">
         {activeTimers.map(timer => (
-          <SingleTimer key={timer.orderId} timer={timer} serverOffset={serverOffset} />
+          <SingleTimer key={timer.orderId} timer={timer} />
         ))}
         {recentlyClosed.map(timer => (
-          <SingleTimer key={timer.orderId} timer={timer} serverOffset={serverOffset} />
+          <SingleTimer key={timer.orderId} timer={timer} />
         ))}
         {activeTimers.length === 0 && recentlyClosed.length > 0 && (
           <p className="text-xs text-muted-foreground text-center">No active countdowns</p>
@@ -142,7 +131,19 @@ export function BiddingCountdownPanel({ variant = "full" }: { variant?: "full" |
   );
 }
 
-export function InlineCountdown({ biddingClosesAt }: { biddingClosesAt: string | null }) {
+export function useServerOffset() {
+  const { data } = useQuery<BiddingTimersResponse>({
+    queryKey: ["/api/bidding-timers"],
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+  return data?.serverTime
+    ? new Date(data.serverTime).getTime() - Date.now()
+    : 0;
+}
+
+export function useBiddingRemaining(biddingClosesAt: string | null): number {
+  const serverOffset = useServerOffset();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -151,9 +152,14 @@ export function InlineCountdown({ biddingClosesAt }: { biddingClosesAt: string |
     return () => clearInterval(interval);
   }, [biddingClosesAt]);
 
-  if (!biddingClosesAt) return null;
+  if (!biddingClosesAt) return -1;
+  return new Date(biddingClosesAt).getTime() - (now + serverOffset);
+}
 
-  const remaining = new Date(biddingClosesAt).getTime() - now;
+export function InlineCountdown({ biddingClosesAt }: { biddingClosesAt: string | null }) {
+  const remaining = useBiddingRemaining(biddingClosesAt);
+
+  if (!biddingClosesAt) return null;
 
   if (remaining <= 0) {
     return <Badge variant="outline" className="bg-muted/50 text-muted-foreground text-[10px]" data-testid="badge-bidding-closed"><Lock className="w-3 h-3 mr-1" />Closed</Badge>;
