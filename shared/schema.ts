@@ -158,6 +158,7 @@ export const assignments = pgTable("assignments", {
   replacedAt: timestamp("replaced_at"),
   replacementReason: text("replacement_reason"),
   notes: text("notes"),
+  startedAt: timestamp("started_at"),
 });
 
 export const queueConfig = pgTable("queue_config", {

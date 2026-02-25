@@ -17,8 +17,9 @@ export async function recalcGrinderStats(grinderId: string) {
   let totalTurnaroundDays = 0;
   let turnaroundCount = 0;
   for (const a of completed) {
-    if (a.assignedDateTime && a.deliveredDateTime) {
-      const days = (new Date(a.deliveredDateTime).getTime() - new Date(a.assignedDateTime).getTime()) / (1000 * 60 * 60 * 24);
+    const startTime = (a as any).startedAt || a.assignedDateTime;
+    if (startTime && a.deliveredDateTime) {
+      const days = (new Date(a.deliveredDateTime).getTime() - new Date(startTime).getTime()) / (1000 * 60 * 60 * 24);
       totalTurnaroundDays += days;
       turnaroundCount++;
     }

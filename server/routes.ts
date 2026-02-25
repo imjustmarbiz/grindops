@@ -1425,6 +1425,8 @@ export async function registerRoutes(
           hasTicketAck,
           orderBrief: order?.orderBrief || null,
           platform: order?.platform || null,
+          startedAt: a.startedAt || null,
+          hasStarted: !!a.startedAt,
         };
       })),
       bids: myBids.map((b: any) => ({
@@ -2411,7 +2413,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "assignmentId, orderId, and type are required" });
       }
 
-      const validTypes = ["ticket_ack", "login", "logoff", "issue", "order_update"];
+      const validTypes = ["ticket_ack", "login", "logoff", "issue", "order_update", "start_order"];
       if (!validTypes.includes(type)) {
         return res.status(400).json({ message: `Invalid type. Must be one of: ${validTypes.join(", ")}` });
       }
@@ -2444,6 +2446,21 @@ export async function registerRoutes(
         }
       }
 
+      if (type === "start_order") {
+        const existingCheckpoints = await storage.getActivityCheckpoints(assignmentId);
+        const alreadyStarted = existingCheckpoints.some((c: any) => c.grinderId === myGrinder.id && c.type === "start_order");
+        if (alreadyStarted) {
+          return res.status(400).json({ message: "Order has already been started" });
+        }
+        const loginLogoffs = existingCheckpoints
+          .filter((c: any) => c.grinderId === myGrinder.id && (c.type === "login" || c.type === "logoff"))
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const lastType = loginLogoffs.length > 0 ? loginLogoffs[0].type : null;
+        if (lastType !== "login") {
+          return res.status(400).json({ message: "You must log in before starting an order" });
+        }
+      }
+
       if (type === "issue" && !note) {
         return res.status(400).json({ message: "Note is required for issue checkpoints" });
       }
@@ -2461,6 +2478,13 @@ export async function registerRoutes(
         response: response || null,
         note: note || req.body.message || null,
       });
+
+      if (type === "start_order") {
+        await storage.updateAssignment(assignmentId, { startedAt: new Date() } as any);
+        if (orderId) {
+          await storage.updateOrderStatus(orderId, "In Progress");
+        }
+      }
 
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
@@ -2515,6 +2539,80 @@ export async function registerRoutes(
       });
 
       res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.get("/api/orders/:orderId/activity-log", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = (req as any).user;
+      if (!userId && !user) return res.status(401).json({ message: "Not authenticated" });
+
+      const orderId = req.params.orderId;
+      const allAssignments = await storage.getAssignments();
+      const orderAssignments = allAssignments.filter((a: any) => a.orderId === orderId);
+
+      const allGrinders = await storage.getGrinders();
+      const isStaff = user?.role === "staff" || user?.role === "owner";
+      if (!isStaff) {
+        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        if (!myGrinder) return res.status(403).json({ message: "Not authorized" });
+        const isAssigned = orderAssignments.some((a: any) => a.grinderId === myGrinder.id);
+        if (!isAssigned) return res.status(403).json({ message: "Not authorized for this order" });
+      }
+
+      const allCheckpoints = await storage.getActivityCheckpoints();
+      const orderCheckpoints = allCheckpoints.filter((c: any) => c.orderId === orderId);
+
+      const allUpdates = await storage.getOrderUpdates();
+      const orderUpdates = (allUpdates || []).filter((u: any) => u.orderId === orderId);
+
+      const log: any[] = [];
+
+      for (const cp of orderCheckpoints) {
+        const grinder = allGrinders.find((g: any) => g.id === cp.grinderId);
+        log.push({
+          id: cp.id,
+          type: cp.type,
+          source: "checkpoint",
+          grinderName: grinder?.name || cp.grinderId,
+          grinderId: cp.grinderId,
+          response: cp.response,
+          note: cp.note,
+          resolvedBy: cp.resolvedBy,
+          resolvedAt: cp.resolvedAt,
+          resolvedNote: cp.resolvedNote,
+          createdAt: cp.createdAt,
+        });
+      }
+
+      for (const u of orderUpdates) {
+        const grinder = allGrinders.find((g: any) => g.id === u.grinderId);
+        log.push({
+          id: u.id,
+          type: u.type || "order_update",
+          source: "update",
+          grinderName: grinder?.name || u.grinderId || "Unknown",
+          grinderId: u.grinderId,
+          note: u.message,
+          newDeadline: u.newDeadline,
+          acknowledgedBy: u.acknowledgedBy,
+          createdAt: u.createdAt,
+        });
+      }
+
+      log.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const assignment = orderAssignments[0];
+      res.json({
+        log,
+        startedAt: assignment?.startedAt || null,
+        assignedAt: assignment?.assignedDateTime || null,
+        dueAt: assignment?.dueDateTime || null,
+        deliveredAt: assignment?.deliveredDateTime || null,
+      });
     } catch (err) {
       res.status(500).json({ message: String(err) });
     }

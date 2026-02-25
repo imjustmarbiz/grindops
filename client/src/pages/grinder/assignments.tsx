@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video, Play
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -68,7 +68,7 @@ export default function GrinderAssignments() {
     onSuccess: (_: any, vars: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me/checkpoints", vars.assignmentId] });
-      const typeLabels: Record<string, string> = { ticket_ack: "Ticket accepted", login: "Logged in", logoff: "Logged off", issue: "Issue reported", order_update: "Update submitted" };
+      const typeLabels: Record<string, string> = { ticket_ack: "Ticket accepted", login: "Logged in", logoff: "Logged off", issue: "Issue reported", order_update: "Update submitted", start_order: "Order started" };
       toast({ title: typeLabels[vars.type] || "Checkpoint recorded" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -205,6 +205,17 @@ export default function GrinderAssignments() {
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
                       </Button>
+                      {!a.hasStarted ? (
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
+                          disabled={checkpointMutation.isPending}
+                          onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
+                          <Play className="w-3 h-3" /> Start Order
+                        </Button>
+                      ) : (
+                        <Badge className="text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                          <Play className="w-3 h-3 mr-1" /> Started {a.startedAt ? new Date(a.startedAt).toLocaleDateString() : ""}
+                        </Badge>
+                      )}
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
