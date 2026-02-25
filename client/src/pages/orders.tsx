@@ -484,7 +484,7 @@ export default function Orders() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
         <Table className="min-w-[1200px] table-fixed w-full">
           <colgroup>
             <col className="w-[7%]" />
