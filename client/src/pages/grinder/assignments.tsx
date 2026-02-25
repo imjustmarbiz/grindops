@@ -159,7 +159,7 @@ export default function GrinderAssignments() {
         <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
           <FileCheck className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         </div>
-        My Assignments
+        My Orders
         <HelpTip text="Track your active assignments and completed work." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
       </h2>
@@ -216,7 +216,7 @@ export default function GrinderAssignments() {
               onClick={() => setStatusFilter("all")}
               data-testid="button-clear-filter"
             >
-              Show all assignments
+              Show all orders
             </Button>
           </CardContent>
         </Card>
