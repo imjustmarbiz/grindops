@@ -1,4 +1,5 @@
 let audioContext: AudioContext | null = null;
+let audioUnlocked = false;
 
 function getAudioContext(): AudioContext {
   if (!audioContext) {
@@ -8,6 +9,33 @@ function getAudioContext(): AudioContext {
     audioContext.resume();
   }
   return audioContext;
+}
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+    const silent = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    silent.connect(gain);
+    gain.connect(ctx.destination);
+    silent.start(ctx.currentTime);
+    silent.stop(ctx.currentTime + 0.001);
+    audioUnlocked = true;
+  } catch {}
+}
+
+if (typeof window !== "undefined") {
+  const events = ["touchstart", "touchend", "click", "keydown"];
+  const handler = () => {
+    unlockAudio();
+    events.forEach(e => document.removeEventListener(e, handler, true));
+  };
+  events.forEach(e => document.addEventListener(e, handler, { once: true, capture: true }));
 }
 
 function playTone(
@@ -80,6 +108,9 @@ const soundMap: Record<string, () => void> = {
 
 export function playNotificationSound(type: string) {
   try {
+    if (audioContext?.state === "suspended") {
+      audioContext.resume();
+    }
     const playFn = soundMap[type] || playInfoSound;
     playFn();
   } catch (err) {
