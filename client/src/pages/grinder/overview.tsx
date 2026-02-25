@@ -20,15 +20,42 @@ import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, type BadgeId } from "@/components/achievement-badges";
 import type { GrinderBadge } from "@shared/schema";
 
-function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
-  const [activeBadge, setActiveBadge] = useState<BadgeId | null>(null);
+function BadgePopup({ id, meta, onClose }: { id: BadgeId; meta: { label: string; tooltip: string }; onClose: () => void }) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 });
+  const [arrowBelow, setArrowBelow] = useState(true);
+  const BadgeComp = BADGE_COMPONENTS[id];
 
   useEffect(() => {
-    if (!activeBadge) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const spaceAbove = rect.top;
+    const showBelow = spaceAbove < 120;
+    setArrowBelow(!showBelow);
+
+    const popupWidth = 200;
+    let left = rect.left + rect.width / 2 - popupWidth / 2;
+    if (left < 8) left = 8;
+    if (left + popupWidth > window.innerWidth - 8) left = window.innerWidth - 8 - popupWidth;
+
+    setStyle({
+      position: "fixed",
+      top: showBelow ? rect.bottom + 8 : undefined,
+      bottom: showBelow ? undefined : window.innerHeight - rect.top + 8,
+      left,
+      width: popupWidth,
+      zIndex: 9999,
+      opacity: 1,
+    });
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        setActiveBadge(null);
+      const target = e.target as Node;
+      if (popupRef.current && !popupRef.current.contains(target) && triggerRef.current && !triggerRef.current.contains(target)) {
+        onClose();
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -37,34 +64,57 @@ function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [activeBadge]);
+  }, [onClose]);
 
   return (
-    <div className="flex items-center gap-2 mt-4 flex-wrap relative" data-testid="section-badges">
+    <>
+      <button
+        ref={triggerRef}
+        onClick={onClose}
+        className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
+        data-testid={`badge-tap-${id}`}
+      >
+        <BadgeComp />
+        <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
+      </button>
+      <div
+        ref={popupRef}
+        style={style}
+        className="p-2.5 rounded-lg bg-popover border border-border shadow-2xl animate-in fade-in-0 zoom-in-95"
+        data-testid={`badge-popup-${id}`}
+      >
+        <p className="text-xs font-bold text-foreground">{meta.label}</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
+      </div>
+    </>
+  );
+}
+
+function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
+  const [activeBadge, setActiveBadge] = useState<BadgeId | null>(null);
+
+  return (
+    <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
       {badgeIds.map(id => {
         const BadgeComp = BADGE_COMPONENTS[id];
         const meta = BADGE_META[id];
+        if (activeBadge === id) {
+          return (
+            <div key={id} className="relative">
+              <BadgePopup id={id} meta={meta} onClose={() => setActiveBadge(null)} />
+            </div>
+          );
+        }
         return (
           <div key={id} className="relative">
             <button
-              onClick={() => setActiveBadge(activeBadge === id ? null : id)}
+              onClick={() => setActiveBadge(id)}
               className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
               data-testid={`badge-tap-${id}`}
             >
               <BadgeComp />
               <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
             </button>
-            {activeBadge === id && (
-              <div
-                ref={popupRef}
-                className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 rounded-lg bg-popover border border-border shadow-xl animate-in fade-in-0 zoom-in-95"
-                data-testid={`badge-popup-${id}`}
-              >
-                <p className="text-xs font-bold text-foreground">{meta.label}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-popover border-r border-b border-border -mt-1" />
-              </div>
-            )}
           </div>
         );
       })}
