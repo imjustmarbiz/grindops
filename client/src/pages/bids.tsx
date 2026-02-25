@@ -195,7 +195,7 @@ export default function Bids() {
 
   return (
     <TooltipProvider>
-    <AnimatedPage className="space-y-5">
+    <AnimatedPage className="page-table-layout gap-5">
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

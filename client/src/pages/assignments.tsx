@@ -103,7 +103,7 @@ export default function Assignments() {
 
   return (
     <TooltipProvider>
-    <AnimatedPage className="flex flex-col h-[calc(100vh-64px)] gap-5 overflow-hidden">
+    <AnimatedPage className="page-table-layout gap-5">
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -141,7 +141,7 @@ export default function Assignments() {
       </div>
       </FadeInUp>
 
-      <FadeInUp>
+      <FadeInUp className="table-section">
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="table-scroll-container">
         <Table className="min-w-[1400px]">

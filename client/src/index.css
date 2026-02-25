@@ -179,9 +179,31 @@
   background: hsl(240 10% 36%);
 }
 
+.page-table-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.page-table-layout > .table-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-table-layout > .table-section > * {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .table-scroll-container {
   overflow: auto;
-  max-height: calc(100vh - 280px);
+  flex: 1;
+  min-height: 0;
   scrollbar-width: auto;
   scrollbar-color: hsl(240 10% 28%) hsl(240 10% 10%);
 }
