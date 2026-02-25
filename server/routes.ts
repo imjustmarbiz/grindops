@@ -1399,6 +1399,7 @@ export async function registerRoutes(
           hasTicket: !!(order?.discordTicketChannelId),
           hasTicketAck,
           orderBrief: order?.orderBrief || null,
+          platform: order?.platform || null,
         };
       })),
       bids: myBids.map((b: any) => ({

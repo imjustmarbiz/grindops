@@ -16,6 +16,18 @@ import {
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
+import { FaXbox } from "react-icons/fa6";
+import { SiPlaystation5, SiSteam, SiNintendoswitch } from "react-icons/si";
+
+function PlatformIcon({ platform, className }: { platform: string | null; className?: string }) {
+  if (!platform) return <LogIn className={className} />;
+  const p = platform.toLowerCase();
+  if (p.includes("xbox") || p.includes("xb")) return <FaXbox className={className} />;
+  if (p.includes("ps") || p.includes("playstation")) return <SiPlaystation5 className={className} />;
+  if (p.includes("pc") || p.includes("steam") || p.includes("epic")) return <SiSteam className={className} />;
+  if (p.includes("switch") || p.includes("nintendo")) return <SiNintendoswitch className={className} />;
+  return <LogIn className={className} />;
+}
 
 export default function GrinderAssignments() {
   const {
@@ -182,12 +194,12 @@ export default function GrinderAssignments() {
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
-                        <LogIn className="w-3 h-3" /> Log In
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20" data-testid={`button-logoff-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
-                        <LogOut className="w-3 h-3" /> Log Off
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
                         disabled={checkpointMutation.isPending}
