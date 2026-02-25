@@ -19,7 +19,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import type { Order, Service, Grinder } from "@shared/schema";
+import type { Order, Service, Grinder, Bid } from "@shared/schema";
+import { HelpTip } from "@/components/help-tip";
+import { Link } from "wouter";
 
 const formSchema = z.object({
   id: z.string().min(1, "Order ID is required"),
@@ -232,6 +234,7 @@ export default function Orders() {
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
   const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
+  const { data: bids } = useQuery<Bid[]>({ queryKey: ["/api/bids"] });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
@@ -361,6 +364,7 @@ export default function Orders() {
               <ListOrdered className="w-5 h-5 text-primary" />
             </div>
             Order Management
+            <HelpTip text="View and manage all orders. Edit prices, assign grinders, and track status." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
         </div>
@@ -495,11 +499,12 @@ export default function Orders() {
               <TableHead className="whitespace-nowrap">Service</TableHead>
               <TableHead className="whitespace-nowrap">Platform</TableHead>
               <TableHead className="whitespace-nowrap">Gamertag</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Cx</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Complexity</TableHead>
               <TableHead className="whitespace-nowrap">Assigned To</TableHead>
               <TableHead className="whitespace-nowrap">Due Date</TableHead>
               <TableHead className="whitespace-nowrap">Completed</TableHead>
               <TableHead className="text-right whitespace-nowrap">Price</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Bid</TableHead>
               <TableHead className="text-right whitespace-nowrap">Profit</TableHead>
               <TableHead className="whitespace-nowrap">Status</TableHead>
               <TableHead className="w-10"></TableHead>
@@ -554,26 +559,26 @@ export default function Orders() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${order.isRush ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
-                              onClick={() => saveField(order.id, { isRush: !order.isRush })}
-                              data-testid={`toggle-rush-${order.id}`}
+                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${!order.isRush ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
+                              onClick={() => saveField(order.id, { isRush: false })}
+                              data-testid={`toggle-standard-${order.id}`}
                             >
-                              {order.isRush ? "RUSH" : "rush"}
+                              Standard
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>Click to toggle rush</TooltipContent>
+                          <TooltipContent>Standard priority</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${order.isEmergency ? "bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
-                              onClick={() => saveField(order.id, { isEmergency: !order.isEmergency })}
-                              data-testid={`toggle-emergency-${order.id}`}
+                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${order.isRush ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
+                              onClick={() => saveField(order.id, { isRush: true })}
+                              data-testid={`toggle-rush-${order.id}`}
                             >
-                              {order.isEmergency ? "EMRG" : "emrg"}
+                              Rush
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>Click to toggle emergency</TooltipContent>
+                          <TooltipContent>Rush priority</TooltipContent>
                         </Tooltip>
                         <InlineTextEdit value={order.location} orderId={order.id} field="location" placeholder="loc" onSave={saveField} />
                       </div>
@@ -671,6 +676,16 @@ export default function Orders() {
                         <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {(() => {
+                      const orderBid = (bids || []).find(b => b.orderId === order.id && b.status === "Accepted");
+                      return orderBid ? (
+                        <Link href="/bids">
+                          <span className="text-blue-400 hover:underline cursor-pointer font-medium" data-testid={`link-bid-${order.id}`}>${orderBid.bidAmount}</span>
+                        </Link>
+                      ) : <span className="text-muted-foreground">-</span>;
+                    })()}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {order.companyProfit ? (

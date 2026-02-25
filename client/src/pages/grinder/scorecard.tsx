@@ -10,6 +10,7 @@ import {
   ScrollText, CheckSquare, ExternalLink
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import type { CustomerReview } from "@shared/schema";
 
 function getGradeLetter(score: number): { letter: string; color: string } {
@@ -85,7 +86,7 @@ export default function GrinderScorecard() {
         <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
           <ClipboardCheck className={`w-5 h-5 ${eliteAccent}`} />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-scorecard-header">My Scorecard</h1>
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-scorecard-header">My Scorecard <HelpTip text="Your performance profile — quality score, completion rate, and customer reviews." /></h1>
       </div>
       </FadeInUp>
 

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Assignment, Order, Grinder } from "@shared/schema";
+import { HelpTip } from "@/components/help-tip";
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
@@ -107,6 +108,7 @@ export default function Assignments() {
               <FileCheck className="w-5 h-5 text-primary" />
             </div>
             Assignments
+            <HelpTip text="Track active and completed grinder assignments with pay splits and margins." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Auto-created when bids are accepted. Replace grinders with custom pay splits.</p>
         </div>

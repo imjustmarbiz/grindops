@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Gamepad2, Monitor, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import type { Order, Service, Assignment } from "@shared/schema";
+import { HelpTip } from "@/components/help-tip";
 
 function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
@@ -226,7 +227,7 @@ export default function StaffServices() {
           <div className="flex items-center gap-3 mb-2">
             <img src={spLogo} alt="SP" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Services Overview</h1>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">Services Overview <HelpTip text="Analyze performance by service type — order volume, revenue, and completion rates." /></h1>
               <p className="text-sm text-muted-foreground">Performance analytics by service type and platform</p>
             </div>
           </div>

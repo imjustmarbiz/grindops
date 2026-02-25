@@ -15,6 +15,7 @@ import {
   MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 
 export default function GrinderAssignments() {
   const {
@@ -65,6 +66,7 @@ export default function GrinderAssignments() {
           <FileCheck className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         </div>
         My Assignments
+        <HelpTip text="Track your active assignments and completed work." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
       </h2>
       </FadeInUp>

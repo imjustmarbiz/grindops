@@ -15,6 +15,7 @@ import {
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity,
 } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
+import { HelpTip } from "@/components/help-tip";
 
 function SparkBar({ segments, height = 6 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
@@ -280,6 +281,7 @@ export default function StaffOverview() {
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
               Order Pipeline
+              <HelpTip text="Shows the current distribution of orders across each stage of the fulfillment process." />
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               {rushOrders > 0 && (
@@ -324,6 +326,7 @@ export default function StaffOverview() {
             <CardTitle className="text-lg flex items-center gap-2">
               <Gauge className="w-5 h-5 text-cyan-400" />
               Fleet Health
+              <HelpTip text="Shows grinder availability and capacity utilization across your team." />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
@@ -393,6 +396,7 @@ export default function StaffOverview() {
               <CardTitle className="text-lg flex items-center gap-2">
                 <Clock className="w-5 h-5 text-blue-400" />
                 Recent Activity
+                <HelpTip text="A live feed of the latest actions taken across orders, assignments, and grinders." />
               </CardTitle>
               <LastUpdated date={auditLogsUpdatedAt ? new Date(auditLogsUpdatedAt) : null} />
             </div>

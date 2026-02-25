@@ -13,6 +13,7 @@ import {
   Wallet, Target, Package, Gamepad2, Monitor
 } from "lucide-react";
 import type { Order, Assignment, Grinder, Service } from "@shared/schema";
+import { HelpTip } from "@/components/help-tip";
 import { useQuery } from "@tanstack/react-query";
 
 type DateRange = "all" | "today" | "7d" | "14d" | "30d" | "90d" | "this_month" | "last_month" | "this_year";
@@ -344,7 +345,7 @@ export default function BusinessPerformance() {
             <div className="flex items-center gap-3">
               <img src={spLogo} alt="SP" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
               <div>
-                <h1 className="text-2xl font-bold tracking-tight" data-testid="text-business-title">Business Performance</h1>
+                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-business-title">Business Performance <HelpTip text="Financial overview for business owners — revenue, costs, margins, and profitability." /></h1>
                 <p className="text-sm text-muted-foreground">Financial analytics, margins, and cost analysis</p>
               </div>
             </div>

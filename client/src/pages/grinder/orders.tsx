@@ -10,6 +10,7 @@ import {
   Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 
 export default function GrinderOrders() {
   const {
@@ -33,6 +34,7 @@ export default function GrinderOrders() {
             <Zap className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           </div>
           Available Orders
+          <HelpTip text="Browse open orders available for bidding." />
           <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{availableOrders.length}</Badge>
         </h2>
       </div>

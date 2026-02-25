@@ -18,6 +18,7 @@ import {
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
+import { HelpTip } from "@/components/help-tip";
 
 export default function StaffOperations() {
   const { toast } = useToast();
@@ -173,8 +174,9 @@ export default function StaffOperations() {
           <div className="flex items-center gap-3">
             <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow flex items-center gap-2" data-testid="text-page-title">
                 Operations
+                <HelpTip text="Manage day-to-day order operations, assignments, and grinder workflows." />
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
             </div>

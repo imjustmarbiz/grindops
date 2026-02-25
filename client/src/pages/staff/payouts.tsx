@@ -11,6 +11,7 @@ import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, Mess
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
+import { HelpTip } from "@/components/help-tip";
 
 export default function StaffPayouts() {
   const { toast } = useToast();
@@ -67,8 +68,9 @@ export default function StaffPayouts() {
           <div className="flex items-center gap-3">
             <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow flex items-center gap-2" data-testid="text-page-title">
                 Payout Management
+                <HelpTip text="Review and process grinder payouts, disputes, and payment history." />
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
             </div>
