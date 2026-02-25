@@ -502,7 +502,7 @@ export default function Orders() {
             <col className="w-[7%]" />
             <col className="w-[7%]" />
             <col className="w-[10%]" />
-            <col className="w-[3%]" />
+            <col className="w-[4%]" />
           </colgroup>
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
@@ -725,7 +725,7 @@ export default function Orders() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-4 text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
