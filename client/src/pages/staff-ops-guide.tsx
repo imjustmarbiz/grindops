@@ -555,7 +555,7 @@ const slides: Slide[] = [
   },
   {
     id: "order-claims",
-    title: "Order Claims",
+    title: "Missing Order Claims",
     subtitle: "Review and approve grinder requests to claim missing orders",
     icon: LinkIcon,
     iconColor: "text-orange-400",

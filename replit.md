@@ -28,7 +28,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Features Pages:** Comprehensive overviews of dashboard capabilities for both Staff and Grinders.
 - **Content Management:** Systems for Events & Promotions, Order Briefs, and AI-rewritten Dev Patch Notes.
 - **Customer Reviews:** A two-step secure system for customers to submit reviews, including a password-protected access mechanism and staff approval workflow.
-- **Order Claim Requests:** Grinders can request to link existing orders to their profile, pending staff approval.
+- **Missing Order Claims:** Grinders can request to link existing orders to their profile, pending staff approval. Staff sidebar label: "Missing Order Claims".
 - **Daily Checkup Controls:** Global and per-order controls for enabling/disabling daily update checks.
 - **Twitch Integration:** Grinders can link Twitch accounts, enabling staff to view live streams and automatically generate activity checkpoints.
 - **Completion Video Proof:** Grinders must upload video proof upon order completion, which staff can review.
@@ -46,6 +46,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Strike Appeals System:** Grinders can appeal strikes, which staff can review, approve, or deny, with audit trails.
 - **Operations Guides:** Slide-deck-style presentation pages for both Grinders and Staff, providing step-by-step instructions and key feature descriptions.
 - **Payment Proof on Mark Paid:** Staff/owners can upload payment proof when marking a payout as paid.
+- **Payout Filters:** Staff payouts page includes status and grinder name filters applied before categorization, with a clear button.
 - **Payout Reduction System:** Staff can request payout reductions with a reason; if staff submits, owner must approve/deny. Owners can apply reductions directly. Difference goes to company profit (updates `orders.companyProfit` and `assignments.grinderEarnings`). Schema fields on `payoutRequests`: `originalAmount`, `reductionReason`, `reductionRequestedBy`, `reductionRequestedAt`, `reductionStatus` (pending/approved/denied), `reductionApprovedBy`, `reductionApprovedAt`, `reductionDeniedReason`. Routes: `PATCH /api/staff/payout-requests/:id/reduce` (requireStaff), `PATCH /api/staff/payout-requests/:id/reduction-review` (requireOwner). Owner sees "Payout Reductions Pending Approval" section on Payouts page.
 
 ## External Dependencies

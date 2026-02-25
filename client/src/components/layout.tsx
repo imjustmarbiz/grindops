@@ -40,7 +40,7 @@ const staffNavItems = [
   { title: "Events & Promos", url: "/events", icon: Calendar },
   { title: "Staff Notes", url: "/patch-notes", icon: Newspaper },
   { title: "Reviews", url: "/reviews", icon: Star },
-  { title: "Order Claims", url: "/order-claims", icon: LinkIcon },
+  { title: "Missing Order Claims", url: "/order-claims", icon: LinkIcon },
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
   { title: "Services", url: "/services", icon: Package },
   { title: "Business Performance", url: "/business", icon: DollarSign },

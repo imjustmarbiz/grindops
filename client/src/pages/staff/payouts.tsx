@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText, ArrowDownCircle, ShieldAlert, ArrowDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText, ArrowDownCircle, ShieldAlert, ArrowDown, Filter } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
@@ -62,6 +63,9 @@ export default function StaffPayouts() {
       setUploading(false);
     }
   };
+
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterGrinder, setFilterGrinder] = useState("");
 
   const [reduceDialog, setReduceDialog] = useState<{ id: string; grinder: string; amount: number; orderId: string } | null>(null);
   const [reduceAmount, setReduceAmount] = useState("");
@@ -126,7 +130,17 @@ export default function StaffPayouts() {
     );
   }
 
-  const allPayoutReqs = payoutReqs || [];
+  const allGrinders = grinders || [];
+  const rawPayoutReqs = payoutReqs || [];
+  const allPayoutReqs = rawPayoutReqs.filter((p: any) => {
+    if (filterStatus !== "all" && p.status !== filterStatus) return false;
+    if (filterGrinder.trim()) {
+      const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
+      const name = (grinder?.name || p.grinderId || "").toLowerCase();
+      if (!name.includes(filterGrinder.trim().toLowerCase())) return false;
+    }
+    return true;
+  });
   const pendingGrinderApproval = allPayoutReqs.filter((p: any) => p.status === "Pending Grinder Approval");
   const disputedPayouts = allPayoutReqs.filter((p: any) => p.status === "Grinder Disputed");
   const pendingPayouts = allPayoutReqs.filter((p: any) => p.status === "Pending");
@@ -135,7 +149,6 @@ export default function StaffPayouts() {
   const pendingReductions = allPayoutReqs.filter((p: any) => p.reductionStatus === "pending");
   const totalOwed = [...pendingPayouts, ...approvedPayouts].reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const totalPaidOut = paidPayouts.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
-  const allGrinders = grinders || [];
 
   return (
     <AnimatedPage className="space-y-5 sm:space-y-6" data-testid="page-staff-payouts">
@@ -182,6 +195,47 @@ export default function StaffPayouts() {
 
       <FadeInUp>
         <BiddingCountdownPanel variant="compact" />
+      </FadeInUp>
+
+      <FadeInUp>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[200px] bg-background/50 border-white/10" data-testid="select-filter-status">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Approved">Approved</SelectItem>
+              <SelectItem value="Paid">Paid</SelectItem>
+              <SelectItem value="Pending Grinder Approval">Pending Grinder Approval</SelectItem>
+              <SelectItem value="Grinder Disputed">Grinder Disputed</SelectItem>
+              <SelectItem value="Denied">Denied</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="Search grinder..."
+            value={filterGrinder}
+            onChange={(e) => setFilterGrinder(e.target.value)}
+            className="w-[200px] bg-background/50 border-white/10"
+            data-testid="input-filter-grinder"
+          />
+          {(filterStatus !== "all" || filterGrinder) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setFilterStatus("all"); setFilterGrinder(""); }}
+              className="text-xs text-muted-foreground gap-1"
+              data-testid="button-clear-filters"
+            >
+              <X className="w-3 h-3" /> Clear
+            </Button>
+          )}
+        </div>
       </FadeInUp>
 
       <FadeInUp>

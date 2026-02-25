@@ -171,6 +171,12 @@ export default function Assignments() {
               const originalGrinder = a.originalGrinderId ? (grinders || []).find((g: Grinder) => g.id === a.originalGrinderId) : null;
               const order = (orders || []).find((o: Order) => o.id === a.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId;
+              
+              const displayPrice = Number(a.orderPrice || order?.customerPrice || 0);
+              const effectivePrice = Number(a.orderPrice || order?.customerPrice || 0);
+              const grinderPay = Number(a.grinderEarnings || a.bidAmount || 0);
+              const effectiveMargin = effectivePrice - grinderPay;
+              
               return (
                 <TableRow key={a.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-assignment-${a.id}`}>
                   <TableCell className="font-mono text-sm text-muted-foreground">{a.id}</TableCell>
@@ -214,7 +220,7 @@ export default function Assignments() {
                       </div>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">{a.orderPrice ? `$${a.orderPrice}` : "-"}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{displayPrice > 0 ? formatCurrency(displayPrice) : "-"}</TableCell>
                   <TableCell className="text-right">
                     {a.wasReassigned ? (
                       <Tooltip>
@@ -240,6 +246,10 @@ export default function Assignments() {
                       <span className={`font-medium whitespace-nowrap ${parseFloat(a.margin) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         ${a.margin}
                         {a.marginPct && <span className="text-xs text-muted-foreground ml-1">({a.marginPct}%)</span>}
+                      </span>
+                    ) : effectiveMargin > 0 ? (
+                      <span className={`font-medium whitespace-nowrap text-emerald-400`}>
+                        {formatCurrency(effectiveMargin)}
                       </span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
