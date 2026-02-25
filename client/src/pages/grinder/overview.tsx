@@ -11,12 +11,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
-  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight,
-  Trophy, Flame, Zap, Star, Shield, Medal, Rocket, Award, Gem, Swords, Eye, Heart
+  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight
 } from "lucide-react";
 import { Link } from "wouter";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
+import { BADGE_COMPONENTS, BADGE_META, type BadgeId } from "@/components/achievement-badges";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function GrinderOverview() {
   const {
@@ -28,10 +29,9 @@ export default function GrinderOverview() {
   const [availStatus, setAvailStatus] = useState(grinder?.availabilityStatus || "available");
   const [availNote, setAvailNote] = useState(grinder?.availabilityNote || "");
 
-  type BadgeDef = { id: string; label: string; icon: any; color: string; bg: string; border: string; tooltip: string };
-  const earnedBadges = useMemo(() => {
-    if (!grinder) return [] as BadgeDef[];
-    const badges: BadgeDef[] = [];
+  const earnedBadgeIds = useMemo(() => {
+    if (!grinder) return [] as BadgeId[];
+    const ids: BadgeId[] = [];
     const completed = grinder.completedOrders || 0;
     const totalOrders = grinder.totalOrders || 0;
     const quality = Number(grinder.avgQualityRating) || 0;
@@ -43,24 +43,24 @@ export default function GrinderOverview() {
     const tier = grinder.tier;
     const daysSinceJoin = grinder.joinedAt ? Math.floor((Date.now() - new Date(grinder.joinedAt).getTime()) / 86400000) : 0;
 
-    if (isElite) badges.push({ id: "elite", label: "Elite", icon: Gem, color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30", tooltip: "Elite Grinder status achieved" });
-    if (tier === "Veteran" || completed >= 20) badges.push({ id: "veteran", label: "Veteran", icon: Medal, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", tooltip: "20+ orders completed" });
-    if (completed >= 1) badges.push({ id: "first-order", label: "First Blood", icon: Swords, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30", tooltip: "Completed your first order" });
-    if (completed >= 5) badges.push({ id: "grind-5", label: "On a Roll", icon: Flame, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30", tooltip: "5+ orders completed" });
-    if (completed >= 10) badges.push({ id: "grind-10", label: "Grind Machine", icon: Rocket, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/30", tooltip: "10+ orders completed" });
-    if (completed >= 50) badges.push({ id: "grind-50", label: "Legend", icon: Trophy, color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", tooltip: "50+ orders completed — legendary" });
-    if (quality >= 95 && completed >= 3) badges.push({ id: "quality", label: "Perfectionist", icon: Star, color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", tooltip: "95%+ quality score" });
-    if (winRate >= 80 && totalOrders >= 3) badges.push({ id: "sharp", label: "Sharpshooter", icon: Target, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", tooltip: "80%+ bid win rate" });
-    if (onTime >= 100 && completed >= 3) badges.push({ id: "punctual", label: "Always On Time", icon: Clock, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/30", tooltip: "100% on-time delivery" });
-    if (completion >= 100 && completed >= 3) badges.push({ id: "reliable", label: "Ironclad", icon: Shield, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", tooltip: "100% completion rate — never cancelled" });
-    if (strikes === 0 && completed >= 5) badges.push({ id: "clean", label: "Clean Record", icon: Award, color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30", tooltip: "Zero strikes with 5+ orders" });
-    if (earned >= 500) badges.push({ id: "earn-500", label: "Money Maker", icon: Zap, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", tooltip: "$500+ total earnings" });
-    if (earned >= 2000) badges.push({ id: "earn-2k", label: "Big Earner", icon: Gem, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30", tooltip: "$2,000+ total earnings" });
-    if (daysSinceJoin <= 7) badges.push({ id: "newbie", label: "Fresh Recruit", icon: Sparkles, color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/30", tooltip: "Joined within the last 7 days" });
-    if (daysSinceJoin >= 90) badges.push({ id: "loyal", label: "Loyal", icon: Heart, color: "text-pink-400", bg: "bg-pink-500/10", border: "border-pink-500/30", tooltip: "Active for 90+ days" });
-    if (grinder.twitchUsername) badges.push({ id: "streamer", label: "Streamer", icon: Eye, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30", tooltip: "Twitch account linked" });
+    if (isElite) ids.push("elite");
+    if (tier === "Veteran" || completed >= 20) ids.push("veteran");
+    if (completed >= 1) ids.push("first-order");
+    if (completed >= 5) ids.push("grind-5");
+    if (completed >= 10) ids.push("grind-10");
+    if (completed >= 50) ids.push("grind-50");
+    if (quality >= 95 && completed >= 3) ids.push("quality");
+    if (winRate >= 80 && totalOrders >= 3) ids.push("sharp");
+    if (onTime >= 100 && completed >= 3) ids.push("punctual");
+    if (completion >= 100 && completed >= 3) ids.push("reliable");
+    if (strikes === 0 && completed >= 5) ids.push("clean");
+    if (earned >= 500) ids.push("earn-500");
+    if (earned >= 2000) ids.push("earn-2k");
+    if (daysSinceJoin <= 7) ids.push("newbie");
+    if (daysSinceJoin >= 90) ids.push("loyal");
+    if (grinder.twitchUsername) ids.push("streamer");
 
-    return badges;
+    return ids;
   }, [grinder, stats, isElite]);
 
   if (!grinder) return null;
@@ -109,23 +109,28 @@ export default function GrinderOverview() {
                 <span className="text-cyan-400/70">Elite since {new Date(grinder.eliteSince).toLocaleDateString()}</span>
               )}
             </div>
-            {earnedBadges.length > 0 && (
-              <div className="flex items-center gap-1.5 mt-3 flex-wrap" data-testid="section-badges">
-                {earnedBadges.map(b => {
-                  const Icon = b.icon;
-                  return (
-                    <span
-                      key={b.id}
-                      title={b.tooltip}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.bg} ${b.color} ${b.border} cursor-default transition-all hover:scale-105`}
-                      data-testid={`badge-${b.id}`}
-                    >
-                      <Icon className="w-3 h-3" />
-                      {b.label}
-                    </span>
-                  );
-                })}
-              </div>
+            {earnedBadgeIds.length > 0 && (
+              <TooltipProvider delayDuration={200}>
+                <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
+                  {earnedBadgeIds.map(id => {
+                    const BadgeComp = BADGE_COMPONENTS[id];
+                    const meta = BADGE_META[id];
+                    return (
+                      <Tooltip key={id}>
+                        <TooltipTrigger asChild>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <BadgeComp />
+                            <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs font-medium">
+                          <span className="font-bold">{meta.label}</span> — {meta.tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
             )}
           </div>
         </div>
