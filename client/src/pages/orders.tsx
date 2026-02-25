@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Order, Service, Grinder, Bid } from "@shared/schema";
-import { HelpTip } from "@/components/help-tip";
+
 import { Link } from "wouter";
 
 const formSchema = z.object({
@@ -365,7 +365,6 @@ export default function Orders() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-orders-title">
             <ListOrdered className="w-7 h-7 text-primary" />
             Order Management
-            <HelpTip text="View and manage all orders. Edit prices, assign grinders, and track status." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
         </div>

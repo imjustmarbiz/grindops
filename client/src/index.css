@@ -56,6 +56,12 @@
 
     --elevate-1: rgba(255, 255, 255, 0.04);
     --elevate-2: rgba(255, 255, 255, 0.08);
+
+    --button-outline: hsl(240 10% 18%);
+    --badge-outline: hsl(240 10% 18%);
+    --primary-border: hsl(240 10% 18%);
+    --destructive-border: hsl(0 50% 30%);
+    --secondary-border: hsl(240 10% 18%);
   }
 
   .theme-owner {

@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder } from "@shared/schema";
-import { HelpTip } from "@/components/help-tip";
+
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
 
@@ -202,7 +202,6 @@ export default function Bids() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-bids-title">
             <Gavel className="w-7 h-7 text-primary" />
             Proposals & Bids
-            <HelpTip text="Review grinder bids on orders. Accept, deny, or counter-offer bids." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Grinder proposals imported from MGT Bot.</p>
         </div>

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { normalizePlatform } from "@shared/schema";
 import type { Order, Assignment, Grinder, Service } from "@shared/schema";
-import { HelpTip } from "@/components/help-tip";
+
 import { useQuery } from "@tanstack/react-query";
 
 type DateRange = "all" | "today" | "7d" | "14d" | "30d" | "90d" | "this_month" | "last_month" | "this_year";
@@ -335,7 +335,7 @@ export default function BusinessPerformance() {
             <div className="flex items-center gap-3">
               <DollarSign className="w-7 h-7 text-primary" />
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-business-title">Business Performance <HelpTip text="Financial overview for business owners — revenue, costs, margins, and profitability." /></h1>
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-business-title">Business Performance</h1>
                 <p className="text-sm text-muted-foreground mt-1">Financial analytics, margins, and cost analysis</p>
               </div>
             </div>

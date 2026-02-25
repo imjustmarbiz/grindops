@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { HelpTip } from "@/components/help-tip";
+
 
 export default function StaffOperations() {
   const { toast } = useToast();
@@ -175,7 +175,6 @@ export default function StaffOperations() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
                 Operations
-                <HelpTip text="Manage day-to-day order operations, assignments, and grinder workflows." />
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
             </div>

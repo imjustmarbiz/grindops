@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DollarSign, TrendingUp, Users, PieChart, Gauge, Percent, Crown, BarChart3, Award, ArrowUpRight, ArrowDownRight, Target, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
-import { HelpTip } from "@/components/help-tip";
+
 
 function SplitBar({ segments, height = 10 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
@@ -108,7 +108,6 @@ export default function StaffAnalytics() {
                 <BarChart3 className="w-7 h-7 text-primary" />
                 <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-analytics-title">
                   Analytics
-                  <HelpTip text="Track performance trends, completion rates, and grinder efficiency over time." />
                 </h1>
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

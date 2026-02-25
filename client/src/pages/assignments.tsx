@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Assignment, Order, Grinder } from "@shared/schema";
-import { HelpTip } from "@/components/help-tip";
+
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
 
@@ -110,7 +110,6 @@ export default function Assignments() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-assignments-title">
             <FileCheck className="w-7 h-7 text-primary" />
             Assignments
-            <HelpTip text="Track active and completed grinder assignments with pay splits and margins." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Auto-created when bids are accepted. Replace grinders with custom pay splits.</p>
         </div>

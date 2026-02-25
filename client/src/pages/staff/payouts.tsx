@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText, ArrowDownCircle, ShieldAlert, ArrowDown, Filter } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { HelpTip } from "@/components/help-tip";
+
 
 export default function StaffPayouts() {
   const { toast } = useToast();
@@ -158,7 +158,6 @@ export default function StaffPayouts() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
                 Payout Management
-                <HelpTip text="Review and process grinder payouts, disputes, and payment history." />
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
             </div>

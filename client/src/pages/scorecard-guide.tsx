@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { HelpTip } from "@/components/help-tip";
+
 import {
   Brain, DollarSign, Gauge, Scale, Shield, Crown, Star, Sparkles,
   AlertTriangle, Zap, ChevronDown, ChevronUp, Info, Target, TrendingUp,
@@ -185,7 +185,6 @@ export default function ScorecardGuide() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-scorecard-guide-header">
               Scorecard & AI Queue System
-              <HelpTip text="Learn how the grading system and AI queue work together to rank grinders for order assignments." />
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">Understanding how performance grades and queue ranking work together</p>
           </div>

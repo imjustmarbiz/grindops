@@ -122,9 +122,6 @@ export default function StaffNotifications() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm" data-testid={`text-notification-title-${notif.id}`}>{notif.title}</span>
                             <Badge variant="outline" className={`text-[10px] ${colors}`} data-testid={`badge-severity-${notif.id}`}>{notif.severity}</Badge>
-                            {notif.type && notif.type !== notif.severity && (
-                              <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/20" data-testid={`badge-type-${notif.id}`}>{notif.type}</Badge>
-                            )}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1" data-testid={`text-notification-body-${notif.id}`}>{notif.body}</p>
                           <p className="text-xs text-muted-foreground/60 mt-1.5">{new Date(notif.createdAt).toLocaleString()}</p>

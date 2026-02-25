@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { HelpTip } from "@/components/help-tip";
+
 import { 
   BookOpen, LayoutDashboard, Wrench, BarChart3, Wallet, Settings, Brain, 
   ListOrdered, Users, Gavel, FileCheck, FileBarChart, Tv, ScrollText, 
@@ -153,7 +153,6 @@ export default function StaffFeatures() {
             A complete overview of every page available in your staff dashboard. Tap any card to navigate there.
           </p>
         </div>
-        <HelpTip text="This page lists all the tools and pages available to staff members. Tap any card to navigate directly to that page." />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

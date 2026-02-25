@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { HelpTip } from "@/components/help-tip";
+
 
 export default function StaffAdmin() {
   const { toast } = useToast();
@@ -266,7 +266,6 @@ export default function StaffAdmin() {
                   <Clock className="w-4 h-4 text-blue-400" />
                 </div>
                 Daily Checkups
-                <HelpTip text="Daily checkups run at 12:30 AM ET and flag grinders who haven't submitted a progress update for their active assignments. Disable globally or per order." />
                 <Badge className={`ml-auto text-xs ${checkupConfig?.enabled !== false ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
                   {checkupConfig?.enabled !== false ? "Active" : "Disabled"}
                 </Badge>

@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Gamepad2, Monitor, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { normalizePlatform } from "@shared/schema";
 import type { Order, Service, Assignment } from "@shared/schema";
-import { HelpTip } from "@/components/help-tip";
+
 
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
@@ -217,7 +217,7 @@ export default function StaffServices() {
           <div className="flex items-center gap-3 mb-2">
             <Package className="w-7 h-7 text-primary" />
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2">Services Overview <HelpTip text="Analyze performance by service type — order volume, revenue, and completion rates." /></h1>
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Services Overview</h1>
               <p className="text-sm text-muted-foreground mt-1">Performance analytics by service type and platform</p>
             </div>
           </div>
