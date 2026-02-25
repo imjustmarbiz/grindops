@@ -1277,8 +1277,16 @@ export async function registerRoutes(
       myGrinder = { ...myGrinder, ...updates };
     }
 
+    const BIDDING_CLOSED_GRACE_MS = 10 * 60 * 1000;
     const openOrders = allOrders.filter((o: any) => {
-      if (o.status !== "Open" || o.visibleToGrinders === false) return false;
+      if (o.visibleToGrinders === false) return false;
+      if (o.status === "Bidding Closed") {
+        if (o.assignedGrinderId) return false;
+        if (!o.biddingClosesAt) return false;
+        const closedAgo = now.getTime() - new Date(o.biddingClosesAt).getTime();
+        return closedAgo < BIDDING_CLOSED_GRACE_MS;
+      }
+      if (o.status !== "Open") return false;
       if (isElite) return true;
       const orderAge = (now.getTime() - new Date(o.createdAt).getTime()) / (1000 * 60);
       return orderAge >= ELITE_PRIORITY_MINUTES;
