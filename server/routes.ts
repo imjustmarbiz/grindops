@@ -140,6 +140,33 @@ export async function registerRoutes(
     res.json(results);
   });
 
+  app.post("/api/services", requireOwner, async (req, res) => {
+    try {
+      const { name, group, defaultComplexity, slaDays } = req.body;
+      if (!name || !group) return res.status(400).json({ error: "Name and group are required" });
+      const id = `S${Date.now().toString(36).toUpperCase()}`;
+      const service = await storage.createService({
+        id,
+        name,
+        group,
+        defaultComplexity: defaultComplexity || 1,
+        slaDays: slaDays || 5,
+      });
+      res.json(service);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/services/:id", requireOwner, async (req, res) => {
+    try {
+      await storage.deleteService(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get(api.grinders.list.path, requireStaff, async (req, res) => {
     const results = await storage.getGrinders();
     res.json(results);

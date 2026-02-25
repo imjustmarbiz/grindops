@@ -1,12 +1,21 @@
+import { useState } from "react";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Gamepad2, Monitor, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Gamepad2, Monitor, Loader2, ArrowUpRight, ArrowDownRight, Plus, Trash2, Settings } from "lucide-react";
 import { normalizePlatform } from "@shared/schema";
 import type { Order, Service, Assignment } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -166,7 +175,146 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
   );
 }
 
+function ServiceManagement({ services }: { services: Service[] }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newGroup, setNewGroup] = useState("");
+  const [newComplexity, setNewComplexity] = useState("1");
+  const [newSla, setNewSla] = useState("5");
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/services", {
+        name: newName,
+        group: newGroup,
+        defaultComplexity: parseInt(newComplexity),
+        slaDays: parseInt(newSla),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      toast({ title: "Service added" });
+      setAddOpen(false);
+      setNewName("");
+      setNewGroup("");
+      setNewComplexity("1");
+      setNewSla("5");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/services/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      toast({ title: "Service removed" });
+      setDeleteId(null);
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card className="bg-card/50 border-border/30">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Settings className="w-4 h-4 text-primary" />
+            Manage Services
+          </CardTitle>
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5" data-testid="button-add-service">
+                <Plus className="w-3.5 h-3.5" /> Add Service
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Service</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Service Name</label>
+                  <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. VC Grinding 🪙" data-testid="input-service-name" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Group</label>
+                  <Input value={newGroup} onChange={e => setNewGroup(e.target.value)} placeholder="e.g. VC, Rep, Badges" data-testid="input-service-group" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Complexity (1-5)</label>
+                    <Select value={newComplexity} onValueChange={setNewComplexity}>
+                      <SelectTrigger data-testid="select-complexity"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">SLA Days</label>
+                    <Select value={newSla} onValueChange={setNewSla}>
+                      <SelectTrigger data-testid="select-sla"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5,6,7,10,14].map(n => <SelectItem key={n} value={String(n)}>{n} days</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button onClick={() => addMutation.mutate()} disabled={!newName || !newGroup || addMutation.isPending} data-testid="button-confirm-add-service">
+                  {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Service"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {services.map(s => (
+            <div key={s.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.02] border border-border/20" data-testid={`row-service-${s.id}`}>
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-sm">{s.name}</span>
+                <Badge variant="secondary" className="text-[10px]">{s.group}</Badge>
+                <span className="text-[10px] text-muted-foreground">Complexity: {s.defaultComplexity} | SLA: {s.slaDays}d</span>
+              </div>
+              <Dialog open={deleteId === s.id} onOpenChange={(open) => setDeleteId(open ? s.id : null)}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" data-testid={`button-delete-service-${s.id}`}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Remove Service</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground">Are you sure you want to remove <strong>{s.name}</strong>? Orders using this service will keep their existing reference.</p>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                    <Button variant="destructive" onClick={() => deleteMutation.mutate(s.id)} disabled={deleteMutation.isPending} data-testid="button-confirm-delete-service">
+                      {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remove"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function StaffServices() {
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const {
     services: allServices,
     orders: allOrders,
@@ -222,6 +370,12 @@ export default function StaffServices() {
             </div>
           </div>
         </FadeInUp>
+
+        {isOwner && (
+          <FadeInUp delay={0.03}>
+            <ServiceManagement services={allServices} />
+          </FadeInUp>
+        )}
 
         <FadeInUp delay={0.05}>
           <div className={`grid gap-4 ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>

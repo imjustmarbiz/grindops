@@ -104,37 +104,30 @@ function detectGrinderRole(member: GuildMember | null): { roleId: string; catego
   return { roleId: primaryRoleId, category: primaryCategory, capacity: primaryCapacity, roles };
 }
 
-async function findOrCreateService(serviceName: string): Promise<string> {
+async function findMatchingService(serviceName: string): Promise<string> {
   const allServices = await storage.getServices();
+  const inputLower = serviceName.toLowerCase();
 
   for (const s of allServices) {
     const sLower = s.name.toLowerCase();
-    const inputLower = serviceName.toLowerCase();
     if (sLower === inputLower) return s.id;
     if (inputLower.includes("vc") && sLower.includes("vc")) return s.id;
     if (inputLower.includes("rep") && sLower.includes("rep")) return s.id;
     if (inputLower.includes("badge") && sLower.includes("badge")) return s.id;
     if (inputLower.includes("build") && sLower.includes("build")) return s.id;
+    if (inputLower.includes("hot zone") && sLower.includes("hot zone")) return s.id;
+    if (inputLower.includes("challenge") && sLower.includes("challenge")) return s.id;
+    if (inputLower.includes("lifetime") && sLower.includes("lifetime")) return s.id;
+    if (inputLower.includes("plate") && sLower.includes("plate")) return s.id;
+    if (inputLower.includes("event") && sLower.includes("event")) return s.id;
+    if (inputLower.includes("bundle") && sLower.includes("bundle")) return s.id;
+    if (inputLower.includes("season") && sLower.includes("season")) return s.id;
+    if (inputLower.includes("add-on") && sLower.includes("add-on")) return s.id;
+    if (inputLower.includes("addon") && sLower.includes("add-on")) return s.id;
   }
 
-  const serviceId = `SVC-${Date.now().toString(36).toUpperCase()}`;
-  let group = "Other";
-  const lower = serviceName.toLowerCase();
-  if (lower.includes("vc") || lower.includes("virtual currency")) group = "VC";
-  else if (lower.includes("rep")) group = "Rep";
-  else if (lower.includes("badge")) group = "Badge";
-  else if (lower.includes("build")) group = "Build";
-
-  await storage.createService({
-    id: serviceId,
-    name: serviceName,
-    group,
-    defaultComplexity: 1,
-    slaDays: 3,
-  });
-
-  console.log(`[mgt-watcher] Created new service: ${serviceName} (${serviceId})`);
-  return serviceId;
+  console.log(`[mgt-watcher] No matching service found for "${serviceName}" — defaulting to S1`);
+  return "S1";
 }
 
 export async function handleNewOrderMessage(message: Message) {
@@ -188,7 +181,7 @@ export async function handleNewOrderMessage(message: Message) {
       return;
     }
 
-    const serviceId = serviceName ? await findOrCreateService(serviceName) : "S1";
+    const serviceId = serviceName ? await findMatchingService(serviceName) : "S1";
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 3);
 
@@ -384,7 +377,7 @@ export async function handleProposalMessage(message: Message) {
 
     let order = await storage.getOrderByMgtNumber(orderNumber);
     if (!order) {
-      const serviceId = serviceName ? await findOrCreateService(serviceName) : "S1";
+      const serviceId = serviceName ? await findMatchingService(serviceName) : "S1";
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 3);
 
@@ -403,7 +396,7 @@ export async function handleProposalMessage(message: Message) {
     }
 
     if (serviceName && order.serviceId === "S1") {
-      const serviceId = await findOrCreateService(serviceName);
+      const serviceId = await findMatchingService(serviceName);
       if (serviceId !== "S1") {
         await storage.upsertOrderByMgtNumber(orderNumber, { serviceId });
       }
