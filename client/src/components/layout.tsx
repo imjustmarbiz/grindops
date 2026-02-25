@@ -24,6 +24,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const staffNavItems = [
+  { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Operations", url: "/operations", icon: Wrench },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
@@ -105,7 +106,7 @@ function AppSidebar() {
                 const isActive = location === item.url;
                 const unreadAlerts = !isStaff && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                       <Link 
                         href={item.url} 
