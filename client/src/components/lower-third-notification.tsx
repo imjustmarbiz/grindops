@@ -3,9 +3,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX, CircleHelp } from "lucide-react";
+import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX, CircleHelp, Play } from "lucide-react";
 import type { Notification } from "@shared/schema";
-import { playNotificationSound } from "@/lib/notification-sounds";
+import { playNotificationSound, unlockMobileAudio } from "@/lib/notification-sounds";
 
 const iconMap: Record<string, any> = {
   package: Package,
@@ -107,6 +107,13 @@ export function LowerThirdNotifications() {
     });
   }, []);
 
+  const testSound = useCallback(() => {
+    unlockMobileAudio();
+    setTimeout(() => {
+      playNotificationSound("new_order");
+    }, 100);
+  }, []);
+
   const [showSoundInfo, setShowSoundInfo] = useState(false);
   const soundInfoRef = useRef<HTMLDivElement>(null);
 
@@ -158,6 +165,14 @@ export function LowerThirdNotifications() {
             )}
           </AnimatePresence>
         </div>
+        <button
+          onClick={testSound}
+          className="p-1.5 rounded-full backdrop-blur-sm border bg-primary/20 border-primary/30 text-primary hover:bg-primary/30 transition-colors"
+          title="Test notification sound"
+          data-testid="button-test-sound"
+        >
+          <Play className="w-3.5 h-3.5" />
+        </button>
         <button
           onClick={toggleSound}
           className={`p-1.5 rounded-full backdrop-blur-sm border transition-colors ${

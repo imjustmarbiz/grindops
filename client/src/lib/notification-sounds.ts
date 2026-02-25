@@ -1,218 +1,135 @@
-let audioContext: AudioContext | null = null;
-let audioUnlocked = false;
+const SAMPLE_RATE = 22050;
 
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
+let unlockedAudio: HTMLAudioElement | null = null;
+let isUnlocked = false;
+
+function generateWav(frequencies: number[], durations: number[], delays: number[], volume: number = 0.4): string {
+  let totalLength = 0;
+  for (let i = 0; i < frequencies.length; i++) {
+    totalLength = Math.max(totalLength, delays[i] + durations[i]);
   }
-  if (audioContext.state === "suspended") {
-    audioContext.resume();
-  }
-  return audioContext;
-}
-
-function unlockAudio() {
-  if (audioUnlocked) return;
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-    const silent = ctx.createOscillator();
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    silent.connect(gain);
-    gain.connect(ctx.destination);
-    silent.start(ctx.currentTime);
-    silent.stop(ctx.currentTime + 0.001);
-    audioUnlocked = true;
-  } catch {}
-}
-
-if (typeof window !== "undefined") {
-  const events = ["touchstart", "touchend", "click", "keydown"];
-  const handler = () => {
-    unlockAudio();
-    events.forEach(e => document.removeEventListener(e, handler, true));
-  };
-  events.forEach(e => document.addEventListener(e, handler, { once: true, capture: true }));
-}
-
-function playTone(
-  frequency: number,
-  duration: number,
-  type: OscillatorType = "sine",
-  volume: number = 0.3,
-  delay: number = 0,
-) {
-  const ctx = getAudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  osc.type = type;
-  osc.frequency.setValueAtTime(frequency, ctx.currentTime + delay);
-  gain.gain.setValueAtTime(0, ctx.currentTime + delay);
-  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + delay + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.start(ctx.currentTime + delay);
-  osc.stop(ctx.currentTime + delay + duration);
-}
-
-function generateWavBase64(frequencies: number[], durations: number[], volume: number = 0.4): string {
-  const sampleRate = 22050;
-  const totalDuration = durations.reduce((sum, d, i) => {
-    const startTime = i === 0 ? 0 : durations.slice(0, i).reduce((s, dur, j) => Math.max(s, (j * 0.12) + dur), 0);
-    return Math.max(sum, (i * 0.12) + durations[i]);
-  }, 0);
-  const numSamples = Math.ceil(sampleRate * (totalDuration + 0.05));
+  const numSamples = Math.ceil(SAMPLE_RATE * (totalLength + 0.05));
   const buffer = new Float32Array(numSamples);
 
-  frequencies.forEach((freq, i) => {
-    const startSample = Math.floor(sampleRate * i * 0.12);
-    const durSamples = Math.floor(sampleRate * durations[i]);
+  for (let i = 0; i < frequencies.length; i++) {
+    const startSample = Math.floor(SAMPLE_RATE * delays[i]);
+    const durSamples = Math.floor(SAMPLE_RATE * durations[i]);
     for (let s = 0; s < durSamples && (startSample + s) < numSamples; s++) {
-      const t = s / sampleRate;
+      const t = s / SAMPLE_RATE;
       const envelope = Math.max(0, 1 - (t / durations[i]) * 1.5);
-      buffer[startSample + s] += Math.sin(2 * Math.PI * freq * t) * volume * envelope;
+      buffer[startSample + s] += Math.sin(2 * Math.PI * frequencies[i] * t) * volume * envelope;
     }
-  });
+  }
 
   const int16 = new Int16Array(numSamples);
   for (let i = 0; i < numSamples; i++) {
-    int16[i] = Math.max(-32768, Math.min(32767, Math.floor(buffer[i] * 32767)));
+    const clamped = Math.max(-1, Math.min(1, buffer[i]));
+    int16[i] = clamped < 0 ? clamped * 32768 : clamped * 32767;
   }
 
   const wavSize = 44 + int16.length * 2;
   const wav = new ArrayBuffer(wavSize);
-  const view = new DataView(wav);
+  const v = new DataView(wav);
 
-  const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  };
-
-  writeString(0, "RIFF");
-  view.setUint32(4, wavSize - 8, true);
-  writeString(8, "WAVE");
-  writeString(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, "data");
-  view.setUint32(40, int16.length * 2, true);
-
-  for (let i = 0; i < int16.length; i++) {
-    view.setInt16(44 + i * 2, int16[i], true);
-  }
+  const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, "RIFF");
+  v.setUint32(4, wavSize - 8, true);
+  ws(8, "WAVE");
+  ws(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, SAMPLE_RATE, true);
+  v.setUint32(28, SAMPLE_RATE * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  ws(36, "data");
+  v.setUint32(40, int16.length * 2, true);
+  for (let i = 0; i < int16.length; i++) v.setInt16(44 + i * 2, int16[i], true);
 
   const bytes = new Uint8Array(wav);
   let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
   return "data:audio/wav;base64," + btoa(binary);
 }
 
-const soundCache: Record<string, string> = {};
+function silentWav(): string {
+  return generateWav([0], [0.01], [0], 0);
+}
 
-function getSoundDataUrl(type: string): string {
-  if (soundCache[type]) return soundCache[type];
+const soundDefs: Record<string, { freqs: number[]; durs: number[]; delays: number[]; vol: number }> = {
+  new_order: { freqs: [880, 1108.73, 1318.51], durs: [0.15, 0.15, 0.25], delays: [0, 0.12, 0.24], vol: 0.45 },
+  strike: { freqs: [330, 277.18, 220], durs: [0.3, 0.3, 0.5], delays: [0, 0.25, 0.5], vol: 0.35 },
+  payout: { freqs: [523.25, 659.25, 783.99, 1046.5], durs: [0.12, 0.12, 0.12, 0.2], delays: [0, 0.1, 0.2, 0.3], vol: 0.4 },
+  alert: { freqs: [800, 600, 800], durs: [0.15, 0.15, 0.2], delays: [0, 0.18, 0.36], vol: 0.4 },
+  message: { freqs: [660, 880], durs: [0.1, 0.15], delays: [0, 0.08], vol: 0.35 },
+  chat: { freqs: [660, 880], durs: [0.1, 0.15], delays: [0, 0.08], vol: 0.35 },
+  info: { freqs: [587.33, 784], durs: [0.12, 0.18], delays: [0, 0.1], vol: 0.35 },
+};
 
-  let url: string;
-  switch (type) {
-    case "new_order":
-      url = generateWavBase64([880, 1108.73, 1318.51], [0.15, 0.15, 0.25], 0.35);
-      break;
-    case "strike":
-      url = generateWavBase64([330, 277.18, 220], [0.3, 0.3, 0.5], 0.25);
-      break;
-    case "payout":
-      url = generateWavBase64([523.25, 659.25, 783.99, 1046.5], [0.12, 0.12, 0.12, 0.2], 0.3);
-      break;
-    case "alert":
-      url = generateWavBase64([800, 600, 800], [0.15, 0.15, 0.2], 0.3);
-      break;
-    case "message":
-    case "chat":
-      url = generateWavBase64([660, 880], [0.1, 0.15], 0.25);
-      break;
-    default:
-      url = generateWavBase64([587.33, 784], [0.12, 0.18], 0.25);
-      break;
-  }
+const wavCache: Record<string, string> = {};
 
-  soundCache[type] = url;
+function getWavUrl(type: string): string {
+  if (wavCache[type]) return wavCache[type];
+  const def = soundDefs[type] || soundDefs.info;
+  const url = generateWav(def.freqs, def.durs, def.delays, def.vol);
+  wavCache[type] = url;
   return url;
 }
 
-function playWithHtmlAudio(type: string): boolean {
-  try {
-    const url = getSoundDataUrl(type);
-    const audio = new Audio(url);
-    audio.volume = 0.6;
-    const playPromise = audio.play();
-    if (playPromise) {
-      playPromise.catch(() => {});
-    }
-    return true;
-  } catch {
-    return false;
+function getOrCreateAudio(): HTMLAudioElement {
+  if (!unlockedAudio) {
+    unlockedAudio = new Audio();
+    unlockedAudio.volume = 1.0;
   }
+  return unlockedAudio;
 }
 
-function playWithWebAudio(type: string) {
-  switch (type) {
-    case "new_order":
-      playTone(880, 0.15, "sine", 0.25, 0);
-      playTone(1108.73, 0.15, "sine", 0.25, 0.12);
-      playTone(1318.51, 0.25, "sine", 0.3, 0.24);
-      break;
-    case "strike":
-      playTone(330, 0.3, "square", 0.15, 0);
-      playTone(277.18, 0.3, "square", 0.15, 0.25);
-      playTone(220, 0.5, "square", 0.2, 0.5);
-      break;
-    case "payout":
-      playTone(523.25, 0.12, "sine", 0.2, 0);
-      playTone(659.25, 0.12, "sine", 0.2, 0.1);
-      playTone(783.99, 0.12, "sine", 0.2, 0.2);
-      playTone(1046.5, 0.2, "sine", 0.25, 0.3);
-      break;
-    case "alert":
-      playTone(800, 0.15, "triangle", 0.25, 0);
-      playTone(600, 0.15, "triangle", 0.25, 0.18);
-      playTone(800, 0.2, "triangle", 0.25, 0.36);
-      break;
-    case "message":
-    case "chat":
-      playTone(660, 0.1, "sine", 0.2, 0);
-      playTone(880, 0.15, "sine", 0.22, 0.08);
-      break;
-    default:
-      playTone(587.33, 0.12, "sine", 0.2, 0);
-      playTone(784, 0.18, "sine", 0.22, 0.1);
-      break;
-  }
+export function unlockMobileAudio(): void {
+  if (isUnlocked) return;
+  try {
+    const audio = getOrCreateAudio();
+    audio.src = silentWav();
+    const p = audio.play();
+    if (p) p.then(() => { isUnlocked = true; }).catch(() => {});
+    else isUnlocked = true;
+  } catch {}
+}
+
+if (typeof window !== "undefined") {
+  const gestureEvents = ["touchstart", "touchend", "click", "keydown"];
+  const gestureHandler = () => {
+    unlockMobileAudio();
+    gestureEvents.forEach(e => document.removeEventListener(e, gestureHandler, true));
+  };
+  gestureEvents.forEach(e => document.addEventListener(e, gestureHandler, { once: true, capture: true }));
 }
 
 export function playNotificationSound(type: string) {
   try {
-    const played = playWithHtmlAudio(type);
-    if (!played) {
-      if (audioContext?.state === "suspended") {
-        audioContext.resume();
-      }
-      playWithWebAudio(type);
+    const audio = getOrCreateAudio();
+    audio.src = getWavUrl(type);
+    audio.currentTime = 0;
+    const p = audio.play();
+    if (p) {
+      p.catch(() => {
+        tryFallbackPlay(type);
+      });
     }
-  } catch (err) {
-    try {
-      playWithWebAudio(type);
-    } catch {}
+  } catch {
+    tryFallbackPlay(type);
   }
+}
+
+function tryFallbackPlay(type: string) {
+  try {
+    const fallback = new Audio(getWavUrl(type));
+    fallback.volume = 1.0;
+    const p = fallback.play();
+    if (p) p.catch(() => {});
+  } catch {}
+}
+
+export function isAudioUnlocked(): boolean {
+  return isUnlocked;
 }
