@@ -16,24 +16,26 @@ export function useTablePage() {
   }, []);
 
   useEffect(() => {
-    recalculate();
+    const scrollToTable = () => {
+      const el = tableContainerRef.current;
+      if (!el) return;
+      const card = el.closest(".overflow-hidden");
+      if (card) {
+        card.scrollIntoView({ block: "start", behavior: "instant" });
+      }
+    };
 
-    const timer = setTimeout(recalculate, 150);
-    const timer2 = setTimeout(recalculate, 500);
+    const timer1 = setTimeout(() => { recalculate(); }, 50);
+    const timer2 = setTimeout(() => { recalculate(); }, 200);
+    const timer3 = setTimeout(() => { recalculate(); }, 500);
 
     window.addEventListener("resize", recalculate);
 
-    const observer = new MutationObserver(recalculate);
-    const el = tableContainerRef.current;
-    if (el?.parentElement) {
-      observer.observe(el.parentElement, { childList: true, subtree: true });
-    }
-
     return () => {
       window.removeEventListener("resize", recalculate);
-      clearTimeout(timer);
+      clearTimeout(timer1);
       clearTimeout(timer2);
-      observer.disconnect();
+      clearTimeout(timer3);
     };
   }, [recalculate]);
 

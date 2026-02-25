@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTablePage } from "@/hooks/use-table-page";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,7 +25,6 @@ function formatCurrency(val: number) {
 }
 
 export default function Assignments() {
-  const { tableContainerRef, tableHeight } = useTablePage();
   const queryClient = useQueryClient();
   const { data: assignments, isLoading } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 10000 });
   const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
@@ -145,7 +143,7 @@ export default function Assignments() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div ref={tableContainerRef} className="overflow-auto" style={tableHeight ? { maxHeight: tableHeight } : undefined}>
+        <div className="overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1400px]">
           <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
             <TableRow className="border-white/[0.06]">

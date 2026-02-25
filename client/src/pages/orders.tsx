@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { useTablePage } from "@/hooks/use-table-page";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -232,7 +231,6 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
 }
 
 export default function Orders() {
-  const { tableContainerRef, tableHeight } = useTablePage();
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
@@ -486,7 +484,7 @@ export default function Orders() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div ref={tableContainerRef} className="overflow-auto" style={tableHeight ? { maxHeight: tableHeight } : undefined}>
+        <div className="overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1200px] table-fixed w-full">
           <colgroup>
             <col className="w-[7%]" />
