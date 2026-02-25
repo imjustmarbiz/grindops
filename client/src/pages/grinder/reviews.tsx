@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -69,6 +70,26 @@ export default function GrinderReviews() {
     queryKey: ["/api/review-access/codes"],
   });
 
+  const assignments: any[] = grinderProfile?.assignments || [];
+
+  const orderOptions = useMemo(() => {
+    const reviewedOrderIds = new Set(reviews.map((r: any) => r.orderId).filter(Boolean));
+    return assignments.map((a: any) => {
+      const isCompleted = a.status === "Completed";
+      const hasReview = reviewedOrderIds.has(a.orderId);
+      let eligible = true;
+      let reason = "";
+      if (hasReview) {
+        eligible = false;
+        reason = "Review already submitted";
+      } else if (!isCompleted) {
+        eligible = false;
+        reason = a.status === "Active" ? "Order not completed" : `Status: ${a.status}`;
+      }
+      return { orderId: a.orderId, eligible, reason };
+    });
+  }, [assignments, reviews]);
+
   const [orderId, setOrderId] = useState("");
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState("");
@@ -107,7 +128,7 @@ export default function GrinderReviews() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/review-access/codes"] });
       setGeneratedCode(data.accessCode);
-      setGenerateOrderId("");
+      setGenerateOrderId("none");
       toast({ title: "Access code generated", description: "Share the code and link with your customer" });
     },
     onError: (err: Error) => {
@@ -149,9 +170,10 @@ export default function GrinderReviews() {
       return;
     }
     const links = proofLinks.split(",").map(l => l.trim()).filter(Boolean);
+    const selectedOrder = orderId && orderId !== "none" ? orderId : undefined;
     submitMutation.mutate({
       grinderId: (user as any)?.grinderId || (user as any)?.id || "",
-      orderId: orderId.trim() || undefined,
+      orderId: selectedOrder,
       rating,
       title: title.trim(),
       body: body.trim(),
@@ -161,7 +183,8 @@ export default function GrinderReviews() {
   };
 
   const handleGenerate = () => {
-    generateMutation.mutate({ orderId: generateOrderId.trim() || undefined });
+    const selectedOrder = generateOrderId && generateOrderId !== "none" ? generateOrderId : undefined;
+    generateMutation.mutate({ orderId: selectedOrder });
   };
 
   const copyToClipboard = (text: string) => {
@@ -223,14 +246,32 @@ export default function GrinderReviews() {
               </p>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Order ID (optional)</label>
-                <Input
-                  value={generateOrderId}
-                  onChange={(e) => setGenerateOrderId(e.target.value)}
-                  placeholder="e.g., ORD-12345"
-                  className="bg-background/50 border-white/10"
-                  data-testid="input-generate-order-id"
-                />
+                <label className="text-sm font-medium mb-1 block">Select Order</label>
+                {orderOptions.length > 0 ? (
+                  <Select value={generateOrderId} onValueChange={setGenerateOrderId}>
+                    <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-generate-order-id">
+                      <SelectValue placeholder="Select an order..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-muted-foreground">No order (general code)</SelectItem>
+                      {orderOptions.map((opt) => (
+                        <SelectItem
+                          key={opt.orderId}
+                          value={opt.orderId}
+                          disabled={!opt.eligible}
+                          className={opt.eligible ? "text-purple-400" : "text-muted-foreground/50"}
+                        >
+                          <span className={opt.eligible ? "text-purple-400 font-medium" : "text-muted-foreground/60"}>
+                            {opt.orderId}
+                            {!opt.eligible && <span className="ml-1 text-[11px]">({opt.reason})</span>}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground/60 py-2">No assignments found</p>
+                )}
               </div>
 
               <Button
@@ -401,14 +442,32 @@ export default function GrinderReviews() {
               </p>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Order ID (optional)</label>
-                <Input
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  placeholder="e.g., ORD-12345"
-                  className="bg-background/50 border-white/10"
-                  data-testid="input-order-id"
-                />
+                <label className="text-sm font-medium mb-1 block">Select Order</label>
+                {orderOptions.length > 0 ? (
+                  <Select value={orderId} onValueChange={setOrderId}>
+                    <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-order-id">
+                      <SelectValue placeholder="Select an order..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-muted-foreground">No order (general review)</SelectItem>
+                      {orderOptions.map((opt) => (
+                        <SelectItem
+                          key={opt.orderId}
+                          value={opt.orderId}
+                          disabled={!opt.eligible}
+                          className={opt.eligible ? "text-purple-400" : "text-muted-foreground/50"}
+                        >
+                          <span className={opt.eligible ? "text-purple-400 font-medium" : "text-muted-foreground/60"}>
+                            {opt.orderId}
+                            {!opt.eligible && <span className="ml-1 text-[11px]">({opt.reason})</span>}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground/60 py-2">No assignments found</p>
+                )}
               </div>
 
               <div>
