@@ -645,10 +645,27 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
   let proposalCount = 0;
 
   const allOrders = await storage.getOrders();
-  const knownOrderMessageIds = new Set(allOrders.map((o: any) => o.discordMessageId).filter(Boolean));
-
   const allBids = await storage.getBids();
+
+  const knownOrderMessageIds = new Set(allOrders.map((o: any) => o.discordMessageId).filter(Boolean));
   const knownBidMessageIds = new Set(allBids.map((b: any) => b.discordMessageId).filter(Boolean));
+
+  let lastTrackedTime = 0;
+  for (const o of allOrders) {
+    if (o.mgtOrderNumber && o.createdAt) {
+      const t = new Date(o.createdAt).getTime();
+      if (t > lastTrackedTime) lastTrackedTime = t;
+    }
+  }
+  for (const b of allBids) {
+    if (b.createdAt) {
+      const t = new Date(b.createdAt).getTime();
+      if (t > lastTrackedTime) lastTrackedTime = t;
+    }
+  }
+
+  const cutoff = lastTrackedTime > 0 ? new Date(lastTrackedTime) : null;
+  console.log(`[mgt-watcher] Backfill cutoff: ${cutoff ? cutoff.toISOString() : "none (first run)"} — only importing messages after this time`);
 
   try {
     const bidWarChannel = await discordClient.channels.fetch(BID_WAR_CHANNEL_ID).catch(() => null);
@@ -656,7 +673,8 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
       const messages = await (bidWarChannel as any).messages.fetch({ limit: 100 });
       const mgtMessages = messages
         .filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0)
-        .filter((m: Message) => !knownOrderMessageIds.has(m.id));
+        .filter((m: Message) => !knownOrderMessageIds.has(m.id))
+        .filter((m: Message) => !cutoff || m.createdTimestamp > cutoff.getTime());
 
       for (const [, msg] of mgtMessages) {
         try {
@@ -677,7 +695,8 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
       const messages = await (proposalsChannel as any).messages.fetch({ limit: 100 });
       const mgtMessages = messages
         .filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0)
-        .filter((m: Message) => !knownBidMessageIds.has(m.id));
+        .filter((m: Message) => !knownBidMessageIds.has(m.id))
+        .filter((m: Message) => !cutoff || m.createdTimestamp > cutoff.getTime());
 
       for (const [, msg] of mgtMessages) {
         try {
