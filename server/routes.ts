@@ -8,7 +8,7 @@ import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats } from "./recalcStats";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
-import { or, eq } from "drizzle-orm";
+import { or, eq, sql } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -162,6 +162,43 @@ export async function registerRoutes(
     try {
       await storage.deleteService(req.params.id);
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/owner/clear-data", requireOwner, async (req, res) => {
+    try {
+      const { tables } = req.body;
+      if (!tables || !Array.isArray(tables) || tables.length === 0) {
+        return res.status(400).json({ error: "No tables specified" });
+      }
+      const allowed = [
+        "orders", "bids", "assignments", "grinders", "payout_requests",
+        "notifications", "audit_logs", "activity_checkpoints", "strike_logs",
+        "customer_reviews", "messages", "message_threads", "thread_participants",
+        "events", "patch_notes", "performance_reports", "staff_tasks",
+        "grinder_badges", "strike_appeals",
+      ];
+      const safeOrder = [
+        "grinder_badges", "strike_logs", "staff_tasks", "activity_checkpoints",
+        "payout_requests", "customer_reviews", "notifications", "messages",
+        "thread_participants", "message_threads", "events", "patch_notes",
+        "performance_reports", "strike_appeals", "audit_logs",
+        "assignments", "bids", "orders", "grinders",
+      ];
+      const toDelete = safeOrder.filter(t => tables.includes(t) && allowed.includes(t));
+      const results: Record<string, boolean> = {};
+      for (const table of toDelete) {
+        try {
+          await db.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = ${table}`);
+          await db.execute(sql.raw(`TRUNCATE TABLE "${table}" CASCADE`));
+          results[table] = true;
+        } catch (e) {
+          results[table] = false;
+        }
+      }
+      res.json({ success: true, results });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

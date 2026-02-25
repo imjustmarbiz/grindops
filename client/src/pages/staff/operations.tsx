@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
@@ -10,14 +10,293 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
   CheckCircle, X, CreditCard, Package, Zap, AlertTriangle, Link2, ExternalLink, Unlink, Wrench,
+  DatabaseZap, Settings,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import type { Service } from "@shared/schema";
 
+
+const DATA_TABLES = [
+  { key: "orders", label: "Orders", desc: "All orders" },
+  { key: "bids", label: "Bids", desc: "All bids/proposals" },
+  { key: "assignments", label: "Assignments", desc: "All grinder assignments" },
+  { key: "grinders", label: "Grinders", desc: "All grinder profiles" },
+  { key: "payout_requests", label: "Payouts", desc: "All payout requests" },
+  { key: "notifications", label: "Notifications", desc: "All notifications" },
+  { key: "audit_logs", label: "Audit Logs", desc: "Activity audit trail" },
+  { key: "activity_checkpoints", label: "Activity Checkpoints", desc: "Login/logout checkpoints" },
+  { key: "strike_logs", label: "Strike Logs", desc: "Strike history" },
+  { key: "strike_appeals", label: "Strike Appeals", desc: "Strike appeal records" },
+  { key: "customer_reviews", label: "Customer Reviews", desc: "Customer review submissions" },
+  { key: "messages", label: "Messages", desc: "Chat messages" },
+  { key: "message_threads", label: "Message Threads", desc: "Chat threads" },
+  { key: "thread_participants", label: "Thread Participants", desc: "Thread membership" },
+  { key: "events", label: "Events & Promos", desc: "Events and promotions" },
+  { key: "patch_notes", label: "Patch Notes", desc: "Staff patch notes" },
+  { key: "performance_reports", label: "Performance Reports", desc: "Generated reports" },
+  { key: "staff_tasks", label: "Staff Tasks", desc: "To-do list tasks" },
+  { key: "grinder_badges", label: "Badges", desc: "Awarded grinder badges" },
+];
+
+function ClearDataPanel() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/owner/clear-data", { tables: Array.from(selected) });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      const cleared = Object.entries(data.results || {}).filter(([, v]) => v).length;
+      queryClient.invalidateQueries();
+      toast({ title: `Cleared ${cleared} table(s)`, description: "Data has been removed." });
+      setSelected(new Set());
+      setConfirmOpen(false);
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleAll = () => {
+    if (selected.size === DATA_TABLES.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(DATA_TABLES.map(t => t.key)));
+    }
+  };
+
+  const toggle = (key: string) => {
+    const next = new Set(selected);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    setSelected(next);
+  };
+
+  return (
+    <Card className="border-0 bg-gradient-to-br from-red-500/[0.08] via-background to-red-900/[0.04] overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-red-500/[0.04] -translate-y-12 translate-x-12" />
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+            <DatabaseZap className="w-4 h-4 text-red-400" />
+          </div>
+          Clear Data
+          <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 ml-auto text-xs">Owner Only</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="relative space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">Select tables to clear. Services are managed separately below.</p>
+          <Button variant="ghost" size="sm" className="text-xs" onClick={toggleAll} data-testid="button-toggle-all-tables">
+            {selected.size === DATA_TABLES.length ? "Deselect All" : "Select All"}
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {DATA_TABLES.map(t => (
+            <label
+              key={t.key}
+              className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                selected.has(t.key)
+                  ? "border-red-500/30 bg-red-500/5"
+                  : "border-border/20 bg-white/[0.02] hover:border-border/40"
+              }`}
+            >
+              <Checkbox
+                checked={selected.has(t.key)}
+                onCheckedChange={() => toggle(t.key)}
+                data-testid={`checkbox-clear-${t.key}`}
+              />
+              <div>
+                <span className="text-sm font-medium">{t.label}</span>
+                <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="destructive"
+              className="w-full"
+              disabled={selected.size === 0}
+              data-testid="button-clear-data"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear {selected.size} Table{selected.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-400">
+                <AlertTriangle className="w-5 h-5" />
+                Confirm Data Deletion
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">This will permanently delete all data from the following tables:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {Array.from(selected).map(key => {
+                  const t = DATA_TABLES.find(dt => dt.key === key);
+                  return <Badge key={key} variant="destructive" className="text-xs">{t?.label || key}</Badge>;
+                })}
+              </div>
+              <p className="text-sm font-medium text-red-400">This action cannot be undone.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={() => clearMutation.mutate()}
+                disabled={clearMutation.isPending}
+                data-testid="button-confirm-clear-data"
+              >
+                {clearMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Yes, Delete Everything
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ServiceManagement({ services }: { services: Service[] }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newGroup, setNewGroup] = useState("");
+  const [newComplexity, setNewComplexity] = useState("1");
+  const [newSla, setNewSla] = useState("5");
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/services", {
+        name: newName, group: newGroup,
+        defaultComplexity: parseInt(newComplexity), slaDays: parseInt(newSla),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      toast({ title: "Service added" });
+      setAddOpen(false);
+      setNewName(""); setNewGroup(""); setNewComplexity("1"); setNewSla("5");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/services/${id}`); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      toast({ title: "Service removed" });
+      setDeleteId(null);
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+              <Settings className="w-4 h-4 text-emerald-400" />
+            </div>
+            Manage Services
+          </CardTitle>
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-500" data-testid="button-add-service">
+                <Plus className="w-3.5 h-3.5" /> Add Service
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Add New Service</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Service Name</label>
+                  <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. VC Grinding 🪙" data-testid="input-service-name" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Group</label>
+                  <Input value={newGroup} onChange={e => setNewGroup(e.target.value)} placeholder="e.g. VC, Rep, Badges" data-testid="input-service-group" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Complexity (1-5)</label>
+                    <Select value={newComplexity} onValueChange={setNewComplexity}>
+                      <SelectTrigger data-testid="select-complexity"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">SLA Days</label>
+                    <Select value={newSla} onValueChange={setNewSla}>
+                      <SelectTrigger data-testid="select-sla"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5,6,7,10,14].map(n => <SelectItem key={n} value={String(n)}>{n} days</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button onClick={() => addMutation.mutate()} disabled={!newName || !newGroup || addMutation.isPending} data-testid="button-confirm-add-service">
+                  {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Service"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent className="relative">
+        <div className="space-y-2">
+          {services.map(s => (
+            <div key={s.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.02] border border-border/20" data-testid={`row-service-${s.id}`}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="font-medium text-sm">{s.name}</span>
+                <Badge variant="secondary" className="text-[10px]">{s.group}</Badge>
+                <span className="text-[10px] text-muted-foreground">Complexity: {s.defaultComplexity} | SLA: {s.slaDays}d</span>
+              </div>
+              <Dialog open={deleteId === s.id} onOpenChange={(open) => setDeleteId(open ? s.id : null)}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" data-testid={`button-delete-service-${s.id}`}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Remove Service</DialogTitle></DialogHeader>
+                  <p className="text-sm text-muted-foreground">Are you sure you want to remove <strong>{s.name}</strong>?</p>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                    <Button variant="destructive" onClick={() => deleteMutation.mutate(s.id)} disabled={deleteMutation.isPending} data-testid="button-confirm-delete-service">
+                      {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remove"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function StaffOperations() {
   const { toast } = useToast();
@@ -725,6 +1004,17 @@ export default function StaffOperations() {
         </CardContent>
       </Card>
       </FadeInUp>
+
+      {isOwner && (
+        <>
+          <FadeInUp>
+            <ServiceManagement services={allServices} />
+          </FadeInUp>
+          <FadeInUp>
+            <ClearDataPanel />
+          </FadeInUp>
+        </>
+      )}
     </AnimatedPage>
   );
 }
