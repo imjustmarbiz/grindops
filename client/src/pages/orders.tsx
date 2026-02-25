@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, MapPin, StickyNote, Gauge, Package, Clock, TrendingUp, FileText } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -31,7 +31,6 @@ const formSchema = z.object({
   complexity: z.coerce.number().min(1).max(5),
   isRush: z.boolean().default(false),
   isEmergency: z.boolean().default(false),
-  location: z.string().optional(),
 });
 
 function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
@@ -448,13 +447,6 @@ export default function Orders() {
                   )} />
                 </div>
 
-                <FormField control={form.control} name="location" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g. Retail, Online" className="bg-background/50 border-white/10" data-testid="input-location" /></FormControl>
-                  </FormItem>
-                )} />
-
                 <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20" data-testid="button-submit-order">
                   {createMutation.isPending ? "Creating..." : "Create Order"}
                 </Button>
@@ -580,7 +572,6 @@ export default function Orders() {
                           </TooltipTrigger>
                           <TooltipContent>Rush priority</TooltipContent>
                         </Tooltip>
-                        <InlineTextEdit value={order.location} orderId={order.id} field="location" placeholder="loc" onSave={saveField} />
                       </div>
                     </div>
                   </TableCell>

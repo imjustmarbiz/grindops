@@ -105,6 +105,7 @@ export const orders = pgTable("orders", {
   orderBrief: text("order_brief"),
   discordBidLink: text("discord_bid_link"),
   discordTicketChannelId: varchar("discord_ticket_channel_id"),
+  skipDailyCheckup: boolean("skip_daily_checkup").notNull().default(false),
   isManual: boolean("is_manual").notNull().default(false),
   visibleToGrinders: boolean("visible_to_grinders").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -172,6 +173,7 @@ export const queueConfig = pgTable("queue_config", {
   emergencyBoost: numeric("emergency_boost").notNull().default("0.25"),
   largeOrderThreshold: numeric("large_order_threshold").notNull().default("500"),
   largeOrderEliteBoost: numeric("large_order_elite_boost").notNull().default("0.15"),
+  dailyCheckupsEnabled: boolean("daily_checkups_enabled").notNull().default(true),
 });
 
 export const orderUpdates = pgTable("order_updates", {

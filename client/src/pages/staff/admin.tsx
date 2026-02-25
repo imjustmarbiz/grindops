@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
@@ -10,14 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat,
-  ArrowRight, CheckCircle, Loader2, Zap,
+  ArrowRight, CheckCircle, Loader2, Zap, Clock, Search,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import spLogo from "@assets/image_1771930905137.png";
 
 export default function StaffAdmin() {
@@ -44,6 +46,36 @@ export default function StaffAdmin() {
   const [editProfileCategory, setEditProfileCategory] = useState("");
   const [editProfileCapacity, setEditProfileCapacity] = useState("");
   const [editProfileNotes, setEditProfileNotes] = useState("");
+  const [checkupOrderSearch, setCheckupOrderSearch] = useState("");
+
+  const { data: checkupConfig } = useQuery<{ enabled: boolean; skippedOrders: string[] }>({
+    queryKey: ["/api/daily-checkups/config"],
+  });
+
+  const toggleGlobalCheckupsMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", "/api/daily-checkups/global", { enabled });
+      return res.json();
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/daily-checkups/config"] });
+      toast({ title: enabled ? "Daily checkups enabled for all orders" : "Daily checkups disabled for all orders" });
+    },
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
+  const toggleOrderCheckupMutation = useMutation({
+    mutationFn: async ({ orderId, skip }: { orderId: string; skip: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/daily-checkups/order/${orderId}`, { skip });
+      return res.json();
+    },
+    onSuccess: (_, { skip }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/daily-checkups/config"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({ title: skip ? "Daily checkups disabled for this order" : "Daily checkups enabled for this order" });
+    },
+    onError: () => toast({ title: "Failed to update order", variant: "destructive" }),
+  });
 
   const eliteReqMutation = useMutation({
     mutationFn: async ({ id, status, decisionNotes }: { id: string; status: string; decisionNotes?: string }) => {
@@ -161,6 +193,96 @@ export default function StaffAdmin() {
       <FadeInUp>
         <BiddingCountdownPanel variant="compact" />
       </FadeInUp>
+
+      {isOwner && (
+        <FadeInUp>
+          <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-900/[0.04] overflow-hidden relative" data-testid="card-daily-checkups">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.04] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                </div>
+                Daily Checkups
+                <HelpTip text="Daily checkups run at 12:30 AM ET and flag grinders who haven't submitted a progress update for their active assignments. Disable globally or per order." />
+                <Badge className={`ml-auto text-xs ${checkupConfig?.enabled !== false ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
+                  {checkupConfig?.enabled !== false ? "Active" : "Disabled"}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <div>
+                  <p className="text-sm font-medium">Global Daily Checkups</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Enable or disable checkups for all orders system-wide</p>
+                </div>
+                <Switch
+                  checked={checkupConfig?.enabled !== false}
+                  onCheckedChange={(checked) => toggleGlobalCheckupsMutation.mutate(checked)}
+                  disabled={toggleGlobalCheckupsMutation.isPending}
+                  data-testid="switch-global-checkups"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm font-medium">Per-Order Overrides</p>
+                  <Badge className="bg-white/5 text-muted-foreground border border-white/10 text-xs">
+                    {checkupConfig?.skippedOrders?.length || 0} skipped
+                  </Badge>
+                </div>
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by order ID or MGT #..."
+                    value={checkupOrderSearch}
+                    onChange={(e) => setCheckupOrderSearch(e.target.value)}
+                    className="pl-8 h-8 text-sm bg-background/50 border-white/10"
+                    data-testid="input-checkup-order-search"
+                  />
+                </div>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {(() => {
+                    const activeOrders = (allOrders || []).filter((o: any) =>
+                      o.status === "In Progress" || o.status === "Open" || o.status === "Bidding Open" || o.status === "Bidding Closed" || o.status === "Need Replacement"
+                    );
+                    const filtered = checkupOrderSearch.trim()
+                      ? activeOrders.filter((o: any) => {
+                          const q = checkupOrderSearch.toLowerCase();
+                          return o.id.toLowerCase().includes(q) || (o.mgtOrderNumber && String(o.mgtOrderNumber).includes(q));
+                        })
+                      : activeOrders;
+                    if (filtered.length === 0) return <p className="text-xs text-muted-foreground py-2">No active orders found</p>;
+                    return filtered.slice(0, 20).map((order: any) => {
+                      const isSkipped = checkupConfig?.skippedOrders?.includes(order.id);
+                      return (
+                        <div key={order.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs" data-testid={`row-checkup-order-${order.id}`}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-primary font-medium">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                            <Badge className="text-[10px] px-1.5 py-0 bg-white/5 text-muted-foreground border border-white/10">{order.status}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] ${isSkipped ? "text-red-400" : "text-emerald-400"}`}>
+                              {isSkipped ? "Skipped" : "Active"}
+                            </span>
+                            <Switch
+                              checked={!isSkipped}
+                              onCheckedChange={(checked) => toggleOrderCheckupMutation.mutate({ orderId: order.id, skip: !checked })}
+                              disabled={toggleOrderCheckupMutation.isPending}
+                              className="scale-75"
+                              data-testid={`switch-checkup-${order.id}`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      )}
 
       <FadeInUp>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

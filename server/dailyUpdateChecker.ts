@@ -45,10 +45,16 @@ async function checkDailyUpdates() {
 
     if (hours !== 0 || minutes < 30 || minutes > 35) return;
 
+    const config = await storage.getQueueConfig();
+    if (config && config.dailyCheckupsEnabled === false) return;
+
     const allAssignments = await storage.getAssignments();
     const activeAssignments = allAssignments.filter((a: any) => a.status === "Active");
 
     if (activeAssignments.length === 0) return;
+
+    const allOrders = await storage.getOrders();
+    const skipOrderIds = new Set(allOrders.filter((o: any) => o.skipDailyCheckup).map((o: any) => o.id));
 
     const allUpdates = await storage.getOrderUpdates();
 
@@ -58,6 +64,8 @@ async function checkDailyUpdates() {
     const grindersToRecalc = new Set<string>();
 
     for (const assignment of activeAssignments) {
+      if (skipOrderIds.has(assignment.orderId)) continue;
+
       const assignmentUpdates = allUpdates.filter(
         (u: any) => u.assignmentId === assignment.id && u.updateType === "progress"
       );

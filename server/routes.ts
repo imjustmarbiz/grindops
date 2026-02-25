@@ -3444,6 +3444,44 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/daily-checkups/config", requireStaff, async (req, res) => {
+    try {
+      const config = await storage.getQueueConfig();
+      const orders = await storage.getOrders();
+      const skippedOrders = orders.filter((o: any) => o.skipDailyCheckup).map((o: any) => o.id);
+      res.json({ enabled: config?.dailyCheckupsEnabled !== false, skippedOrders });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch daily checkup config" });
+    }
+  });
+
+  app.patch("/api/daily-checkups/global", requireOwner, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled must be a boolean" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, dailyCheckupsEnabled: enabled });
+      res.json({ success: true, enabled });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update daily checkup config" });
+    }
+  });
+
+  app.patch("/api/daily-checkups/order/:orderId", requireOwner, async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { skip } = req.body;
+      if (typeof skip !== "boolean") return res.status(400).json({ error: "skip must be a boolean" });
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+      await storage.updateOrder(orderId, { skipDailyCheckup: skip });
+      res.json({ success: true, orderId, skip });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update order daily checkup" });
+    }
+  });
+
   return httpServer;
 }
 
