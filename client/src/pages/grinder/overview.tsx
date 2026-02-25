@@ -13,6 +13,7 @@ import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
   Signal, ScrollText, Sparkles, Crown, ShieldCheck
 } from "lucide-react";
+import { Link } from "wouter";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 
@@ -293,19 +294,21 @@ export default function GrinderOverview() {
             ) : (
               <div className="space-y-2.5">
                 {assignments.slice(0, 5).map((a: any) => (
-                  <div key={a.id} className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} transition-all duration-200`} data-testid={`card-assignment-${a.id}`}>
-                    <div>
-                      <p className="text-sm font-medium">Order {a.orderId}</p>
-                      <p className="text-xs text-white/40">
-                        Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}
-                        {a.grinderEarnings && <span className="text-emerald-400 ml-2">${Number(a.grinderEarnings).toFixed(2)}</span>}
-                      </p>
+                  <Link key={a.id} href="/grinder/assignments">
+                    <div className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer transition-all duration-200`} data-testid={`card-assignment-${a.id}`}>
+                      <div>
+                        <p className="text-sm font-medium">Order {a.orderId}</p>
+                        <p className="text-xs text-white/40">
+                          Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}
+                          {a.grinderEarnings && <span className="text-emerald-400 ml-2">${Number(a.grinderEarnings).toFixed(2)}</span>}
+                        </p>
+                      </div>
+                      <Badge
+                        className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
+                        {a.status}
+                      </Badge>
                     </div>
-                    <Badge
-                      className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
-                      {a.status}
-                    </Badge>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
