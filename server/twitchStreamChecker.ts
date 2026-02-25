@@ -80,6 +80,57 @@ function generateCheckpointId(): string {
   return `CP-${rand}-${ts}`;
 }
 
+async function rehydrateLiveState() {
+  try {
+    const allGrinders = await storage.getGrinders();
+    const grindersWithTwitch = allGrinders.filter(g => g.twitchUsername && !g.isRemoved);
+    if (grindersWithTwitch.length === 0) return;
+
+    const usernameToGrinder = new Map<string, typeof grindersWithTwitch[0]>();
+    for (const g of grindersWithTwitch) {
+      usernameToGrinder.set(g.twitchUsername!.toLowerCase(), g);
+    }
+
+    const usernames = Array.from(usernameToGrinder.keys());
+    const liveNow = await checkStreams(usernames);
+
+    const allAssignments = await storage.getAssignments();
+    const activeAssignmentsByGrinder = new Map<string, any[]>();
+    for (const a of allAssignments) {
+      if (a.status === "Active") {
+        const list = activeAssignmentsByGrinder.get(a.grinderId) || [];
+        list.push(a);
+        activeAssignmentsByGrinder.set(a.grinderId, list);
+      }
+    }
+
+    for (const [username, grinder] of usernameToGrinder) {
+      if (liveNow.has(username)) {
+        const activeAssignments = activeAssignmentsByGrinder.get(grinder.id) || [];
+        liveGrinders.set(grinder.id, {
+          assignmentIds: activeAssignments.map(a => a.id),
+          startedAt: Date.now(),
+        });
+        console.log(`[twitch-checker] Rehydrated: ${grinder.name} is currently LIVE`);
+      }
+    }
+  } catch (err) {
+    console.error("[twitch-checker] Rehydrate error:", err);
+  }
+}
+
+async function hasRecentStreamCheckpoint(grinderId: string, type: string, withinMs: number = 5 * 60_000): Promise<boolean> {
+  try {
+    const checkpoints = await storage.getActivityCheckpoints(grinderId);
+    const cutoff = new Date(Date.now() - withinMs);
+    return checkpoints.some(
+      cp => cp.type === type && cp.grinderId === grinderId && new Date(cp.createdAt!) > cutoff
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function runCheck() {
   try {
     const allGrinders = await storage.getGrinders();
@@ -113,21 +164,26 @@ async function runCheck() {
       const isLive = liveNow.has(username);
 
       if (isLive && !wasLive) {
+        const alreadyLogged = await hasRecentStreamCheckpoint(grinder.id, "stream_live");
         liveGrinders.set(grinder.id, {
           assignmentIds: activeAssignments.map(a => a.id),
           startedAt: Date.now(),
         });
-        for (const a of activeAssignments) {
-          await storage.createActivityCheckpoint({
-            id: generateCheckpointId(),
-            assignmentId: a.id,
-            orderId: a.orderId,
-            grinderId: grinder.id,
-            type: "stream_live",
-            note: `Stream went live on Twitch (${grinder.twitchUsername})`,
-          });
+        if (!alreadyLogged) {
+          for (const a of activeAssignments) {
+            await storage.createActivityCheckpoint({
+              id: generateCheckpointId(),
+              assignmentId: a.id,
+              orderId: a.orderId,
+              grinderId: grinder.id,
+              type: "stream_live",
+              note: `Stream went live on Twitch (${grinder.twitchUsername})`,
+            });
+          }
+          console.log(`[twitch-checker] ${grinder.name} went LIVE (${activeAssignments.length} active assignments)`);
+        } else {
+          console.log(`[twitch-checker] ${grinder.name} still LIVE (skipped duplicate checkpoint)`);
         }
-        console.log(`[twitch-checker] ${grinder.name} went LIVE (${activeAssignments.length} active assignments)`);
       } else if (!isLive && wasLive) {
         const session = liveGrinders.get(grinder.id)!;
         const durationMin = Math.round((Date.now() - session.startedAt) / 60_000);
@@ -158,12 +214,12 @@ export function getLiveGrinders(): Map<string, { assignmentIds: string[]; starte
   return liveGrinders;
 }
 
-export function startTwitchStreamChecker() {
+export async function startTwitchStreamChecker() {
   if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
     console.log("[twitch-checker] Skipped — TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET not set");
     return;
   }
   console.log("[twitch-checker] Stream checker started (checking every 60s)");
-  runCheck();
+  await rehydrateLiveState();
   setInterval(runCheck, CHECK_INTERVAL_MS);
 }
