@@ -745,43 +745,43 @@ export default function GrinderOpsGuide() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-white" data-testid="text-ops-guide-title">Grinder Operations Guide</h1>
-          <p className="text-xs text-muted-foreground">Step-by-step walkthrough for every page</p>
+      <div className="flex items-center justify-between px-3 py-2.5 sm:px-6 sm:py-4 border-b border-white/[0.06] bg-white/[0.02]">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-white" data-testid="text-ops-guide-title">Grinder Operations Guide</h1>
+          <p className="text-[11px] sm:text-xs text-muted-foreground">Step-by-step walkthrough for every page</p>
         </div>
-        <Badge variant="outline" className="border-white/10 text-muted-foreground text-xs">
+        <Badge variant="outline" className="border-white/10 text-muted-foreground text-[10px] sm:text-xs shrink-0 ml-2">
           {currentSlide + 1} / {slides.length}
         </Badge>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex items-start justify-center p-4 sm:p-8">
-        <div className="w-full max-w-4xl">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
+        <div className="w-full max-w-4xl mx-auto">
           <Card className="border-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01] shadow-2xl shadow-black/40 overflow-hidden" data-testid={`slide-${slide.id}`}>
-            <div className={`h-1.5 bg-gradient-to-r ${currentSlide === 0 ? "from-yellow-500 via-amber-500 to-orange-500" : currentSlide === slides.length - 1 ? "from-emerald-500 via-green-500 to-teal-500" : "from-blue-500 via-purple-500 to-violet-500"}`} />
+            <div className={`h-1 sm:h-1.5 bg-gradient-to-r ${currentSlide === 0 ? "from-yellow-500 via-amber-500 to-orange-500" : currentSlide === slides.length - 1 ? "from-emerald-500 via-green-500 to-teal-500" : "from-blue-500 via-purple-500 to-violet-500"}`} />
 
-            <CardContent className="p-6 sm:p-10 space-y-6">
-              <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shrink-0`}>
-                  <SlideIcon className={`w-7 h-7 ${slide.iconColor}`} />
+            <CardContent className="p-4 sm:p-6 lg:p-10 space-y-4 sm:space-y-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shrink-0">
+                  <SlideIcon className={`w-5 h-5 sm:w-7 sm:h-7 ${slide.iconColor}`} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white" data-testid="text-slide-title">{slide.title}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">{slide.subtitle}</p>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white" data-testid="text-slide-title">{slide.title}</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">{slide.subtitle}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {slide.sections.map((section, idx) => (
                   <div
                     key={idx}
-                    className={`rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3 ${slide.sections.length === 1 ? "md:col-span-2" : ""}`}
+                    className={`rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 sm:p-5 space-y-2 sm:space-y-3 ${slide.sections.length === 1 ? "md:col-span-2" : ""}`}
                   >
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70">{section.heading}</h3>
-                    <ul className="space-y-2">
+                    <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-white/70">{section.heading}</h3>
+                    <ul className="space-y-1.5 sm:space-y-2">
                       {section.points.map((point, pIdx) => (
-                        <li key={pIdx} className="flex items-start gap-2.5 text-sm text-white/80">
-                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-white/30 shrink-0" />
+                        <li key={pIdx} className="flex items-start gap-2 sm:gap-2.5 text-xs sm:text-sm text-white/80">
+                          <span className="mt-1.5 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-white/30 shrink-0" />
                           <span>{point}</span>
                         </li>
                       ))}
@@ -791,15 +791,15 @@ export default function GrinderOpsGuide() {
               </div>
 
               {slide.steps && (
-                <div className="rounded-xl border border-blue-500/15 bg-blue-500/[0.04] p-5 space-y-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                    <ArrowRight className="w-4 h-4" />
+                <div className="rounded-lg sm:rounded-xl border border-blue-500/15 bg-blue-500/[0.04] p-3 sm:p-5 space-y-2 sm:space-y-3">
+                  <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Step-by-Step
                   </h3>
-                  <ol className="space-y-2">
+                  <ol className="space-y-1.5 sm:space-y-2">
                     {slide.steps.map((step, sIdx) => (
-                      <li key={sIdx} className="flex items-start gap-3 text-sm text-white/80">
-                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      <li key={sIdx} className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm text-white/80">
+                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-500/20 text-blue-400 text-[10px] sm:text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                           {sIdx + 1}
                         </span>
                         <span>{step}</span>
@@ -810,11 +810,11 @@ export default function GrinderOpsGuide() {
               )}
 
               {slide.tip && (
-                <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] p-4 flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="rounded-lg sm:rounded-xl border border-amber-500/15 bg-amber-500/[0.04] p-3 sm:p-4 flex items-start gap-2.5 sm:gap-3">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Pro Tip</p>
-                    <p className="text-sm text-white/80">{slide.tip}</p>
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-amber-400 mb-0.5 sm:mb-1">Pro Tip</p>
+                    <p className="text-xs sm:text-sm text-white/80">{slide.tip}</p>
                   </div>
                 </div>
               )}
@@ -823,19 +823,20 @@ export default function GrinderOpsGuide() {
         </div>
       </div>
 
-      <div className="px-6 py-4 border-t border-white/[0.06] bg-white/[0.02]">
+      <div className="px-3 py-2.5 sm:px-6 sm:py-4 border-t border-white/[0.06] bg-white/[0.02]">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Button
             variant="outline"
-            className="gap-2 border-white/10 text-white/70 hover:text-white"
+            size="sm"
+            className="gap-1 sm:gap-2 border-white/10 text-white/70 hover:text-white text-xs sm:text-sm px-2 sm:px-4"
             onClick={goPrev}
             disabled={currentSlide === 0}
             data-testid="button-prev-slide"
           >
-            <ChevronLeft className="w-4 h-4" /> Previous
+            <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Previous</span><span className="sm:hidden">Prev</span>
           </Button>
 
-          <div className="hidden sm:flex items-center gap-1.5">
+          <div className="hidden md:flex items-center gap-1.5">
             {slides.map((_, idx) => (
               <button
                 key={idx}
@@ -846,25 +847,28 @@ export default function GrinderOpsGuide() {
             ))}
           </div>
 
+          <span className="md:hidden text-[10px] text-white/40">{currentSlide + 1}/{slides.length}</span>
+
           <Button
-            className="gap-2 bg-white/10 hover:bg-white/20 text-white"
+            size="sm"
+            className="gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm px-2 sm:px-4"
             onClick={goNext}
             disabled={currentSlide === slides.length - 1}
             data-testid="button-next-slide"
           >
-            Next <ChevronRight className="w-4 h-4" />
+            Next <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>
 
-      <div className="px-6 py-3 border-t border-white/[0.04] bg-white/[0.01]">
+      <div className="hidden sm:block px-3 sm:px-6 py-2 sm:py-3 border-t border-white/[0.04] bg-white/[0.01]">
         <div className="max-w-4xl mx-auto">
-          <div className="flex flex-wrap gap-1.5 justify-center">
+          <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-center">
             {slides.map((s, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`text-[10px] px-2 py-1 rounded-md transition-all ${idx === currentSlide ? "bg-white/15 text-white font-medium" : "text-white/30 hover:text-white/60 hover:bg-white/[0.05]"}`}
+                className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all ${idx === currentSlide ? "bg-white/15 text-white font-medium" : "text-white/30 hover:text-white/60 hover:bg-white/[0.05]"}`}
                 data-testid={`nav-slide-${s.id}`}
               >
                 {s.title}
