@@ -488,7 +488,7 @@ export default function Orders() {
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-x-auto">
-        <Table className="min-w-[950px]">
+        <Table className="min-w-[1200px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
               <SortableHeader label="MGT #" sortKey="mgtOrderNumber" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
