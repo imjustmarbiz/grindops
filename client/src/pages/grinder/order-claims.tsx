@@ -78,8 +78,8 @@ export default function GrinderOrderClaims() {
         <div className="flex items-center gap-3">
           <FileText className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-order-claims-title">Claim an Order</h2>
-            <p className="text-sm text-muted-foreground">Submit proof to claim an order or view your claim history</p>
+            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-order-claims-title">Claim Missing Order</h2>
+            <p className="text-sm text-muted-foreground">Completed an order that isn't linked to your profile? Submit proof to claim it</p>
           </div>
         </div>
       </FadeInUp>
@@ -88,7 +88,7 @@ export default function GrinderOrderClaims() {
         <Card className="border-0 bg-white/[0.03]">
           <CardContent className="p-5 space-y-4">
             <h3 className={`text-sm font-medium uppercase tracking-wider ${isElite ? "text-cyan-400" : "text-amber-400"}`}>
-              New Claim Request
+              Submit a Claim
             </h3>
             <div>
               <label className="text-sm font-medium mb-1 block">Order ID</label>
