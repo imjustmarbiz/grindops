@@ -1,6 +1,6 @@
 import { type Message, type PartialMessage, type GuildMember } from "discord.js";
 import { storage } from "../storage";
-import { GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS } from "@shared/schema";
+import { GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS, normalizePlatform } from "@shared/schema";
 import { recalcGrinderStats } from "../recalcStats";
 
 const MGT_BOT_USER_ID = "1466336342521937930";
@@ -207,7 +207,7 @@ export async function handleNewOrderMessage(message: Message) {
     const order = await storage.upsertOrderByMgtNumber(orderNumber, {
       serviceId,
       customerPrice: customerPrice ? customerPrice.toFixed(2) : "0",
-      platform: platform || undefined,
+      platform: platform ? normalizePlatform(platform) : undefined,
       gamertag: gamertag || undefined,
       notes: orderNotes || undefined,
       orderBrief,
@@ -391,14 +391,14 @@ export async function handleProposalMessage(message: Message) {
       order = await storage.upsertOrderByMgtNumber(orderNumber, {
         serviceId,
         customerPrice: customerPrice ? customerPrice.toFixed(2) : "0",
-        platform: platform || undefined,
+        platform: platform ? normalizePlatform(platform) : undefined,
         orderDueDate: dueDate,
         status: "Open",
       });
     } else if (customerPrice && Number(order.customerPrice) === 0) {
       order = await storage.upsertOrderByMgtNumber(orderNumber, {
         customerPrice: customerPrice.toFixed(2),
-        platform: platform || order.platform || undefined,
+        platform: (platform || order.platform) ? normalizePlatform(platform || order.platform) : undefined,
       });
     }
 

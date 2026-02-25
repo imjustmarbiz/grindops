@@ -580,3 +580,13 @@ export type DashboardStats = {
   availableGrinders: number;
   totalGrinders: number;
 };
+
+export function normalizePlatform(platform: string | null | undefined): string {
+  if (!platform) return "Unknown";
+  const lower = platform.toLowerCase().trim();
+  if (lower.includes("xbox") || lower.includes("xb")) return "Xbox";
+  if (lower.includes("ps") || lower.includes("playstation")) return "PS5";
+  if (lower.includes("pc") || lower.includes("steam") || lower.includes("epic")) return "PC";
+  if (lower.includes("switch") || lower.includes("nintendo")) return "Nintendo";
+  return platform;
+}

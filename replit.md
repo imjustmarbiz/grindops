@@ -35,3 +35,8 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Discord API:** Used for OAuth2 authentication, Discord bot interactions, slash commands, and real-time monitoring of MGT Bot messages.
 - **MGT Bot:** An existing Discord bot that this system passively monitors for order and proposal data.
 - **OpenAI:** Utilized for AI-driven rewriting of dev patch notes.
+
+## Key Implementation Details
+- **Platform Normalization:** `normalizePlatform()` function in `shared/schema.ts` standardizes platform names: anything with "xbox"/"xb" → "Xbox", anything with "ps"/"playstation" → "PS5", "pc"/"steam"/"epic" → "PC", "switch"/"nintendo" → "Nintendo". Applied server-side on order create/update, in MGT watcher on ingest, and client-side in analytics (services.tsx, business.tsx). Both files import from `@shared/schema` instead of local copies.
+- **Daily Checkup Controls:** Owner-only controls in Admin tab. Global toggle via `queueConfig.dailyCheckupsEnabled`, per-order via `orders.skipDailyCheckup`. Routes: `GET /api/daily-checkups/config`, `PATCH /api/daily-checkups/global`, `PATCH /api/daily-checkups/order/:orderId`. The checker in `server/dailyUpdateChecker.ts` respects both flags.
+- **Location Field Removed:** Removed from orders UI (form + inline edit). Column remains in DB schema but is unused.

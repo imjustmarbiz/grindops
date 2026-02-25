@@ -12,6 +12,7 @@ import {
   ArrowUpRight, ArrowDownRight, Minus, CalendarRange, Filter, Loader2,
   Wallet, Target, Package, Gamepad2, Monitor
 } from "lucide-react";
+import { normalizePlatform } from "@shared/schema";
 import type { Order, Assignment, Grinder, Service } from "@shared/schema";
 import { HelpTip } from "@/components/help-tip";
 import { useQuery } from "@tanstack/react-query";
@@ -88,16 +89,6 @@ function KpiCard({ title, value, subtitle, icon: Icon, iconColor, trend }: {
       </CardContent>
     </Card>
   );
-}
-
-function normalizePlatform(platform: string | null | undefined): string {
-  if (!platform) return "Unknown";
-  const lower = platform.toLowerCase().trim();
-  if (lower.includes("ps") || lower.includes("playstation")) return "PlayStation";
-  if (lower.includes("xbox")) return "Xbox";
-  if (lower.includes("pc")) return "PC";
-  if (lower.includes("switch") || lower.includes("nintendo")) return "Nintendo";
-  return platform;
 }
 
 export default function BusinessPerformance() {

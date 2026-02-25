@@ -6,18 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Gamepad2, Monitor, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { normalizePlatform } from "@shared/schema";
 import type { Order, Service, Assignment } from "@shared/schema";
 import { HelpTip } from "@/components/help-tip";
-
-function normalizePlatform(platform: string | null | undefined): string {
-  if (!platform) return "Unknown";
-  const lower = platform.toLowerCase().trim();
-  if (lower.includes("ps") || lower.includes("playstation")) return "PlayStation";
-  if (lower.includes("xbox")) return "Xbox";
-  if (lower.includes("pc")) return "PC";
-  if (lower.includes("switch") || lower.includes("nintendo")) return "Nintendo";
-  return platform;
-}
 
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;

@@ -12,7 +12,7 @@ import { or, eq } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { messages as messagesTable } from "@shared/schema";
+import { messages as messagesTable, normalizePlatform } from "@shared/schema";
 
 const uploadsDir = path.join(process.cwd(), "uploads", "chat");
 if (!fs.existsSync(uploadsDir)) {
@@ -283,6 +283,7 @@ export async function registerRoutes(
   app.post(api.orders.create.path, requireStaff, async (req, res) => {
     try {
       const input = api.orders.create.input.parse(req.body);
+      if (input.platform) input.platform = normalizePlatform(input.platform);
       const result = await storage.createOrder(input);
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
@@ -636,6 +637,7 @@ export async function registerRoutes(
     try {
       const input = api.orders.update.input.parse(req.body);
       const updateData: any = { ...input };
+      if (updateData.platform) updateData.platform = normalizePlatform(updateData.platform);
       if (input.orderDueDate) {
         updateData.orderDueDate = new Date(input.orderDueDate);
       }
