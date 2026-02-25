@@ -54,6 +54,7 @@ import StaffOpsGuide from "@/pages/staff-ops-guide";
 import CustomerReviewPage from "@/pages/customer-review";
 import StaffNotifications from "@/pages/staff/notifications";
 import StaffTodo from "@/pages/staff/todo";
+import StaffBadges from "@/pages/staff/badges";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean }) {
@@ -166,6 +167,7 @@ function Router() {
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly />} />
+      <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
       <Route path="/features" component={() => <ProtectedRoute component={StaffFeatures} staffOnly />} />
       <Route path="/staff/ops-guide" component={() => <ProtectedRoute component={StaffOpsGuide} staffOnly />} />
       

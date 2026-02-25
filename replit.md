@@ -16,7 +16,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Chat Messaging System:** Integrated group chat and DM functionality with file attachments and @mentions.
 - **Notifications:** Lower-third popups with distinct sounds for various event types.
 - **Activity Calendar:** Reusable component for tracking activities.
-- **Help Tooltips:** Contextual `HelpTip` components for on-demand explanations.
+- **Help Tooltips:** Contextual `HelpTip` components on grinder pages for on-demand explanations. Removed from staff/owner pages to reduce visual clutter.
 
 **Technical Implementations:**
 - **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds, extracting and backfilling order, grinder, and bid data.
@@ -47,6 +47,9 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Operations Guides:** Slide-deck-style presentation pages for both Grinders and Staff, providing step-by-step instructions and key feature descriptions.
 - **Payment Proof on Mark Paid:** Staff/owners can upload payment proof when marking a payout as paid.
 - **Payout Filters:** Staff payouts page includes status and grinder name filters applied before categorization, with a clear button.
+- **Badge Management Page:** Dedicated `/badges` page for staff/owners to search grinders and award/remove achievement badges. Both auto-earned and manual staff-awarded badge types. Schema: `grinder_badges` table.
+- **Owner Dashboard Upgrade:** Owner overview has a premium hero header with Crown icon and gold accents, plus quick-action cards for Business, Payouts, Admin, and Badges. Owner theme uses darker card backgrounds, red-tinted borders, and gold accent color.
+- **Staff Notifications Filters:** Severity and read/unread status filters on the notifications page, with clear button and result count.
 - **Payout Reduction System:** Staff can request payout reductions with a reason; if staff submits, owner must approve/deny. Owners can apply reductions directly. Difference goes to company profit (updates `orders.companyProfit` and `assignments.grinderEarnings`). Schema fields on `payoutRequests`: `originalAmount`, `reductionReason`, `reductionRequestedBy`, `reductionRequestedAt`, `reductionStatus` (pending/approved/denied), `reductionApprovedBy`, `reductionApprovedAt`, `reductionDeniedReason`. Routes: `PATCH /api/staff/payout-requests/:id/reduce` (requireStaff), `PATCH /api/staff/payout-requests/:id/reduction-review` (requireOwner). Owner sees "Payout Reductions Pending Approval" section on Payouts page.
 
 ## External Dependencies

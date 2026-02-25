@@ -69,6 +69,12 @@
     --ring: 0 72% 51%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-ring: 0 72% 51%;
+    --accent: 45 100% 51%;
+    --accent-foreground: 240 10% 4%;
+    --card: 240 12% 7%;
+    --card-border: 0 40% 18%;
+    --border: 0 20% 14%;
+    --sidebar-background: 240 14% 5%;
   }
 
   .theme-staff {

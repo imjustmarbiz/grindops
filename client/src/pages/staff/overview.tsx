@@ -129,22 +129,49 @@ export default function StaffOverview() {
     <TooltipProvider>
     <AnimatedPage className="space-y-6">
       <FadeInUp>
-        <div className="flex flex-col gap-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <LayoutDashboard className="w-7 h-7 text-primary" />
-            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
-              {isOwner ? "Owner Command Center" : "Staff Command Center"}
-            </h1>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+        {isOwner ? (
+          <div className="relative overflow-hidden rounded-xl border border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30 p-5 sm:p-6">
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-red-500/[0.06] -translate-y-32 translate-x-32" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-amber-500/[0.04] translate-y-24 -translate-x-24" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/30 to-amber-500/20 flex items-center justify-center border border-red-500/20 shadow-lg shadow-red-500/10">
+                  <Crown className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
+                    Owner Command Center
+                  </h1>
+                  <p className="text-sm text-red-200/60">Full authority over operations, analytics, and team management</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                </div>
+                <LastUpdated date={lastUpdatedDate} />
+              </div>
             </div>
           </div>
-          <LastUpdated date={lastUpdatedDate} />
-        </div>
-        <p className="text-sm text-muted-foreground">Real-time analytics and operations overview</p>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <LayoutDashboard className="w-7 h-7 text-primary" />
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
+                  Staff Command Center
+                </h1>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                </div>
+              </div>
+              <LastUpdated date={lastUpdatedDate} />
+            </div>
+            <p className="text-sm text-muted-foreground">Real-time analytics and operations overview</p>
+          </div>
+        )}
       </FadeInUp>
 
       <FadeInUp>
@@ -269,6 +296,49 @@ export default function StaffOverview() {
           gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
       </div>
       </FadeInUp>
+
+      {isOwner && (
+        <FadeInUp>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div onClick={() => navigate("/business")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-900/5 border border-amber-500/15 cursor-pointer hover:border-amber-500/30 transition-all group" data-testid="quick-action-business">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <DollarSign className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Business</p>
+                <p className="text-[10px] text-muted-foreground">Revenue & margins</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/payouts")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-900/5 border border-emerald-500/15 cursor-pointer hover:border-emerald-500/30 transition-all group" data-testid="quick-action-payouts">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Payouts</p>
+                <p className="text-[10px] text-muted-foreground">Pending approvals</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/admin")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-900/5 border border-blue-500/15 cursor-pointer hover:border-blue-500/30 transition-all group" data-testid="quick-action-admin">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Admin</p>
+                <p className="text-[10px] text-muted-foreground">Team & settings</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/grinders")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-badges">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Crown className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Badges</p>
+                <p className="text-[10px] text-muted-foreground">Award & manage</p>
+              </div>
+            </div>
+          </div>
+        </FadeInUp>
+      )}
 
       <FadeInUp>
       <BiddingCountdownPanel />

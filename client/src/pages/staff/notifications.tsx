@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Eye, Loader2, CheckCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Bell, Eye, EyeOff, Loader2, CheckCheck, Filter, X } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Notification } from "@shared/schema";
 
 export default function StaffNotifications() {
   const { user } = useAuth();
   const userId = (user as any)?.discordId || user?.id || "";
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -31,12 +35,31 @@ export default function StaffNotifications() {
     return readBy.includes(userId);
   };
 
+  const filteredNotifications = notifications.filter(n => {
+    if (severityFilter !== "all" && n.severity !== severityFilter) return false;
+    if (statusFilter === "unread" && isRead(n)) return false;
+    if (statusFilter === "read" && !isRead(n)) return false;
+    return true;
+  });
+
   const unreadCount = notifications.filter(n => !isRead(n)).length;
+  const hasFilters = severityFilter !== "all" || statusFilter !== "all";
+
+  const clearFilters = () => {
+    setSeverityFilter("all");
+    setStatusFilter("all");
+  };
 
   const markAllRead = () => {
     notifications.filter(n => !isRead(n)).forEach(n => {
       markReadMutation.mutate(n.id);
     });
+  };
+
+  const toggleRead = (notif: Notification) => {
+    if (!isRead(notif)) {
+      markReadMutation.mutate(notif.id);
+    }
   };
 
   if (isLoading) {
@@ -73,6 +96,42 @@ export default function StaffNotifications() {
           </div>
         </FadeInUp>
 
+        <FadeInUp delay={0.03}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select value={severityFilter} onValueChange={setSeverityFilter}>
+              <SelectTrigger className="w-[130px] h-8 text-xs bg-white/[0.03] border-white/10" data-testid="filter-severity">
+                <SelectValue placeholder="Severity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Severity</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="success">Success</SelectItem>
+                <SelectItem value="danger">Danger</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[130px] h-8 text-xs bg-white/[0.03] border-white/10" data-testid="filter-status">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="unread">Unread</SelectItem>
+                <SelectItem value="read">Read</SelectItem>
+              </SelectContent>
+            </Select>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground" onClick={clearFilters} data-testid="button-clear-filters">
+                <X className="w-3 h-3 mr-1" /> Clear
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">
+              {filteredNotifications.length} of {notifications.length} shown
+            </span>
+          </div>
+        </FadeInUp>
+
         <FadeInUp delay={0.05}>
           <Card className={`border-0 bg-gradient-to-br ${unreadCount > 0 ? "from-primary/[0.08] via-background to-primary/[0.04]" : "from-background to-background"} overflow-hidden relative`} data-testid="card-notifications">
             <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-12 translate-x-12" />
@@ -90,17 +149,17 @@ export default function StaffNotifications() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {notifications.length === 0 ? (
+              {filteredNotifications.length === 0 ? (
                 <div className="text-center py-10" data-testid="text-no-notifications">
                   <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">
                     <Bell className="w-7 h-7 text-muted-foreground/30" />
                   </div>
-                  <p className="text-muted-foreground/60 text-sm">No notifications yet</p>
-                  <p className="text-muted-foreground/40 text-xs mt-1">System alerts and updates will appear here</p>
+                  <p className="text-muted-foreground/60 text-sm">{hasFilters ? "No notifications match filters" : "No notifications yet"}</p>
+                  <p className="text-muted-foreground/40 text-xs mt-1">{hasFilters ? "Try adjusting your filter criteria" : "System alerts and updates will appear here"}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {notifications.map((notif) => {
+                  {filteredNotifications.map((notif) => {
                     const read = isRead(notif);
                     const severityColors: Record<string, string> = {
                       info: "text-blue-400 bg-blue-500/[0.06] border-blue-500/20",
@@ -112,20 +171,34 @@ export default function StaffNotifications() {
                     return (
                       <div
                         key={notif.id}
-                        className={`flex items-start gap-3 p-3.5 rounded-lg border ${colors} cursor-pointer transition-all duration-200 ${read ? "opacity-50 hover:opacity-70" : "hover:brightness-110"}`}
-                        onClick={() => { if (!read) markReadMutation.mutate(notif.id); }}
+                        className={`flex items-start gap-3 p-3.5 rounded-lg border ${colors} transition-all duration-200 ${read ? "opacity-50 hover:opacity-70" : "hover:brightness-110"}`}
                         data-testid={`card-notification-${notif.id}`}
                       >
-                        {!read && <span className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0 animate-pulse" />}
-                        {read && <Eye className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            {!read && <span className="w-2 h-2 rounded-full bg-primary shrink-0 animate-pulse" />}
                             <span className="font-medium text-sm" data-testid={`text-notification-title-${notif.id}`}>{notif.title}</span>
                             <Badge variant="outline" className={`text-[10px] ${colors}`} data-testid={`badge-severity-${notif.id}`}>{notif.severity}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1" data-testid={`text-notification-body-${notif.id}`}>{notif.body}</p>
                           <p className="text-xs text-muted-foreground/60 mt-1.5">{new Date(notif.createdAt).toLocaleString()}</p>
                         </div>
+                        {!read ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                            onClick={() => toggleRead(notif)}
+                            disabled={markReadMutation.isPending}
+                            data-testid={`button-mark-read-${notif.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <div className="shrink-0 h-8 w-8 flex items-center justify-center">
+                            <EyeOff className="w-4 h-4 text-muted-foreground/40" />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
