@@ -41,13 +41,19 @@ const featureItems = [
   },
   {
     icon: ClipboardCheck,
-    title: "Scorecard",
+    title: "My Scorecard",
     desc: "Your performance profile showing quality score, letter grade, completion rate, customer reviews, and staff reports. Track how you're doing over time.",
     url: "/grinder/scorecard",
   },
   {
     icon: Brain,
-    title: "Scorecard & Queue",
+    title: "Queue",
+    desc: "See where you rank in the AI queue across all open orders. View your factor breakdown, improvement tips, and boost modifiers without revealing other grinders.",
+    url: "/grinder/queue",
+  },
+  {
+    icon: Brain,
+    title: "Scorecard & Queue Info",
     desc: "Understand how your scorecard grades feed into the AI queue ranking system. Learn the 9 factors that determine your queue position and how to improve.",
     url: "/scorecard-guide",
     isLink: true,

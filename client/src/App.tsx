@@ -32,6 +32,7 @@ import GrinderStatus from "@/pages/grinder/status";
 import GrinderGuide from "@/pages/grinder/guide";
 import ScorecardGuide from "@/pages/scorecard-guide";
 import GrinderScorecard from "@/pages/grinder/scorecard";
+import GrinderQueue from "@/pages/grinder/queue";
 import StaffEvents from "@/pages/staff/events";
 import GrinderEvents from "@/pages/grinder/events";
 import StaffPatchNotes from "@/pages/staff/patch-notes";
@@ -165,6 +166,7 @@ function Router() {
       <Route path="/grinder/status" component={() => <ProtectedRoute component={GrinderStatus} />} />
       <Route path="/grinder/guide" component={() => <ProtectedRoute component={GrinderGuide} />} />
       <Route path="/grinder/scorecard" component={() => <ProtectedRoute component={GrinderScorecard} />} />
+      <Route path="/grinder/queue" component={() => <ProtectedRoute component={GrinderQueue} />} />
       <Route path="/grinder/events" component={() => <ProtectedRoute component={GrinderEvents} />} />
       <Route path="/grinder/patch-notes" component={() => <ProtectedRoute component={GrinderPatchNotes} />} />
       <Route path="/grinder/reviews" component={() => <ProtectedRoute component={GrinderReviews} />} />

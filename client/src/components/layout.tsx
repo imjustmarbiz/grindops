@@ -45,7 +45,7 @@ const staffNavItems = [
   { title: "Services", url: "/services", icon: Package },
   { title: "Business Performance", url: "/business", icon: DollarSign },
   { title: "Features", url: "/features", icon: BookOpen },
-  { title: "Scorecard & Queue", url: "/scorecard-guide", icon: Brain },
+  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
 ];
 
 const grinderNavItems = [
@@ -54,7 +54,9 @@ const grinderNavItems = [
   { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
-  { title: "Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
+  { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
+  { title: "Queue", url: "/grinder/queue", icon: Brain },
+  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Status", url: "/grinder/status", icon: Bell },
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
@@ -62,7 +64,6 @@ const grinderNavItems = [
   { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
   { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
   { title: "Features", url: "/grinder/guide", icon: BookOpen },
-  { title: "Scorecard & Queue", url: "/scorecard-guide", icon: Brain },
 ];
 
 function AppSidebar() {
