@@ -117,8 +117,8 @@ export function useGrinderData() {
   });
 
   const markCompleteMutation = useMutation({
-    mutationFn: async ({ assignmentId, payoutPlatform, payoutDetails, savePayoutMethod }: { assignmentId: string; payoutPlatform: string; payoutDetails: string; savePayoutMethod?: boolean }) => {
-      const res = await apiRequest("PATCH", `/api/grinder/me/assignments/${assignmentId}/complete`, { payoutPlatform, payoutDetails, savePayoutMethod });
+    mutationFn: async ({ assignmentId, payoutPlatform, payoutDetails, savePayoutMethod, completionProofUrl }: { assignmentId: string; payoutPlatform: string; payoutDetails: string; savePayoutMethod?: boolean; completionProofUrl: string }) => {
+      const res = await apiRequest("PATCH", `/api/grinder/me/assignments/${assignmentId}/complete`, { payoutPlatform, payoutDetails, savePayoutMethod, completionProofUrl });
       return res.json();
     },
     onSuccess: () => {

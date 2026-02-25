@@ -19,6 +19,31 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+const proofsDir = path.join(process.cwd(), "uploads", "proofs");
+if (!fs.existsSync(proofsDir)) {
+  fs.mkdirSync(proofsDir, { recursive: true });
+}
+
+const proofUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, proofsDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const ext = path.extname(file.originalname);
+      cb(null, `${uniqueSuffix}${ext}`);
+    },
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(mp4|mov|webm|mkv|avi)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only video files are allowed (mp4, mov, webm, mkv, avi)"));
+    }
+  },
+});
+
 const chatUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadsDir),
@@ -1794,9 +1819,12 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Not your assignment" });
     }
 
-    const { payoutPlatform, payoutDetails, savePayoutMethod } = req.body;
+    const { payoutPlatform, payoutDetails, savePayoutMethod, completionProofUrl } = req.body;
     if (!payoutPlatform || !payoutDetails) {
       return res.status(400).json({ message: "Payout platform and details are required" });
+    }
+    if (!completionProofUrl) {
+      return res.status(400).json({ message: "Video proof of completion is required" });
     }
 
     const now = new Date();
@@ -1848,6 +1876,7 @@ export async function registerRoutes(
         status: "Pending",
         notes: "Auto-created on order completion",
         reviewedBy: null,
+        completionProofUrl: completionProofUrl || null,
       });
     }
 
@@ -3027,6 +3056,15 @@ export async function registerRoutes(
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
     const urls = files.map(f => `/uploads/chat/${f.filename}`);
     res.json({ urls });
+  });
+
+  app.post('/api/grinder/me/upload-proof', proofUpload.single('video'), async (req, res) => {
+    const userId = (req as any).userId;
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: "No video file uploaded" });
+    const url = `/uploads/proofs/${file.filename}`;
+    res.json({ url });
   });
 
   app.delete('/api/chat/threads/:threadId', async (req, res) => {

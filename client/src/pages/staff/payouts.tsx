@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp } from "lucide-react";
+import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
@@ -155,6 +155,11 @@ export default function StaffPayouts() {
                       <span className="text-xs text-muted-foreground">Order {p.orderId}</span>
                     </div>
                   </div>
+                  {p.completionProofUrl && (
+                    <a href={p.completionProofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs hover:bg-blue-500/20 transition-colors" data-testid={`link-proof-disputed-${p.id}`}>
+                      <Video className="w-3 h-3" /> View Completion Proof
+                    </a>
+                  )}
                   <div className="p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15">
                     <p className="text-xs font-medium text-orange-400 mb-1">Grinder's dispute reason:</p>
                     <p className="text-sm text-white/70">{p.disputeReason}</p>
@@ -256,6 +261,11 @@ export default function StaffPayouts() {
                         <span className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleDateString()}</span>
                       </div>
                       {p.notes && <p className="text-xs text-muted-foreground mt-1 italic">{p.notes}</p>}
+                      {p.completionProofUrl && (
+                        <a href={p.completionProofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs hover:bg-blue-500/20 transition-colors" data-testid={`link-proof-${p.id}`}>
+                          <Video className="w-3 h-3" /> View Completion Proof
+                        </a>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {p.status === "Pending" && (

@@ -29,6 +29,9 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Order Claim Requests:** Grinders can request to link existing orders to their profile, subject to staff approval.
 - **Daily Checkup Controls:** Global and per-order controls for enabling/disabling daily update checks.
 - **Twitch Integration:** Grinders can link Twitch accounts, allowing staff to view embedded live streams.
+- **Completion Video Proof:** Grinders must upload video proof (order completion + account removal from console) via `/api/grinder/me/upload-proof` when marking an order complete. Stored in `payoutRequests.completionProofUrl`. Staff can view proof links on the Payouts page. Videos stored in `uploads/proofs/` with 100MB limit.
+- **Activity Checkpoint Ticket Response:** Accept/Decline ticket buttons disappear after response (tracked via `hasTicketAck` flag from API). Confirmation modal required before submitting. Declined tickets require a reason note.
+- **Platform-Specific Icons:** Log In/Log Off buttons on grinder assignment cards show platform logos (Xbox, PS5, Steam, Nintendo Switch) based on the order's platform field. Uses `react-icons/fa6` (FaXbox) and `react-icons/si` (SiPlaystation5, SiSteam, SiNintendoswitch).
 
 ## External Dependencies
 - **PostgreSQL:** Primary database for all application data, managed with Drizzle ORM.

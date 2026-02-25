@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -55,6 +55,10 @@ export default function GrinderAssignments() {
   const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [ticketConfirm, setTicketConfirm] = useState<{ assignmentId: string; orderId: string; action: "accept" | "decline" } | null>(null);
   const [briefDialog, setBriefDialog] = useState<{ orderId: string; brief: string } | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   const checkpointMutation = useMutation({
     mutationFn: async (data: { assignmentId: string; orderId: string; type: string; response?: string; note?: string }) => {
@@ -196,7 +200,7 @@ export default function GrinderAssignments() {
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20" data-testid={`button-logoff-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
@@ -330,7 +334,7 @@ export default function GrinderAssignments() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!completeDialog} onOpenChange={(open) => { if (!open) { setCompleteDialog(null); setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); } }}>
+      <Dialog open={!!completeDialog} onOpenChange={(open) => { if (!open) { setCompleteDialog(null); setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); setProofFile(null); setProofUrl(null); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -344,6 +348,62 @@ export default function GrinderAssignments() {
               <p className="text-xl font-bold text-green-400" data-testid="text-complete-amount">
                 ${Number(completeDialog?.grinderEarnings || completeDialog?.bidAmount || 0).toFixed(2)}
               </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1">
+                <Video className="w-4 h-4 text-blue-400" /> Video Proof *
+              </label>
+              <p className="text-xs text-muted-foreground mb-2">Upload a video showing the order is complete and the customer's account has been removed from your console.</p>
+              <input
+                ref={proofInputRef}
+                type="file"
+                accept="video/*,.mp4,.mov,.webm,.mkv,.avi"
+                className="hidden"
+                data-testid="input-proof-file"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setProofFile(file);
+                  setUploadingProof(true);
+                  try {
+                    const formData = new FormData();
+                    formData.append("video", file);
+                    const res = await fetch("/api/grinder/me/upload-proof", { method: "POST", body: formData, credentials: "include" });
+                    if (!res.ok) {
+                      const err = await res.json().catch(() => ({ error: "Upload failed" }));
+                      throw new Error(err.error || err.message || "Upload failed");
+                    }
+                    const data = await res.json();
+                    setProofUrl(data.url);
+                    toast({ title: "Video uploaded successfully" });
+                  } catch (err: any) {
+                    toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+                    setProofFile(null);
+                    setProofUrl(null);
+                  } finally {
+                    setUploadingProof(false);
+                  }
+                }}
+              />
+              {!proofFile ? (
+                <Button type="button" variant="outline" className="w-full gap-2 border-dashed border-white/20 hover:border-white/40" data-testid="button-upload-proof"
+                  onClick={() => proofInputRef.current?.click()}>
+                  <Upload className="w-4 h-4" /> Select Video File
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  {uploadingProof ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+                  ) : proofUrl ? (
+                    <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                  ) : null}
+                  <span className="text-sm truncate flex-1">{proofFile.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{(proofFile.size / 1024 / 1024).toFixed(1)}MB</span>
+                  <button className="text-muted-foreground hover:text-white" data-testid="button-remove-proof" onClick={() => { setProofFile(null); setProofUrl(null); if (proofInputRef.current) proofInputRef.current.value = ""; }}>
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Where should we send your payout? *</label>
@@ -413,18 +473,21 @@ export default function GrinderAssignments() {
               </label>
             )}
             <Button className="w-full bg-green-600 hover:bg-green-700" data-testid="button-confirm-complete"
-              disabled={!completePlatform || !completeDetails || markCompleteMutation.isPending}
+              disabled={!completePlatform || !completeDetails || !proofUrl || uploadingProof || markCompleteMutation.isPending}
               onClick={() => {
                 markCompleteMutation.mutate({
                   assignmentId: completeDialog.id,
                   payoutPlatform: completePlatform,
                   payoutDetails: completeDetails,
                   savePayoutMethod: completeSaveMethod,
+                  completionProofUrl: proofUrl!,
                 });
                 setCompleteDialog(null);
                 setCompletePlatform("");
                 setCompleteDetails("");
                 setCompleteSaveMethod(true);
+                setProofFile(null);
+                setProofUrl(null);
               }}>
               {markCompleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
               Complete & Request Payout
