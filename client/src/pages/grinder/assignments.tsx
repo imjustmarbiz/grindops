@@ -163,6 +163,7 @@ export default function GrinderAssignments() {
         <HelpTip text="Track your active assignments and completed work." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
       </h2>
+      <p className="text-sm text-muted-foreground mt-1">Manage your active orders, send updates, and request payouts</p>
       </FadeInUp>
       {assignments.length > 0 && (
         <FadeInUp>

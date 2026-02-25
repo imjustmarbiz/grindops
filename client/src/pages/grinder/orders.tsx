@@ -162,6 +162,7 @@ export default function GrinderOrders() {
           <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{availableOrders.length}</Badge>
         </h2>
       </div>
+      <p className="text-sm text-muted-foreground mt-1">Browse open orders and place bids on work you want</p>
       </FadeInUp>
 
       <FadeInUp>

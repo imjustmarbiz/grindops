@@ -61,6 +61,7 @@ export default function GrinderBids() {
         My Bids
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{allBids.length}</Badge>
       </h2>
+      <p className="text-sm text-muted-foreground mt-1">Track your bid submissions, outcomes, and edit pending bids</p>
       </FadeInUp>
       {allBids.length > 0 && (
         <FadeInUp>

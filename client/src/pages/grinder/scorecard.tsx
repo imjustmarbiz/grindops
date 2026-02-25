@@ -88,6 +88,7 @@ export default function GrinderScorecard() {
         </div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-scorecard-header">My Scorecard <HelpTip text="Your performance profile — quality score, completion rate, and customer reviews." /></h1>
       </div>
+      <p className="text-sm text-muted-foreground mt-1">Your performance metrics, quality score, and customer reviews</p>
       </FadeInUp>
 
       <FadeInUp>

@@ -53,6 +53,7 @@ export default function GrinderQueue() {
             Your Queue Standing
             <HelpTip text="See where you rank in the AI queue across all open orders. Improve your weakest factors to move up." />
           </h2>
+          <p className="text-sm text-muted-foreground mt-1">See where you rank and how to improve your position</p>
           {queuePosition && queuePosition.bestPosition > 0 && (
             <Badge className={`border-0 ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-purple-500/20 text-purple-400"}`} data-testid="badge-best-position">
               Best: #{queuePosition.bestPosition}
