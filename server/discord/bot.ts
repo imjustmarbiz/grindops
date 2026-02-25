@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials } from "discord.js";
 import { storage } from "../storage";
-import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance } from "./mgtWatcher";
+import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance, backfillMissedMessages } from "./mgtWatcher";
 
 let client: Client | null = null;
 
@@ -487,6 +487,10 @@ export async function startDiscordBot() {
     }
 
     console.log("[discord] MGT Bot watcher active - monitoring bid war and proposals channels");
+
+    backfillMissedMessages(client!).catch(err => {
+      console.error("[discord] Backfill error:", err);
+    });
 
     try {
       const allGrinders = await storage.getGrinders();

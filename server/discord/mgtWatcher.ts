@@ -1,4 +1,4 @@
-import { type Message, type PartialMessage, type GuildMember } from "discord.js";
+import { type Client, type Message, type PartialMessage, type GuildMember } from "discord.js";
 import { storage } from "../storage";
 import { GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS, normalizePlatform } from "@shared/schema";
 import { recalcGrinderStats } from "../recalcStats";
@@ -517,11 +517,19 @@ export async function handleProposalMessage(message: Message) {
 
 export async function handleMessageUpdate(oldMessage: Message | PartialMessage, newMessage: Message | PartialMessage) {
   if (newMessage.author && newMessage.author.id !== MGT_BOT_USER_ID) return;
-  if (newMessage.channel.id !== BID_PROPOSALS_CHANNEL_ID) return;
 
   try {
     const message = newMessage.partial ? await newMessage.fetch() : newMessage;
     if (!message.embeds || message.embeds.length === 0) return;
+
+    if (message.channel.id === BID_WAR_CHANNEL_ID) {
+      await handleNewOrderMessage(message);
+      return;
+    }
+
+    if (message.channel.id !== BID_PROPOSALS_CHANNEL_ID) return;
+
+    await handleProposalMessage(message);
 
     const embed = message.embeds[0];
     const footerText = embed.footer?.text || "";
@@ -542,10 +550,7 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
     if (!proposalId) return;
 
     const existingBid = await storage.getBidByProposalId(proposalId);
-    if (!existingBid) {
-      await handleProposalMessage(message);
-      return;
-    }
+    if (!existingBid) return;
 
     let newStatus = existingBid.status;
     let acceptedBy: string | undefined;
@@ -631,5 +636,107 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
     }
   } catch (error) {
     console.error("[mgt-watcher] Error handling message update:", error);
+  }
+}
+
+export async function backfillMissedMessages(discordClient: Client): Promise<void> {
+  console.log("[mgt-watcher] Starting backfill scan for missed messages...");
+  let orderCount = 0;
+  let proposalCount = 0;
+
+  try {
+    const bidWarChannel = await discordClient.channels.fetch(BID_WAR_CHANNEL_ID).catch(() => null);
+    if (bidWarChannel && bidWarChannel.isTextBased()) {
+      const messages = await (bidWarChannel as any).messages.fetch({ limit: 100 });
+      const mgtMessages = messages.filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0);
+
+      for (const [, msg] of mgtMessages) {
+        try {
+          const embed = msg.embeds[0];
+          const title = embed.title || "";
+          const description = embed.description || "";
+          const hasOrderKeywords = title.toLowerCase().includes("order") ||
+                                   description.toLowerCase().includes("order") ||
+                                   description.toLowerCase().includes("proposal");
+          if (!hasOrderKeywords) continue;
+
+          let orderNumber: number | null = null;
+          for (const field of embed.fields || []) {
+            const name = field.name.replace(/[^\w\s]/g, "").trim().toLowerCase();
+            if (name.includes("order id") || name.includes("order")) {
+              const numMatch = field.value.match(/#?(\d+)/);
+              if (numMatch) orderNumber = parseInt(numMatch[1], 10);
+            }
+          }
+          if (!orderNumber) {
+            const titleMatch = title.match(/#(\d+)/) || description.match(/#(\d+)/);
+            if (titleMatch) orderNumber = parseInt(titleMatch[1], 10);
+          }
+          if (!orderNumber) {
+            const orderMatch = (title + " " + description).match(/Order\s*#?(\d+)/i);
+            if (orderMatch) orderNumber = parseInt(orderMatch[1], 10);
+          }
+          if (!orderNumber) continue;
+
+          const existing = await storage.getOrderByMgtNumber(orderNumber);
+          if (!existing) {
+            await handleNewOrderMessage(msg);
+            orderCount++;
+          }
+        } catch (e) {
+          console.error("[mgt-watcher] Error backfilling order message:", e);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[mgt-watcher] Error fetching bid war channel for backfill:", e);
+  }
+
+  try {
+    const proposalsChannel = await discordClient.channels.fetch(BID_PROPOSALS_CHANNEL_ID).catch(() => null);
+    if (proposalsChannel && proposalsChannel.isTextBased()) {
+      const messages = await (proposalsChannel as any).messages.fetch({ limit: 100 });
+      const mgtMessages = messages.filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0);
+
+      for (const [, msg] of mgtMessages) {
+        try {
+          const embed = msg.embeds[0];
+          const title = embed.title || "";
+          const description = embed.description || "";
+          if (!title.toLowerCase().includes("proposal") && !description.toLowerCase().includes("proposal")) continue;
+
+          let proposalId: number | null = null;
+          const footerText = embed.footer?.text || "";
+          const allText = title + " " + description + " " + footerText;
+          for (const field of embed.fields || []) {
+            const pMatch = (field.name + " " + field.value).match(/Proposal\s*ID:?\s*(\d+)/i);
+            if (pMatch) { proposalId = parseInt(pMatch[1], 10); break; }
+          }
+          if (!proposalId) {
+            const pMatch = allText.match(/Proposal\s*ID:?\s*(\d+)/i);
+            if (pMatch) proposalId = parseInt(pMatch[1], 10);
+          }
+          if (!proposalId) continue;
+
+          const existingBid = await storage.getBidByProposalId(proposalId);
+          if (!existingBid) {
+            await handleProposalMessage(msg);
+            proposalCount++;
+          } else {
+            await handleProposalMessage(msg);
+          }
+        } catch (e) {
+          console.error("[mgt-watcher] Error backfilling proposal message:", e);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[mgt-watcher] Error fetching proposals channel for backfill:", e);
+  }
+
+  if (orderCount > 0 || proposalCount > 0) {
+    console.log(`[mgt-watcher] Backfill complete: ${orderCount} new order(s), ${proposalCount} new proposal(s) found`);
+  } else {
+    console.log("[mgt-watcher] Backfill complete: no missed messages found");
   }
 }

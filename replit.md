@@ -19,7 +19,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Help Tooltips:** Contextual `HelpTip` components for on-demand explanations across the platform.
 
 **Technical Implementations:**
-- **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds to automatically extract order, grinder, and bid data.
+- **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds to automatically extract order, grinder, and bid data. On startup, backfills the last 100 messages from both bid war and proposals channels to catch any missed while offline. Edited proposal messages are fully re-processed (data + status) via `handleMessageUpdate`, which also handles bid war channel edits.
 - **Role-Based Features:** Supports multi-role grinders, elite priority order access, and staff alert messaging.
 - **Performance Management:** Includes an Elite Path Coaching system for personalized tips, a Strike Management System with fines and suspensions, and an Activity Checkpoint System for daily update compliance.
 - **Order Management:** Features live bidding countdown timers, staff override assignment capabilities (including replacement logic with profit calculation), manual order creation, and a system for linking Discord tickets to orders.
