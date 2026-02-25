@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CustomerReview, Grinder, Order, Service } from "@shared/schema";
+import type { CustomerReview, Grinder, Order, Service, ReviewAccessCode } from "@shared/schema";
 import {
-  Star, Check, X, MessageSquare, User, ExternalLink, Filter
+  Star, Check, X, MessageSquare, User, ExternalLink, Filter, Shield, Clock
 } from "lucide-react";
 
 function StatusBadge({ status }: { status: string }) {
@@ -162,6 +162,31 @@ export default function StaffReviews() {
   const { data: grinders = [] } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
   const { data: orders = [] } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+  const { data: accessCodes = [] } = useQuery<ReviewAccessCode[]>({ queryKey: ["/api/review-access/codes"] });
+
+  const pendingAccessRequests = useMemo(() => accessCodes.filter(c => c.status === "pending_approval"), [accessCodes]);
+
+  const approveAccessMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/review-access/${id}/approve`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/review-access/codes"] });
+      toast({ title: "Access approved" });
+    },
+  });
+
+  const denyAccessMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/review-access/${id}/deny`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/review-access/codes"] });
+      toast({ title: "Access denied" });
+    },
+  });
 
   const grinderMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -291,6 +316,42 @@ export default function StaffReviews() {
           </Card>
         </div>
       </FadeInUp>
+
+      {pendingAccessRequests.length > 0 && (
+        <FadeInUp>
+          <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] to-transparent" data-testid="card-pending-access">
+            <CardContent className="p-5 space-y-3">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Shield className="w-4 h-4 text-amber-400" />
+                Pending Customer Access Requests ({pendingAccessRequests.length})
+              </h3>
+              <p className="text-xs text-muted-foreground">Customers who entered a review access code and are waiting for approval.</p>
+              <div className="space-y-2">
+                {pendingAccessRequests.map(req => (
+                  <div key={req.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.03] border border-amber-500/[0.12]" data-testid={`card-access-request-${req.id}`}>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{req.customerName || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Code: <span className="font-mono">{req.accessCode}</span>
+                        {" · "}Grinder: {grinderMap.get(req.grinderId) || req.grinderId}
+                        {req.orderId && <> · Order: {req.orderId}</>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button size="sm" variant="ghost" className="text-emerald-400 gap-1" onClick={() => approveAccessMutation.mutate(req.id)} data-testid={`button-approve-access-${req.id}`}>
+                        <Check className="w-3.5 h-3.5" /> Approve
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-red-400 gap-1" onClick={() => denyAccessMutation.mutate(req.id)} data-testid={`button-deny-access-${req.id}`}>
+                        <X className="w-3.5 h-3.5" /> Deny
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      )}
 
       <FadeInUp>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">

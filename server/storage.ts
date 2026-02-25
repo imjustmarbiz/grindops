@@ -3,7 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
-  patchNotes, customerReviews, orderClaimRequests,
+  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -27,6 +27,7 @@ import {
   type PatchNote, type InsertPatchNote,
   type CustomerReview, type InsertCustomerReview,
   type OrderClaimRequest, type InsertOrderClaimRequest,
+  type ReviewAccessCode, type InsertReviewAccessCode,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -150,6 +151,13 @@ export interface IStorage {
   getOrderClaimRequest(id: string): Promise<OrderClaimRequest | undefined>;
   createOrderClaimRequest(request: InsertOrderClaimRequest): Promise<OrderClaimRequest>;
   updateOrderClaimRequest(id: string, data: Partial<OrderClaimRequest>): Promise<OrderClaimRequest | undefined>;
+
+  getReviewAccessCodes(grinderId?: string): Promise<ReviewAccessCode[]>;
+  getReviewAccessCode(id: string): Promise<ReviewAccessCode | undefined>;
+  getReviewAccessCodeByCode(accessCode: string): Promise<ReviewAccessCode | undefined>;
+  getReviewAccessCodeBySession(sessionToken: string): Promise<ReviewAccessCode | undefined>;
+  createReviewAccessCode(code: InsertReviewAccessCode): Promise<ReviewAccessCode>;
+  updateReviewAccessCode(id: string, data: Partial<ReviewAccessCode>): Promise<ReviewAccessCode | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1208,6 +1216,38 @@ export class DatabaseStorage implements IStorage {
 
   async updateOrderClaimRequest(id: string, data: Partial<OrderClaimRequest>): Promise<OrderClaimRequest | undefined> {
     const [updated] = await db.update(orderClaimRequests).set(data).where(eq(orderClaimRequests.id, id)).returning();
+    return updated;
+  }
+
+  async getReviewAccessCodes(grinderId?: string): Promise<ReviewAccessCode[]> {
+    if (grinderId) {
+      return await db.select().from(reviewAccessCodes).where(eq(reviewAccessCodes.grinderId, grinderId)).orderBy(desc(reviewAccessCodes.createdAt));
+    }
+    return await db.select().from(reviewAccessCodes).orderBy(desc(reviewAccessCodes.createdAt));
+  }
+
+  async getReviewAccessCode(id: string): Promise<ReviewAccessCode | undefined> {
+    const [code] = await db.select().from(reviewAccessCodes).where(eq(reviewAccessCodes.id, id));
+    return code;
+  }
+
+  async getReviewAccessCodeByCode(accessCode: string): Promise<ReviewAccessCode | undefined> {
+    const [code] = await db.select().from(reviewAccessCodes).where(eq(reviewAccessCodes.accessCode, accessCode));
+    return code;
+  }
+
+  async getReviewAccessCodeBySession(sessionToken: string): Promise<ReviewAccessCode | undefined> {
+    const [code] = await db.select().from(reviewAccessCodes).where(eq(reviewAccessCodes.sessionToken, sessionToken));
+    return code;
+  }
+
+  async createReviewAccessCode(code: InsertReviewAccessCode): Promise<ReviewAccessCode> {
+    const [created] = await db.insert(reviewAccessCodes).values(code).returning();
+    return created;
+  }
+
+  async updateReviewAccessCode(id: string, data: Partial<ReviewAccessCode>): Promise<ReviewAccessCode | undefined> {
+    const [updated] = await db.update(reviewAccessCodes).set(data).where(eq(reviewAccessCodes.id, id)).returning();
     return updated;
   }
 }

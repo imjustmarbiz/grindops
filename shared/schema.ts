@@ -415,6 +415,25 @@ export const orderClaimRequests = pgTable("order_claim_requests", {
   decidedAt: timestamp("decided_at"),
 });
 
+export const reviewAccessCodes = pgTable("review_access_codes", {
+  id: varchar("id").primaryKey(),
+  orderId: varchar("order_id").references(() => orders.id),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  accessCode: varchar("access_code").notNull(),
+  customerName: text("customer_name"),
+  status: text("status").notNull().default("unused"),
+  sessionToken: varchar("session_token"),
+  approvedBy: varchar("approved_by"),
+  approvedByName: text("approved_by_name"),
+  approvedAt: timestamp("approved_at"),
+  deniedBy: varchar("denied_by"),
+  deniedByName: text("denied_by_name"),
+  deniedAt: timestamp("denied_at"),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],
@@ -469,6 +488,7 @@ export const insertEventSchema = createInsertSchema(events).omit({ createdAt: tr
 export const insertPatchNoteSchema = createInsertSchema(patchNotes).omit({ createdAt: true, publishedAt: true });
 export const insertCustomerReviewSchema = createInsertSchema(customerReviews).omit({ createdAt: true, updatedAt: true, decisionBy: true, decisionByName: true, decisionNote: true, decisionAt: true });
 export const insertOrderClaimRequestSchema = createInsertSchema(orderClaimRequests).omit({ requestedAt: true, decidedAt: true, decidedBy: true, decidedByName: true, decisionNote: true });
+export const insertReviewAccessCodeSchema = createInsertSchema(reviewAccessCodes).omit({ createdAt: true, approvedBy: true, approvedByName: true, approvedAt: true, deniedBy: true, deniedByName: true, deniedAt: true, usedAt: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -516,6 +536,8 @@ export type CustomerReview = typeof customerReviews.$inferSelect;
 export type InsertCustomerReview = z.infer<typeof insertCustomerReviewSchema>;
 export type OrderClaimRequest = typeof orderClaimRequests.$inferSelect;
 export type InsertOrderClaimRequest = z.infer<typeof insertOrderClaimRequestSchema>;
+export type ReviewAccessCode = typeof reviewAccessCodes.$inferSelect;
+export type InsertReviewAccessCode = z.infer<typeof insertReviewAccessCodeSchema>;
 
 export type GrinderScorecard = {
   grinder: Grinder;

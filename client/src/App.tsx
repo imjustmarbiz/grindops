@@ -45,6 +45,7 @@ import StaffServices from "@/pages/staff/services";
 import BusinessPerformance from "@/pages/staff/business";
 import GrinderCalendar from "@/pages/grinder/calendar";
 import StaffFeatures from "@/pages/staff/features";
+import CustomerReviewPage from "@/pages/customer-review";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean }) {
@@ -171,6 +172,8 @@ function Router() {
       <Route path="/grinder/calendar" component={() => <ProtectedRoute component={GrinderCalendar} />} />
       <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
       
+      <Route path="/customer-review" component={CustomerReviewPage} />
+
       <Route component={NotFound} />
     </Switch>
   );

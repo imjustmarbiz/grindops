@@ -103,7 +103,7 @@ export async function registerRoutes(
   app.use('/uploads', express.default.static(path.join(process.cwd(), "uploads")));
 
   app.use('/api', (req, res, next) => {
-    if (req.path.startsWith('/auth') || req.path === '/logout') {
+    if (req.path.startsWith('/auth') || req.path === '/logout' || req.path.startsWith('/public/')) {
       return next();
     }
     return isAuthenticated(req, res, next);
@@ -3713,6 +3713,273 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating order claim:", error);
       res.status(500).json({ error: "Failed to update order claim" });
+    }
+  });
+
+  // ===== REVIEW ACCESS CODES (Password-Protected Customer Reviews) =====
+
+  app.post('/api/review-access/generate', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { orderId } = req.body;
+
+      let grinderId: string;
+      if (user.role === "grinder") {
+        grinderId = user.grinderId;
+      } else if (req.body.grinderId) {
+        grinderId = req.body.grinderId;
+      } else {
+        return res.status(400).json({ error: "Grinder ID is required" });
+      }
+
+      const grinder = await storage.getGrinder(grinderId);
+      if (!grinder) return res.status(404).json({ error: "Grinder not found" });
+
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let accessCode = "";
+      for (let i = 0; i < 8; i++) {
+        accessCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const id = `RAC-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const code = await storage.createReviewAccessCode({
+        id,
+        orderId: orderId || null,
+        grinderId,
+        accessCode,
+        status: "unused",
+        sessionToken: null,
+        customerName: null,
+        expiresAt,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "review_access",
+        entityId: id,
+        action: "access_code_generated",
+        actor: user.displayName || user.username || grinder.name,
+        details: JSON.stringify({ orderId, grinderId, expiresAt: expiresAt.toISOString() }),
+      });
+
+      res.json(code);
+    } catch (error) {
+      console.error("Error generating review access code:", error);
+      res.status(500).json({ error: "Failed to generate access code" });
+    }
+  });
+
+  app.get('/api/review-access/codes', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (user.role === "grinder") {
+        const codes = await storage.getReviewAccessCodes(user.grinderId);
+        return res.json(codes);
+      }
+      const grinderId = req.query.grinderId as string | undefined;
+      const codes = await storage.getReviewAccessCodes(grinderId);
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching access codes:", error);
+      res.status(500).json({ error: "Failed to fetch access codes" });
+    }
+  });
+
+  app.patch('/api/review-access/:id/approve', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const code = await storage.getReviewAccessCode(req.params.id);
+      if (!code) return res.status(404).json({ error: "Access request not found" });
+
+      if (user.role === "grinder" && code.grinderId !== user.grinderId) {
+        return res.status(403).json({ error: "Not your access request" });
+      }
+
+      const sessionToken = `ST-${Date.now()}-${Math.random().toString(36).substr(2, 12)}`;
+
+      const updated = await storage.updateReviewAccessCode(req.params.id, {
+        status: "approved",
+        sessionToken,
+        approvedBy: user.id,
+        approvedByName: user.displayName || user.username,
+        approvedAt: new Date(),
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "review_access",
+        entityId: req.params.id,
+        action: "access_approved",
+        actor: user.displayName || user.username,
+        details: JSON.stringify({ customerName: code.customerName, grinderId: code.grinderId }),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error approving access:", error);
+      res.status(500).json({ error: "Failed to approve access" });
+    }
+  });
+
+  app.patch('/api/review-access/:id/deny', isAuthenticated, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const code = await storage.getReviewAccessCode(req.params.id);
+      if (!code) return res.status(404).json({ error: "Access request not found" });
+
+      if (user.role === "grinder" && code.grinderId !== user.grinderId) {
+        return res.status(403).json({ error: "Not your access request" });
+      }
+
+      const updated = await storage.updateReviewAccessCode(req.params.id, {
+        status: "denied",
+        deniedBy: user.id,
+        deniedByName: user.displayName || user.username,
+        deniedAt: new Date(),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error denying access:", error);
+      res.status(500).json({ error: "Failed to deny access" });
+    }
+  });
+
+  // ===== PUBLIC CUSTOMER REVIEW ENDPOINTS (No Auth Required) =====
+
+  app.post('/api/public/review-access/verify', async (req, res) => {
+    try {
+      const { accessCode, customerName } = req.body;
+      if (!accessCode || !customerName) {
+        return res.status(400).json({ error: "Access code and your name are required" });
+      }
+
+      const code = await storage.getReviewAccessCodeByCode(accessCode.toUpperCase().trim());
+      if (!code) return res.status(404).json({ error: "Invalid access code" });
+
+      if (new Date() > new Date(code.expiresAt)) {
+        return res.status(410).json({ error: "This access code has expired" });
+      }
+
+      if (code.status === "denied") {
+        return res.status(403).json({ error: "This access request was denied" });
+      }
+
+      if (code.status === "approved" && code.sessionToken) {
+        return res.json({ status: "approved", sessionToken: code.sessionToken, message: "Access already approved" });
+      }
+
+      if (code.status === "used") {
+        return res.status(410).json({ error: "This access code has already been used to submit a review" });
+      }
+
+      await storage.updateReviewAccessCode(code.id, {
+        status: "pending_approval",
+        customerName: customerName.trim(),
+        usedAt: new Date(),
+      });
+
+      const grinder = await storage.getGrinder(code.grinderId);
+
+      await storage.createNotification({
+        id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        title: "Customer Review Access Request",
+        message: `${customerName.trim()} entered a review access code and is waiting for approval.`,
+        type: "info",
+        roleScope: "staff",
+        userId: null,
+        readBy: [],
+      });
+
+      res.json({ 
+        status: "pending_approval", 
+        accessId: code.id,
+        message: "Your access code has been verified. Please wait for approval before submitting your review." 
+      });
+    } catch (error) {
+      console.error("Error verifying access code:", error);
+      res.status(500).json({ error: "Failed to verify access code" });
+    }
+  });
+
+  app.get('/api/public/review-access/:accessId/status', async (req, res) => {
+    try {
+      const code = await storage.getReviewAccessCode(req.params.accessId);
+      if (!code) return res.status(404).json({ error: "Access request not found" });
+
+      if (code.status === "approved" && code.sessionToken) {
+        return res.json({ status: "approved", sessionToken: code.sessionToken });
+      }
+
+      res.json({ status: code.status });
+    } catch (error) {
+      console.error("Error checking access status:", error);
+      res.status(500).json({ error: "Failed to check status" });
+    }
+  });
+
+  app.post('/api/public/review/submit', async (req, res) => {
+    try {
+      const { sessionToken, rating, title, body, proofLinks, proofNotes } = req.body;
+      if (!sessionToken) return res.status(401).json({ error: "Session token is required" });
+      if (!rating || !title || !body) return res.status(400).json({ error: "Rating, title, and body are required" });
+      if (rating < 1 || rating > 5) return res.status(400).json({ error: "Rating must be 1-5" });
+
+      const code = await storage.getReviewAccessCodeBySession(sessionToken);
+      if (!code) return res.status(401).json({ error: "Invalid session token" });
+
+      if (code.status !== "approved") {
+        return res.status(403).json({ error: "Access not approved" });
+      }
+
+      if (new Date() > new Date(code.expiresAt)) {
+        return res.status(410).json({ error: "This access code has expired" });
+      }
+
+      const reviewId = `REV-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const review = await storage.createCustomerReview({
+        id: reviewId,
+        grinderId: code.grinderId,
+        orderId: code.orderId || null,
+        reviewerId: `customer-${code.id}`,
+        reviewerName: code.customerName || "Customer",
+        reviewerRole: "customer",
+        rating,
+        title: title.trim(),
+        body: body.trim(),
+        proofLinks: proofLinks || [],
+        proofNotes: proofNotes || null,
+        status: "pending",
+      });
+
+      await storage.updateReviewAccessCode(code.id, { status: "used" });
+
+      await storage.createNotification({
+        id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        title: "New Customer Review Submitted",
+        message: `${code.customerName || "A customer"} submitted a review. Awaiting staff approval.`,
+        type: "info",
+        roleScope: "staff",
+        userId: null,
+        readBy: [],
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "customer_review",
+        entityId: reviewId,
+        action: "customer_review_submitted",
+        actor: code.customerName || "Customer",
+        details: JSON.stringify({ grinderId: code.grinderId, orderId: code.orderId, rating, accessCodeId: code.id }),
+      });
+
+      res.json({ success: true, message: "Review submitted successfully! It will be reviewed by staff." });
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      res.status(500).json({ error: "Failed to submit review" });
     }
   });
 
