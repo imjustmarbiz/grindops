@@ -48,7 +48,7 @@ export default function GrinderPatchNotes() {
             <Newspaper className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-patch-notes-title">Patch Notes</h2>
+            <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-patch-notes-title">Staff Notes</h2>
             <p className="text-sm text-muted-foreground">Latest updates and changes to the platform</p>
           </div>
         </div>

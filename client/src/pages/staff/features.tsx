@@ -94,8 +94,8 @@ const features = [
   },
   {
     icon: Newspaper,
-    title: "Patch Notes",
-    description: "Publish development patch notes that get AI-rewritten for the grinder audience. Keep your team informed about platform updates and new features.",
+    title: "Staff Notes",
+    description: "Publish staff notes that get AI-rewritten for the grinder audience. Keep your team informed about platform updates and new features.",
     url: "/patch-notes",
   },
   {

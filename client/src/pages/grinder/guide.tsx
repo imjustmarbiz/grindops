@@ -66,7 +66,7 @@ const featureItems = [
   },
   {
     icon: Newspaper,
-    title: "Patch Notes",
+    title: "Staff Notes",
     desc: "Read the latest platform updates and changes. Stay informed about new features, bug fixes, and improvements that affect how you use the dashboard.",
     url: "/grinder/patch-notes",
   },

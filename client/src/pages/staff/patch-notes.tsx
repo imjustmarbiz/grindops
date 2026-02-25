@@ -152,9 +152,9 @@ export default function StaffPatchNotes() {
             <img src={spLogo} alt="SP" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
             <div>
               <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-glow" data-testid="text-patch-notes-title">
-                Patch Notes
+                Staff Notes
               </h1>
-              <p className="text-sm text-muted-foreground">Create, polish, and publish patch notes for grinders</p>
+              <p className="text-sm text-muted-foreground">Create, polish, and publish staff notes for grinders</p>
             </div>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
