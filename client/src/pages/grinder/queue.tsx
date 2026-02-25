@@ -85,8 +85,10 @@ export default function GrinderQueue() {
                     Avg. rank <span className={`font-bold ${isElite ? "text-cyan-400" : "text-purple-400"}`}>#{queuePosition.averagePosition}</span> across {queuePosition.rankedIn} order{queuePosition.rankedIn !== 1 ? "s" : ""}
                     {queuePosition.totalGrindersInQueue > 0 && <span className="text-white/30"> · {queuePosition.totalGrindersInQueue} grinders eligible</span>}
                   </p>
+                ) : queuePosition.totalOpenOrders === 0 ? (
+                  <p className="text-sm text-amber-400">No open orders right now — you'll be ranked when new orders are posted</p>
                 ) : (
-                  <p className="text-sm text-red-400">Not currently eligible for the queue</p>
+                  <p className="text-sm text-amber-400">Waiting to be ranked — submit bids on open orders to appear in the queue</p>
                 )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
