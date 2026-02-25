@@ -57,7 +57,7 @@ const grinderNavItems = [
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
-  { title: "Status", url: "/grinder/status", icon: Bell },
+  { title: "Grinder Status", url: "/grinder/status", icon: Bell },
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
   { title: "Submit Review", url: "/grinder/reviews", icon: Star },
   { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
