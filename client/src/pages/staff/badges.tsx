@@ -112,11 +112,7 @@ export default function StaffBadges() {
                     <SelectContent className="max-h-[300px]">
                       {grinders.map(g => (
                         <SelectItem key={g.id} value={g.id} data-testid={`grinder-option-${g.id}`}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{g.name}</span>
-                            {g.discordUsername && <span className="text-muted-foreground text-xs">@{g.discordUsername}</span>}
-                            <span className="text-[10px] text-muted-foreground/60 ml-auto">{g.category || "grinder"}</span>
-                          </div>
+                          {g.name}{g.discordUsername ? ` (@${g.discordUsername})` : ""} — {g.category || "grinder"}
                         </SelectItem>
                       ))}
                     </SelectContent>
