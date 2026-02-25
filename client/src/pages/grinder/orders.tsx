@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGrinderData, getDiscordMessageLink, getBidWarLink, BID_WAR_CHANNEL_ID } from "@/hooks/use-grinder-data";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InlineCountdown } from "@/components/bidding-countdown";
 import {
   Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign, AlertTriangle,
-  Brain, ChevronDown, ChevronUp, Crown, Gauge, Scale, Shield, Star, Lightbulb, TrendingUp, Info
+  Brain, ChevronDown, ChevronUp, Crown, Gauge, Scale, Shield, Star, Lightbulb, TrendingUp, Info, Filter, ArrowUpDown
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -50,15 +51,51 @@ export default function GrinderOrders() {
   const [placeBidCanStart, setPlaceBidCanStart] = useState("");
   const [viewDetailsOrder, setViewDetailsOrder] = useState<any>(null);
   const [showQueueStanding, setShowQueueStanding] = useState(false);
+  const [filterService, setFilterService] = useState("all");
+  const [filterPlatform, setFilterPlatform] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
 
   const { data: queuePosition, isLoading: queueLoading } = useQuery<any>({
     queryKey: ["/api/grinder/me/queue-position"],
   });
 
+  const uniqueServices = useMemo(() => {
+    const set = new Set<string>();
+    availableOrders.forEach((o: any) => { if (o.serviceId) set.add(o.serviceId); });
+    return Array.from(set);
+  }, [availableOrders]);
+
+  const uniquePlatforms = useMemo(() => {
+    const set = new Set<string>();
+    availableOrders.forEach((o: any) => { if (o.platform) set.add(o.platform); });
+    return Array.from(set).sort();
+  }, [availableOrders]);
+
+  const filteredOrders = useMemo(() => {
+    let orders = [...availableOrders];
+    if (filterService !== "all") orders = orders.filter((o: any) => o.serviceId === filterService);
+    if (filterPlatform !== "all") orders = orders.filter((o: any) => o.platform === filterPlatform);
+
+    orders.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case "newest": return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "oldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "due-soon": return new Date(a.orderDueDate).getTime() - new Date(b.orderDueDate).getTime();
+        case "complexity-high": return (b.complexity || 0) - (a.complexity || 0);
+        case "complexity-low": return (a.complexity || 0) - (b.complexity || 0);
+        case "most-bids": return (b.totalBids || 0) - (a.totalBids || 0);
+        case "fewest-bids": return (a.totalBids || 0) - (b.totalBids || 0);
+        default: return 0;
+      }
+    });
+    return orders;
+  }, [availableOrders, filterService, filterPlatform, sortBy]);
+
   if (!grinder) return null;
 
-  const replacementOrders = availableOrders.filter((o: any) => o.isEmergency === true);
-  const regularOrders = availableOrders.filter((o: any) => !o.isEmergency);
+  const replacementOrders = filteredOrders.filter((o: any) => o.isEmergency === true);
+  const regularOrders = filteredOrders.filter((o: any) => !o.isEmergency);
+  const activeFilterCount = (filterService !== "all" ? 1 : 0) + (filterPlatform !== "all" ? 1 : 0);
 
   const renderOrderCard = (order: any, isReplacement?: boolean) => (
     <Card
@@ -160,6 +197,66 @@ export default function GrinderOrders() {
         </h2>
       </div>
       <p className="text-sm text-muted-foreground mt-1">Browse open orders and place bids on work you want</p>
+      </FadeInUp>
+
+      <FadeInUp>
+        <div className="flex flex-wrap items-center gap-2" data-testid="section-order-filters">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filter:</span>
+          </div>
+          <Select value={filterService} onValueChange={setFilterService}>
+            <SelectTrigger className="h-8 text-xs bg-white/[0.03] border-white/10 w-auto min-w-[120px]" data-testid="filter-service">
+              <SelectValue placeholder="Service" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Services</SelectItem>
+              {uniqueServices.map(id => (
+                <SelectItem key={id} value={id}>{serviceName(id)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterPlatform} onValueChange={setFilterPlatform}>
+            <SelectTrigger className="h-8 text-xs bg-white/[0.03] border-white/10 w-auto min-w-[100px]" data-testid="filter-platform">
+              <SelectValue placeholder="Platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Platforms</SelectItem>
+              {uniquePlatforms.map(p => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="h-8 text-xs bg-white/[0.03] border-white/10 w-auto min-w-[120px]" data-testid="sort-orders">
+              <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
+              <SelectItem value="due-soon">Due Soonest</SelectItem>
+              <SelectItem value="complexity-high">Complexity: High</SelectItem>
+              <SelectItem value="complexity-low">Complexity: Low</SelectItem>
+              <SelectItem value="most-bids">Most Bids</SelectItem>
+              <SelectItem value="fewest-bids">Fewest Bids</SelectItem>
+            </SelectContent>
+          </Select>
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground px-2"
+              onClick={() => { setFilterService("all"); setFilterPlatform("all"); }}
+              data-testid="button-clear-filters"
+            >
+              Clear filters ({activeFilterCount})
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto">
+            {filteredOrders.length}{filteredOrders.length !== availableOrders.length ? ` of ${availableOrders.length}` : ""} order{filteredOrders.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </FadeInUp>
 
       <FadeInUp>
