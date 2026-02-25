@@ -49,6 +49,7 @@ const staffNavItems = [
 ];
 
 const grinderNavItems = [
+  { title: "Operations Guide", url: "/grinder/ops-guide", icon: ScrollText },
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Notifications", url: "/grinder/notifications", icon: Bell },
   { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
@@ -67,7 +68,6 @@ const grinderNavItems = [
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
   { title: "Features", url: "/grinder/guide", icon: BookOpen },
-  { title: "Operations Guide", url: "/grinder/ops-guide", icon: ScrollText },
 ];
 
 function AppSidebar() {
@@ -151,7 +151,7 @@ function AppSidebar() {
                   className={`w-fit text-[10px] px-1.5 py-0 ${
                     isOwner ? "bg-[#fd853f]/20 text-[#fd853f] border-[#fd853f]/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
-                    isElite ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/30" :
+                    isElite ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" :
                     "bg-muted text-muted-foreground"
                   }`}
                   data-testid="text-user-role"
