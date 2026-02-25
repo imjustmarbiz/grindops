@@ -179,6 +179,52 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/owner/staff-members", requireOwner, async (req, res) => {
+    try {
+      const staffUsers = await db.select().from(users)
+        .where(or(eq(users.role, "staff"), eq(users.role, "owner")));
+      const allAuditLogs = await storage.getAuditLogs();
+      const allTasks = await storage.getStaffTasks();
+
+      const members = staffUsers.map(s => {
+        const discordId = s.discordId || s.id;
+        const staffLogs = allAuditLogs.filter(l => {
+          const actor = l.actor?.toLowerCase() || "";
+          const username = (s.discordUsername || "").toLowerCase();
+          return actor === username || actor === discordId;
+        });
+        const staffTasksAssigned = allTasks.filter(t => t.assignedBy === discordId);
+        const staffTasksReceived = allTasks.filter(t => t.assignedTo === discordId);
+        const pendingTasks = staffTasksReceived.filter(t => t.status === "pending").length;
+        const completedTasks = staffTasksReceived.filter(t => t.status === "completed").length;
+
+        const now = Date.now();
+        const last24h = staffLogs.filter(l => now - new Date(l.createdAt).getTime() < 86400000).length;
+        const last7d = staffLogs.filter(l => now - new Date(l.createdAt).getTime() < 604800000).length;
+        const lastAction = staffLogs.length > 0 ? staffLogs[0].createdAt : null;
+
+        return {
+          id: s.id,
+          discordId,
+          name: s.discordUsername || s.firstName || "Staff",
+          role: s.role,
+          avatarUrl: s.discordAvatar ? `https://cdn.discordapp.com/avatars/${s.discordId}/${s.discordAvatar}.png` : s.profileImageUrl || null,
+          totalActions: staffLogs.length,
+          actionsLast24h: last24h,
+          actionsLast7d: last7d,
+          lastAction,
+          tasksAssigned: staffTasksAssigned.length,
+          pendingTasks,
+          completedTasks,
+        };
+      });
+
+      res.json(members);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/owner/clear-data", requireOwner, async (req, res) => {
     try {
       const { tables } = req.body;

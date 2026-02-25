@@ -9,10 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } from "@/lib/animations";
+import { useQuery } from "@tanstack/react-query";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard,
+  ClipboardList, UserCheck, History,
 } from "lucide-react";
 
 
@@ -75,6 +78,12 @@ export default function StaffOverview() {
   } = useStaffData();
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: staffMembers = [] } = useQuery<any[]>({
+    queryKey: ["/api/owner/staff-members"],
+    enabled: isOwner,
+    refetchInterval: 30000,
+  });
 
   const latestUpdate = Math.max(analyticsUpdatedAt || 0, grindersUpdatedAt || 0, auditLogsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
@@ -337,6 +346,128 @@ export default function StaffOverview() {
               </div>
             </div>
           </div>
+        </FadeInUp>
+      )}
+
+      {isOwner && staffMembers.length > 0 && (
+        <FadeInUp>
+          <Card className="border-red-500/10 bg-gradient-to-br from-red-950/20 via-background to-red-900/5">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                    <UserCheck className="w-4 h-4 text-red-400" />
+                  </div>
+                  Staff Overview
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-white/5 text-muted-foreground border-0 text-[10px]">
+                    {staffMembers.length} member{staffMembers.length !== 1 ? "s" : ""}
+                  </Badge>
+                  <Badge className="bg-emerald-500/10 text-emerald-400 border-0 text-[10px]">
+                    {staffMembers.reduce((s: number, m: any) => s + m.actionsLast24h, 0)} actions today
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
+                  <p className="text-2xl font-bold text-blue-400" data-testid="text-total-staff">{staffMembers.length}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Total Staff</p>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-center">
+                  <p className="text-2xl font-bold text-emerald-400" data-testid="text-total-actions-7d">{staffMembers.reduce((s: number, m: any) => s + m.actionsLast7d, 0)}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Actions (7d)</p>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
+                  <p className="text-2xl font-bold text-amber-400" data-testid="text-pending-tasks">{staffMembers.reduce((s: number, m: any) => s + m.pendingTasks, 0)}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Pending Tasks</p>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-center">
+                  <p className="text-2xl font-bold text-purple-400" data-testid="text-completed-tasks">{staffMembers.reduce((s: number, m: any) => s + m.completedTasks, 0)}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Tasks Done</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {staffMembers.sort((a: any, b: any) => b.actionsLast7d - a.actionsLast7d).map((member: any) => {
+                  const isActive24h = member.actionsLast24h > 0;
+                  const maxActions7d = Math.max(...staffMembers.map((m: any) => m.actionsLast7d), 1);
+                  const barWidth = maxActions7d > 0 ? (member.actionsLast7d / maxActions7d) * 100 : 0;
+                  return (
+                    <div key={member.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors" data-testid={`card-staff-${member.discordId}`}>
+                      <Avatar className="w-9 h-9 border border-white/10">
+                        <AvatarImage src={member.avatarUrl || undefined} />
+                        <AvatarFallback className="bg-white/5 text-xs">{member.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium truncate">{member.name}</span>
+                          <Badge className={`border-0 text-[9px] px-1.5 py-0 ${member.role === "owner" ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
+                            {member.role === "owner" ? "Owner" : "Staff"}
+                          </Badge>
+                          {isActive24h && (
+                            <div className="flex items-center gap-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span className="text-[9px] text-emerald-400">Active</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full transition-all duration-700" style={{ width: `${barWidth}%` }} />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{member.actionsLast7d} actions</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-right shrink-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="text-center cursor-default">
+                              <div className="flex items-center gap-1 justify-center">
+                                <ClipboardList className="w-3 h-3 text-muted-foreground" />
+                                <span className={`text-sm font-bold ${member.pendingTasks > 0 ? "text-amber-400" : "text-muted-foreground"}`}>{member.pendingTasks}</span>
+                              </div>
+                              <p className="text-[8px] text-muted-foreground">tasks</p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>{member.pendingTasks} pending, {member.completedTasks} completed</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="text-center cursor-default hidden sm:block">
+                              <div className="flex items-center gap-1 justify-center">
+                                <History className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-sm font-bold text-muted-foreground">{member.actionsLast24h}</span>
+                              </div>
+                              <p className="text-[8px] text-muted-foreground">today</p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>{member.actionsLast24h} actions in the last 24 hours</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {staffMembers.some((m: any) => m.lastAction) && (
+                <div className="pt-2 border-t border-white/5">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5" />
+                    Most recent staff action: {(() => {
+                      const latest = staffMembers
+                        .filter((m: any) => m.lastAction)
+                        .sort((a: any, b: any) => new Date(b.lastAction).getTime() - new Date(a.lastAction).getTime())[0];
+                      if (!latest) return "None";
+                      return `${latest.name} — ${new Date(latest.lastAction).toLocaleString()}`;
+                    })()}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </FadeInUp>
       )}
 
