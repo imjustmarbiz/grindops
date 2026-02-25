@@ -25,28 +25,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const staffNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
+  { title: "Notifications", url: "/notifications", icon: Bell },
+  { title: "To-Do List", url: "/todo", icon: ClipboardList },
   { title: "Operations", url: "/operations", icon: Wrench },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-  { title: "Payouts", url: "/payouts", icon: Wallet },
   { title: "Admin", url: "/admin", icon: Settings },
-  { title: "AI Queue", url: "/queue", icon: Brain },
-  { title: "Orders", url: "/orders", icon: ListOrdered },
-  { title: "Grinders", url: "/grinders", icon: Users },
-  { title: "Bids", url: "/bids", icon: Gavel },
-  { title: "Assignments", url: "/assignments", icon: FileCheck },
-  { title: "Reports", url: "/reports", icon: FileBarChart },
-  { title: "Streams", url: "/streams", icon: Tv },
-  { title: "Audit Log", url: "/audit-log", icon: ScrollText },
-  { title: "Events & Promos", url: "/events", icon: Calendar },
-  { title: "Staff Notes", url: "/patch-notes", icon: Newspaper },
-  { title: "Reviews", url: "/reviews", icon: Star },
-  { title: "Missing Order Claims", url: "/order-claims", icon: LinkIcon },
-  { title: "Calendar", url: "/calendar", icon: CalendarDays },
-  { title: "Services", url: "/services", icon: Package },
   { title: "Business Performance", url: "/business", icon: DollarSign },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Services", url: "/services", icon: Package },
+  { title: "Grinders", url: "/grinders", icon: Users },
+  { title: "Reports", url: "/reports", icon: FileBarChart },
+  { title: "Bids", url: "/bids", icon: Gavel },
+  { title: "Orders", url: "/orders", icon: ListOrdered },
+  { title: "Missing Order Claims", url: "/order-claims", icon: LinkIcon },
+  { title: "Assignments", url: "/assignments", icon: FileCheck },
+  { title: "All Queue", url: "/queue", icon: Brain },
+  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
+  { title: "Payouts", url: "/payouts", icon: Wallet },
+  { title: "Reviews", url: "/reviews", icon: Star },
+  { title: "Calendar", url: "/calendar", icon: CalendarDays },
+  { title: "Streams", url: "/streams", icon: Tv },
+  { title: "Events & Promos", url: "/events", icon: Calendar },
+  { title: "Audit Log", url: "/audit-log", icon: ScrollText },
+  { title: "Staff Notes", url: "/patch-notes", icon: Newspaper },
   { title: "Features", url: "/features", icon: BookOpen },
   { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
-  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
 ];
 
 const grinderNavItems = [
@@ -77,10 +79,20 @@ function AppSidebar() {
 
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const isOwner = user?.role === "owner";
+  const userId = (user as any)?.discordId || user?.id || "";
   const { data: grinderProfile } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
     enabled: !isStaff,
   });
+  const { data: sidebarNotifs = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    refetchInterval: 15000,
+    enabled: isStaff,
+  });
+  const unreadNotifCount = sidebarNotifs.filter(n => {
+    const readBy = (n.readBy as string[]) || [];
+    return !readBy.includes(userId);
+  }).length;
   const isElite = !isStaff && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const navItems = isStaff
     ? staffNavItems.filter(item => item.url !== "/business" || isOwner)
@@ -105,6 +117,7 @@ function AppSidebar() {
               {navItems.map((item) => {
                 const isActive = location === item.url;
                 const unreadAlerts = !isStaff && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
+                const staffUnreadNotifs = isStaff && item.url === "/notifications" ? unreadNotifCount : 0;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
@@ -119,8 +132,8 @@ function AppSidebar() {
                       >
                         <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : ""}`} />
                         <span className="flex-1">{item.title}</span>
-                        {unreadAlerts > 0 && (
-                          <Badge className="bg-blue-500/20 text-blue-400 border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse">{unreadAlerts}</Badge>
+                        {(unreadAlerts > 0 || staffUnreadNotifs > 0) && (
+                          <Badge className="bg-blue-500/20 text-blue-400 border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse">{unreadAlerts || staffUnreadNotifs}</Badge>
                         )}
                       </Link>
                     </SidebarMenuButton>
@@ -150,7 +163,7 @@ function AppSidebar() {
                 <Badge 
                   variant={isStaff ? "default" : "secondary"} 
                   className={`w-fit text-[10px] px-1.5 py-0 ${
-                    isOwner ? "bg-[#fd853f]/20 text-[#fd853f] border-[#fd853f]/30" :
+                    isOwner ? "bg-red-500/20 text-red-400 border-red-500/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
                     isElite ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" :
                     "bg-muted text-muted-foreground"
@@ -238,7 +251,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 variant="ghost"
                 size="icon"
                 className="relative h-9 w-9"
-                onClick={() => setLocation("/grinder/notifications")}
+                onClick={() => setLocation(user?.role === "staff" || user?.role === "owner" ? "/notifications" : "/grinder/notifications")}
                 data-testid="button-notifications"
               >
                 <Bell className="w-5 h-5 text-muted-foreground" />

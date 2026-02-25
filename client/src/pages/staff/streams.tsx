@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tv, Radio, Users, ExternalLink, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import spLogo from "@assets/image_1771930905137.png";
 
 type StreamGrinder = {
   id: string;
@@ -28,12 +27,12 @@ export default function StaffStreams() {
     <AnimatedPage className="space-y-6">
       <FadeInUp>
         <div className="flex items-center gap-3 mb-2">
-          <img src={spLogo} alt="SP" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+          <Tv className="w-7 h-7 text-primary" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-glow" data-testid="text-streams-title">
+            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-streams-title">
               Content Multiplayer
             </h1>
-            <p className="text-sm text-muted-foreground">Watch grinder live streams together</p>
+            <p className="text-sm text-muted-foreground mt-1">Watch grinder live streams together</p>
           </div>
         </div>
       </FadeInUp>

@@ -4742,6 +4742,71 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/staff/tasks", requireStaff, async (req, res) => {
+    try {
+      const discordId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const tasks = await storage.getStaffTasks(discordId);
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get("/api/staff/tasks/all", requireStaff, async (req, res) => {
+    try {
+      const tasks = await storage.getStaffTasks();
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.post("/api/staff/tasks", requireStaff, async (req, res) => {
+    try {
+      const { title, description, assignedTo, priority, orderId } = req.body;
+      if (!title || !assignedTo) {
+        return res.status(400).json({ message: "Title and assignedTo are required" });
+      }
+      const assignerName = (req.user as any)?.firstName || (req.user as any)?.discordUsername || "Staff";
+      const assignerId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const task = await storage.createStaffTask({
+        id: `ST-${Date.now().toString(36)}`,
+        title,
+        description: description || null,
+        assignedTo,
+        assignedBy: assignerId,
+        assignedByName: assignerName,
+        priority: priority || "normal",
+        status: "pending",
+        orderId: orderId || null,
+      });
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "staff_task",
+        entityId: task.id,
+        action: "created",
+        actor: assignerName,
+        details: JSON.stringify({ title, assignedTo, priority }),
+      });
+      res.status(201).json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/staff/tasks/:id/complete", requireStaff, async (req, res) => {
+    try {
+      const task = await storage.updateStaffTask(req.params.id, {
+        status: "completed",
+        completedAt: new Date(),
+      });
+      if (!task) return res.status(404).json({ message: "Task not found" });
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
   return httpServer;
 }
 

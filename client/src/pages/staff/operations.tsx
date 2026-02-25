@@ -13,11 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
-  CheckCircle, X, CreditCard, Package, Zap, AlertTriangle, Link2, ExternalLink, Unlink,
+  CheckCircle, X, CreditCard, Package, Zap, AlertTriangle, Link2, ExternalLink, Unlink, Wrench,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import spLogo from "@assets/image_1771930905137.png";
 import { HelpTip } from "@/components/help-tip";
 
 export default function StaffOperations() {
@@ -172,9 +171,9 @@ export default function StaffOperations() {
       <FadeInUp>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+            <Wrench className="w-7 h-7 text-primary" />
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-glow flex items-center gap-2" data-testid="text-page-title">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
                 Operations
                 <HelpTip text="Manage day-to-day order operations, assignments, and grinder workflows." />
               </h1>

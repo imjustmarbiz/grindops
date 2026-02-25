@@ -3,7 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
-  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges,
+  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -32,6 +32,7 @@ import {
   type ReviewAccessCode, type InsertReviewAccessCode,
   type GrinderTask, type InsertGrinderTask,
   type GrinderBadge, type InsertGrinderBadge,
+  type StaffTask, type InsertStaffTask,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -176,6 +177,10 @@ export interface IStorage {
   getGrinderBadges(grinderId?: string): Promise<GrinderBadge[]>;
   createGrinderBadge(badge: InsertGrinderBadge): Promise<GrinderBadge>;
   deleteGrinderBadge(id: string): Promise<boolean>;
+
+  getStaffTasks(assignedTo?: string): Promise<StaffTask[]>;
+  createStaffTask(task: InsertStaffTask): Promise<StaffTask>;
+  updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1347,6 +1352,23 @@ export class DatabaseStorage implements IStorage {
   async deleteGrinderBadge(id: string): Promise<boolean> {
     const result = await db.delete(grinderBadges).where(eq(grinderBadges.id, id));
     return (result?.rowCount ?? 0) > 0;
+  }
+
+  async getStaffTasks(assignedTo?: string): Promise<StaffTask[]> {
+    if (assignedTo) {
+      return await db.select().from(staffTasks).where(eq(staffTasks.assignedTo, assignedTo)).orderBy(desc(staffTasks.createdAt));
+    }
+    return await db.select().from(staffTasks).orderBy(desc(staffTasks.createdAt));
+  }
+
+  async createStaffTask(task: InsertStaffTask): Promise<StaffTask> {
+    const [created] = await db.insert(staffTasks).values(task).returning();
+    return created;
+  }
+
+  async updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined> {
+    const [updated] = await db.update(staffTasks).set(data).where(eq(staffTasks.id, id)).returning();
+    return updated;
   }
 }
 

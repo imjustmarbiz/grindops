@@ -96,7 +96,7 @@ export default function Queue() {
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-queue-title">
+          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-queue-title">
             <Brain className="w-7 h-7 text-primary" />
             AI Queue
           </h1>

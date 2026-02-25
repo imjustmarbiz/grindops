@@ -268,7 +268,7 @@ export default function StaffReviews() {
           <div className="flex items-center gap-3">
             <Star className="w-7 h-7 text-amber-400" />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-reviews-title">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-reviews-title">
                 Customer Reviews
               </h1>
               <p className="text-sm text-muted-foreground">Review and moderate submitted customer reviews</p>

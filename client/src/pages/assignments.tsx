@@ -107,7 +107,7 @@ export default function Assignments() {
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-assignments-title">
+          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-assignments-title">
             <FileCheck className="w-7 h-7 text-primary" />
             Assignments
             <HelpTip text="Track active and completed grinder assignments with pay splits and margins." />

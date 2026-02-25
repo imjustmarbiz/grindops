@@ -4,7 +4,6 @@ import { ActivityCalendar, type CalendarActivity, type ActivityTypeConfig } from
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { formatLabel } from "@/lib/staff-utils";
 import { Loader2, Package, Gavel, FileCheck, DollarSign, AlertTriangle, FileBarChart, ScrollText, CalendarDays } from "lucide-react";
-import spLogo from "@assets/image_1771930905137.png";
 
 const staffTypeConfig: Record<string, ActivityTypeConfig> = {
   order_created: { label: "Order Created", color: "bg-blue-500/20 text-blue-300", dotColor: "bg-blue-400" },
@@ -137,12 +136,12 @@ export default function StaffCalendar() {
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <FadeInUp>
           <div className="flex items-center gap-3 mb-2">
-            <img src={spLogo} alt="SP" className="w-8 h-8 rounded-md" />
+            <CalendarDays className="w-7 h-7 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-staff-calendar-title">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-staff-calendar-title">
                 Activity Calendar
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mt-1">
                 Track all operations, orders, bids, assignments, and more by date
               </p>
             </div>

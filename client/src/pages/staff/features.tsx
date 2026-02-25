@@ -148,7 +148,7 @@ export default function StaffFeatures() {
       <div className="flex items-center gap-3 flex-wrap">
         <BookOpen className="w-8 h-8 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-features-title">Staff Dashboard Features</h1>
+          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-features-title">Staff Dashboard Features</h1>
           <p className="text-muted-foreground text-sm mt-1">
             A complete overview of every page available in your staff dashboard. Tap any card to navigate there.
           </p>

@@ -52,6 +52,8 @@ import StaffFeatures from "@/pages/staff/features";
 import GrinderOpsGuide from "@/pages/grinder-ops-guide";
 import StaffOpsGuide from "@/pages/staff-ops-guide";
 import CustomerReviewPage from "@/pages/customer-review";
+import StaffNotifications from "@/pages/staff/notifications";
+import StaffTodo from "@/pages/staff/todo";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean }) {
@@ -143,6 +145,8 @@ function Router() {
       </Route>
       
       <Route path="/" component={HomeRedirect} />
+      <Route path="/notifications" component={() => <ProtectedRoute component={StaffNotifications} staffOnly />} />
+      <Route path="/todo" component={() => <ProtectedRoute component={StaffTodo} staffOnly />} />
       <Route path="/operations" component={() => <ProtectedRoute component={StaffOperations} staffOnly />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={StaffAnalytics} staffOnly />} />
       <Route path="/payouts" component={() => <ProtectedRoute component={StaffPayouts} staffOnly />} />

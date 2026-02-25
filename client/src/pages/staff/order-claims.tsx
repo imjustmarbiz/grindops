@@ -186,7 +186,7 @@ export default function StaffOrderClaims() {
         <div className="flex items-center gap-3">
           <FileText className="w-7 h-7 text-amber-400" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-order-claims-title">
+            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-order-claims-title">
               Missing Order Claims
             </h1>
             <p className="text-sm text-muted-foreground">Review and approve grinder order claim requests</p>

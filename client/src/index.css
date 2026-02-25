@@ -59,10 +59,10 @@
   }
 
   .theme-owner {
-    --primary: 26 98% 61%;
-    --ring: 26 98% 61%;
-    --sidebar-primary: 26 98% 61%;
-    --sidebar-ring: 26 98% 61%;
+    --primary: 0 72% 51%;
+    --ring: 0 72% 51%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-ring: 0 72% 51%;
   }
 
   .theme-staff {

@@ -2,7 +2,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency, formatCompact, AnimatedRing, MultiSegmentRing, MiniBar, LastUpdated, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import spLogo from "@assets/image_1771930905137.png";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -106,8 +105,8 @@ export default function StaffAnalytics() {
           <div className="flex flex-col gap-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
-                <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight flex items-center gap-2" data-testid="text-analytics-title">
+                <BarChart3 className="w-7 h-7 text-primary" />
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-analytics-title">
                   Analytics
                   <HelpTip text="Track performance trends, completion rates, and grinder efficiency over time." />
                 </h1>

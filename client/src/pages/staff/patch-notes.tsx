@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import spLogo from "@assets/image_1771930905137.png";
 import type { PatchNote } from "@shared/schema";
 import {
   Newspaper, Plus, Sparkles, Pencil, Trash2, Send, Eye, EyeOff
@@ -149,12 +148,12 @@ export default function StaffPatchNotes() {
       <FadeInUp>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <img src={spLogo} alt="SP" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+            <Newspaper className="w-7 h-7 text-primary" />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-glow" data-testid="text-patch-notes-title">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-patch-notes-title">
                 Staff Notes
               </h1>
-              <p className="text-sm text-muted-foreground">Create, polish, and publish staff notes for grinders</p>
+              <p className="text-sm text-muted-foreground mt-1">Create, polish, and publish staff notes for grinders</p>
             </div>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>

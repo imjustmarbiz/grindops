@@ -1,7 +1,6 @@
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import spLogo from "@assets/image_1771930905137.png";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -216,10 +215,10 @@ export default function StaffServices() {
       <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
         <FadeInUp delay={0}>
           <div className="flex items-center gap-3 mb-2">
-            <img src={spLogo} alt="SP" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+            <Package className="w-7 h-7 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">Services Overview <HelpTip text="Analyze performance by service type — order volume, revenue, and completion rates." /></h1>
-              <p className="text-sm text-muted-foreground">Performance analytics by service type and platform</p>
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2">Services Overview <HelpTip text="Analyze performance by service type — order volume, revenue, and completion rates." /></h1>
+              <p className="text-sm text-muted-foreground mt-1">Performance analytics by service type and platform</p>
             </div>
           </div>
         </FadeInUp>

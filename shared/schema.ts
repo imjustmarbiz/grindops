@@ -672,6 +672,24 @@ export type DashboardStats = {
   totalGrinders: number;
 };
 
+export const staffTasks = pgTable("staff_tasks", {
+  id: varchar("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  assignedTo: text("assigned_to").notNull(),
+  assignedBy: text("assigned_by").notNull(),
+  assignedByName: text("assigned_by_name").notNull(),
+  priority: text("priority").notNull().default("normal"),
+  status: text("status").notNull().default("pending"),
+  orderId: text("order_id"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertStaffTaskSchema = createInsertSchema(staffTasks).omit({ completedAt: true, createdAt: true });
+export type InsertStaffTask = z.infer<typeof insertStaffTaskSchema>;
+export type StaffTask = typeof staffTasks.$inferSelect;
+
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
   const lower = platform.toLowerCase().trim();

@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import spLogo from "@assets/image_1771930905137.png";
 import type { Event } from "@shared/schema";
 import {
   Calendar, Plus, Percent, Tag, Megaphone, Gamepad2, Pencil, Trash2, Star, AlertTriangle, Clock, Eye, EyeOff
@@ -192,12 +191,12 @@ export default function StaffEvents() {
       <FadeInUp>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={spLogo} alt="SP" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+            <Calendar className="w-7 h-7 text-primary" />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-glow" data-testid="text-events-title">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-events-title">
                 Events & Promos
               </h1>
-              <p className="text-sm text-muted-foreground">Manage upcoming events and promotions for grinders</p>
+              <p className="text-sm text-muted-foreground mt-1">Manage upcoming events and promotions for grinders</p>
             </div>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>

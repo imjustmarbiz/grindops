@@ -12,9 +12,8 @@ import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } fro
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
-  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity,
+  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard,
 } from "lucide-react";
-import spLogo from "@assets/image_1771930905137.png";
 import { HelpTip } from "@/components/help-tip";
 
 function SparkBar({ segments, height = 6 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
@@ -133,8 +132,8 @@ export default function StaffOverview() {
         <div className="flex flex-col gap-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
-            <h1 className="text-xl sm:text-3xl font-display font-bold tracking-tight" data-testid="text-page-title">
+            <LayoutDashboard className="w-7 h-7 text-primary" />
+            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
               {isOwner ? "Owner Command Center" : "Staff Command Center"}
             </h1>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">

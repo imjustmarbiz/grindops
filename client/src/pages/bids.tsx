@@ -199,7 +199,7 @@ export default function Bids() {
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-bids-title">
+          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-bids-title">
             <Gavel className="w-7 h-7 text-primary" />
             Proposals & Bids
             <HelpTip text="Review grinder bids on orders. Accept, deny, or counter-offer bids." />

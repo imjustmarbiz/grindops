@@ -7,7 +7,7 @@ import {
   Settings, Brain, ListOrdered, Users, Gavel, FileCheck, FileBarChart,
   Tv, ScrollText, Calendar, Newspaper, Star, CalendarDays, Package,
   DollarSign, BookOpen, LinkIcon, Sparkles, CheckCircle, ArrowRight,
-  Shield, Search, Bell, Target, TrendingUp, AlertTriangle
+  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList
 } from "lucide-react";
 
 type Slide = {
@@ -53,6 +53,76 @@ const slides: Slide[] = [
       },
     ],
     tip: "Use keyboard arrow keys or spacebar to navigate slides. Bookmark this page for quick reference.",
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    subtitle: "System alerts, updates, and important messages in one inbox",
+    icon: Bell,
+    iconColor: "text-amber-400",
+    sections: [
+      {
+        heading: "Notification Inbox",
+        points: [
+          "View all system notifications in a single, organized feed",
+          "Severity-coded alerts: Info (blue), Warning (amber), Success (green), Danger (red)",
+          "Unread notifications are highlighted with a bold indicator",
+          "Unread count badge shown in the sidebar and header bell icon",
+        ],
+      },
+      {
+        heading: "Managing Notifications",
+        points: [
+          "Click any unread notification to mark it as read",
+          "\"Mark All Read\" button clears all unread indicators at once",
+          "Notifications include: new orders, system alerts, grinder updates",
+          "Auto-refreshes every 10 seconds for real-time awareness",
+        ],
+      },
+    ],
+    steps: [
+      "Check the notification bell badge for unread count",
+      "Open the Notifications page to review all alerts",
+      "Click unread notifications to mark them as read",
+      "Use 'Mark All Read' when catching up on a backlog",
+    ],
+    tip: "Check notifications at the start of each shift. The severity badges help you prioritize — handle Danger and Warning alerts first.",
+  },
+  {
+    id: "todo",
+    title: "To-Do List",
+    subtitle: "Assign and track tasks between staff members and owners",
+    icon: ClipboardList,
+    iconColor: "text-indigo-400",
+    sections: [
+      {
+        heading: "Task Assignment",
+        points: [
+          "Create tasks for other staff members or owners",
+          "Set priority levels: Normal, High, or Urgent",
+          "Optionally link tasks to specific orders for context",
+          "Include detailed descriptions for complex tasks",
+        ],
+      },
+      {
+        heading: "Task Management",
+        points: [
+          "\"My Tasks\" shows pending tasks assigned to you, sorted by priority",
+          "\"Tasks I Assigned\" shows tasks you've delegated to others",
+          "Mark tasks as complete with a single click",
+          "Completed tasks are archived in a collapsible section",
+          "All task actions are logged in the audit trail",
+        ],
+      },
+    ],
+    steps: [
+      "Select a staff member or owner from the dropdown",
+      "Write a clear task title and optional description",
+      "Choose priority (Urgent tasks appear first)",
+      "Optionally link to an order ID for context",
+      "Submit — the assignee will see it immediately in their To-Do List",
+    ],
+    tip: "Use Urgent priority sparingly for truly time-sensitive items. High priority is usually sufficient for important tasks.",
   },
   {
     id: "overview",
@@ -175,6 +245,17 @@ const slides: Slide[] = [
           "Multi-step approval: Pending \u2192 Grinder Approved \u2192 Staff Review \u2192 Paid",
           "Completion proof links: view video evidence before marking as paid",
           "Payout method details: Cash App, PayPal, Zelle, etc.",
+          "Payment Proof: upload proof (image/PDF) when marking payouts as paid",
+        ],
+      },
+      {
+        heading: "Filters & Reductions",
+        points: [
+          "Filter payouts by status (Pending, Approved, Paid, etc.) and grinder name",
+          "Filters apply before categorization — all sections respect active filters",
+          "Clear button resets all filters instantly",
+          "Payout Reductions: staff can request a reduction (owner must approve)",
+          "Owners can apply reductions directly — difference goes to company profit",
         ],
       },
       {
@@ -188,13 +269,14 @@ const slides: Slide[] = [
       },
     ],
     steps: [
+      "Use filters to narrow down payouts by status or grinder name",
       "Check outstanding liabilities at the top for total owed",
       "Review payouts in 'Pending' status that need processing",
       "Click the proof link to verify completion before paying",
+      "Upload payment proof when marking payouts as paid",
       "Handle any disputes before processing standard payouts",
-      "Mark payouts as 'Paid' once payment is sent",
     ],
-    tip: "Always verify completion proof before marking payouts as paid. This protects against fraudulent claims.",
+    tip: "Use status filters to focus on one category at a time. Always upload payment proof — it creates an accountability trail.",
   },
   {
     id: "admin",

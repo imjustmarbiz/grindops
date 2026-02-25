@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import spLogo from "@assets/image_1771930905137.png";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -334,10 +333,10 @@ export default function BusinessPerformance() {
         <FadeInUp delay={0}>
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src={spLogo} alt="SP" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+              <DollarSign className="w-7 h-7 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-business-title">Business Performance <HelpTip text="Financial overview for business owners — revenue, costs, margins, and profitability." /></h1>
-                <p className="text-sm text-muted-foreground">Financial analytics, margins, and cost analysis</p>
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-business-title">Business Performance <HelpTip text="Financial overview for business owners — revenue, costs, margins, and profitability." /></h1>
+                <p className="text-sm text-muted-foreground mt-1">Financial analytics, margins, and cost analysis</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2" data-testid="filter-controls">
