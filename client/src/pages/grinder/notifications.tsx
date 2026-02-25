@@ -22,11 +22,14 @@ export default function GrinderNotifications() {
     <AnimatedPage>
       <div className="space-y-6">
         <FadeInUp delay={0}>
-          <div>
-            <h1 className="text-2xl font-bold font-display tracking-tight">Notifications</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Alerts and messages from staff
-            </p>
+          <div className="flex items-center gap-3">
+            <Bell className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+            <div>
+              <h1 className="text-2xl font-bold font-display tracking-tight">Notifications</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Alerts and messages from staff
+              </p>
+            </div>
           </div>
         </FadeInUp>
 

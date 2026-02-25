@@ -26,7 +26,7 @@ type AutoTodo = {
 };
 
 export default function GrinderTodoList() {
-  const { assignments, payoutRequests, isLoading, grinder, eliteGradient, eliteBorder, eliteAccent } = useGrinderData();
+  const { assignments, payoutRequests, isLoading, grinder, isElite, eliteGradient, eliteBorder, eliteAccent } = useGrinderData();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedGuide, setExpandedGuide] = useState(false);
@@ -147,11 +147,14 @@ export default function GrinderTodoList() {
       <div className="space-y-6">
         <FadeInUp delay={0}>
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold font-display tracking-tight">Order To-Do List</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Track what you need to do for your active orders
-              </p>
+            <div className="flex items-center gap-3">
+              <ClipboardList className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
+              <div>
+                <h1 className="text-2xl font-bold font-display tracking-tight">Order To-Do List</h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Track what you need to do for your active orders
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {totalPending > 0 && (

@@ -3,7 +3,6 @@ import { useGrinderData } from "@/hooks/use-grinder-data";
 import { ActivityCalendar, type CalendarActivity, type ActivityTypeConfig } from "@/components/activity-calendar";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Loader2, FileCheck, Gavel, DollarSign, ClipboardCheck, Package, AlertTriangle, CalendarDays } from "lucide-react";
-import spLogo from "@assets/image_1771930905137.png";
 
 export default function GrinderCalendar() {
   const { isLoading, isElite, assignments, bids, payoutRequests, strikeLogs, alerts, eliteAccent } = useGrinderData();
@@ -145,7 +144,7 @@ export default function GrinderCalendar() {
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <FadeInUp>
           <div className="flex items-center gap-3 mb-2">
-            <img src={spLogo} alt="SP" className="w-8 h-8 rounded-md" />
+            <CalendarDays className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
             <div>
               <h1 className={`text-2xl font-bold text-foreground`} data-testid="text-grinder-calendar-title">
                 My Activity Calendar
