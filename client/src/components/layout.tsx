@@ -39,7 +39,7 @@ const staffNavItems = [
   { title: "Orders", url: "/orders", icon: ListOrdered },
   { title: "Missing Order Claims", url: "/order-claims", icon: LinkIcon },
   { title: "Assignments", url: "/assignments", icon: FileCheck },
-  { title: "All Queue", url: "/queue", icon: Brain },
+  { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Payouts", url: "/payouts", icon: Wallet },
   { title: "Reviews", url: "/reviews", icon: Star },
