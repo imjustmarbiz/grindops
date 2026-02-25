@@ -19,6 +19,8 @@ import {
   type EliteRequest, type InsertEliteRequest,
   type StaffAlert, type InsertStaffAlert,
   type StrikeLog, type InsertStrikeLog,
+  type StrikeAppeal, type InsertStrikeAppeal,
+  strikeAppeals,
   type MessageThread, type InsertMessageThread,
   type ThreadParticipant, type InsertThreadParticipant,
   type Message, type InsertMessage,
@@ -105,6 +107,9 @@ export interface IStorage {
   createStrikeLog(log: InsertStrikeLog): Promise<StrikeLog>;
   updateStrikeLog(id: string, data: Partial<StrikeLog>): Promise<void>;
   acknowledgeStrike(id: string): Promise<void>;
+  getStrikeAppeals(grinderId?: string): Promise<StrikeAppeal[]>;
+  createStrikeAppeal(appeal: InsertStrikeAppeal): Promise<StrikeAppeal>;
+  updateStrikeAppeal(id: string, data: Partial<StrikeAppeal>): Promise<void>;
 
   getActivityCheckpoints(assignmentId?: string, grinderId?: string): Promise<ActivityCheckpoint[]>;
   createActivityCheckpoint(checkpoint: InsertActivityCheckpoint): Promise<ActivityCheckpoint>;
@@ -933,6 +938,22 @@ export class DatabaseStorage implements IStorage {
 
   async acknowledgeStrike(id: string): Promise<void> {
     await db.update(strikeLogs).set({ acknowledgedAt: new Date() }).where(eq(strikeLogs.id, id));
+  }
+
+  async getStrikeAppeals(grinderId?: string): Promise<StrikeAppeal[]> {
+    if (grinderId) {
+      return await db.select().from(strikeAppeals).where(eq(strikeAppeals.grinderId, grinderId)).orderBy(desc(strikeAppeals.createdAt));
+    }
+    return await db.select().from(strikeAppeals).orderBy(desc(strikeAppeals.createdAt));
+  }
+
+  async createStrikeAppeal(appeal: InsertStrikeAppeal): Promise<StrikeAppeal> {
+    const [created] = await db.insert(strikeAppeals).values(appeal).returning();
+    return created;
+  }
+
+  async updateStrikeAppeal(id: string, data: Partial<StrikeAppeal>): Promise<void> {
+    await db.update(strikeAppeals).set(data).where(eq(strikeAppeals.id, id));
   }
 
   async getActivityCheckpoints(assignmentId?: string, grinderId?: string): Promise<ActivityCheckpoint[]> {

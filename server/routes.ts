@@ -1239,6 +1239,7 @@ export async function registerRoutes(
     const myPayoutRequests = await storage.getPayoutRequests(myGrinder.id);
     const myPayoutMethods = await storage.getGrinderPayoutMethods(myGrinder.id);
     const myStrikeLogs = await storage.getStrikeLogs(myGrinder.id);
+    const myStrikeAppeals = await storage.getStrikeAppeals(myGrinder.id);
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
@@ -1511,6 +1512,7 @@ export async function registerRoutes(
       payoutRequests: myPayoutRequests,
       payoutMethods: myPayoutMethods,
       strikeLogs: myStrikeLogs,
+      strikeAppeals: myStrikeAppeals,
       alerts: myAlerts.map((a: any) => ({
         ...a,
         isRead: Array.isArray(a.readBy) ? a.readBy.includes(myGrinder.id) : false,
@@ -2203,6 +2205,54 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.get("/api/grinder/me/strike-appeals", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+    const appeals = await storage.getStrikeAppeals(myGrinder.id);
+    res.json(appeals);
+  });
+
+  app.post("/api/grinder/me/strike-appeals", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+
+    const { strikeLogId, reason } = req.body;
+    if (!strikeLogId || !reason?.trim()) {
+      return res.status(400).json({ message: "strikeLogId and reason are required" });
+    }
+
+    const strikeLogs = await storage.getStrikeLogs(myGrinder.id);
+    const strikeLog = strikeLogs.find((l: any) => l.id === strikeLogId && l.delta > 0);
+    if (!strikeLog) return res.status(404).json({ message: "Strike not found" });
+
+    const existingAppeals = await storage.getStrikeAppeals(myGrinder.id);
+    const alreadyAppealed = existingAppeals.find((a: any) => a.strikeLogId === strikeLogId && a.status === "pending");
+    if (alreadyAppealed) return res.status(400).json({ message: "You already have a pending appeal for this strike" });
+
+    const appeal = await storage.createStrikeAppeal({
+      id: `APPEAL-${Date.now().toString(36)}`,
+      strikeLogId,
+      grinderId: myGrinder.id,
+      reason: reason.trim(),
+      status: "pending",
+    });
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "grinder",
+      entityId: myGrinder.id,
+      action: "strike_appeal_submitted",
+      actor: myGrinder.name || myGrinder.id,
+      details: JSON.stringify({ strikeLogId, appealId: appeal.id }),
+    });
+
+    res.status(201).json(appeal);
+  });
+
   app.patch("/api/grinder/me/availability", async (req, res) => {
     const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
@@ -2404,6 +2454,125 @@ export async function registerRoutes(
   app.get("/api/staff/strike-logs", requireStaff, async (req, res) => {
     const logs = await storage.getStrikeLogs();
     res.json(logs);
+  });
+
+  app.get("/api/staff/strike-appeals", requireStaff, async (req, res) => {
+    const appeals = await storage.getStrikeAppeals();
+    res.json(appeals);
+  });
+
+  app.patch("/api/staff/strike-appeals/:id", requireStaff, async (req, res) => {
+    try {
+      const { status, reviewNote } = req.body;
+      if (!status || !["approved", "denied"].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'denied'" });
+      }
+
+      const appeals = await storage.getStrikeAppeals();
+      const appeal = appeals.find((a: any) => a.id === req.params.id);
+      if (!appeal) return res.status(404).json({ message: "Appeal not found" });
+      if (appeal.status !== "pending") return res.status(400).json({ message: "Appeal already reviewed" });
+
+      const reviewerName = (req as any).userName || (req as any).userId || "Staff";
+
+      await storage.updateStrikeAppeal(req.params.id, {
+        status,
+        reviewedBy: (req as any).userId || "staff",
+        reviewedByName: reviewerName,
+        reviewNote: reviewNote || null,
+        reviewedAt: new Date(),
+      });
+
+      if (status === "approved") {
+        const grinder = await storage.getGrinder(appeal.grinderId);
+        if (grinder) {
+          const strikeLog = (await storage.getStrikeLogs(appeal.grinderId)).find((l: any) => l.id === appeal.strikeLogId);
+          const newStrikes = Math.max(0, grinder.strikes - 1);
+
+          const fineRefund = strikeLog ? parseFloat(strikeLog.fineAmount?.toString() || "0") : 0;
+          const currentFine = parseFloat(grinder.outstandingFine?.toString() || "0");
+          const newFine = Math.max(0, currentFine - fineRefund);
+          const shouldUnsuspend = newStrikes === 0 && newFine <= 0;
+
+          await storage.updateGrinder(appeal.grinderId, {
+            strikes: newStrikes,
+            outstandingFine: newFine.toString(),
+            ...(shouldUnsuspend ? { suspended: false } : {}),
+          });
+
+          if (strikeLog) {
+            await storage.updateStrikeLog(appeal.strikeLogId, { finePaid: true, finePaidAt: new Date() });
+          }
+
+          await storage.createStrikeLog({
+            id: `SL-${Date.now().toString(36)}`,
+            grinderId: appeal.grinderId,
+            action: "remove",
+            reason: `Strike appeal approved: ${reviewNote || "Appeal granted"}`,
+            delta: -1,
+            resultingStrikes: newStrikes,
+            fineAmount: "0",
+            createdBy: reviewerName,
+          });
+
+          await storage.createStaffAlert({
+            id: `SA-${Date.now().toString(36)}ap`,
+            targetType: "grinder",
+            grinderId: appeal.grinderId,
+            title: "Strike Appeal Approved",
+            message: `Your strike appeal has been approved. The strike has been removed and your fine of $${fineRefund.toFixed(2)} has been waived. You now have ${newStrikes} strike${newStrikes !== 1 ? "s" : ""}.${shouldUnsuspend ? " Your suspension has been lifted." : ""}`,
+            severity: "success",
+            createdBy: reviewerName,
+            readBy: [],
+          });
+
+          createSystemNotification({
+            userId: grinder.discordUserId || appeal.grinderId,
+            type: "strike",
+            title: "Strike Appeal Approved",
+            body: `Your appeal was approved. Strike removed. Current strikes: ${newStrikes}.`,
+            icon: "check-circle",
+            severity: "success",
+          });
+        }
+      } else {
+        const grinder = await storage.getGrinder(appeal.grinderId);
+        if (grinder) {
+          await storage.createStaffAlert({
+            id: `SA-${Date.now().toString(36)}ad`,
+            targetType: "grinder",
+            grinderId: appeal.grinderId,
+            title: "Strike Appeal Denied",
+            message: `Your strike appeal has been denied.${reviewNote ? ` Reason: ${reviewNote}` : ""} The original strike and fine remain in effect.`,
+            severity: "danger",
+            createdBy: reviewerName,
+            readBy: [],
+          });
+
+          createSystemNotification({
+            userId: grinder.discordUserId || appeal.grinderId,
+            type: "strike",
+            title: "Strike Appeal Denied",
+            body: `Your appeal was denied.${reviewNote ? ` Reason: ${reviewNote}` : ""}`,
+            icon: "x-circle",
+            severity: "danger",
+          });
+        }
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: appeal.grinderId,
+        action: `strike_appeal_${status}`,
+        actor: reviewerName,
+        details: JSON.stringify({ appealId: req.params.id, strikeLogId: appeal.strikeLogId, reviewNote }),
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.post("/api/staff/fines/:grinderId/pay", requireStaff, async (req, res) => {

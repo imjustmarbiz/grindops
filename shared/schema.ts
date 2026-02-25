@@ -295,6 +295,19 @@ export const strikeLogs = pgTable("strike_logs", {
   acknowledgedAt: timestamp("acknowledged_at"),
 });
 
+export const strikeAppeals = pgTable("strike_appeals", {
+  id: varchar("id").primaryKey(),
+  strikeLogId: varchar("strike_log_id").references(() => strikeLogs.id).notNull(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: text("reviewed_by"),
+  reviewedByName: text("reviewed_by_name"),
+  reviewNote: text("review_note"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey(),
   entityType: text("entity_type").notNull(),
@@ -497,6 +510,7 @@ export const insertGrinderPayoutMethodSchema = createInsertSchema(grinderPayoutM
 export const insertEliteRequestSchema = createInsertSchema(eliteRequests).omit({ requestedAt: true, reviewedAt: true });
 export const insertStaffAlertSchema = createInsertSchema(staffAlerts).omit({ createdAt: true });
 export const insertStrikeLogSchema = createInsertSchema(strikeLogs).omit({ createdAt: true, acknowledgedAt: true });
+export const insertStrikeAppealSchema = createInsertSchema(strikeAppeals).omit({ createdAt: true, reviewedAt: true, reviewedBy: true, reviewedByName: true, reviewNote: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ createdAt: true });
 export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ createdAt: true });
 export const insertThreadParticipantSchema = createInsertSchema(threadParticipants).omit({ joinedAt: true });
@@ -537,6 +551,8 @@ export type StaffAlert = typeof staffAlerts.$inferSelect;
 export type InsertStaffAlert = z.infer<typeof insertStaffAlertSchema>;
 export type StrikeLog = typeof strikeLogs.$inferSelect;
 export type InsertStrikeLog = z.infer<typeof insertStrikeLogSchema>;
+export type StrikeAppeal = typeof strikeAppeals.$inferSelect;
+export type InsertStrikeAppeal = z.infer<typeof insertStrikeAppealSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type MessageThread = typeof messageThreads.$inferSelect;

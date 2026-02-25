@@ -42,6 +42,7 @@ export function useGrinderData() {
   const payoutRequests = profile?.payoutRequests || [];
   const payoutMethods = profile?.payoutMethods || [];
   const strikeLogs = profile?.strikeLogs || [];
+  const strikeAppeals = profile?.strikeAppeals || [];
   const alerts = profile?.alerts || [];
   const eliteRequests = profile?.eliteRequests || [];
   const eliteCoaching = profile?.eliteCoaching;
@@ -204,6 +205,7 @@ export function useGrinderData() {
     payoutRequests,
     payoutMethods,
     strikeLogs,
+    strikeAppeals,
     alerts,
     eliteRequests,
     eliteCoaching,
