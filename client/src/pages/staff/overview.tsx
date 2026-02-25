@@ -424,9 +424,9 @@ export default function StaffOverview() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">
-                        <span className="font-medium capitalize">{log.entityType.replace(/_/g, " ")}</span>{" "}
+                        <span className="font-medium capitalize">{log.entityType.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>{" "}
                         <span className="text-white/40">{log.entityId}</span>{" "}
-                        <span className="text-primary/80">{log.action.replace(/_/g, " ")}</span>
+                        <span className="text-primary/80">{log.action.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
                       </p>
                       <p className="text-[10px] text-white/30 mt-0.5">
                         {log.actor} &middot; {new Date(log.createdAt).toLocaleString()}

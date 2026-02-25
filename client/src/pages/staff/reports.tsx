@@ -462,7 +462,7 @@ export default function StaffReports() {
                       <span className="text-sm font-medium" data-testid={`text-checkpoint-grinder-${cp.id}`}>{getGrinderName(cp.grinderId)}</span>
                       <span className="text-xs text-muted-foreground">#{cp.assignmentId}</span>
                       <Badge className={`${typeColors[cp.type] || "bg-white/10 text-foreground"} border text-[10px]`} data-testid={`badge-checkpoint-type-${cp.id}`}>
-                        {cp.type}
+                        {cp.type.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                       </Badge>
                       {cp.resolvedAt && (
                         <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">Resolved</Badge>

@@ -776,7 +776,7 @@ function CheckpointHistory({ assignmentId }: { assignmentId: string }) {
           <span>{typeIcons[cp.type] || "📋"}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-medium capitalize">{cp.type.replace(/_/g, " ")}</span>
+              <span className="font-medium capitalize">{cp.type.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
               {cp.response && <Badge variant="outline" className="text-[10px] h-4 px-1">{cp.response}</Badge>}
               {cp.resolvedAt && <Badge className="text-[10px] h-4 px-1 bg-emerald-500/20 text-emerald-400 border-0">Resolved</Badge>}
             </div>

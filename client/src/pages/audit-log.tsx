@@ -8,6 +8,13 @@ import { ScrollText, Filter, Clock, Activity, FileText, Package, Gavel, Users, S
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { AuditLog } from "@shared/schema";
 
+function formatLabel(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const { data: logs, isLoading } = useQuery<AuditLog[]>({
@@ -186,13 +193,13 @@ export default function AuditLogPage() {
                     <TableCell>
                       <Badge variant="outline" className={`border ${entityColor(log.entityType)} gap-1`}>
                         {entityIcon(log.entityType)}
-                        {log.entityType.replace(/_/g, " ")}
+                        {formatLabel(log.entityType)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{log.entityId}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`border ${actionColor(log.action)}`}>
-                        {log.action.replace(/_/g, " ")}
+                        {formatLabel(log.action)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{log.actor}</TableCell>
@@ -200,7 +207,7 @@ export default function AuditLogPage() {
                       <div className="flex flex-wrap gap-1">
                         {Object.entries(details).slice(0, 4).map(([k, v]) => (
                           <span key={k} className="text-xs bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded-md">
-                            <span className="text-muted-foreground">{k}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                            <span className="text-muted-foreground">{formatLabel(k)}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v)}
                           </span>
                         ))}
                       </div>

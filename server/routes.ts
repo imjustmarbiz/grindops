@@ -1597,6 +1597,14 @@ export async function registerRoutes(
     const method = methods.find((m: any) => m.id === req.params.id);
     if (!method) return res.status(404).json({ message: "Payout method not found" });
     await storage.deleteGrinderPayoutMethod(req.params.id);
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "grinder",
+      entityId: myGrinder.id,
+      action: "payout_method_deleted",
+      actor: myGrinder.name || myGrinder.id,
+      details: JSON.stringify({ platform: method.platform, details: method.details }),
+    });
     res.json({ success: true });
   });
 
@@ -2103,6 +2111,14 @@ export async function registerRoutes(
       const sanitized = twitchUsername ? twitchUsername.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 25) : null;
       const updated = await storage.updateGrinder(myGrinder.id, { twitchUsername: sanitized });
       if (!updated) return res.status(500).json({ message: "Failed to update" });
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: myGrinder.id,
+        action: "twitch_updated",
+        actor: myGrinder.name || myGrinder.id,
+        details: JSON.stringify({ twitchUsername: sanitized }),
+      });
       res.json(updated);
     } catch (error) {
       res.status(500).json({ message: "Failed to update Twitch username" });
@@ -3198,6 +3214,20 @@ export async function registerRoutes(
     const file = req.file;
     if (!file) return res.status(400).json({ error: "No video file uploaded" });
     const url = `/uploads/proofs/${file.filename}`;
+
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (myGrinder) {
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: myGrinder.id,
+        action: "proof_uploaded",
+        actor: myGrinder.name || myGrinder.id,
+        details: JSON.stringify({ filename: file.filename }),
+      });
+    }
+
     res.json({ url });
   });
 

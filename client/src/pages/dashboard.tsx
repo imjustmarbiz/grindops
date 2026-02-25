@@ -1122,9 +1122,9 @@ export default function Dashboard() {
                   }`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">
-                      <span className="font-medium capitalize">{log.entityType}</span>{" "}
+                      <span className="font-medium capitalize">{log.entityType.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>{" "}
                       <span className="text-muted-foreground">{log.entityId}</span>{" "}
-                      <span className="text-primary">{log.action.replace(/_/g, " ")}</span>
+                      <span className="text-primary">{log.action.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
                     </p>
                     <p className="text-[10px] text-muted-foreground">
                       {log.actor} &middot; {new Date(log.createdAt).toLocaleString()}
