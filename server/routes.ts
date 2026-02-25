@@ -250,7 +250,7 @@ export async function registerRoutes(
       for (const table of toDelete) {
         try {
           await db.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = ${table}`);
-          await db.execute(sql.raw(`TRUNCATE TABLE "${table}" CASCADE`));
+          await db.execute(sql`TRUNCATE TABLE ${sql.identifier(table)} CASCADE`);
           results[table] = true;
         } catch (e) {
           results[table] = false;
