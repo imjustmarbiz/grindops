@@ -90,8 +90,8 @@ function AppSidebar() {
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
       <SidebarContent>
         <div className="p-6 flex items-center gap-3">
-          <img src={spLogo} alt="SP Logo" className="w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
-          <span className="font-display font-bold text-xl tracking-tight text-glow">GrindOps</span>
+          <img src={spLogo} alt="SP Logo" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
+          <span className="font-display font-bold text-2xl tracking-tight text-glow">GrindOps</span>
         </div>
         
         <SidebarGroup>
