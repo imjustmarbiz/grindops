@@ -198,7 +198,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const userId = (user as any)?.discordId || user?.id || "";
-  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : "";
+  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : "theme-grinder";
   const sidebarStyle = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",

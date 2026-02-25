@@ -84,6 +84,13 @@
     --sidebar-ring: 196 60% 55%;
   }
 
+  .theme-grinder {
+    --primary: 196 60% 55%;
+    --ring: 196 60% 55%;
+    --sidebar-primary: 196 60% 55%;
+    --sidebar-ring: 196 60% 55%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-family: var(--font-sans);
