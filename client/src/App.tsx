@@ -47,6 +47,7 @@ import BusinessPerformance from "@/pages/staff/business";
 import GrinderCalendar from "@/pages/grinder/calendar";
 import GrinderTodo from "@/pages/grinder/todo";
 import GrinderStrikes from "@/pages/grinder/strikes";
+import GrinderNotifications from "@/pages/grinder/notifications";
 import StaffFeatures from "@/pages/staff/features";
 import CustomerReviewPage from "@/pages/customer-review";
 import { Loader2 } from "lucide-react";
@@ -165,6 +166,7 @@ function Router() {
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
       <Route path="/grinder/bids" component={() => <ProtectedRoute component={GrinderBids} />} />
       <Route path="/grinder/payouts" component={() => <ProtectedRoute component={GrinderPayouts} />} />
+      <Route path="/grinder/notifications" component={() => <ProtectedRoute component={GrinderNotifications} />} />
       <Route path="/grinder/status" component={() => <ProtectedRoute component={GrinderStatus} />} />
       <Route path="/grinder/guide" component={() => <ProtectedRoute component={GrinderGuide} />} />
       <Route path="/grinder/scorecard" component={() => <ProtectedRoute component={GrinderScorecard} />} />

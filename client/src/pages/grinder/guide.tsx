@@ -66,8 +66,14 @@ const featureItems = [
   },
   {
     icon: Bell,
+    title: "Notifications",
+    desc: "View alerts and messages from staff. Unread notifications are highlighted and the sidebar shows a badge count so you never miss important updates.",
+    url: "/grinder/notifications",
+  },
+  {
+    icon: Crown,
     title: "Grinder Status",
-    desc: "View alerts from staff, review your strike history, acknowledge new strikes, and manage your availability settings so staff knows when you're ready to work.",
+    desc: "Track your progress toward Elite status with coaching metrics and tips. Request Elite rank, view your request history, and link your Twitch account for staff streaming visibility.",
     url: "/grinder/status",
   },
   {

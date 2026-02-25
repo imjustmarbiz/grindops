@@ -58,7 +58,8 @@ const grinderNavItems = [
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
-  { title: "Grinder Status", url: "/grinder/status", icon: Bell },
+  { title: "Notifications", url: "/grinder/notifications", icon: Bell },
+  { title: "Grinder Status", url: "/grinder/status", icon: Crown },
   { title: "Strikes & Policy", url: "/grinder/strikes", icon: AlertOctagon },
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
   { title: "Reviews", url: "/grinder/reviews", icon: Star },
@@ -101,6 +102,7 @@ function AppSidebar() {
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive = location === item.url;
+                const unreadAlerts = !isStaff && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
@@ -114,7 +116,10 @@ function AppSidebar() {
                         }`}
                       >
                         <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : ""}`} />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {unreadAlerts > 0 && (
+                          <Badge className="bg-blue-500/20 text-blue-400 border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse">{unreadAlerts}</Badge>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
