@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTablePage } from "@/hooks/use-table-page";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -231,6 +232,7 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
 }
 
 export default function Orders() {
+  const { tableContainerRef, tableHeight } = useTablePage();
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
@@ -358,7 +360,7 @@ export default function Orders() {
 
   return (
     <TooltipProvider>
-    <AnimatedPage className="page-table-layout gap-5">
+    <AnimatedPage className="space-y-5">
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -482,9 +484,9 @@ export default function Orders() {
       </div>
       </FadeInUp>
 
-      <FadeInUp className="table-section">
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="table-scroll-container">
+        <div ref={tableContainerRef} className="overflow-auto" style={tableHeight ? { maxHeight: tableHeight } : undefined}>
         <Table className="min-w-[1200px] table-fixed w-full">
           <colgroup>
             <col className="w-[7%]" />

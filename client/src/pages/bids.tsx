@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTablePage } from "@/hooks/use-table-page";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -23,6 +24,7 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
 
 export default function Bids() {
+  const { tableContainerRef, tableHeight } = useTablePage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -195,7 +197,7 @@ export default function Bids() {
 
   return (
     <TooltipProvider>
-    <AnimatedPage className="page-table-layout gap-5">
+    <AnimatedPage className="space-y-5">
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -282,7 +284,7 @@ export default function Bids() {
       )}
 
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="table-scroll-container">
+        <div ref={tableContainerRef} className="overflow-auto" style={tableHeight ? { maxHeight: tableHeight } : undefined}>
         <Table className="min-w-[1400px]">
           <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
             <TableRow className="border-white/[0.06]">
