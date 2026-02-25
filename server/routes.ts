@@ -1579,17 +1579,38 @@ export async function registerRoutes(
     }
 
     const improvementTips: string[] = [];
-    if (avgFactors.margin < 0.3) improvementTips.push("Lower your bid amounts to improve your margin score. Competitive pricing moves you up the queue.");
-    if (avgFactors.capacity < 0.4) improvementTips.push("You're near full capacity. Complete current orders to free up slots and boost your capacity score.");
-    if (avgFactors.fairness < 0.3) improvementTips.push("You were recently assigned an order. Your fairness score will naturally improve over time as the system rotates work.");
-    if (avgFactors.reliability < 0.6) improvementTips.push("Improve your reliability by delivering on time, completing all orders, and avoiding reassignments.");
-    if (avgFactors.quality < 0.5) improvementTips.push("Boost your quality score by focusing on on-time delivery, faster turnaround, providing daily updates, and avoiding strikes.");
-    if (avgFactors.risk > 0 && avgFactors.risk < 0.5) improvementTips.push("Your risk score is low due to strikes or cancellations. Maintain a clean record to improve.");
-    if (avgFactors.tier < 0.5) improvementTips.push("Higher tier grinders rank better. Work toward Elite status for a significant queue advantage.");
-    if (avgFactors.newGrinder === 1) improvementTips.push("You're getting a new grinder boost! Make the most of it by bidding on orders now.");
-    if (rankedIn === 0 && myGrinder.strikes >= 3) improvementTips.push("You're suspended from the queue due to 3+ strikes. Contact staff to resolve outstanding strikes.");
-    if (rankedIn === 0 && myGrinder.activeOrders >= myGrinder.capacity) improvementTips.push("You're at full capacity. Complete current orders to appear in the queue again.");
-    if (improvementTips.length === 0 && rankedIn > 0) improvementTips.push("You're performing well across all factors. Keep it up to maintain your position!");
+    const isTopPerformer = bestPos > 0 && bestPos <= 3;
+    const midPoint = Math.ceil(totalGrindersMax / 2);
+    const isMidRange = avgPos > 0 && avgPos <= midPoint && !isTopPerformer;
+
+    if (rankedIn === 0 && myGrinder.strikes >= 3) {
+      improvementTips.push("You're suspended from the queue due to 3+ strikes. Contact staff to resolve outstanding strikes.");
+    } else if (rankedIn === 0 && myGrinder.activeOrders >= myGrinder.capacity) {
+      improvementTips.push("You're at full capacity. Complete current orders to appear in the queue again.");
+    } else if (isTopPerformer) {
+      improvementTips.push("You're ranked near the top — great work. Stay consistent with quality and on-time delivery to hold your position.");
+      if (avgFactors.margin < 0.5) improvementTips.push("Your margin score is your weakest area. Keep bid amounts competitive to protect your ranking.");
+      if (avgFactors.capacity < 0.6) improvementTips.push("Freeing up a slot would strengthen your capacity score and help you stay on top.");
+      if (avgFactors.newGrinder === 1) improvementTips.push("You're benefiting from a new grinder boost — bid actively now while it lasts.");
+    } else if (isMidRange) {
+      improvementTips.push("You're in the middle of the pack. Focus on your weakest factors below to climb higher.");
+      if (avgFactors.margin < 0.3) improvementTips.push("Lower your bid amounts to improve your margin score. Competitive pricing moves you up the queue.");
+      if (avgFactors.capacity < 0.4) improvementTips.push("You're near full capacity. Complete current orders to free up slots and boost your capacity score.");
+      if (avgFactors.reliability < 0.6) improvementTips.push("Improve your reliability by delivering on time, completing all orders, and avoiding reassignments.");
+      if (avgFactors.quality < 0.5) improvementTips.push("Boost your quality score by focusing on on-time delivery, faster turnaround, and daily updates.");
+      if (avgFactors.tier < 0.5) improvementTips.push("Higher tier grinders rank better. Work toward Elite status for a significant queue advantage.");
+      if (avgFactors.newGrinder === 1) improvementTips.push("You're getting a new grinder boost — make the most of it by bidding on orders now.");
+    } else {
+      if (avgFactors.margin < 0.3) improvementTips.push("Your bids are too high relative to order prices. Lower them to improve your margin score significantly.");
+      if (avgFactors.capacity < 0.4) improvementTips.push("You're near full capacity. Complete current orders to free up slots and boost your capacity score.");
+      if (avgFactors.fairness < 0.3) improvementTips.push("You were recently assigned an order. Your fairness score will naturally improve over time as the system rotates work.");
+      if (avgFactors.reliability < 0.6) improvementTips.push("Reliability is holding you back. Focus on delivering on time and completing all orders without reassignments.");
+      if (avgFactors.quality < 0.5) improvementTips.push("Quality is a weak spot. Prioritize on-time delivery, faster turnaround, daily updates, and avoiding strikes.");
+      if (avgFactors.risk > 0 && avgFactors.risk < 0.5) improvementTips.push("Your risk score is low due to strikes or cancellations. A clean record going forward will help a lot.");
+      if (avgFactors.tier < 0.5) improvementTips.push("Higher tier grinders rank better. Work toward Elite status for a significant queue advantage.");
+      if (avgFactors.newGrinder === 1) improvementTips.push("You're getting a new grinder boost — bid on orders now to take advantage of it.");
+      if (improvementTips.length === 0) improvementTips.push("You're performing well across all factors. Keep it up to maintain your position!");
+    }
 
     res.json({
       totalOpenOrders: openOrders.length,

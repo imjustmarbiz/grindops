@@ -166,23 +166,23 @@ export default function GrinderOrders() {
       <FadeInUp>
         <Card className={`border-0 overflow-hidden bg-white/[0.03]`} data-testid="card-queue-standing">
           <button
-            className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
+            className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors gap-2"
             onClick={() => setShowQueueStanding(!showQueueStanding)}
             data-testid="button-toggle-queue-standing"
           >
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-purple-500/15"} flex items-center justify-center`}>
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-purple-500/15"} flex items-center justify-center shrink-0`}>
                 <Brain className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
               </div>
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">Your Queue Standing</span>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-sm sm:text-base">Your Queue Standing</span>
                   <HelpTip text="See where you rank in the AI queue without seeing other grinders. Improve your weakest factors to move up." />
                 </div>
                 {queuePosition && queuePosition.rankedIn > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
                     Avg. rank <span className={`font-bold ${isElite ? "text-cyan-400" : "text-purple-400"}`}>#{queuePosition.averagePosition}</span> across {queuePosition.rankedIn} order{queuePosition.rankedIn !== 1 ? "s" : ""}
-                    {queuePosition.totalGrindersInQueue > 0 && <span className="text-white/30"> · {queuePosition.totalGrindersInQueue} grinders eligible</span>}
+                    {queuePosition.totalGrindersInQueue > 0 && <span className="text-white/30"> · {queuePosition.totalGrindersInQueue} eligible</span>}
                   </p>
                 )}
                 {queuePosition && queuePosition.rankedIn === 0 && (
@@ -190,10 +190,10 @@ export default function GrinderOrders() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {queuePosition && queuePosition.bestPosition > 0 && (
-                <Badge className={`border-0 ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-purple-500/20 text-purple-400"} text-xs`} data-testid="badge-best-position">
-                  Best: #{queuePosition.bestPosition}
+                <Badge className={`border-0 ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-purple-500/20 text-purple-400"} text-xs whitespace-nowrap`} data-testid="badge-best-position">
+                  #{queuePosition.bestPosition}
                 </Badge>
               )}
               {showQueueStanding ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -279,13 +279,29 @@ export default function GrinderOrders() {
                   {queuePosition.improvementTips && queuePosition.improvementTips.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <Lightbulb className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-yellow-400"}`} />
-                        <span className="text-sm font-semibold">How to Improve</span>
+                        <Lightbulb className={`w-4 h-4 ${
+                          queuePosition.bestPosition <= 3
+                            ? "text-emerald-400"
+                            : queuePosition.averagePosition <= Math.ceil((queuePosition.totalGrindersInQueue || 1) / 2)
+                              ? isElite ? "text-cyan-400" : "text-yellow-400"
+                              : "text-orange-400"
+                        }`} />
+                        <span className="text-sm font-semibold">
+                          {queuePosition.bestPosition <= 3
+                            ? "Queue Evaluation — Top Performer"
+                            : queuePosition.averagePosition <= Math.ceil((queuePosition.totalGrindersInQueue || 1) / 2)
+                              ? "Queue Evaluation — Mid Range"
+                              : "Queue Evaluation — Room to Grow"}
+                        </span>
                       </div>
                       <div className="space-y-1.5">
                         {queuePosition.improvementTips.map((tip: string, i: number) => (
                           <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground" data-testid={`tip-${i}`}>
-                            <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${isElite ? "bg-cyan-400" : "bg-purple-400"}`} />
+                            <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
+                              queuePosition.bestPosition <= 3
+                                ? "bg-emerald-400"
+                                : isElite ? "bg-cyan-400" : "bg-purple-400"
+                            }`} />
                             <span>{tip}</span>
                           </div>
                         ))}
