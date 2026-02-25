@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
-  Signal, ScrollText, Sparkles, Crown, ShieldCheck
+  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight
 } from "lucide-react";
 import { Link } from "wouter";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -299,7 +299,7 @@ export default function GrinderOverview() {
               <div className="space-y-2.5">
                 {assignments.slice(0, 5).map((a: any) => (
                   <Link key={a.id} href="/grinder/assignments">
-                    <div className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer transition-all duration-200`} data-testid={`card-assignment-${a.id}`}>
+                    <div className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer transition-all duration-200 group`} data-testid={`card-assignment-${a.id}`}>
                       <div>
                         <p className="text-sm font-medium">Order {a.orderId}</p>
                         <p className="text-xs text-white/40">
@@ -307,10 +307,13 @@ export default function GrinderOverview() {
                           {a.grinderEarnings && <span className="text-emerald-400 ml-2">${Number(a.grinderEarnings).toFixed(2)}</span>}
                         </p>
                       </div>
-                      <Badge
-                        className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
-                        {a.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
+                          {a.status}
+                        </Badge>
+                        <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
+                      </div>
                     </div>
                   </Link>
                 ))}
