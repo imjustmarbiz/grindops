@@ -1,6 +1,6 @@
 const SAMPLE_RATE = 22050;
 
-let unlockedAudio: HTMLAudioElement | null = null;
+let audioPool: HTMLAudioElement[] = [];
 let isUnlocked = false;
 
 function generateWav(frequencies: number[], durations: number[], delays: number[], volume: number = 0.4): string {
@@ -77,22 +77,34 @@ function getWavUrl(type: string): string {
   return url;
 }
 
-function getOrCreateAudio(): HTMLAudioElement {
-  if (!unlockedAudio) {
-    unlockedAudio = new Audio();
-    unlockedAudio.volume = 1.0;
-  }
-  return unlockedAudio;
+function createPooledAudio(): HTMLAudioElement {
+  const audio = new Audio();
+  audio.volume = 1.0;
+  audio.src = silentWav();
+  return audio;
 }
 
 export function unlockMobileAudio(): void {
-  if (isUnlocked) return;
   try {
-    const audio = getOrCreateAudio();
-    audio.src = silentWav();
-    const p = audio.play();
-    if (p) p.then(() => { isUnlocked = true; }).catch(() => {});
-    else isUnlocked = true;
+    if (audioPool.length === 0) {
+      for (let i = 0; i < 3; i++) {
+        audioPool.push(createPooledAudio());
+      }
+    }
+
+    const promises: Promise<void>[] = [];
+    for (const audio of audioPool) {
+      audio.src = silentWav();
+      audio.currentTime = 0;
+      const p = audio.play();
+      if (p) promises.push(p);
+    }
+
+    if (promises.length > 0) {
+      Promise.all(promises).then(() => { isUnlocked = true; }).catch(() => {});
+    } else {
+      isUnlocked = true;
+    }
   } catch {}
 }
 
@@ -105,27 +117,50 @@ if (typeof window !== "undefined") {
   gestureEvents.forEach(e => document.addEventListener(e, gestureHandler, { once: true, capture: true }));
 }
 
+function getAvailableAudio(): HTMLAudioElement {
+  if (audioPool.length === 0) {
+    for (let i = 0; i < 3; i++) {
+      audioPool.push(createPooledAudio());
+    }
+  }
+
+  for (const audio of audioPool) {
+    if (audio.paused || audio.ended) {
+      return audio;
+    }
+  }
+
+  const fresh = createPooledAudio();
+  audioPool.push(fresh);
+  if (audioPool.length > 6) {
+    audioPool.shift();
+  }
+  return fresh;
+}
+
 export function playNotificationSound(type: string) {
+  const wavUrl = getWavUrl(type);
+
   try {
-    const audio = getOrCreateAudio();
-    audio.src = getWavUrl(type);
+    const audio = getAvailableAudio();
+    audio.src = wavUrl;
     audio.currentTime = 0;
     const p = audio.play();
     if (p) {
       p.catch(() => {
-        tryFallbackPlay(type);
+        tryFreshAudio(wavUrl);
       });
     }
   } catch {
-    tryFallbackPlay(type);
+    tryFreshAudio(wavUrl);
   }
 }
 
-function tryFallbackPlay(type: string) {
+function tryFreshAudio(wavUrl: string) {
   try {
-    const fallback = new Audio(getWavUrl(type));
-    fallback.volume = 1.0;
-    const p = fallback.play();
+    const fresh = new Audio(wavUrl);
+    fresh.volume = 1.0;
+    const p = fresh.play();
     if (p) p.catch(() => {});
   } catch {}
 }
