@@ -4020,34 +4020,40 @@ export async function registerRoutes(
       const user = (req as any).user;
       if (!user.grinderId) return res.status(403).json({ error: "Only grinders can submit claims" });
 
-      const { orderId, ticketName, proofLinks, proofNotes, dueDate, startDateTime, completedDateTime } = req.body;
-      if (!orderId) return res.status(400).json({ error: "Order ID is required" });
+      const { orderId, ticketName, proofLinks, proofNotes, dueDate, startDateTime, completedDateTime, grinderAmount, payoutPlatform, payoutDetails } = req.body;
+      if (!ticketName || !ticketName.trim()) return res.status(400).json({ error: "Ticket name is required" });
 
-      const order = await storage.getOrder(orderId);
-      if (!order) return res.status(404).json({ error: "Order not found" });
+      if (orderId) {
+        const order = await storage.getOrder(orderId);
+        if (!order) return res.status(404).json({ error: "Order not found" });
 
-      const existing = await storage.getOrderClaimRequests(user.grinderId, "pending");
-      const alreadyClaimed = existing.find(c => c.orderId === orderId);
-      if (alreadyClaimed) return res.status(400).json({ error: "You already have a pending claim for this order" });
+        const existing = await storage.getOrderClaimRequests(user.grinderId, "pending");
+        const alreadyClaimed = existing.find(c => c.orderId === orderId);
+        if (alreadyClaimed) return res.status(400).json({ error: "You already have a pending claim for this order" });
+      }
 
       const id = `OCR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       const claim = await storage.createOrderClaimRequest({
         id,
         grinderId: user.grinderId,
-        orderId,
-        ticketName: ticketName || null,
+        orderId: orderId || null,
+        ticketName: ticketName.trim(),
         proofLinks: proofLinks || [],
         proofNotes: proofNotes || null,
         dueDate: dueDate ? new Date(dueDate) : null,
         startDateTime: startDateTime ? new Date(startDateTime) : null,
         completedDateTime: completedDateTime ? new Date(completedDateTime) : null,
+        grinderAmount: grinderAmount || null,
+        payoutPlatform: payoutPlatform || null,
+        payoutDetails: payoutDetails || null,
         status: "pending",
       });
 
+      const orderLabel = orderId ? orderId : `ticket "${ticketName.trim()}"`;
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: "New Order Claim Request",
-        message: `A grinder has submitted a claim request for order ${order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId}.`,
+        message: `A grinder has submitted a claim request for ${orderLabel}.`,
         type: "info",
         roleScope: "staff",
         userId: null,

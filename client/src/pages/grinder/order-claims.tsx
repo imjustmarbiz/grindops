@@ -11,7 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import type { OrderClaimRequest } from "@shared/schema";
 import {
-  LinkIcon, Send, FileText, ExternalLink, Clock, CalendarDays, Play, CheckCircle
+  LinkIcon, Send, FileText, ExternalLink, Clock, CalendarDays, Play, CheckCircle, DollarSign, Wallet
 } from "lucide-react";
 
 
@@ -36,13 +36,16 @@ export default function GrinderOrderClaims() {
   const [dueDate, setDueDate] = useState("");
   const [startDateTime, setStartDateTime] = useState("");
   const [completedDateTime, setCompletedDateTime] = useState("");
+  const [grinderAmount, setGrinderAmount] = useState("");
+  const [payoutPlatform, setPayoutPlatform] = useState("");
+  const [payoutDetails, setPayoutDetails] = useState("");
 
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
     queryKey: ["/api/order-claims"],
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: { orderId: string; ticketName?: string; proofLinks: string[]; proofNotes: string; dueDate?: string; startDateTime?: string; completedDateTime?: string }) => {
+    mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/order-claims", data);
       return res.json();
     },
@@ -56,6 +59,9 @@ export default function GrinderOrderClaims() {
       setDueDate("");
       setStartDateTime("");
       setCompletedDateTime("");
+      setGrinderAmount("");
+      setPayoutPlatform("");
+      setPayoutDetails("");
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -63,19 +69,22 @@ export default function GrinderOrderClaims() {
   });
 
   const handleSubmit = () => {
-    if (!orderId.trim()) {
-      toast({ title: "Please enter an Order ID", variant: "destructive" });
+    if (!ticketName.trim()) {
+      toast({ title: "Please enter a Ticket Name", variant: "destructive" });
       return;
     }
     const links = proofLinks.split(",").map(l => l.trim()).filter(Boolean);
     submitMutation.mutate({
-      orderId: orderId.trim(),
-      ticketName: ticketName.trim() || undefined,
+      orderId: orderId.trim() || undefined,
+      ticketName: ticketName.trim(),
       proofLinks: links,
       proofNotes: proofNotes.trim(),
       dueDate: dueDate || undefined,
       startDateTime: startDateTime || undefined,
       completedDateTime: completedDateTime || undefined,
+      grinderAmount: grinderAmount || undefined,
+      payoutPlatform: payoutPlatform || undefined,
+      payoutDetails: payoutDetails || undefined,
     });
   };
 
@@ -100,17 +109,7 @@ export default function GrinderOrderClaims() {
               Submit a Claim
             </h3>
             <div>
-              <label className="text-sm font-medium mb-1 block">Order ID</label>
-              <Input
-                value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Enter the order ID"
-                className="bg-white/[0.03] border-white/10"
-                data-testid="input-claim-order-id"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Ticket Name <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <label className="text-sm font-medium mb-1 block">Ticket Name</label>
               <Input
                 value={ticketName}
                 onChange={(e) => setTicketName(e.target.value)}
@@ -118,10 +117,20 @@ export default function GrinderOrderClaims() {
                 className="bg-white/[0.03] border-white/10"
                 data-testid="input-claim-ticket-name"
               />
-              <p className="text-xs text-muted-foreground mt-1">If you don't have the ticket ID, type the ticket name so staff can find it</p>
+              <p className="text-xs text-muted-foreground mt-1">Enter the ticket name so staff can find and link it</p>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Proof Links (comma separated)</label>
+              <label className="text-sm font-medium mb-1 block">Order ID <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <Input
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
+                placeholder="Enter the order ID if known"
+                className="bg-white/[0.03] border-white/10"
+                data-testid="input-claim-order-id"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Proof Links <span className="text-muted-foreground font-normal">(comma separated)</span></label>
               <Input
                 value={proofLinks}
                 onChange={(e) => setProofLinks(e.target.value)}
@@ -169,6 +178,49 @@ export default function GrinderOrderClaims() {
                   className="bg-white/[0.03] border-white/10"
                   data-testid="input-claim-completed-date"
                 />
+              </div>
+            </div>
+            <div className="border-t border-white/[0.06] pt-4">
+              <h4 className={`text-xs font-medium uppercase tracking-wider mb-3 flex items-center gap-1.5 ${isElite ? "text-cyan-400" : "text-amber-400"}`}>
+                <Wallet className="w-3.5 h-3.5" /> Payout Details
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                    Grinder Amount
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={grinderAmount}
+                    onChange={(e) => setGrinderAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="bg-white/[0.03] border-white/10"
+                    data-testid="input-claim-grinder-amount"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Payout Platform</label>
+                  <Input
+                    value={payoutPlatform}
+                    onChange={(e) => setPayoutPlatform(e.target.value)}
+                    placeholder="e.g. Cash App, PayPal, Zelle"
+                    className="bg-white/[0.03] border-white/10"
+                    data-testid="input-claim-payout-platform"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Payout Details</label>
+                  <Input
+                    value={payoutDetails}
+                    onChange={(e) => setPayoutDetails(e.target.value)}
+                    placeholder="e.g. $cashtag, email, phone"
+                    className="bg-white/[0.03] border-white/10"
+                    data-testid="input-claim-payout-details"
+                  />
+                </div>
               </div>
             </div>
             <div>
@@ -224,12 +276,12 @@ export default function GrinderOrderClaims() {
                 <CardContent className="p-5 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     {statusBadge(claim.status)}
-                    <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
-                      Order: <span className="text-foreground font-medium">{claim.orderId}</span>
+                    <span className="text-sm text-muted-foreground" data-testid={`text-claim-ticket-${claim.id}`}>
+                      Ticket: <span className="text-foreground font-medium">{claim.ticketName}</span>
                     </span>
-                    {claim.ticketName && (
-                      <span className="text-sm text-muted-foreground" data-testid={`text-claim-ticket-${claim.id}`}>
-                        Ticket: <span className="text-foreground font-medium">{claim.ticketName}</span>
+                    {claim.orderId && (
+                      <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
+                        Order: <span className="text-foreground font-medium">{claim.orderId}</span>
                       </span>
                     )}
                   </div>
@@ -278,6 +330,28 @@ export default function GrinderOrderClaims() {
                         <span className="flex items-center gap-1" data-testid={`text-claim-completed-${claim.id}`}>
                           <CheckCircle className="w-3 h-3 text-emerald-400" />
                           Completed: {new Date(claim.completedDateTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {(claim.grinderAmount || claim.payoutPlatform || claim.payoutDetails) && (
+                    <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                      {claim.grinderAmount && (
+                        <span className="flex items-center gap-1" data-testid={`text-claim-amount-${claim.id}`}>
+                          <DollarSign className="w-3 h-3 text-emerald-400" />
+                          Amount: ${Number(claim.grinderAmount).toFixed(2)}
+                        </span>
+                      )}
+                      {claim.payoutPlatform && (
+                        <span className="flex items-center gap-1" data-testid={`text-claim-payout-platform-${claim.id}`}>
+                          <Wallet className="w-3 h-3 text-violet-400" />
+                          {claim.payoutPlatform}
+                        </span>
+                      )}
+                      {claim.payoutDetails && (
+                        <span className="text-muted-foreground/70" data-testid={`text-claim-payout-details-${claim.id}`}>
+                          {claim.payoutDetails}
                         </span>
                       )}
                     </div>

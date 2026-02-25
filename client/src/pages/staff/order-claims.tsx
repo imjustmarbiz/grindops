@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { OrderClaimRequest } from "@shared/schema";
 import {
-  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle
+  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle, DollarSign, Wallet
 } from "lucide-react";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -213,18 +213,18 @@ export default function StaffOrderClaims() {
                         <span className="text-sm text-muted-foreground" data-testid={`text-claim-grinder-${claim.id}`}>
                           Grinder: <span className="text-foreground font-medium">{claim.grinderId}</span>
                         </span>
-                        <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
-                          Order: <span className="text-foreground font-medium">{claim.orderId}</span>
-                        </span>
-                        {claim.ticketName && (
-                          <Badge variant="outline" className="border-violet-500/20 text-violet-400 text-[10px] gap-1" data-testid={`badge-ticket-name-${claim.id}`}>
-                            <Hash className="w-3 h-3" />
-                            {claim.ticketName}
-                          </Badge>
+                        <Badge variant="outline" className="border-violet-500/20 text-violet-400 text-[10px] gap-1" data-testid={`badge-ticket-name-${claim.id}`}>
+                          <Hash className="w-3 h-3" />
+                          {claim.ticketName}
+                        </Badge>
+                        {claim.orderId && (
+                          <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
+                            Order: <span className="text-foreground font-medium">{claim.orderId}</span>
+                          </span>
                         )}
                       </div>
 
-                      {claim.ticketName && claim.status === "pending" && (
+                      {claim.status === "pending" && (
                         <TicketSearch ticketName={claim.ticketName} />
                       )}
 
@@ -272,6 +272,28 @@ export default function StaffOrderClaims() {
                             <span className="flex items-center gap-1" data-testid={`text-claim-completed-${claim.id}`}>
                               <CheckCircle className="w-3 h-3 text-emerald-400" />
                               Completed: {new Date(claim.completedDateTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {(claim.grinderAmount || claim.payoutPlatform || claim.payoutDetails) && (
+                        <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                          {claim.grinderAmount && (
+                            <span className="flex items-center gap-1 font-medium text-emerald-400" data-testid={`text-claim-amount-${claim.id}`}>
+                              <DollarSign className="w-3 h-3" />
+                              ${Number(claim.grinderAmount).toFixed(2)}
+                            </span>
+                          )}
+                          {claim.payoutPlatform && (
+                            <span className="flex items-center gap-1" data-testid={`text-claim-payout-platform-${claim.id}`}>
+                              <Wallet className="w-3 h-3 text-violet-400" />
+                              {claim.payoutPlatform}
+                            </span>
+                          )}
+                          {claim.payoutDetails && (
+                            <span className="text-muted-foreground/70" data-testid={`text-claim-payout-details-${claim.id}`}>
+                              {claim.payoutDetails}
                             </span>
                           )}
                         </div>
