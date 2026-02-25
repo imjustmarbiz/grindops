@@ -426,6 +426,8 @@ export default function StaffReports() {
                 <SelectItem value="issue">Issue</SelectItem>
                 <SelectItem value="order_update">Order Update</SelectItem>
                 <SelectItem value="missed_update">Missed Update</SelectItem>
+                <SelectItem value="stream_live">Stream Live</SelectItem>
+                <SelectItem value="stream_offline">Stream Offline</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -453,6 +455,8 @@ export default function StaffReports() {
                 issue: "bg-red-500/15 text-red-400 border-red-500/20",
                 order_update: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
                 missed_update: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+                stream_live: "bg-red-500/15 text-red-400 border-red-500/20",
+                stream_offline: "bg-slate-500/15 text-slate-400 border-slate-500/20",
               };
 
               return (

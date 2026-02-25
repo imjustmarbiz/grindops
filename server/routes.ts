@@ -13,6 +13,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { messages as messagesTable, normalizePlatform } from "@shared/schema";
+import { isGrinderLive } from "./twitchStreamChecker";
 
 const uploadsDir = path.join(process.cwd(), "uploads", "chat");
 if (!fs.existsSync(uploadsDir)) {
@@ -129,6 +130,7 @@ export async function registerRoutes(
       tier: g.tier,
       avatarUrl: (g as any).discordAvatarUrl,
       roles: g.roles,
+      isLive: isGrinderLive(g.id),
     })));
   });
 
@@ -1399,6 +1401,7 @@ export async function registerRoutes(
       availabilityNote: myGrinder.availabilityNote,
       availabilityUpdatedAt: myGrinder.availabilityUpdatedAt,
       twitchUsername: myGrinder.twitchUsername,
+      isStreaming: isGrinderLive(myGrinder.id),
       notes: myGrinder.notes,
     };
 

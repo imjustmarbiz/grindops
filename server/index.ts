@@ -95,6 +95,14 @@ app.use((req, res, next) => {
     console.error("Failed to start daily update checker:", error);
   }
 
+  // Start Twitch stream checker
+  try {
+    const { startTwitchStreamChecker } = await import("./twitchStreamChecker");
+    startTwitchStreamChecker();
+  } catch (error) {
+    console.error("Failed to start Twitch stream checker:", error);
+  }
+
   // Repair accepted bids that are missing assignments
   try {
     const { repairMissingAssignments } = await import("./repairSync");

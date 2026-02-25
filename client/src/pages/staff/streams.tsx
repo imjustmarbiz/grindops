@@ -14,6 +14,7 @@ type StreamGrinder = {
   tier: string;
   avatarUrl?: string;
   roles?: string[];
+  isLive?: boolean;
 };
 
 export default function StaffStreams() {
@@ -39,7 +40,14 @@ export default function StaffStreams() {
       <FadeInUp>
         <div className="flex items-center gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
           <Radio className="w-5 h-5 text-purple-400 animate-pulse" />
-          <span className="text-sm font-medium">{streamers.length} grinder{streamers.length !== 1 ? "s" : ""} with Twitch linked</span>
+          <span className="text-sm font-medium">
+            {streamers.length} grinder{streamers.length !== 1 ? "s" : ""} with Twitch linked
+            {streamers.some(s => s.isLive) && (
+              <span className="ml-2 text-red-400">
+                · {streamers.filter(s => s.isLive).length} live now
+              </span>
+            )}
+          </span>
         </div>
       </FadeInUp>
 
@@ -64,9 +72,18 @@ export default function StaffStreams() {
       ) : (
         <FadeInUp>
           <div className="grid gap-4 md:grid-cols-2">
-            {streamers.map(streamer => (
-              <Card key={streamer.id} className="bg-card/50 border-border/50 overflow-hidden group" data-testid={`card-stream-${streamer.id}`}>
+            {[...streamers].sort((a, b) => (b.isLive ? 1 : 0) - (a.isLive ? 1 : 0)).map(streamer => (
+              <Card key={streamer.id} className={`bg-card/50 overflow-hidden group ${streamer.isLive ? "border-red-500/30 ring-1 ring-red-500/10" : "border-border/50"}`} data-testid={`card-stream-${streamer.id}`}>
                 <div className="aspect-video bg-black/80 relative">
+                  {streamer.isLive && (
+                    <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-600/90 text-white text-[10px] font-bold uppercase">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                      </span>
+                      LIVE
+                    </div>
+                  )}
                   <iframe
                     src={`https://player.twitch.tv/?channel=${streamer.twitchUsername}&parent=${window.location.hostname}&muted=true`}
                     height="100%"

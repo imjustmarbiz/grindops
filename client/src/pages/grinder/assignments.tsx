@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video, Play
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video, Play, Tv
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -37,6 +37,32 @@ function platformLoginColors(platform: string | null): string {
   if (p.includes("pc") || p.includes("steam") || p.includes("epic")) return "bg-[#1B2838]/10 border-[#66C0F4]/30 text-[#66C0F4] hover:bg-[#1B2838]/20";
   if (p.includes("switch") || p.includes("nintendo")) return "bg-[#E60012]/10 border-[#E60012]/30 text-[#FF4654] hover:bg-[#E60012]/20";
   return "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20";
+}
+
+function StreamStatusBadge({ twitchUsername, isStreaming }: { twitchUsername?: string | null; isStreaming?: boolean }) {
+  if (!twitchUsername) {
+    return (
+      <Badge className="text-[10px] h-5 gap-1 bg-white/[0.04] text-white/30 border border-white/[0.06]" data-testid="badge-stream-no-link">
+        <Tv className="w-3 h-3" /> No Stream Linked
+      </Badge>
+    );
+  }
+  if (!isStreaming) {
+    return (
+      <Badge className="text-[10px] h-5 gap-1 bg-white/[0.04] text-white/40 border border-white/[0.08]" data-testid="badge-stream-offline">
+        <Tv className="w-3 h-3" /> Stream Offline
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="text-[10px] h-5 gap-1 bg-red-500/15 text-red-400 border border-red-500/25" data-testid="badge-stream-live">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+      </span>
+      Stream Live
+    </Badge>
+  );
 }
 
 export default function GrinderAssignments() {
@@ -184,7 +210,10 @@ export default function GrinderAssignments() {
                 )}
                 {a.status === "Active" && (
                   <div className="mt-2 pt-2 border-t border-white/[0.06]">
-                    <p className="text-[10px] uppercase tracking-wider text-white/30 font-medium mb-1.5">Activity Checkpoints</p>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <p className="text-[10px] uppercase tracking-wider text-white/30 font-medium">Activity Checkpoints</p>
+                      <StreamStatusBadge twitchUsername={grinder?.twitchUsername} isStreaming={grinder?.isStreaming} />
+                    </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {!a.hasTicketAck && (
                         <>
@@ -767,6 +796,8 @@ function CheckpointHistory({ assignmentId }: { assignmentId: string }) {
     order_update: "📝",
     missed_update: "❌",
     start_order: "▶️",
+    stream_live: "📡",
+    stream_offline: "📴",
   };
 
   return (
