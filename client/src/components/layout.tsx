@@ -43,7 +43,7 @@ const staffNavItems = [
   { title: "Order Claims", url: "/order-claims", icon: LinkIcon },
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
   { title: "Services", url: "/services", icon: Package },
-  { title: "Business", url: "/business", icon: DollarSign },
+  { title: "Business Performance", url: "/business", icon: DollarSign },
   { title: "Features", url: "/features", icon: BookOpen },
   { title: "Scorecard & Queue", url: "/scorecard-guide", icon: Brain },
 ];
