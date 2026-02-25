@@ -50,7 +50,7 @@ export default function GrinderAssignments() {
     onSuccess: (_: any, vars: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me/checkpoints", vars.assignmentId] });
-      const typeLabels: Record<string, string> = { ticket_ack: "Ticket acknowledged", login: "Logged in", logoff: "Logged off", issue: "Issue reported", order_update: "Update submitted" };
+      const typeLabels: Record<string, string> = { ticket_ack: "Ticket accepted", login: "Logged in", logoff: "Logged off", issue: "Issue reported", order_update: "Update submitted" };
       toast({ title: typeLabels[vars.type] || "Checkpoint recorded" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -153,12 +153,12 @@ export default function GrinderAssignments() {
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "ticket_ack", response: "yes" })}>
-                        <TicketCheck className="w-3 h-3" /> Ack ✓
+                        <TicketCheck className="w-3 h-3" /> Accept Ticket
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "ticket_ack_no" }); setIssueNote(""); }}>
-                        <TicketCheck className="w-3 h-3" /> Ack ✗
+                        <TicketCheck className="w-3 h-3" /> Decline Ticket
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
                         disabled={checkpointMutation.isPending}
