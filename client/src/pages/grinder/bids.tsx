@@ -23,7 +23,33 @@ export default function GrinderBids() {
   const [editTimeline, setEditTimeline] = useState("");
   const [editCanStart, setEditCanStart] = useState("");
 
+  const [bidFilter, setBidFilter] = useState<string>("all");
+
   if (!grinder) return null;
+
+  const allBids = bids as any[];
+  const filterCounts = {
+    all: allBids.length,
+    pending: allBids.filter((b: any) => b.status === "Pending" && !lostBids.find((lb: any) => lb.id === b.id)).length,
+    accepted: allBids.filter((b: any) => b.status === "Accepted").length,
+    lost: allBids.filter((b: any) => b.status === "Denied" || b.status === "Order Assigned" || !!lostBids.find((lb: any) => lb.id === b.id)).length,
+  };
+
+  const filteredBids = allBids.filter((b: any) => {
+    if (bidFilter === "all") return true;
+    const isLost = lostBids.find((lb: any) => lb.id === b.id);
+    if (bidFilter === "pending") return b.status === "Pending" && !isLost;
+    if (bidFilter === "accepted") return b.status === "Accepted";
+    if (bidFilter === "lost") return b.status === "Denied" || b.status === "Order Assigned" || !!isLost;
+    return true;
+  });
+
+  const bidFilters = [
+    { key: "all", label: "All", color: "bg-white/[0.06] text-white/60" },
+    { key: "pending", label: "Pending", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" },
+    { key: "accepted", label: "Accepted", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
+    { key: "lost", label: "Lost / Denied", color: "bg-red-500/15 text-red-400 border-red-500/20" },
+  ];
 
   return (
     <AnimatedPage className="space-y-4">
@@ -33,11 +59,42 @@ export default function GrinderBids() {
           <Gavel className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
         </div>
         My Bids
-        <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{bids.length}</Badge>
+        <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{allBids.length}</Badge>
       </h2>
       </FadeInUp>
+      {allBids.length > 0 && (
+        <FadeInUp>
+          <div className="flex items-center gap-2 flex-wrap" data-testid="filter-bid-status">
+            {bidFilters.map((f) => {
+              const count = filterCounts[f.key as keyof typeof filterCounts];
+              const isActive = bidFilter === f.key;
+              return (
+                <Button
+                  key={f.key}
+                  size="sm"
+                  variant="outline"
+                  className={`text-xs h-8 gap-1.5 transition-all ${
+                    isActive
+                      ? `${f.color} border shadow-sm`
+                      : "bg-transparent border-white/[0.06] text-muted-foreground hover:bg-white/[0.04]"
+                  }`}
+                  onClick={() => setBidFilter(f.key)}
+                  data-testid={`button-filter-bid-${f.key}`}
+                >
+                  {f.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center ${
+                      isActive ? "bg-white/10" : "bg-white/[0.06]"
+                    }`}>{count}</span>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+        </FadeInUp>
+      )}
       <FadeInUp>
-      {bids.length === 0 ? (
+      {allBids.length === 0 ? (
         <Card className="border-0 bg-white/[0.03]">
           <CardContent className="p-8 sm:p-12 text-center">
             <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-4">
@@ -46,9 +103,24 @@ export default function GrinderBids() {
             <p className="text-white/40">No bids yet. Check available orders to start bidding!</p>
           </CardContent>
         </Card>
+      ) : filteredBids.length === 0 ? (
+        <Card className="border-0 bg-white/[0.03]">
+          <CardContent className="p-8 text-center">
+            <p className="text-white/40 text-sm">No bids match this filter.</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 text-xs text-muted-foreground"
+              onClick={() => setBidFilter("all")}
+              data-testid="button-clear-bid-filter"
+            >
+              Show all bids
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
-          {bids.map((b: any) => {
+          {filteredBids.map((b: any) => {
             const isLost = lostBids.find((lb: any) => lb.id === b.id);
             return (
               <Card key={b.id} className={`border-0 ${isLost ? "bg-gradient-to-r from-red-500/[0.04] to-transparent" : "bg-white/[0.03]"} sm:hover:bg-white/[0.05] transition-all duration-200`} data-testid={`card-bid-${b.id}`}>
