@@ -3,7 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
-  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes,
+  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -28,6 +28,7 @@ import {
   type CustomerReview, type InsertCustomerReview,
   type OrderClaimRequest, type InsertOrderClaimRequest,
   type ReviewAccessCode, type InsertReviewAccessCode,
+  type GrinderTask, type InsertGrinderTask,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -159,6 +160,12 @@ export interface IStorage {
   getReviewAccessCodeBySession(sessionToken: string): Promise<ReviewAccessCode | undefined>;
   createReviewAccessCode(code: InsertReviewAccessCode): Promise<ReviewAccessCode>;
   updateReviewAccessCode(id: string, data: Partial<ReviewAccessCode>): Promise<ReviewAccessCode | undefined>;
+
+  getGrinderTasks(grinderId?: string): Promise<GrinderTask[]>;
+  getGrinderTask(id: string): Promise<GrinderTask | undefined>;
+  createGrinderTask(task: InsertGrinderTask): Promise<GrinderTask>;
+  updateGrinderTask(id: string, data: Partial<GrinderTask>): Promise<GrinderTask | undefined>;
+  deleteGrinderTask(id: string): Promise<boolean>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1270,6 +1277,33 @@ export class DatabaseStorage implements IStorage {
   async updateReviewAccessCode(id: string, data: Partial<ReviewAccessCode>): Promise<ReviewAccessCode | undefined> {
     const [updated] = await db.update(reviewAccessCodes).set(data).where(eq(reviewAccessCodes.id, id)).returning();
     return updated;
+  }
+
+  async getGrinderTasks(grinderId?: string): Promise<GrinderTask[]> {
+    if (grinderId) {
+      return await db.select().from(grinderTasks).where(eq(grinderTasks.grinderId, grinderId)).orderBy(desc(grinderTasks.createdAt));
+    }
+    return await db.select().from(grinderTasks).orderBy(desc(grinderTasks.createdAt));
+  }
+
+  async getGrinderTask(id: string): Promise<GrinderTask | undefined> {
+    const [task] = await db.select().from(grinderTasks).where(eq(grinderTasks.id, id));
+    return task;
+  }
+
+  async createGrinderTask(task: InsertGrinderTask): Promise<GrinderTask> {
+    const [created] = await db.insert(grinderTasks).values(task).returning();
+    return created;
+  }
+
+  async updateGrinderTask(id: string, data: Partial<GrinderTask>): Promise<GrinderTask | undefined> {
+    const [updated] = await db.update(grinderTasks).set(data).where(eq(grinderTasks.id, id)).returning();
+    return updated;
+  }
+
+  async deleteGrinderTask(id: string): Promise<boolean> {
+    const result = await db.delete(grinderTasks).where(eq(grinderTasks.id, id));
+    return (result?.rowCount ?? 0) > 0;
   }
 }
 

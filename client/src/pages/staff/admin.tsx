@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat,
+  Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
@@ -50,6 +50,11 @@ export default function StaffAdmin() {
   const [editProfileCapacity, setEditProfileCapacity] = useState("");
   const [editProfileNotes, setEditProfileNotes] = useState("");
   const [checkupOrderSearch, setCheckupOrderSearch] = useState("");
+  const [taskGrinderId, setTaskGrinderId] = useState("");
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskPriority, setTaskPriority] = useState("normal");
+  const [taskOrderId, setTaskOrderId] = useState("");
 
   const { data: checkupConfig } = useQuery<{ enabled: boolean; skippedOrders: string[] }>({
     queryKey: ["/api/daily-checkups/config"],
@@ -88,6 +93,38 @@ export default function StaffAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/elite-requests"] });
       toast({ title: "Elite request updated" });
+    },
+  });
+
+  const { data: staffTasks = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/grinder-tasks"],
+  });
+
+  const sendTaskMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/staff/grinder-tasks", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/grinder-tasks"] });
+      setTaskGrinderId("");
+      setTaskTitle("");
+      setTaskDescription("");
+      setTaskPriority("normal");
+      setTaskOrderId("");
+      toast({ title: "Task sent", description: "The grinder will see this on their To-Do List." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/staff/grinder-tasks/${id}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/grinder-tasks"] });
+      toast({ title: "Task removed" });
     },
   });
 
@@ -759,6 +796,148 @@ export default function StaffAdmin() {
           )}
         </DialogContent>
       </Dialog>
+
+      <FadeInUp>
+        <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-grinder-tasks">
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                <ClipboardList className="w-4 h-4 text-cyan-400" />
+              </div>
+              Send Task to Grinder
+              {staffTasks.filter((t: any) => t.status === "pending").length > 0 && (
+                <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 ml-auto text-xs">
+                  {staffTasks.filter((t: any) => t.status === "pending").length} active
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="relative space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Grinder</label>
+                <Select value={taskGrinderId} onValueChange={setTaskGrinderId}>
+                  <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-task-grinder">
+                    <SelectValue placeholder="Select grinder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allGrinders.filter((g: any) => !g.removedAt).map((g: any) => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Priority</label>
+                <Select value={taskPriority} onValueChange={setTaskPriority}>
+                  <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-task-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Task Title</label>
+              <Input
+                value={taskTitle}
+                onChange={(e) => setTaskTitle(e.target.value)}
+                placeholder="e.g. Upload updated screenshot of progress"
+                className="bg-background/50 border-white/10"
+                data-testid="input-task-title"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Description (optional)</label>
+              <Textarea
+                value={taskDescription}
+                onChange={(e) => setTaskDescription(e.target.value)}
+                placeholder="Additional details about what needs to be done..."
+                className="bg-background/50 border-white/10 min-h-[60px]"
+                data-testid="textarea-task-description"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Link to Order (optional)</label>
+              <Select value={taskOrderId} onValueChange={setTaskOrderId}>
+                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-task-order">
+                  <SelectValue placeholder="No specific order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No specific order</SelectItem>
+                  {allOrders.filter((o: any) => o.status !== "Completed" && o.status !== "Cancelled").map((o: any) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {o.serviceId}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="w-full gap-2 bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/25"
+              disabled={!taskGrinderId || !taskTitle.trim() || sendTaskMutation.isPending}
+              onClick={() => sendTaskMutation.mutate({
+                grinderId: taskGrinderId,
+                title: taskTitle.trim(),
+                description: taskDescription.trim() || undefined,
+                priority: taskPriority,
+                orderId: taskOrderId && taskOrderId !== "none" ? taskOrderId : undefined,
+              })}
+              data-testid="button-send-task"
+            >
+              {sendTaskMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Send Task
+            </Button>
+
+            {staffTasks.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Recent Tasks</p>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {staffTasks.slice(0, 15).map((task: any) => {
+                    const grinder = allGrinders.find((g: any) => g.id === task.grinderId);
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs ${task.status === "completed" ? "opacity-50" : ""}`}
+                        data-testid={`row-staff-task-${task.id}`}
+                      >
+                        {task.status === "completed" ? (
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        ) : (
+                          <ClipboardList className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        )}
+                        <span className="text-primary font-medium truncate max-w-[120px]">{grinder?.name || task.grinderId}</span>
+                        <span className="text-muted-foreground truncate flex-1">{task.title}</span>
+                        {task.priority === "urgent" && <Badge className="bg-red-500/15 text-red-400 border-red-500/20 text-[10px] px-1.5">Urgent</Badge>}
+                        {task.priority === "high" && <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/20 text-[10px] px-1.5">High</Badge>}
+                        <Badge className={`text-[10px] px-1.5 ${task.status === "completed" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-white/5 text-muted-foreground border-white/10"}`}>
+                          {task.status === "completed" ? "Done" : "Pending"}
+                        </Badge>
+                        {task.status === "pending" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-red-400"
+                            onClick={() => deleteTaskMutation.mutate(task.id)}
+                            data-testid={`button-delete-task-${task.id}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </FadeInUp>
 
       {replacedAssignments.length > 0 && (
         <FadeInUp>

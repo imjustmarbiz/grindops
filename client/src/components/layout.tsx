@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, FileBarChart, MessageCircle, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +53,8 @@ const grinderNavItems = [
   { title: "Available Orders", url: "/grinder/orders", icon: Zap },
   { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
-  { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
+  { title: "My Orders", url: "/grinder/assignments", icon: FileCheck },
+  { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },

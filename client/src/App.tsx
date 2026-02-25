@@ -45,6 +45,7 @@ import StaffCalendar from "@/pages/staff/calendar";
 import StaffServices from "@/pages/staff/services";
 import BusinessPerformance from "@/pages/staff/business";
 import GrinderCalendar from "@/pages/grinder/calendar";
+import GrinderTodo from "@/pages/grinder/todo";
 import StaffFeatures from "@/pages/staff/features";
 import CustomerReviewPage from "@/pages/customer-review";
 import { Loader2 } from "lucide-react";
@@ -172,6 +173,7 @@ function Router() {
       <Route path="/grinder/reviews" component={() => <ProtectedRoute component={GrinderReviews} />} />
       <Route path="/grinder/order-claims" component={() => <ProtectedRoute component={GrinderOrderClaims} />} />
       <Route path="/grinder/calendar" component={() => <ProtectedRoute component={GrinderCalendar} />} />
+      <Route path="/grinder/todo" component={() => <ProtectedRoute component={GrinderTodo} />} />
       <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
       
       <Route path="/customer-review" component={CustomerReviewPage} />

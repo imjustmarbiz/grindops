@@ -1,7 +1,7 @@
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, Brain,
+  BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, ClipboardList, Brain,
   Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
   CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight
 } from "lucide-react";
@@ -23,9 +23,15 @@ const featureItems = [
   },
   {
     icon: FileCheck,
-    title: "My Work",
+    title: "My Orders",
     desc: "Track your active assignments, send progress updates to staff, log in and out of sessions, report issues, and upload completion proof when you finish an order.",
     url: "/grinder/assignments",
+  },
+  {
+    icon: ClipboardList,
+    title: "To-Do List",
+    desc: "See all pending actions for your active orders in one place. Auto-generated tasks like logging in, starting orders, and uploading proof, plus custom requests from staff.",
+    url: "/grinder/todo",
   },
   {
     icon: Gavel,

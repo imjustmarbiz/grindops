@@ -436,6 +436,22 @@ export const reviewAccessCodes = pgTable("review_access_codes", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
+export const grinderTasks = pgTable("grinder_tasks", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  assignmentId: varchar("assignment_id").references(() => assignments.id),
+  orderId: varchar("order_id").references(() => orders.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull().default("custom"),
+  status: text("status").notNull().default("pending"),
+  priority: text("priority").notNull().default("normal"),
+  createdBy: varchar("created_by"),
+  createdByName: text("created_by_name"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],
@@ -491,6 +507,7 @@ export const insertPatchNoteSchema = createInsertSchema(patchNotes).omit({ creat
 export const insertCustomerReviewSchema = createInsertSchema(customerReviews).omit({ createdAt: true, updatedAt: true, decisionBy: true, decisionByName: true, decisionNote: true, decisionAt: true });
 export const insertOrderClaimRequestSchema = createInsertSchema(orderClaimRequests).omit({ requestedAt: true, decidedAt: true, decidedBy: true, decidedByName: true, decisionNote: true });
 export const insertReviewAccessCodeSchema = createInsertSchema(reviewAccessCodes).omit({ createdAt: true, approvedBy: true, approvedByName: true, approvedAt: true, deniedBy: true, deniedByName: true, deniedAt: true, usedAt: true });
+export const insertGrinderTaskSchema = createInsertSchema(grinderTasks).omit({ createdAt: true, completedAt: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -540,6 +557,8 @@ export type OrderClaimRequest = typeof orderClaimRequests.$inferSelect;
 export type InsertOrderClaimRequest = z.infer<typeof insertOrderClaimRequestSchema>;
 export type ReviewAccessCode = typeof reviewAccessCodes.$inferSelect;
 export type InsertReviewAccessCode = z.infer<typeof insertReviewAccessCodeSchema>;
+export type GrinderTask = typeof grinderTasks.$inferSelect;
+export type InsertGrinderTask = z.infer<typeof insertGrinderTaskSchema>;
 
 export type GrinderScorecard = {
   grinder: Grinder;

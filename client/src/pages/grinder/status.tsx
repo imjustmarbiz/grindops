@@ -245,7 +245,7 @@ export default function GrinderStatus() {
                 </p>
               </div>
               <Button
-                className={`w-full gap-2 ${isElite ? "" : "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white"}`}
+                className={`w-full gap-2 justify-center ${isElite ? "" : "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white"}`}
                 disabled={eliteRequestMutation.isPending || eliteRequests.some((r: any) => r.status === "Pending")}
                 onClick={() => eliteRequestMutation.mutate()}
                 data-testid="button-request-elite"

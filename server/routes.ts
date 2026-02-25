@@ -3423,6 +3423,76 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  app.get("/api/grinder/me/tasks", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    const tasks = await storage.getGrinderTasks(myGrinder.id);
+    res.json(tasks);
+  });
+
+  app.patch("/api/grinder/me/tasks/:taskId/complete", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    const task = await storage.getGrinderTask(req.params.taskId);
+    if (!task || task.grinderId !== myGrinder.id) return res.status(404).json({ message: "Task not found" });
+    const updated = await storage.updateGrinderTask(req.params.taskId, { status: "completed", completedAt: new Date() });
+    await storage.createAuditLog({
+      id: `AUD-${Date.now()}`,
+      entityType: "grinder_task",
+      entityId: req.params.taskId,
+      action: "task_completed",
+      actor: myGrinder.id,
+      details: { taskTitle: task.title },
+    });
+    res.json(updated);
+  });
+
+  app.get("/api/staff/grinder-tasks", requireStaff, async (req, res) => {
+    const { grinderId } = req.query;
+    const tasks = await storage.getGrinderTasks(grinderId as string | undefined);
+    res.json(tasks);
+  });
+
+  app.post("/api/staff/grinder-tasks", requireStaff, async (req, res) => {
+    const user = (req as any).user;
+    const { grinderId, assignmentId, orderId, title, description, priority } = req.body;
+    if (!grinderId || !title) return res.status(400).json({ error: "grinderId and title are required" });
+    const grinder = await storage.getGrinder(grinderId);
+    if (!grinder) return res.status(404).json({ error: "Grinder not found" });
+    const task = await storage.createGrinderTask({
+      id: `TASK-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      grinderId,
+      assignmentId: assignmentId || null,
+      orderId: orderId || null,
+      title,
+      description: description || null,
+      type: "custom",
+      status: "pending",
+      priority: priority || "normal",
+      createdBy: user.id || (req as any).userId,
+      createdByName: user.username || user.displayName || "Staff",
+    });
+    await storage.createAuditLog({
+      id: `AUD-${Date.now()}`,
+      entityType: "grinder_task",
+      entityId: task.id,
+      action: "task_created",
+      actor: user.id || (req as any).userId,
+      details: { grinderId, title, priority },
+    });
+    res.json(task);
+  });
+
+  app.delete("/api/staff/grinder-tasks/:id", requireStaff, async (req, res) => {
+    const deleted = await storage.deleteGrinderTask(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Task not found" });
+    res.json({ success: true });
+  });
+
   app.get('/api/events', async (req, res) => {
     const allEvents = await storage.getEvents();
     res.json(allEvents);
