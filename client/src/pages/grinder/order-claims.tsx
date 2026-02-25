@@ -11,7 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import type { OrderClaimRequest } from "@shared/schema";
 import {
-  LinkIcon, Send, FileText, ExternalLink, Clock
+  LinkIcon, Send, FileText, ExternalLink, Clock, CalendarDays, Play, CheckCircle
 } from "lucide-react";
 
 
@@ -33,13 +33,16 @@ export default function GrinderOrderClaims() {
   const [ticketName, setTicketName] = useState("");
   const [proofLinks, setProofLinks] = useState("");
   const [proofNotes, setProofNotes] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [startDateTime, setStartDateTime] = useState("");
+  const [completedDateTime, setCompletedDateTime] = useState("");
 
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
     queryKey: ["/api/order-claims"],
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: { orderId: string; ticketName?: string; proofLinks: string[]; proofNotes: string }) => {
+    mutationFn: async (data: { orderId: string; ticketName?: string; proofLinks: string[]; proofNotes: string; dueDate?: string; startDateTime?: string; completedDateTime?: string }) => {
       const res = await apiRequest("POST", "/api/order-claims", data);
       return res.json();
     },
@@ -50,6 +53,9 @@ export default function GrinderOrderClaims() {
       setTicketName("");
       setProofLinks("");
       setProofNotes("");
+      setDueDate("");
+      setStartDateTime("");
+      setCompletedDateTime("");
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -67,6 +73,9 @@ export default function GrinderOrderClaims() {
       ticketName: ticketName.trim() || undefined,
       proofLinks: links,
       proofNotes: proofNotes.trim(),
+      dueDate: dueDate || undefined,
+      startDateTime: startDateTime || undefined,
+      completedDateTime: completedDateTime || undefined,
     });
   };
 
@@ -120,6 +129,47 @@ export default function GrinderOrderClaims() {
                 className="bg-white/[0.03] border-white/10"
                 data-testid="input-claim-proof-links"
               />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5 text-orange-400" />
+                  Due Date
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="bg-white/[0.03] border-white/10"
+                  data-testid="input-claim-due-date"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5 text-blue-400" />
+                  Start Date/Time
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={startDateTime}
+                  onChange={(e) => setStartDateTime(e.target.value)}
+                  className="bg-white/[0.03] border-white/10"
+                  data-testid="input-claim-start-date"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  Completed Date/Time
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={completedDateTime}
+                  onChange={(e) => setCompletedDateTime(e.target.value)}
+                  className="bg-white/[0.03] border-white/10"
+                  data-testid="input-claim-completed-date"
+                />
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Proof Notes</label>
@@ -208,6 +258,29 @@ export default function GrinderOrderClaims() {
                     <p className="text-sm text-muted-foreground" data-testid={`text-proof-notes-${claim.id}`}>
                       {claim.proofNotes}
                     </p>
+                  )}
+
+                  {(claim.dueDate || claim.startDateTime || claim.completedDateTime) && (
+                    <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                      {claim.dueDate && (
+                        <span className="flex items-center gap-1" data-testid={`text-claim-due-${claim.id}`}>
+                          <CalendarDays className="w-3 h-3 text-orange-400" />
+                          Due: {new Date(claim.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </span>
+                      )}
+                      {claim.startDateTime && (
+                        <span className="flex items-center gap-1" data-testid={`text-claim-start-${claim.id}`}>
+                          <Play className="w-3 h-3 text-blue-400" />
+                          Started: {new Date(claim.startDateTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </span>
+                      )}
+                      {claim.completedDateTime && (
+                        <span className="flex items-center gap-1" data-testid={`text-claim-completed-${claim.id}`}>
+                          <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          Completed: {new Date(claim.completedDateTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </span>
+                      )}
+                    </div>
                   )}
 
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">

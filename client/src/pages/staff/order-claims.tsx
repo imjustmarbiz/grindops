@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { OrderClaimRequest } from "@shared/schema";
 import {
-  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy
+  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle
 } from "lucide-react";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -252,6 +252,29 @@ export default function StaffOrderClaims() {
                         <p className="text-sm text-muted-foreground" data-testid={`text-proof-notes-${claim.id}`}>
                           {claim.proofNotes}
                         </p>
+                      )}
+
+                      {(claim.dueDate || claim.startDateTime || claim.completedDateTime) && (
+                        <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                          {claim.dueDate && (
+                            <span className="flex items-center gap-1" data-testid={`text-claim-due-${claim.id}`}>
+                              <CalendarDays className="w-3 h-3 text-orange-400" />
+                              Due: {new Date(claim.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </span>
+                          )}
+                          {claim.startDateTime && (
+                            <span className="flex items-center gap-1" data-testid={`text-claim-start-${claim.id}`}>
+                              <Play className="w-3 h-3 text-blue-400" />
+                              Started: {new Date(claim.startDateTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </span>
+                          )}
+                          {claim.completedDateTime && (
+                            <span className="flex items-center gap-1" data-testid={`text-claim-completed-${claim.id}`}>
+                              <CheckCircle className="w-3 h-3 text-emerald-400" />
+                              Completed: {new Date(claim.completedDateTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </span>
+                          )}
+                        </div>
                       )}
 
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">

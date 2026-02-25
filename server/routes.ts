@@ -4020,7 +4020,7 @@ export async function registerRoutes(
       const user = (req as any).user;
       if (!user.grinderId) return res.status(403).json({ error: "Only grinders can submit claims" });
 
-      const { orderId, ticketName, proofLinks, proofNotes } = req.body;
+      const { orderId, ticketName, proofLinks, proofNotes, dueDate, startDateTime, completedDateTime } = req.body;
       if (!orderId) return res.status(400).json({ error: "Order ID is required" });
 
       const order = await storage.getOrder(orderId);
@@ -4038,6 +4038,9 @@ export async function registerRoutes(
         ticketName: ticketName || null,
         proofLinks: proofLinks || [],
         proofNotes: proofNotes || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        startDateTime: startDateTime ? new Date(startDateTime) : null,
+        completedDateTime: completedDateTime ? new Date(completedDateTime) : null,
         status: "pending",
       });
 
