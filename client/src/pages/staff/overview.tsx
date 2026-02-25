@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency, formatCompact, AnimatedRing, LastUpdated, categoryIcon, pluralize } from "@/lib/staff-utils";
+import { formatCurrency, formatCompact, AnimatedRing, LastUpdated, categoryIcon, pluralize, formatLabel } from "@/lib/staff-utils";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -424,9 +424,9 @@ export default function StaffOverview() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">
-                        <span className="font-medium capitalize">{log.entityType.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>{" "}
+                        <span className="font-medium capitalize">{formatLabel(log.entityType)}</span>{" "}
                         <span className="text-white/40">{log.entityId}</span>{" "}
-                        <span className="text-primary/80">{log.action.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
+                        <span className="text-primary/80">{formatLabel(log.action)}</span>
                       </p>
                       <p className="text-[10px] text-white/30 mt-0.5">
                         {log.actor} &middot; {new Date(log.createdAt).toLocaleString()}

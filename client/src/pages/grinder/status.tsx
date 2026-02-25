@@ -3,6 +3,7 @@ import { useGrinderData } from "@/hooks/use-grinder-data";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatLabel } from "@/lib/staff-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,7 +118,7 @@ export default function GrinderStatus() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge className={log.delta > 0 ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"}>
-                        {log.action} ({log.delta > 0 ? "+" : ""}{log.delta})
+                        {log.action === "add" ? "Added" : log.action === "remove" ? "Removed" : formatLabel(log.action)} ({log.delta > 0 ? "+" : ""}{log.delta})
                       </Badge>
                       {!log.acknowledgedAt && (
                         <Badge className="bg-orange-500/20 text-orange-400">New</Badge>

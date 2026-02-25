@@ -22,7 +22,7 @@ import {
   Search, X, CreditCard, Wallet, Plus, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
-import { pluralize } from "@/lib/staff-utils";
+import { pluralize, formatLabel } from "@/lib/staff-utils";
 import spLogo from "@assets/image_1771930905137.png";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -1122,9 +1122,9 @@ export default function Dashboard() {
                   }`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">
-                      <span className="font-medium capitalize">{log.entityType.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>{" "}
+                      <span className="font-medium capitalize">{formatLabel(log.entityType)}</span>{" "}
                       <span className="text-muted-foreground">{log.entityId}</span>{" "}
-                      <span className="text-primary">{log.action.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
+                      <span className="text-primary">{formatLabel(log.action)}</span>
                     </p>
                     <p className="text-[10px] text-muted-foreground">
                       {log.actor} &middot; {new Date(log.createdAt).toLocaleString()}

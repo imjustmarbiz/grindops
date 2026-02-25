@@ -9,13 +9,7 @@ import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
 import type { AuditLog } from "@shared/schema";
-
-function formatLabel(str: string): string {
-  return str
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, c => c.toUpperCase());
-}
+import { formatLabel } from "@/lib/staff-utils";
 
 export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState<string>("all");

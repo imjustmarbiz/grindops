@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { ActivityCalendar, type CalendarActivity, type ActivityTypeConfig } from "@/components/activity-calendar";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { formatLabel } from "@/lib/staff-utils";
 import { Loader2, Package, Gavel, FileCheck, DollarSign, AlertTriangle, FileBarChart, ScrollText, CalendarDays } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 
@@ -112,8 +113,8 @@ export default function StaffCalendar() {
         items.push({
           id: `aud-${a.id}`,
           type: "audit",
-          title: `${a.action || "Action"}`,
-          description: `${a.entityType || ""} by ${a.actor || "system"}`,
+          title: `${formatLabel(a.action || "Action")}`,
+          description: `${formatLabel(a.entityType || "")} by ${a.actor || "system"}`,
           date: new Date(a.createdAt),
           icon: iconMap.audit,
         });

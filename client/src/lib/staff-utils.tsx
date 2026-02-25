@@ -4,6 +4,13 @@ export function pluralize(count: number, singular: string, plural?: string): str
   return count === 1 ? `${count} ${singular}` : `${count} ${plural || singular + 's'}`;
 }
 
+export function formatLabel(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
 }
