@@ -65,10 +65,10 @@
   }
 
   .theme-owner {
-    --primary: 0 72% 51%;
-    --ring: 0 72% 51%;
-    --sidebar-primary: 0 72% 51%;
-    --sidebar-ring: 0 72% 51%;
+    --primary: 0 85% 55%;
+    --ring: 0 85% 55%;
+    --sidebar-primary: 0 85% 55%;
+    --sidebar-ring: 0 85% 55%;
     --accent: 45 100% 51%;
     --accent-foreground: 240 10% 4%;
     --card: 240 12% 7%;

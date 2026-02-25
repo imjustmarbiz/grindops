@@ -7,7 +7,7 @@ import {
   Settings, Brain, ListOrdered, Users, Gavel, FileCheck, FileBarChart,
   Tv, ScrollText, Calendar, Newspaper, Star, CalendarDays, Package,
   DollarSign, BookOpen, LinkIcon, Sparkles, CheckCircle, ArrowRight,
-  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList
+  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList, Award
 } from "lucide-react";
 
 type Slide = {
@@ -781,6 +781,43 @@ const slides: Slide[] = [
       "Reference this page when grinders ask how rankings work",
     ],
     tip: "Sharing this page with new grinders during onboarding helps set clear expectations about performance evaluation.",
+  },
+  {
+    id: "badges",
+    title: "Badge Management",
+    subtitle: "Award and manage grinder achievement badges",
+    icon: Award,
+    iconColor: "text-amber-400",
+    sections: [
+      {
+        heading: "Badge Types",
+        points: [
+          "Staff-Awarded: manually given by staff/owners for recognition",
+          "Auto-Earned: automatically granted based on grinder performance milestones",
+          "Each badge has a unique visual emblem, label, and description",
+          "Badge Catalogue at the bottom shows all available badges with explanations",
+        ],
+      },
+      {
+        heading: "Managing Badges",
+        points: [
+          "Select a grinder from the dropdown to view their current badges",
+          "Award new badges using the badge selector and optional note",
+          "Remove staff-awarded badges with the hover-to-remove button",
+          "Auto-earned badges cannot be manually removed",
+          "Badges appear on grinder profiles and overview pages",
+        ],
+      },
+    ],
+    steps: [
+      "Select a grinder from the dropdown at the top",
+      "View their currently awarded badges in the grid",
+      "To award: pick a badge from the 'Award New Badge' dropdown",
+      "Optionally add a note explaining why the badge was given",
+      "Click 'Award' to assign the badge",
+      "To remove: hover over a staff-awarded badge and click the red X",
+    ],
+    tip: "Use badges as positive reinforcement. Recognizing top performers with visible badges motivates the entire team.",
   },
   {
     id: "features",

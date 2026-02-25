@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -18,8 +18,59 @@ import { Link } from "wouter";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, type BadgeId } from "@/components/achievement-badges";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GrinderBadge } from "@shared/schema";
+
+function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
+  const [activeBadge, setActiveBadge] = useState<BadgeId | null>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!activeBadge) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setActiveBadge(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [activeBadge]);
+
+  return (
+    <div className="flex items-center gap-2 mt-4 flex-wrap relative" data-testid="section-badges">
+      {badgeIds.map(id => {
+        const BadgeComp = BADGE_COMPONENTS[id];
+        const meta = BADGE_META[id];
+        return (
+          <div key={id} className="relative">
+            <button
+              onClick={() => setActiveBadge(activeBadge === id ? null : id)}
+              className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
+              data-testid={`badge-tap-${id}`}
+            >
+              <BadgeComp />
+              <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
+            </button>
+            {activeBadge === id && (
+              <div
+                ref={popupRef}
+                className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 rounded-lg bg-popover border border-border shadow-xl animate-in fade-in-0 zoom-in-95"
+                data-testid={`badge-popup-${id}`}
+              >
+                <p className="text-xs font-bold text-foreground">{meta.label}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-popover border-r border-b border-border -mt-1" />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function GrinderOverview() {
   const {
@@ -121,27 +172,7 @@ export default function GrinderOverview() {
               )}
             </div>
             {allBadgeIds.length > 0 && (
-              <TooltipProvider delayDuration={200}>
-                <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
-                  {allBadgeIds.map(id => {
-                    const BadgeComp = BADGE_COMPONENTS[id];
-                    const meta = BADGE_META[id];
-                    return (
-                      <Tooltip key={id}>
-                        <TooltipTrigger asChild>
-                          <div className="flex flex-col items-center gap-0.5">
-                            <BadgeComp />
-                            <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs font-medium">
-                          <span className="font-bold">{meta.label}</span> — {meta.tooltip}
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </TooltipProvider>
+              <BadgeGrid badgeIds={allBadgeIds} />
             )}
           </div>
         </div>
