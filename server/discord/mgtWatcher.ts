@@ -644,45 +644,24 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
   let orderCount = 0;
   let proposalCount = 0;
 
+  const allOrders = await storage.getOrders();
+  const knownOrderMessageIds = new Set(allOrders.map((o: any) => o.discordMessageId).filter(Boolean));
+
+  const allBids = await storage.getBids();
+  const knownBidMessageIds = new Set(allBids.map((b: any) => b.discordMessageId).filter(Boolean));
+
   try {
     const bidWarChannel = await discordClient.channels.fetch(BID_WAR_CHANNEL_ID).catch(() => null);
     if (bidWarChannel && bidWarChannel.isTextBased()) {
       const messages = await (bidWarChannel as any).messages.fetch({ limit: 100 });
-      const mgtMessages = messages.filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0);
+      const mgtMessages = messages
+        .filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0)
+        .filter((m: Message) => !knownOrderMessageIds.has(m.id));
 
       for (const [, msg] of mgtMessages) {
         try {
-          const embed = msg.embeds[0];
-          const title = embed.title || "";
-          const description = embed.description || "";
-          const hasOrderKeywords = title.toLowerCase().includes("order") ||
-                                   description.toLowerCase().includes("order") ||
-                                   description.toLowerCase().includes("proposal");
-          if (!hasOrderKeywords) continue;
-
-          let orderNumber: number | null = null;
-          for (const field of embed.fields || []) {
-            const name = field.name.replace(/[^\w\s]/g, "").trim().toLowerCase();
-            if (name.includes("order id") || name.includes("order")) {
-              const numMatch = field.value.match(/#?(\d+)/);
-              if (numMatch) orderNumber = parseInt(numMatch[1], 10);
-            }
-          }
-          if (!orderNumber) {
-            const titleMatch = title.match(/#(\d+)/) || description.match(/#(\d+)/);
-            if (titleMatch) orderNumber = parseInt(titleMatch[1], 10);
-          }
-          if (!orderNumber) {
-            const orderMatch = (title + " " + description).match(/Order\s*#?(\d+)/i);
-            if (orderMatch) orderNumber = parseInt(orderMatch[1], 10);
-          }
-          if (!orderNumber) continue;
-
-          const existing = await storage.getOrderByMgtNumber(orderNumber);
-          if (!existing) {
-            await handleNewOrderMessage(msg);
-            orderCount++;
-          }
+          await handleNewOrderMessage(msg);
+          orderCount++;
         } catch (e) {
           console.error("[mgt-watcher] Error backfilling order message:", e);
         }
@@ -696,35 +675,14 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
     const proposalsChannel = await discordClient.channels.fetch(BID_PROPOSALS_CHANNEL_ID).catch(() => null);
     if (proposalsChannel && proposalsChannel.isTextBased()) {
       const messages = await (proposalsChannel as any).messages.fetch({ limit: 100 });
-      const mgtMessages = messages.filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0);
+      const mgtMessages = messages
+        .filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0)
+        .filter((m: Message) => !knownBidMessageIds.has(m.id));
 
       for (const [, msg] of mgtMessages) {
         try {
-          const embed = msg.embeds[0];
-          const title = embed.title || "";
-          const description = embed.description || "";
-          if (!title.toLowerCase().includes("proposal") && !description.toLowerCase().includes("proposal")) continue;
-
-          let proposalId: number | null = null;
-          const footerText = embed.footer?.text || "";
-          const allText = title + " " + description + " " + footerText;
-          for (const field of embed.fields || []) {
-            const pMatch = (field.name + " " + field.value).match(/Proposal\s*ID:?\s*(\d+)/i);
-            if (pMatch) { proposalId = parseInt(pMatch[1], 10); break; }
-          }
-          if (!proposalId) {
-            const pMatch = allText.match(/Proposal\s*ID:?\s*(\d+)/i);
-            if (pMatch) proposalId = parseInt(pMatch[1], 10);
-          }
-          if (!proposalId) continue;
-
-          const existingBid = await storage.getBidByProposalId(proposalId);
-          if (!existingBid) {
-            await handleProposalMessage(msg);
-            proposalCount++;
-          } else {
-            await handleProposalMessage(msg);
-          }
+          await handleProposalMessage(msg);
+          proposalCount++;
         } catch (e) {
           console.error("[mgt-watcher] Error backfilling proposal message:", e);
         }
