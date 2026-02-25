@@ -143,7 +143,7 @@ export default function Assignments() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
         <Table className="min-w-[1400px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
