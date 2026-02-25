@@ -56,13 +56,13 @@ const grinderNavItems = [
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
-  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Status", url: "/grinder/status", icon: Bell },
-  { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
-  { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
+  { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
   { title: "Submit Review", url: "/grinder/reviews", icon: Star },
   { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
-  { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
+  { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
+  { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
+  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Features", url: "/grinder/guide", icon: BookOpen },
 ];
 
