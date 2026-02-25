@@ -103,7 +103,7 @@ export default function Assignments() {
 
   return (
     <TooltipProvider>
-    <AnimatedPage className="space-y-5">
+    <AnimatedPage className="flex flex-col h-[calc(100vh-64px)] gap-5 overflow-hidden">
       <FadeInUp>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
