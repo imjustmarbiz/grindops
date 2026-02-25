@@ -1380,8 +1380,10 @@ export async function registerRoutes(
     res.json({
       grinder: safeGrinder,
       isElite,
-      assignments: myAssignments.map((a: any) => {
+      assignments: await Promise.all(myAssignments.map(async (a: any) => {
         const order = allOrders.find((o: any) => o.id === a.orderId);
+        const checkpoints = await storage.getActivityCheckpoints(a.id);
+        const hasTicketAck = checkpoints.some((cp: any) => cp.type === "ticket_ack");
         return {
           id: a.id,
           orderId: a.orderId,
@@ -1395,8 +1397,9 @@ export async function registerRoutes(
           bidAmount: a.bidAmount,
           grinderId: a.grinderId,
           hasTicket: !!(order?.discordTicketChannelId),
+          hasTicketAck,
         };
-      }),
+      })),
       bids: myBids.map((b: any) => ({
         id: b.id,
         orderId: b.orderId,

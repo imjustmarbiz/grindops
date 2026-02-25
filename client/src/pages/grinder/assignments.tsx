@@ -41,6 +41,7 @@ export default function GrinderAssignments() {
   const [issueNote, setIssueNote] = useState("");
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<string | null>(null);
   const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
+  const [ticketConfirm, setTicketConfirm] = useState<{ assignmentId: string; orderId: string; action: "accept" | "decline" } | null>(null);
 
   const checkpointMutation = useMutation({
     mutationFn: async (data: { assignmentId: string; orderId: string; type: string; response?: string; note?: string }) => {
@@ -150,16 +151,25 @@ export default function GrinderAssignments() {
                   <div className="mt-2 pt-2 border-t border-white/[0.06]">
                     <p className="text-[10px] uppercase tracking-wider text-white/30 font-medium mb-1.5">Activity Checkpoints</p>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
-                        disabled={checkpointMutation.isPending}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "ticket_ack", response: "yes" })}>
-                        <TicketCheck className="w-3 h-3" /> Accept Ticket
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
-                        disabled={checkpointMutation.isPending}
-                        onClick={() => { setIssueDialog({ ...a, checkpointType: "ticket_ack_no" }); setIssueNote(""); }}>
-                        <TicketCheck className="w-3 h-3" /> Decline Ticket
-                      </Button>
+                      {!a.hasTicketAck && (
+                        <>
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
+                            disabled={checkpointMutation.isPending}
+                            onClick={() => setTicketConfirm({ assignmentId: a.id, orderId: a.orderId, action: "accept" })}>
+                            <TicketCheck className="w-3 h-3" /> Accept Ticket
+                          </Button>
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
+                            disabled={checkpointMutation.isPending}
+                            onClick={() => setTicketConfirm({ assignmentId: a.id, orderId: a.orderId, action: "decline" })}>
+                            <TicketCheck className="w-3 h-3" /> Decline Ticket
+                          </Button>
+                        </>
+                      )}
+                      {a.hasTicketAck && (
+                        <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Ticket Responded
+                        </Badge>
+                      )}
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
@@ -506,6 +516,59 @@ export default function GrinderAssignments() {
               {requestPayoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Banknote className="w-4 h-4 mr-2" />}
               Request Payout
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!ticketConfirm} onOpenChange={(open) => !open && setTicketConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {ticketConfirm?.action === "accept" ? (
+                <><TicketCheck className="w-5 h-5 text-blue-400" /> Confirm Accept Ticket</>
+              ) : (
+                <><TicketCheck className="w-5 h-5 text-red-400" /> Confirm Decline Ticket</>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-white/60">
+              {ticketConfirm?.action === "accept"
+                ? "Are you sure you want to accept this ticket? This action cannot be undone."
+                : "Are you sure you want to decline this ticket? You will be asked to provide a reason."}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" data-testid="button-ticket-confirm-cancel"
+                onClick={() => setTicketConfirm(null)}>
+                Cancel
+              </Button>
+              <Button
+                className={`flex-1 ${ticketConfirm?.action === "accept" ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"}`}
+                data-testid="button-ticket-confirm-submit"
+                disabled={checkpointMutation.isPending}
+                onClick={() => {
+                  if (!ticketConfirm) return;
+                  if (ticketConfirm.action === "accept") {
+                    checkpointMutation.mutate({
+                      assignmentId: ticketConfirm.assignmentId,
+                      orderId: ticketConfirm.orderId,
+                      type: "ticket_ack",
+                      response: "yes",
+                    });
+                    setTicketConfirm(null);
+                  } else {
+                    const assignmentData = assignments?.find((a: any) => a.id === ticketConfirm.assignmentId);
+                    setTicketConfirm(null);
+                    if (assignmentData) {
+                      setIssueDialog({ ...assignmentData, checkpointType: "ticket_ack_no" });
+                      setIssueNote("");
+                    }
+                  }
+                }}>
+                {checkpointMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {ticketConfirm?.action === "accept" ? "Accept Ticket" : "Continue to Decline"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
