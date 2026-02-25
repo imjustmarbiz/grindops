@@ -577,7 +577,7 @@ export function ActivityCalendar({
                       >
                         <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors group">
                           <div
-                            className={`mt-0.5 p-1.5 rounded-md ${config?.color || "bg-white/10"}`}
+                            className={`mt-0.5 p-1.5 rounded-md shrink-0 ${config?.color || "bg-white/10"}`}
                           >
                             {IconComp ? (
                               <IconComp className="w-3.5 h-3.5" />
@@ -586,11 +586,19 @@ export function ActivityCalendar({
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground leading-tight truncate">
-                              {activity.title}
-                            </p>
+                            <div className="flex items-start justify-between gap-2 flex-wrap">
+                              <p className="text-sm font-medium text-foreground leading-tight break-words">
+                                {activity.title}
+                              </p>
+                              <Badge
+                                variant="secondary"
+                                className={`text-[10px] shrink-0 ${config?.color || "bg-white/10"}`}
+                              >
+                                {config?.label || activity.type}
+                              </Badge>
+                            </div>
                             {activity.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                              <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-2">
                                 {activity.description}
                               </p>
                             )}
@@ -604,12 +612,6 @@ export function ActivityCalendar({
                               })}
                             </p>
                           </div>
-                          <Badge
-                            variant="secondary"
-                            className={`text-[10px] shrink-0 ${config?.color || "bg-white/10"}`}
-                          >
-                            {config?.label || activity.type}
-                          </Badge>
                         </div>
                       </motion.div>
                     );
