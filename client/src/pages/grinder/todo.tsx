@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -289,9 +290,11 @@ export default function GrinderTodoList() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{todo.description}</p>
                     </div>
-                    <Badge variant="outline" className="shrink-0 border-amber-500/20 text-amber-400/80 text-[10px]">
-                      Go to My Orders
-                    </Badge>
+                    <Link href="/grinder/assignments" data-testid={`link-goto-orders-${todo.id}`}>
+                      <Badge variant="outline" className="shrink-0 border-amber-500/20 text-amber-400/80 text-[10px] cursor-pointer hover:bg-amber-500/10 transition-colors">
+                        Go to My Orders
+                      </Badge>
+                    </Link>
                   </div>
                 ))}
               </CardContent>

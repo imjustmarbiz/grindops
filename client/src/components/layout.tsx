@@ -50,11 +50,11 @@ const staffNavItems = [
 
 const grinderNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
+  { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
   { title: "Available Orders", url: "/grinder/orders", icon: Zap },
   { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
   { title: "My Orders", url: "/grinder/assignments", icon: FileCheck },
-  { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
