@@ -21,7 +21,7 @@ export default function StaffBadges() {
   const [badgeNote, setBadgeNote] = useState("");
 
   const { data: grinders = [], isLoading: grindersLoading } = useQuery<Grinder[]>({
-    queryKey: ["/api/staff/grinders"],
+    queryKey: ["/api/grinders"],
   });
 
   const selectedGrinder = grinders.find(g => g.id === selectedGrinderId) || null;
