@@ -158,6 +158,18 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/services/:id/toggle", requireOwner, async (req, res) => {
+    try {
+      const allServices = await storage.getServices();
+      const svc = allServices.find(s => s.id === req.params.id);
+      if (!svc) return res.status(404).json({ error: "Service not found" });
+      const updated = await storage.updateService(req.params.id, { isActive: !svc.isActive });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/services/:id", requireOwner, async (req, res) => {
     try {
       await storage.deleteService(req.params.id);

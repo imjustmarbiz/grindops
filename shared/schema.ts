@@ -41,6 +41,7 @@ export const services = pgTable("services", {
   defaultComplexity: integer("default_complexity").notNull().default(1),
   slaDays: integer("sla_days").notNull().default(1),
   notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
 });
 
 export const grinders = pgTable("grinders", {

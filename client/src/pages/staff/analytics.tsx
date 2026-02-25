@@ -82,7 +82,8 @@ export default function StaffAnalytics() {
   const onTimeRate = completedAssignments.length > 0 ? (onTimeCount / completedAssignments.length) * 100 : 0;
 
   const nonCancelledOrders = allOrders.filter(o => o.status !== "Cancelled");
-  const serviceDistribution = allServices.map(s => {
+  const activeServices = allServices.filter(s => s.isActive !== false);
+  const serviceDistribution = activeServices.map(s => {
     const svcOrders = nonCancelledOrders.filter(o => o.serviceId === s.id);
     const count = svcOrders.length;
     const serviceRevenue = svcOrders.reduce((sum, o) => sum + Number(o.customerPrice || 0), 0);

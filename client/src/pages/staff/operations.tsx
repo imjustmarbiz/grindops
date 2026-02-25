@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -195,6 +196,14 @@ function ServiceManagement({ services }: { services: Service[] }) {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: async (id: string) => { await apiRequest("PATCH", `/api/services/${id}/toggle`); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/services/${id}`); },
     onSuccess: () => {
@@ -267,29 +276,38 @@ function ServiceManagement({ services }: { services: Service[] }) {
       <CardContent className="relative">
         <div className="space-y-2">
           {services.map(s => (
-            <div key={s.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.02] border border-border/20" data-testid={`row-service-${s.id}`}>
+            <div key={s.id} className={`flex items-center justify-between py-2 px-3 rounded-lg border border-border/20 ${s.isActive ? "bg-white/[0.02]" : "bg-white/[0.01] opacity-50"}`} data-testid={`row-service-${s.id}`}>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="font-medium text-sm">{s.name}</span>
+                <span className={`font-medium text-sm ${!s.isActive ? "line-through text-muted-foreground" : ""}`}>{s.name}</span>
                 <Badge variant="secondary" className="text-[10px]">{s.group}</Badge>
                 <span className="text-[10px] text-muted-foreground">Complexity: {s.defaultComplexity} | SLA: {s.slaDays}d</span>
+                {!s.isActive && <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30">Inactive</Badge>}
               </div>
-              <Dialog open={deleteId === s.id} onOpenChange={(open) => setDeleteId(open ? s.id : null)}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" data-testid={`button-delete-service-${s.id}`}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Remove Service</DialogTitle></DialogHeader>
-                  <p className="text-sm text-muted-foreground">Are you sure you want to remove <strong>{s.name}</strong>?</p>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-                    <Button variant="destructive" onClick={() => deleteMutation.mutate(s.id)} disabled={deleteMutation.isPending} data-testid="button-confirm-delete-service">
-                      {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remove"}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={s.isActive}
+                  onCheckedChange={() => toggleMutation.mutate(s.id)}
+                  disabled={toggleMutation.isPending}
+                  data-testid={`toggle-service-${s.id}`}
+                />
+                <Dialog open={deleteId === s.id} onOpenChange={(open) => setDeleteId(open ? s.id : null)}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" data-testid={`button-delete-service-${s.id}`}>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>Remove Service</DialogTitle></DialogHeader>
+                    <p className="text-sm text-muted-foreground">Are you sure you want to remove <strong>{s.name}</strong>?</p>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                      <Button variant="destructive" onClick={() => deleteMutation.mutate(s.id)} disabled={deleteMutation.isPending} data-testid="button-confirm-delete-service">
+                        {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remove"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
           ))}
         </div>
@@ -495,7 +513,7 @@ export default function StaffOperations() {
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {allServices.map(s => (
+                  {allServices.filter(s => s.isActive !== false).map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
