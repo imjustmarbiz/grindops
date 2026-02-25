@@ -4103,12 +4103,13 @@ export async function registerRoutes(
             isRush: false,
             isEmergency: false,
             completedAt: claim.completedDateTime || null,
+            skipDailyCheckup: true,
           });
 
           resolvedOrderId = newOrderId;
           await storage.updateOrderClaimRequest(req.params.id, { orderId: newOrderId });
         } else {
-          const updateData: any = { assignedGrinderId: claim.grinderId };
+          const updateData: any = { assignedGrinderId: claim.grinderId, skipDailyCheckup: true };
           if (customerPrice) updateData.customerPrice = String(customerPrice);
           if (platform) updateData.platform = platform;
           if (gamertag) updateData.gamertag = gamertag;
@@ -4166,6 +4167,7 @@ export async function registerRoutes(
               payoutPlatform: claim.payoutPlatform || null,
               payoutDetails: claim.payoutDetails || null,
               status: "Pending",
+              completionProofUrl: "claimed-order",
             });
           }
         }
