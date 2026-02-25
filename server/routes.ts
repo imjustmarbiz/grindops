@@ -135,6 +135,7 @@ export async function registerRoutes(
             orderId: a.orderId,
             serviceId: order?.serviceId || "",
             platform: order?.platform || "",
+            ticketLink: order?.discordBidLink || "",
           };
         });
       return {

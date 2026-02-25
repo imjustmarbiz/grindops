@@ -15,7 +15,7 @@ type StreamGrinder = {
   avatarUrl?: string;
   roles?: string[];
   isLive?: boolean;
-  activeOrders: { orderId: string; serviceId: string; platform: string }[];
+  activeOrders: { orderId: string; serviceId: string; platform: string; ticketLink: string }[];
 };
 
 export default function StaffStreams() {
@@ -130,13 +130,27 @@ export default function StaffStreams() {
                     </div>
                     {streamer.activeOrders && streamer.activeOrders.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
-                        {streamer.activeOrders.map(order => (
-                          <Badge key={order.orderId} variant="secondary" className="text-[10px] px-1.5 py-0" data-testid={`badge-order-${order.orderId}`}>
-                            {order.orderId}
-                            {order.serviceId && <span className="ml-1 opacity-70">· {order.serviceId}</span>}
-                            {order.platform && <span className="ml-1 opacity-70">· {order.platform}</span>}
-                          </Badge>
-                        ))}
+                        {streamer.activeOrders.map(order => {
+                          const content = (
+                            <>
+                              {order.orderId}
+                              {order.serviceId && <span className="ml-1 opacity-70">· {order.serviceId}</span>}
+                              {order.platform && <span className="ml-1 opacity-70">· {order.platform}</span>}
+                            </>
+                          );
+                          return order.ticketLink ? (
+                            <a key={order.orderId} href={order.ticketLink} target="_blank" rel="noopener noreferrer" data-testid={`link-order-${order.orderId}`}>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-primary/20 hover:text-primary transition-colors">
+                                {content}
+                                <ExternalLink className="w-2.5 h-2.5 ml-1 opacity-60" />
+                              </Badge>
+                            </a>
+                          ) : (
+                            <Badge key={order.orderId} variant="secondary" className="text-[10px] px-1.5 py-0" data-testid={`badge-order-${order.orderId}`}>
+                              {content}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground/60" data-testid={`text-no-orders-${streamer.id}`}>No active orders</p>
