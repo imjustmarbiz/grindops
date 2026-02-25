@@ -157,6 +157,7 @@ export default function GrinderOverview() {
                 <Signal className={`w-3.5 h-3.5 ${isElite ? "text-cyan-400" : "text-[#5865F2]"}`} />
               </div>
               <span className="text-sm font-medium">Availability</span>
+              <HelpTip text="Set your availability so staff knows when you're ready to take orders. Use the status note to share details like your schedule or timezone. Staying 'Available' boosts your queue position." />
             </div>
             <Select
               value={availStatus}
