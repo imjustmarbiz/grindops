@@ -37,6 +37,9 @@ export default function StaffAdmin() {
 
   const [strikeGrinderId, setStrikeGrinderId] = useState("");
   const [strikeReason, setStrikeReason] = useState("");
+  const [denyEliteDialogOpen, setDenyEliteDialogOpen] = useState(false);
+  const [denyEliteReqId, setDenyEliteReqId] = useState("");
+  const [denyEliteReason, setDenyEliteReason] = useState("");
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
   const [removeGrinder, setRemoveGrinder] = useState<any>(null);
@@ -338,10 +341,13 @@ export default function StaffAdmin() {
                         </Button>
                         <Button size="sm" className="text-xs bg-red-500/15 text-red-400 border border-red-500/20" data-testid={`button-deny-elite-${req.id}`}
                           disabled={eliteReqMutation.isPending}
-                          onClick={() => eliteReqMutation.mutate({ id: req.id, status: "Denied" })}>
+                          onClick={() => { setDenyEliteReqId(req.id); setDenyEliteReason(""); setDenyEliteDialogOpen(true); }}>
                           Deny
                         </Button>
                       </div>
+                    )}
+                    {req.status === "Denied" && req.decisionNotes && (
+                      <p className="text-xs text-red-400/70 mt-2 italic">Reason: {req.decisionNotes}</p>
                     )}
                   </div>
                 );
@@ -349,6 +355,50 @@ export default function StaffAdmin() {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={denyEliteDialogOpen} onOpenChange={setDenyEliteDialogOpen}>
+          <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                  <Crown className="w-4 h-4 text-red-400" />
+                </div>
+                Deny Elite Request
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Reason for denial (visible to grinder)</label>
+                <Textarea
+                  value={denyEliteReason}
+                  onChange={(e) => setDenyEliteReason(e.target.value)}
+                  placeholder="e.g. Need more completed orders, improve on-time rate..."
+                  className="mt-1.5 bg-background/50 border-white/10 min-h-[80px]"
+                  data-testid="textarea-deny-elite-reason"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setDenyEliteDialogOpen(false)} className="border-white/10">
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25"
+                  disabled={eliteReqMutation.isPending}
+                  data-testid="button-confirm-deny-elite"
+                  onClick={() => {
+                    eliteReqMutation.mutate(
+                      { id: denyEliteReqId, status: "Denied", decisionNotes: denyEliteReason.trim() || undefined },
+                      { onSuccess: () => setDenyEliteDialogOpen(false) }
+                    );
+                  }}
+                >
+                  {eliteReqMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Deny Request"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Card className="border-0 bg-gradient-to-br from-red-500/[0.08] via-background to-red-900/[0.04] overflow-hidden relative" data-testid="card-strike-management">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-red-500/[0.04] -translate-y-12 translate-x-12" />

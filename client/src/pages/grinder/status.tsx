@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Loader2, Bell, AlertOctagon, Crown, CheckCircle, DollarSign,
-  Eye, Sparkles, Lightbulb, ArrowUpCircle, Tv, ExternalLink
+  Eye, Sparkles, Lightbulb, ArrowUpCircle, Tv, ExternalLink, Info
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -238,6 +238,12 @@ export default function GrinderStatus() {
                   )}
                 </>
               )}
+              <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] mb-3" data-testid="banner-elite-disclaimer">
+                <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-300/90">
+                  Staff will review elite applications on a case-by-case basis. The metrics shown above are not the sole factor in the decision. If denied, you can re-apply at any time.
+                </p>
+              </div>
               <Button
                 className={`w-full gap-2 ${isElite ? "" : "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white"}`}
                 disabled={eliteRequestMutation.isPending || eliteRequests.some((r: any) => r.status === "Pending")}
