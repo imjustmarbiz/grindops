@@ -156,10 +156,12 @@
 .overflow-x-auto {
   scrollbar-width: auto;
   scrollbar-color: hsl(240 10% 28%) hsl(240 10% 10%);
+  overflow: auto;
 }
 
 .overflow-x-auto::-webkit-scrollbar {
   height: 14px;
+  width: 8px;
 }
 
 .overflow-x-auto::-webkit-scrollbar-track {
@@ -175,4 +177,35 @@
 
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
   background: hsl(240 10% 36%);
+}
+
+.table-scroll-container {
+  overflow: auto;
+  max-height: calc(100vh - 280px);
+  scrollbar-width: auto;
+  scrollbar-color: hsl(240 10% 28%) hsl(240 10% 10%);
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  height: 14px;
+  width: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: hsl(240 10% 10%);
+  border-radius: 7px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: hsl(240 10% 28%);
+  border-radius: 7px;
+  border: 2px solid hsl(240 10% 10%);
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: hsl(240 10% 36%);
+}
+
+.table-scroll-container::-webkit-scrollbar-corner {
+  background: hsl(240 10% 10%);
 }

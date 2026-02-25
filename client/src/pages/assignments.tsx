@@ -143,9 +143,9 @@ export default function Assignments() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
+        <div className="table-scroll-container">
         <Table className="min-w-[1400px]">
-          <TableHeader className="bg-white/[0.03]">
+          <TableHeader className="bg-background/95 backdrop-blur-sm sticky top-0 z-10">
             <TableRow className="border-white/[0.06]">
               <SortableHeader label="ID" sortKey="id" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
               <SortableHeader label="Order" sortKey="orderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
