@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, ClipboardList, Brain,
   Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
-  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon
+  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon, ScrollText
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -111,6 +111,12 @@ const featureItems = [
     title: "Calendar",
     desc: "Your personal activity calendar showing completed orders, upcoming deadlines, events, and other important dates across the platform.",
     url: "/grinder/calendar",
+  },
+  {
+    icon: ScrollText,
+    title: "Operations Guide",
+    desc: "A comprehensive slide-deck walkthrough of every grinder dashboard page. Step-by-step instructions, key features, pro tips, and an ideal daily workflow routine.",
+    url: "/grinder/ops-guide",
   },
 ];
 

@@ -128,6 +128,18 @@ const features = [
     description: "Financial overview with revenue tracking, cost analysis, margin calculations, and profitability metrics. The complete picture of your business performance.",
     url: "/business",
   },
+  {
+    icon: ScrollText,
+    title: "Operations Guide",
+    description: "A comprehensive slide-deck walkthrough of every staff and owner page. Step-by-step instructions, key features, and pro tips for managing the entire platform.",
+    url: "/staff/ops-guide",
+  },
+  {
+    icon: Brain,
+    title: "Scorecard & Queue Info",
+    description: "Reference page explaining the letter grading system (A-F), 5 quality score factors, all 9 AI queue factors with weights and tips, and boost modifiers.",
+    url: "/scorecard-guide",
+  },
 ];
 
 export default function StaffFeatures() {
