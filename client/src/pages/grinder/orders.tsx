@@ -293,6 +293,13 @@ export default function GrinderOrders() {
                       </div>
                     </div>
                   )}
+
+                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06]" data-testid="banner-queue-disclaimer">
+                    <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                    <p className="text-sm text-amber-300/90">
+                      Queue position is a <strong className="font-semibold text-amber-300">guide</strong> — it helps keep everyone on a fair playing field and rewards better performers, but it doesn't guarantee you will or won't receive any specific order.
+                    </p>
+                  </div>
                 </>
               ) : null}
             </CardContent>
