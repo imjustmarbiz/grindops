@@ -46,6 +46,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Strike Appeals System:** Grinders can appeal strikes, which staff can review, approve, or deny, with audit trails.
 - **Operations Guides:** Slide-deck-style presentation pages for both Grinders and Staff, providing step-by-step instructions and key feature descriptions.
 - **Payment Proof on Mark Paid:** Staff/owners can upload payment proof when marking a payout as paid.
+- **Payout Reduction System:** Staff can request payout reductions with a reason; if staff submits, owner must approve/deny. Owners can apply reductions directly. Difference goes to company profit (updates `orders.companyProfit` and `assignments.grinderEarnings`). Schema fields on `payoutRequests`: `originalAmount`, `reductionReason`, `reductionRequestedBy`, `reductionRequestedAt`, `reductionStatus` (pending/approved/denied), `reductionApprovedBy`, `reductionApprovedAt`, `reductionDeniedReason`. Routes: `PATCH /api/staff/payout-requests/:id/reduce` (requireStaff), `PATCH /api/staff/payout-requests/:id/reduction-review` (requireOwner). Owner sees "Payout Reductions Pending Approval" section on Payouts page.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database, managed with Drizzle ORM.

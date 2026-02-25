@@ -8,8 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText } from "lucide-react";
+import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText, ArrowDownCircle, ShieldAlert, ArrowDown } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
@@ -61,6 +63,49 @@ export default function StaffPayouts() {
     }
   };
 
+  const [reduceDialog, setReduceDialog] = useState<{ id: string; grinder: string; amount: number; orderId: string } | null>(null);
+  const [reduceAmount, setReduceAmount] = useState("");
+  const [reduceReason, setReduceReason] = useState("");
+  const [denyReductionDialog, setDenyReductionDialog] = useState<string | null>(null);
+  const [denyReductionReason, setDenyReductionReason] = useState("");
+
+  const isOwner = user?.role === "owner";
+
+  const reduceMutation = useMutation({
+    mutationFn: async ({ id, newAmount, reason }: { id: string; newAmount: string; reason: string }) => {
+      const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}/reduce`, { newAmount, reason, reviewedBy });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      toast({ title: isOwner ? "Payout reduced" : "Reduction submitted for owner approval" });
+      setReduceDialog(null);
+      setReduceAmount("");
+      setReduceReason("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to reduce payout", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const reductionReviewMutation = useMutation({
+    mutationFn: async ({ id, action, deniedReason }: { id: string; action: string; deniedReason?: string }) => {
+      const reviewedBy = (user as any)?.username || user?.discordUsername || "owner";
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}/reduction-review`, { action, reviewedBy, deniedReason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      toast({ title: "Reduction review complete" });
+      setDenyReductionDialog(null);
+      setDenyReductionReason("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to review reduction", description: err.message, variant: "destructive" });
+    },
+  });
+
   const resolveDisputeMutation = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: string }) => {
       const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
@@ -87,6 +132,7 @@ export default function StaffPayouts() {
   const pendingPayouts = allPayoutReqs.filter((p: any) => p.status === "Pending");
   const approvedPayouts = allPayoutReqs.filter((p: any) => p.status === "Approved");
   const paidPayouts = allPayoutReqs.filter((p: any) => p.status === "Paid");
+  const pendingReductions = allPayoutReqs.filter((p: any) => p.reductionStatus === "pending");
   const totalOwed = [...pendingPayouts, ...approvedPayouts].reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const totalPaidOut = paidPayouts.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const allGrinders = grinders || [];
@@ -122,6 +168,12 @@ export default function StaffPayouts() {
               <Badge className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 gap-1 animate-pulse">
                 <Clock className="w-3 h-3" />
                 {pendingPayouts.length} pending review
+              </Badge>
+            )}
+            {pendingReductions.length > 0 && isOwner && (
+              <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 gap-1 animate-pulse">
+                <ArrowDownCircle className="w-3 h-3" />
+                {pendingReductions.length} reduction{pendingReductions.length > 1 ? "s" : ""} awaiting approval
               </Badge>
             )}
           </div>
@@ -257,6 +309,63 @@ export default function StaffPayouts() {
         </FadeInUp>
       )}
 
+      {pendingReductions.length > 0 && isOwner && (
+        <FadeInUp>
+        <Card className="border-0 bg-gradient-to-br from-red-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-pending-reductions">
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-red-500/[0.03] -translate-y-16 translate-x-16" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                <ShieldAlert className="w-4 h-4 text-red-400" />
+              </div>
+              Payout Reductions Pending Approval
+              <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 ml-2 text-xs">{pendingReductions.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 relative">
+            {pendingReductions.map((p: any) => {
+              const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
+              const difference = Number(p.amount) - Number(p.requestedAmount);
+              return (
+                <div key={p.id} className="p-4 rounded-xl bg-white/[0.03] border border-red-500/20 space-y-3" data-testid={`pending-reduction-${p.id}`}>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{grinder?.name || p.grinderId}</span>
+                        <span className="text-white/50 line-through text-sm">{formatCurrency(Number(p.amount))}</span>
+                        <ArrowDown className="w-3 h-3 text-red-400" />
+                        <span className="text-red-400 font-bold">{formatCurrency(Number(p.requestedAmount))}</span>
+                        <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">+{formatCurrency(difference)} to profit</Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Order {p.orderId} — Requested by {p.reductionRequestedBy}</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-red-500/[0.06] border border-red-500/15">
+                    <p className="text-xs font-medium text-red-400 mb-1">Reason for reduction:</p>
+                    <p className="text-sm text-white/70">{p.reductionReason}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 gap-1"
+                      data-testid={`button-approve-reduction-${p.id}`}
+                      disabled={reductionReviewMutation.isPending}
+                      onClick={() => reductionReviewMutation.mutate({ id: p.id, action: "approve" })}>
+                      <CheckCircle className="w-3 h-3" /> Approve Reduction
+                    </Button>
+                    <Button size="sm" className="text-xs bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/20 gap-1"
+                      data-testid={`button-deny-reduction-${p.id}`}
+                      disabled={reductionReviewMutation.isPending}
+                      onClick={() => setDenyReductionDialog(p.id)}>
+                      <X className="w-3 h-3" /> Deny Reduction
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+        </FadeInUp>
+      )}
+
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-payout-management">
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-emerald-500/[0.03] -translate-y-16 translate-x-16" />
@@ -297,7 +406,25 @@ export default function StaffPayouts() {
                         </a>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {p.reductionStatus === "approved" && p.originalAmount && (
+                      <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-red-500/[0.06] border border-red-500/15">
+                        <ArrowDown className="w-3 h-3 text-red-400 shrink-0" />
+                        <span className="text-[10px] text-red-400">Reduced from {formatCurrency(Number(p.originalAmount))} — {p.reductionReason}</span>
+                      </div>
+                    )}
+                    {p.reductionStatus === "pending" && (
+                      <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-amber-500/[0.06] border border-amber-500/15">
+                        <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                        <span className="text-[10px] text-amber-400">Reduction to {formatCurrency(Number(p.requestedAmount))} pending owner approval — {p.reductionReason}</span>
+                      </div>
+                    )}
+                    {p.reductionStatus === "denied" && (
+                      <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                        <X className="w-3 h-3 text-white/40 shrink-0" />
+                        <span className="text-[10px] text-white/40">Reduction denied{p.reductionDeniedReason ? `: ${p.reductionDeniedReason}` : ""}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
                       {p.status === "Pending" && (
                         <>
                           <Button size="sm" className="text-xs bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/20" data-testid={`button-approve-payout-${p.id}`}
@@ -311,6 +438,12 @@ export default function StaffPayouts() {
                             <X className="w-3 h-3 mr-1" /> Deny
                           </Button>
                         </>
+                      )}
+                      {(p.status === "Approved" || p.status === "Pending") && p.reductionStatus !== "pending" && (
+                        <Button size="sm" className="text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 border border-orange-500/20" data-testid={`button-reduce-payout-${p.id}`}
+                          onClick={() => setReduceDialog({ id: p.id, grinder: grinder?.name || p.grinderId, amount: Number(p.amount), orderId: p.orderId })}>
+                          <ArrowDownCircle className="w-3 h-3 mr-1" /> Reduce
+                        </Button>
                       )}
                       {(p.status === "Approved" || p.status === "Pending") && (
                         <Button size="sm" className="text-xs bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20" data-testid={`button-mark-paid-${p.id}`}
@@ -494,6 +627,151 @@ export default function StaffPayouts() {
                 <><Loader2 className="w-3 h-3 animate-spin" /> Processing...</>
               ) : (
                 <><CheckCircle className="w-3 h-3" /> Confirm Paid</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reduceDialog} onOpenChange={(open) => { if (!open) { setReduceDialog(null); setReduceAmount(""); setReduceReason(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowDownCircle className="w-5 h-5 text-orange-400" />
+              Reduce Payout
+            </DialogTitle>
+          </DialogHeader>
+          {reduceDialog && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <p className="text-sm">
+                  Reducing <span className="font-semibold text-white">{reduceDialog.grinder}</span>'s payout for order{" "}
+                  <span className="text-white/70">{reduceDialog.orderId}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Current amount: <span className="text-emerald-400 font-semibold">{formatCurrency(reduceDialog.amount)}</span></p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">New Amount ($)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={reduceDialog.amount - 0.01}
+                  placeholder="Enter reduced amount"
+                  value={reduceAmount}
+                  onChange={(e) => setReduceAmount(e.target.value)}
+                  className="bg-background/50 border-white/10"
+                  data-testid="input-reduce-amount"
+                />
+                {reduceAmount && Number(reduceAmount) < reduceDialog.amount && Number(reduceAmount) >= 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-red-400">-{formatCurrency(reduceDialog.amount - Number(reduceAmount))}</span>
+                    <ArrowDown className="w-3 h-3 text-white/30" />
+                    <span className="text-emerald-400">+{formatCurrency(reduceDialog.amount - Number(reduceAmount))} company profit</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reason for Reduction</label>
+                <Textarea
+                  placeholder="Explain why the payout is being reduced..."
+                  value={reduceReason}
+                  onChange={(e) => setReduceReason(e.target.value)}
+                  className="bg-background/50 border-white/10 min-h-[80px] resize-none"
+                  data-testid="input-reduce-reason"
+                />
+              </div>
+
+              {!isOwner && (
+                <div className="p-2.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/15">
+                  <p className="text-[10px] text-amber-400 flex items-center gap-1.5">
+                    <ShieldAlert className="w-3 h-3 shrink-0" />
+                    This reduction requires owner approval before taking effect.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-white/10"
+              onClick={() => { setReduceDialog(null); setReduceAmount(""); setReduceReason(""); }}
+              data-testid="button-cancel-reduce"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 border border-orange-500/20 gap-1"
+              disabled={reduceMutation.isPending || !reduceAmount || !reduceReason || Number(reduceAmount) >= (reduceDialog?.amount || 0) || Number(reduceAmount) < 0}
+              onClick={() => {
+                if (reduceDialog) {
+                  reduceMutation.mutate({ id: reduceDialog.id, newAmount: reduceAmount, reason: reduceReason });
+                }
+              }}
+              data-testid="button-confirm-reduce"
+            >
+              {reduceMutation.isPending ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Processing...</>
+              ) : isOwner ? (
+                <><ArrowDownCircle className="w-3 h-3" /> Apply Reduction</>
+              ) : (
+                <><ArrowDownCircle className="w-3 h-3" /> Submit for Approval</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!denyReductionDialog} onOpenChange={(open) => { if (!open) { setDenyReductionDialog(null); setDenyReductionReason(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="w-5 h-5 text-red-400" />
+              Deny Reduction
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reason for Denial (optional)</label>
+              <Textarea
+                placeholder="Explain why the reduction was denied..."
+                value={denyReductionReason}
+                onChange={(e) => setDenyReductionReason(e.target.value)}
+                className="bg-background/50 border-white/10 min-h-[80px] resize-none"
+                data-testid="input-deny-reduction-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-white/10"
+              onClick={() => { setDenyReductionDialog(null); setDenyReductionReason(""); }}
+              data-testid="button-cancel-deny-reduction"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/20 gap-1"
+              disabled={reductionReviewMutation.isPending}
+              onClick={() => {
+                if (denyReductionDialog) {
+                  reductionReviewMutation.mutate({ id: denyReductionDialog, action: "deny", deniedReason: denyReductionReason });
+                }
+              }}
+              data-testid="button-confirm-deny-reduction"
+            >
+              {reductionReviewMutation.isPending ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Processing...</>
+              ) : (
+                <><X className="w-3 h-3" /> Confirm Denial</>
               )}
             </Button>
           </DialogFooter>

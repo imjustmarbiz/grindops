@@ -2200,6 +2200,174 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/staff/payout-requests/:id/reduce", requireStaff, async (req, res) => {
+    try {
+      const { newAmount, reason } = req.body;
+      const userRole = (req as any).userRole;
+      const reviewedBy = req.body.reviewedBy || "staff";
+
+      if (!newAmount || !reason) {
+        return res.status(400).json({ message: "New amount and reason are required" });
+      }
+
+      const payoutReq = await storage.getPayoutRequest(req.params.id);
+      if (!payoutReq) return res.status(404).json({ message: "Payout request not found" });
+
+      if (Number(newAmount) >= Number(payoutReq.amount)) {
+        return res.status(400).json({ message: "Reduced amount must be less than current amount" });
+      }
+      if (Number(newAmount) < 0) {
+        return res.status(400).json({ message: "Amount cannot be negative" });
+      }
+
+      const originalAmount = payoutReq.originalAmount || payoutReq.amount;
+
+      if (userRole === "owner") {
+        const difference = Number(payoutReq.amount) - Number(newAmount);
+        await storage.updatePayoutRequest(req.params.id, {
+          amount: newAmount,
+          originalAmount,
+          reductionReason: reason,
+          reductionRequestedBy: reviewedBy,
+          reductionRequestedAt: new Date(),
+          reductionStatus: "approved",
+          reductionApprovedBy: reviewedBy,
+          reductionApprovedAt: new Date(),
+        });
+
+        if (payoutReq.orderId) {
+          const order = await storage.getOrder(payoutReq.orderId);
+          if (order) {
+            const currentProfit = Number(order.companyProfit || 0);
+            await storage.updateOrder(payoutReq.orderId, {
+              companyProfit: String(currentProfit + difference),
+            });
+          }
+        }
+
+        if (payoutReq.assignmentId) {
+          const assignment = await storage.getAssignment(payoutReq.assignmentId);
+          if (assignment) {
+            const currentAssignProfit = Number(assignment.companyProfit || 0);
+            await storage.updateAssignment(payoutReq.assignmentId, {
+              grinderEarnings: newAmount,
+              companyProfit: String(currentAssignProfit + difference),
+            });
+          }
+        }
+
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "payout_request",
+          entityId: req.params.id,
+          action: "payout_reduction_applied",
+          actor: reviewedBy,
+          details: JSON.stringify({ originalAmount, newAmount, difference, reason, grinderId: payoutReq.grinderId, orderId: payoutReq.orderId }),
+        });
+      } else {
+        await storage.updatePayoutRequest(req.params.id, {
+          originalAmount,
+          reductionReason: reason,
+          reductionRequestedBy: reviewedBy,
+          reductionRequestedAt: new Date(),
+          reductionStatus: "pending",
+          requestedAmount: newAmount,
+        });
+
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "payout_request",
+          entityId: req.params.id,
+          action: "payout_reduction_requested",
+          actor: reviewedBy,
+          details: JSON.stringify({ originalAmount, requestedNewAmount: newAmount, reason, grinderId: payoutReq.grinderId, orderId: payoutReq.orderId }),
+        });
+      }
+
+      const updated = await storage.getPayoutRequest(req.params.id);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/staff/payout-requests/:id/reduction-review", requireOwner, async (req, res) => {
+    try {
+      const { action, reviewedBy, deniedReason } = req.body;
+      const payoutReq = await storage.getPayoutRequest(req.params.id);
+      if (!payoutReq) return res.status(404).json({ message: "Payout request not found" });
+
+      if (payoutReq.reductionStatus !== "pending") {
+        return res.status(400).json({ message: "No pending reduction to review" });
+      }
+
+      if (action === "approve") {
+        const newAmount = payoutReq.requestedAmount;
+        const difference = Number(payoutReq.amount) - Number(newAmount);
+
+        await storage.updatePayoutRequest(req.params.id, {
+          amount: newAmount!,
+          reductionStatus: "approved",
+          reductionApprovedBy: reviewedBy || "owner",
+          reductionApprovedAt: new Date(),
+          requestedAmount: null,
+        });
+
+        if (payoutReq.orderId) {
+          const order = await storage.getOrder(payoutReq.orderId);
+          if (order) {
+            const currentProfit = Number(order.companyProfit || 0);
+            await storage.updateOrder(payoutReq.orderId, {
+              companyProfit: String(currentProfit + difference),
+            });
+          }
+        }
+
+        if (payoutReq.assignmentId) {
+          const assignment = await storage.getAssignment(payoutReq.assignmentId);
+          if (assignment) {
+            const currentAssignProfit = Number(assignment.companyProfit || 0);
+            await storage.updateAssignment(payoutReq.assignmentId, {
+              grinderEarnings: newAmount!,
+              companyProfit: String(currentAssignProfit + difference),
+            });
+          }
+        }
+
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "payout_request",
+          entityId: req.params.id,
+          action: "payout_reduction_approved",
+          actor: reviewedBy || "owner",
+          details: JSON.stringify({ originalAmount: payoutReq.originalAmount, newAmount, difference, reason: payoutReq.reductionReason, grinderId: payoutReq.grinderId, orderId: payoutReq.orderId }),
+        });
+      } else if (action === "deny") {
+        await storage.updatePayoutRequest(req.params.id, {
+          reductionStatus: "denied",
+          reductionApprovedBy: reviewedBy || "owner",
+          reductionApprovedAt: new Date(),
+          reductionDeniedReason: deniedReason || "",
+          requestedAmount: null,
+        });
+
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "payout_request",
+          entityId: req.params.id,
+          action: "payout_reduction_denied",
+          actor: reviewedBy || "owner",
+          details: JSON.stringify({ originalAmount: payoutReq.originalAmount, requestedAmount: payoutReq.requestedAmount, reason: payoutReq.reductionReason, deniedReason, grinderId: payoutReq.grinderId }),
+        });
+      }
+
+      const updated = await storage.getPayoutRequest(req.params.id);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   app.get("/api/staff/grinder-payout-methods/:grinderId", requireStaff, async (req, res) => {
     const methods = await storage.getGrinderPayoutMethods(req.params.grinderId);
     res.json(methods);

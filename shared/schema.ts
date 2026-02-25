@@ -245,6 +245,14 @@ export const payoutRequests = pgTable("payout_requests", {
   requestedAmount: numeric("requested_amount"),
   completionProofUrl: text("completion_proof_url"),
   paymentProofUrl: text("payment_proof_url"),
+  originalAmount: numeric("original_amount"),
+  reductionReason: text("reduction_reason"),
+  reductionRequestedBy: text("reduction_requested_by"),
+  reductionRequestedAt: timestamp("reduction_requested_at"),
+  reductionStatus: text("reduction_status"),
+  reductionApprovedBy: text("reduction_approved_by"),
+  reductionApprovedAt: timestamp("reduction_approved_at"),
+  reductionDeniedReason: text("reduction_denied_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
