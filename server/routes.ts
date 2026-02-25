@@ -1373,6 +1373,7 @@ export async function registerRoutes(
       availabilityStatus: myGrinder.availabilityStatus,
       availabilityNote: myGrinder.availabilityNote,
       availabilityUpdatedAt: myGrinder.availabilityUpdatedAt,
+      twitchUsername: myGrinder.twitchUsername,
       notes: myGrinder.notes,
     };
 
