@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Timer, Clock, AlertTriangle, Lock } from "lucide-react";
+import { useBiddingRemaining } from "@/hooks/use-bidding-timer";
 
 interface TimerData {
   orderId: string;
@@ -129,31 +129,6 @@ export function BiddingCountdownPanel({ variant = "full" }: { variant?: "full" |
       </CardContent>
     </Card>
   );
-}
-
-export function useServerOffset() {
-  const { data } = useQuery<BiddingTimersResponse>({
-    queryKey: ["/api/bidding-timers"],
-    refetchInterval: 30_000,
-    staleTime: 10_000,
-  });
-  return data?.serverTime
-    ? new Date(data.serverTime).getTime() - Date.now()
-    : 0;
-}
-
-export function useBiddingRemaining(biddingClosesAt: string | null): number {
-  const serverOffset = useServerOffset();
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    if (!biddingClosesAt) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [biddingClosesAt]);
-
-  if (!biddingClosesAt) return -1;
-  return new Date(biddingClosesAt).getTime() - (now + serverOffset);
 }
 
 export function InlineCountdown({ biddingClosesAt }: { biddingClosesAt: string | null }) {

@@ -8,7 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InlineCountdown, useBiddingRemaining } from "@/components/bidding-countdown";
+import { InlineCountdown } from "@/components/bidding-countdown";
+import { useBiddingRemaining } from "@/hooks/use-bidding-timer";
 import {
   Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign, AlertTriangle,
   Brain, ChevronDown, ChevronUp, Crown, Gauge, Scale, Shield, Star, Lightbulb, TrendingUp, Info, Filter, ArrowUpDown, Lock
