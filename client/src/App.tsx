@@ -49,6 +49,7 @@ import GrinderTodo from "@/pages/grinder/todo";
 import GrinderStrikes from "@/pages/grinder/strikes";
 import GrinderNotifications from "@/pages/grinder/notifications";
 import StaffFeatures from "@/pages/staff/features";
+import GrinderOpsGuide from "@/pages/grinder-ops-guide";
 import CustomerReviewPage from "@/pages/customer-review";
 import { Loader2 } from "lucide-react";
 
@@ -179,6 +180,7 @@ function Router() {
       <Route path="/grinder/todo" component={() => <ProtectedRoute component={GrinderTodo} />} />
       <Route path="/grinder/strikes" component={() => <ProtectedRoute component={GrinderStrikes} />} />
       <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
+      <Route path="/grinder/ops-guide" component={() => <ProtectedRoute component={GrinderOpsGuide} />} />
       
       <Route path="/customer-review" component={CustomerReviewPage} />
 

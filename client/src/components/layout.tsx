@@ -67,6 +67,7 @@ const grinderNavItems = [
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
   { title: "Features", url: "/grinder/guide", icon: BookOpen },
+  { title: "Operations Guide", url: "/grinder/ops-guide", icon: ScrollText },
 ];
 
 function AppSidebar() {
