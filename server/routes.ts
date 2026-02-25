@@ -2051,6 +2051,22 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  app.patch("/api/grinder/me/twitch", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+      const { twitchUsername } = req.body;
+      const sanitized = twitchUsername ? twitchUsername.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 25) : null;
+      const updated = await storage.updateGrinder(myGrinder.id, { twitchUsername: sanitized });
+      if (!updated) return res.status(500).json({ message: "Failed to update" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update Twitch username" });
+    }
+  });
+
   app.get("/api/staff/elite-requests", requireStaff, async (req, res) => {
     const requests = await storage.getEliteRequests();
     const allGrinders = await storage.getGrinders();

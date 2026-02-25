@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -286,17 +287,22 @@ export default function GrinderStatus() {
 }
 
 function TwitchLinkSection({ grinderId, currentUsername, isElite }: { grinderId: string; currentUsername: string | null; isElite: boolean }) {
+  const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState(currentUsername || "");
 
   const updateMutation = useMutation({
     mutationFn: async (twitchUsername: string) => {
-      const res = await apiRequest("PATCH", `/api/grinders/${grinderId}/twitch`, { twitchUsername: twitchUsername || null });
+      const res = await apiRequest("PATCH", `/api/grinder/me/twitch`, { twitchUsername: twitchUsername || null });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_: any, twitchUsername: string) => {
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      toast({ title: twitchUsername ? "Twitch account linked" : "Twitch account unlinked" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Failed to update Twitch", description: e.message, variant: "destructive" });
     },
   });
 
