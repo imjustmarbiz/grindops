@@ -283,7 +283,7 @@ export default function Bids() {
 
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-x-auto">
-        <Table className="min-w-[1100px]">
+        <Table className="min-w-[1400px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
               <TableHead className="whitespace-nowrap">Proposal</TableHead>
