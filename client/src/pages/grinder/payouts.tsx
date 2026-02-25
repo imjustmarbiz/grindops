@@ -13,7 +13,7 @@ import {
   TrendingUp, Clock, Wallet, ArrowUpRight
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { HelpTip } from "@/components/help-tip";
+
 
 export default function GrinderPayouts() {
   const {
@@ -88,10 +88,9 @@ export default function GrinderPayouts() {
   return (
     <AnimatedPage className="space-y-4">
       <FadeInUp>
-      <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+      <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3">
         <Banknote className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         Payouts
-        <HelpTip text="Track your earnings, pending payouts, and payment history." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{allPayouts.length}</Badge>
       </h2>
       <p className="text-sm text-muted-foreground mt-1">Track your earnings, approve payouts, and view payment history</p>

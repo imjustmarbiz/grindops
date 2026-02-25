@@ -13,7 +13,7 @@ import type { OrderClaimRequest } from "@shared/schema";
 import {
   LinkIcon, Send, FileText, ExternalLink, Clock
 } from "lucide-react";
-import { HelpTip } from "@/components/help-tip";
+
 
 function statusBadge(status: string) {
   if (status === "pending") return <Badge className="bg-amber-500/20 text-amber-400 border-0">Pending</Badge>;
@@ -78,7 +78,7 @@ export default function GrinderOrderClaims() {
         <div className="flex items-center gap-3">
           <FileText className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-order-claims-title">Claim an Order <HelpTip text="Browse open orders available for bidding." /></h2>
+            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-order-claims-title">Claim an Order</h2>
             <p className="text-sm text-muted-foreground">Submit proof to claim an order or view your claim history</p>
           </div>
         </div>

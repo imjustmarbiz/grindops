@@ -153,10 +153,9 @@ export default function GrinderOrders() {
     <AnimatedPage className="space-y-4">
       <FadeInUp>
       <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3">
           <Zap className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           Available Orders
-          <HelpTip text="Browse open orders available for bidding." />
           <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{availableOrders.length}</Badge>
         </h2>
       </div>

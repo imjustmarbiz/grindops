@@ -50,7 +50,6 @@ export default function GrinderQueue() {
             <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-queue-title">
               <Brain className={`w-6 h-6 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
               Your Queue Standing
-              <HelpTip text="See where you rank in the AI queue across all open orders. Improve your weakest factors to move up." />
             </h2>
             <p className="text-sm text-muted-foreground mt-1">See where you rank and how to improve your position</p>
           </div>
