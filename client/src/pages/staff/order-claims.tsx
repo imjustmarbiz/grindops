@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { OrderClaimRequest } from "@shared/schema";
+import type { OrderClaimRequest, Service } from "@shared/schema";
 import {
-  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle, DollarSign, Wallet
+  LinkIcon, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle, DollarSign, Wallet, Gamepad2
 } from "lucide-react";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -111,11 +112,21 @@ function TicketSearch({ ticketName }: { ticketName: string }) {
   );
 }
 
+type StaffFields = {
+  customerPrice: string;
+  platform: string;
+  gamertag: string;
+  serviceId: string;
+};
+
 export default function StaffOrderClaims() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [filter, setFilter] = useState<StatusFilter>("pending");
   const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
+  const [staffFields, setStaffFields] = useState<Record<string, StaffFields>>({});
+
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
 
   const queryUrl = filter === "all" ? "/api/order-claims" : `/api/order-claims?status=${filter}`;
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
@@ -127,9 +138,17 @@ export default function StaffOrderClaims() {
     },
   });
 
+  const getStaffField = (claimId: string): StaffFields => staffFields[claimId] || { customerPrice: "", platform: "", gamertag: "", serviceId: "" };
+  const setStaffField = (claimId: string, field: keyof StaffFields, value: string) => {
+    setStaffFields(prev => ({
+      ...prev,
+      [claimId]: { ...getStaffField(claimId), [field]: value },
+    }));
+  };
+
   const decideMutation = useMutation({
-    mutationFn: async ({ id, status, decisionNote }: { id: string; status: "approved" | "rejected"; decisionNote?: string }) => {
-      const res = await apiRequest("PATCH", `/api/order-claims/${id}`, { status, decisionNote });
+    mutationFn: async ({ id, status, decisionNote, customerPrice, platform, gamertag, serviceId }: { id: string; status: "approved" | "rejected"; decisionNote?: string; customerPrice?: string; platform?: string; gamertag?: string; serviceId?: string }) => {
+      const res = await apiRequest("PATCH", `/api/order-claims/${id}`, { status, decisionNote, customerPrice, platform, gamertag, serviceId });
       return res.json();
     },
     onSuccess: () => {
@@ -142,7 +161,16 @@ export default function StaffOrderClaims() {
   });
 
   const handleDecision = (id: string, status: "approved" | "rejected") => {
-    decideMutation.mutate({ id, status, decisionNote: decisionNotes[id] || undefined });
+    const fields = getStaffField(id);
+    decideMutation.mutate({
+      id,
+      status,
+      decisionNote: decisionNotes[id] || undefined,
+      customerPrice: fields.customerPrice || undefined,
+      platform: fields.platform || undefined,
+      gamertag: fields.gamertag || undefined,
+      serviceId: fields.serviceId || undefined,
+    });
   };
 
   const filters: { label: string; value: StatusFilter }[] = [
@@ -221,6 +249,12 @@ export default function StaffOrderClaims() {
                           <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
                             Order: <span className="text-foreground font-medium">{claim.orderId}</span>
                           </span>
+                        )}
+                        {claim.serviceId && (
+                          <Badge variant="outline" className="border-blue-500/20 text-blue-400 text-[10px] gap-1" data-testid={`badge-service-${claim.id}`}>
+                            <Gamepad2 className="w-3 h-3" />
+                            {services.find(s => s.id === claim.serviceId)?.name || claim.serviceId}
+                          </Badge>
                         )}
                       </div>
 
@@ -312,7 +346,63 @@ export default function StaffOrderClaims() {
                     </div>
 
                     {claim.status === "pending" && (
-                      <div className="flex flex-col gap-2 shrink-0 w-64">
+                      <div className="flex flex-col gap-2 shrink-0 w-72">
+                        <div className="border border-white/[0.06] rounded-lg p-3 bg-white/[0.02] space-y-2">
+                          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Staff Fill-In</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-muted-foreground mb-0.5 block">Customer Price</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="$0.00"
+                                value={getStaffField(claim.id).customerPrice}
+                                onChange={(e) => setStaffField(claim.id, "customerPrice", e.target.value)}
+                                className="bg-white/[0.03] border-white/10 text-xs h-8"
+                                data-testid={`input-staff-price-${claim.id}`}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted-foreground mb-0.5 block">Platform</label>
+                              <Input
+                                placeholder="Xbox, PS5..."
+                                value={getStaffField(claim.id).platform}
+                                onChange={(e) => setStaffField(claim.id, "platform", e.target.value)}
+                                className="bg-white/[0.03] border-white/10 text-xs h-8"
+                                data-testid={`input-staff-platform-${claim.id}`}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-muted-foreground mb-0.5 block">Gamertag</label>
+                            <Input
+                              placeholder="Customer gamertag"
+                              value={getStaffField(claim.id).gamertag}
+                              onChange={(e) => setStaffField(claim.id, "gamertag", e.target.value)}
+                              className="bg-white/[0.03] border-white/10 text-xs h-8"
+                              data-testid={`input-staff-gamertag-${claim.id}`}
+                            />
+                          </div>
+                          {!claim.serviceId && (
+                            <div>
+                              <label className="text-[10px] text-muted-foreground mb-0.5 block">Service</label>
+                              <Select
+                                value={getStaffField(claim.id).serviceId}
+                                onValueChange={(v) => setStaffField(claim.id, "serviceId", v)}
+                              >
+                                <SelectTrigger className="bg-white/[0.03] border-white/10 text-xs h-8" data-testid={`select-staff-service-${claim.id}`}>
+                                  <SelectValue placeholder="Select service..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {services.map(s => (
+                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
                         <Input
                           placeholder="Decision note (optional)"
                           value={decisionNotes[claim.id] || ""}

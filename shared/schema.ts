@@ -420,6 +420,7 @@ export const orderClaimRequests = pgTable("order_claim_requests", {
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   orderId: varchar("order_id"),
   ticketName: text("ticket_name").notNull(),
+  serviceId: varchar("service_id"),
   proofLinks: text("proof_links").array().default([]),
   proofNotes: text("proof_notes"),
   dueDate: timestamp("due_date"),

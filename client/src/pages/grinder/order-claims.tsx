@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import type { OrderClaimRequest } from "@shared/schema";
+import type { OrderClaimRequest, Service } from "@shared/schema";
 import {
-  LinkIcon, Send, FileText, ExternalLink, Clock, CalendarDays, Play, CheckCircle, DollarSign, Wallet
+  LinkIcon, Send, FileText, ExternalLink, Clock, CalendarDays, Play, CheckCircle, DollarSign, Wallet, Gamepad2
 } from "lucide-react";
 
 
@@ -39,7 +40,9 @@ export default function GrinderOrderClaims() {
   const [grinderAmount, setGrinderAmount] = useState("");
   const [payoutPlatform, setPayoutPlatform] = useState("");
   const [payoutDetails, setPayoutDetails] = useState("");
+  const [serviceId, setServiceId] = useState("");
 
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
     queryKey: ["/api/order-claims"],
   });
@@ -62,6 +65,7 @@ export default function GrinderOrderClaims() {
       setGrinderAmount("");
       setPayoutPlatform("");
       setPayoutDetails("");
+      setServiceId("");
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -77,6 +81,7 @@ export default function GrinderOrderClaims() {
     submitMutation.mutate({
       orderId: orderId.trim() || undefined,
       ticketName: ticketName.trim(),
+      serviceId: serviceId || undefined,
       proofLinks: links,
       proofNotes: proofNotes.trim(),
       dueDate: dueDate || undefined,
@@ -119,15 +124,33 @@ export default function GrinderOrderClaims() {
               />
               <p className="text-xs text-muted-foreground mt-1">Enter the ticket name so staff can find and link it</p>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Order ID <span className="text-muted-foreground font-normal">(optional)</span></label>
-              <Input
-                value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Enter the order ID if known"
-                className="bg-white/[0.03] border-white/10"
-                data-testid="input-claim-order-id"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Order ID <span className="text-muted-foreground font-normal">(optional)</span></label>
+                <Input
+                  value={orderId}
+                  onChange={(e) => setOrderId(e.target.value)}
+                  placeholder="Enter the order ID if known"
+                  className="bg-white/[0.03] border-white/10"
+                  data-testid="input-claim-order-id"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                  <Gamepad2 className="w-3.5 h-3.5 text-violet-400" />
+                  Service
+                </label>
+                <Select value={serviceId} onValueChange={setServiceId}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10" data-testid="select-claim-service">
+                    <SelectValue placeholder="Select service..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Proof Links <span className="text-muted-foreground font-normal">(comma separated)</span></label>
@@ -283,6 +306,12 @@ export default function GrinderOrderClaims() {
                       <span className="text-sm text-muted-foreground" data-testid={`text-claim-order-${claim.id}`}>
                         Order: <span className="text-foreground font-medium">{claim.orderId}</span>
                       </span>
+                    )}
+                    {claim.serviceId && (
+                      <Badge variant="outline" className="border-violet-500/20 text-violet-400 text-[10px] gap-1" data-testid={`badge-service-${claim.id}`}>
+                        <Gamepad2 className="w-3 h-3" />
+                        {services.find(s => s.id === claim.serviceId)?.name || claim.serviceId}
+                      </Badge>
                     )}
                   </div>
 
