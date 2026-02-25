@@ -79,6 +79,7 @@ export interface IStorage {
   getAnalyticsSummary(): Promise<AnalyticsSummary>;
   getSuggestionsForOrder(orderId: string): Promise<SuggestionResult[]>;
   getEmergencyQueue(): Promise<SuggestionResult[]>;
+  getFullQueue(): Promise<{ orderId: string; mgtOrderNumber: number | null; customerPrice: string; serviceId: string; platform: string; isEmergency: boolean; suggestions: SuggestionResult[] }[]>;
 
   getOrderUpdates(grinderId?: string): Promise<OrderUpdate[]>;
   createOrderUpdate(update: InsertOrderUpdate): Promise<OrderUpdate>;
@@ -788,6 +789,26 @@ export class DatabaseStorage implements IStorage {
 
     allSuggestions.sort((a, b) => b.scores.finalScore - a.scores.finalScore);
     return allSuggestions.slice(0, 20);
+  }
+
+  async getFullQueue(): Promise<{ orderId: string; mgtOrderNumber: number | null; customerPrice: string; serviceId: string; platform: string; isEmergency: boolean; suggestions: SuggestionResult[] }[]> {
+    const openOrders = (await this.getOrders()).filter(o => o.status === "Open");
+    if (openOrders.length === 0) return [];
+
+    const results = [];
+    for (const order of openOrders) {
+      const suggestions = await this.getSuggestionsForOrder(order.id);
+      results.push({
+        orderId: order.id,
+        mgtOrderNumber: order.mgtOrderNumber,
+        customerPrice: String(order.customerPrice),
+        serviceId: order.serviceId,
+        platform: order.platform || "",
+        isEmergency: order.isEmergency || false,
+        suggestions: suggestions.slice(0, 5),
+      });
+    }
+    return results;
   }
 
   async getOrderUpdates(grinderId?: string): Promise<OrderUpdate[]> {

@@ -2508,6 +2508,11 @@ export async function registerRoutes(
     res.json(emergency);
   });
 
+  app.get("/api/queue/full", requireStaff, async (req, res) => {
+    const fullQueue = await storage.getFullQueue();
+    res.json(fullQueue);
+  });
+
   app.get(api.auditLogs.list.path, requireStaff, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 100;
     const entityType = req.query.entityType as string | undefined;

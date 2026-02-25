@@ -3,9 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, DollarSign } from "lucide-react";
+import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, DollarSign, ChevronDown, ChevronRight, Package } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Order, SuggestionResult } from "@shared/schema";
+
+type FullQueueItem = {
+  orderId: string;
+  mgtOrderNumber: number | null;
+  customerPrice: string;
+  serviceId: string;
+  platform: string;
+  isEmergency: boolean;
+  suggestions: SuggestionResult[];
+};
 
 function ScoreBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -19,9 +29,57 @@ function ScoreBar({ label, value, color }: { label: string; value: number; color
   );
 }
 
+function categoryIcon(cat: string) {
+  if (cat === "Elite Grinder") return <Crown className="w-4 h-4 text-yellow-500" />;
+  if (cat === "VC Grinder") return <Zap className="w-4 h-4 text-cyan-400" />;
+  if (cat === "Event Grinder") return <Shield className="w-4 h-4 text-purple-400" />;
+  return <Users className="w-4 h-4 text-muted-foreground" />;
+}
+
+function SuggestionCard({ s, i, customerPrice }: { s: SuggestionResult; i: number; customerPrice?: string }) {
+  const profit = s.bidAmount && customerPrice ? parseFloat(customerPrice) - parseFloat(s.bidAmount) : null;
+  const margin = profit !== null && parseFloat(customerPrice!) > 0 ? (profit / parseFloat(customerPrice!)) * 100 : null;
+
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors sm:hover:bg-white/[0.05] ${i === 0 ? "border-primary/20 bg-primary/[0.03]" : "border-white/[0.06] bg-white/[0.02]"}`} data-testid={`card-suggestion-${s.grinderId}-rank-${i}`}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.05] text-muted-foreground"}`}>
+          #{i + 1}
+        </div>
+        {categoryIcon(s.category)}
+        <div>
+          <p className="font-medium text-sm">{s.grinderName}</p>
+          <p className="text-[10px] text-muted-foreground">{s.category} · {s.activeOrders}/{s.capacity} active</p>
+        </div>
+        {s.bidAmount && <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">Bid: ${s.bidAmount}</Badge>}
+        {profit !== null && (
+          <Badge className={`border text-[10px] ${profit >= 0 ? "bg-amber-500/15 text-amber-400 border-amber-500/20" : "bg-red-500/15 text-red-400 border-red-500/20"}`}>
+            <DollarSign className="w-3 h-3 mr-0.5" />
+            ${profit.toFixed(0)} ({margin!.toFixed(0)}%)
+          </Badge>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        {s.strikes > 0 && (
+          <div className="flex gap-1">
+            {Array.from({ length: 3 }).map((_, j) => (
+              <div key={j} className={`w-2 h-2 rounded-full ${j < s.strikes ? "bg-red-500" : "bg-white/10"}`} />
+            ))}
+          </div>
+        )}
+        <Badge className="bg-primary/15 text-primary border border-primary/20">
+          {(s.scores.finalScore * 100).toFixed(0)}
+        </Badge>
+      </div>
+    </div>
+  );
+}
+
 export default function Queue() {
   const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
-  const { data: emergency, isLoading: emergLoading } = useQuery<SuggestionResult[]>({ queryKey: ["/api/queue/emergency"] });
+  const { data: fullQueue, isLoading: fullLoading } = useQuery<FullQueueItem[]>({ queryKey: ["/api/queue/full"], refetchInterval: 30000 });
+  const { data: services } = useQuery<{ id: string; name: string }[]>({ queryKey: ["/api/services"] });
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
 
   const { data: suggestions, isLoading: sugLoading } = useQuery<SuggestionResult[]>({
@@ -31,13 +89,7 @@ export default function Queue() {
 
   const openOrders = (orders || []).filter(o => o.status === "Open");
   const selectedOrder = openOrders.find(o => o.id === selectedOrderId);
-
-  const categoryIcon = (cat: string) => {
-    if (cat === "Elite Grinder") return <Crown className="w-4 h-4 text-yellow-500" />;
-    if (cat === "VC Grinder") return <Zap className="w-4 h-4 text-cyan-400" />;
-    if (cat === "Event Grinder") return <Shield className="w-4 h-4 text-purple-400" />;
-    return <Users className="w-4 h-4 text-muted-foreground" />;
-  };
+  const serviceName = (sid: string) => services?.find(s => s.id === sid)?.name || sid;
 
   return (
     <AnimatedPage className="space-y-5">
@@ -48,12 +100,99 @@ export default function Queue() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <Brain className="w-5 h-5 text-primary" />
             </div>
-            AI Assignment Suggestions
+            AI Queue
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">9-factor weighted scoring system for optimal grinder assignment</p>
+          <p className="text-sm text-muted-foreground mt-1">9-factor weighted scoring · ranked grinder suggestions for every open order</p>
         </div>
-        <Badge className="bg-primary/15 text-primary border border-primary/20 font-bold">WEIGHTED</Badge>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-primary/15 text-primary border border-primary/20 font-bold">WEIGHTED</Badge>
+          {fullQueue && <Badge variant="outline" className="text-muted-foreground">{fullQueue.length} open orders</Badge>}
+        </div>
       </div>
+      </FadeInUp>
+
+      <FadeInUp>
+      <Card className="border-0 bg-gradient-to-br from-blue-500/[0.06] via-background to-background overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-blue-500/[0.03] -translate-y-16 translate-x-16" />
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-blue-400" />
+            </div>
+            Active Queue
+            <Badge className="bg-blue-500/15 text-blue-400 border border-blue-500/20 text-[10px]">LIVE</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative">
+          {fullLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : fullQueue && fullQueue.length > 0 ? (
+            <div className="space-y-3">
+              {fullQueue.map(item => {
+                const isExpanded = expandedOrder === item.orderId;
+                const topGrinder = item.suggestions[0];
+                return (
+                  <div key={item.orderId} className={`rounded-xl border overflow-hidden transition-colors ${item.isEmergency ? "border-red-500/30 bg-red-500/[0.03]" : "border-white/[0.06] bg-white/[0.02]"}`} data-testid={`card-queue-${item.orderId}`}>
+                    <button
+                      className="w-full flex items-center justify-between p-3 sm:hover:bg-white/[0.03] transition-colors text-left"
+                      onClick={() => setExpandedOrder(isExpanded ? null : item.orderId)}
+                      data-testid={`button-expand-${item.orderId}`}
+                    >
+                      <div className="flex items-center gap-3 flex-wrap min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                          <span className="font-mono font-bold text-sm">
+                            {item.mgtOrderNumber ? `#${item.mgtOrderNumber}` : item.orderId}
+                          </span>
+                        </div>
+                        {item.isEmergency && <Badge className="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px]">EMERGENCY</Badge>}
+                        <span className="text-xs text-muted-foreground truncate max-w-[140px]">{serviceName(item.serviceId)}</span>
+                        {item.platform && <Badge variant="outline" className="text-[10px] text-muted-foreground">{item.platform}</Badge>}
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
+                          <DollarSign className="w-3 h-3 mr-0.5" />{item.customerPrice}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {topGrinder ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground hidden sm:inline">Top:</span>
+                            <span className="text-sm font-medium">{topGrinder.grinderName}</span>
+                            <Badge className="bg-primary/15 text-primary border border-primary/20 text-xs">
+                              {(topGrinder.scores.finalScore * 100).toFixed(0)}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No candidates</span>
+                        )}
+                        <Badge variant="outline" className="text-[10px]">{item.suggestions.length} ranked</Badge>
+                      </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="px-3 pb-3 space-y-2 border-t border-white/[0.04] pt-2">
+                        {item.suggestions.length > 0 ? item.suggestions.map((s, i) => (
+                          <SuggestionCard key={s.grinderId} s={s} i={i} customerPrice={item.customerPrice} />
+                        )) : (
+                          <div className="py-4 text-center text-muted-foreground text-sm">
+                            <Brain className="w-5 h-5 mx-auto mb-1 opacity-30" />
+                            No available grinders for this order
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-muted-foreground">
+              <Package className="w-6 h-6 mr-2 opacity-30" />
+              No open orders in the queue
+            </div>
+          )}
+        </CardContent>
+      </Card>
       </FadeInUp>
 
       <FadeInUp>
@@ -64,13 +203,13 @@ export default function Queue() {
             <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
               <Brain className="w-4 h-4 text-primary" />
             </div>
-            Select an Open Order
+            Deep Dive — Single Order
           </CardTitle>
         </CardHeader>
         <CardContent className="relative">
           <Select value={selectedOrderId} onValueChange={setSelectedOrderId}>
             <SelectTrigger className="w-full max-w-md bg-background/50 border-white/10" data-testid="select-order-suggestion">
-              <SelectValue placeholder="Choose an order to get AI suggestions..." />
+              <SelectValue placeholder="Choose an order for detailed factor breakdown..." />
             </SelectTrigger>
             <SelectContent>
               {openOrders.map(o => (
@@ -94,7 +233,7 @@ export default function Queue() {
               <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
                 <Brain className="w-4 h-4 text-blue-400" />
               </div>
-              Ranked Suggestions for {openOrders.find(o => o.id === selectedOrderId)?.mgtOrderNumber 
+              Factor Breakdown — {openOrders.find(o => o.id === selectedOrderId)?.mgtOrderNumber 
                 ? `Order #${openOrders.find(o => o.id === selectedOrderId)?.mgtOrderNumber}` 
                 : selectedOrderId}
             </CardTitle>
@@ -121,11 +260,11 @@ export default function Queue() {
                         {s.bidAmount && <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Bid: ${s.bidAmount}</Badge>}
                         {s.bidAmount && selectedOrder && (() => {
                           const profit = parseFloat(selectedOrder.customerPrice as string) - parseFloat(s.bidAmount!);
-                          const margin = parseFloat(selectedOrder.customerPrice as string) > 0 ? (profit / parseFloat(selectedOrder.customerPrice as string)) * 100 : 0;
+                          const marginPct = parseFloat(selectedOrder.customerPrice as string) > 0 ? (profit / parseFloat(selectedOrder.customerPrice as string)) * 100 : 0;
                           return (
                             <Badge className={`border ${profit >= 0 ? "bg-amber-500/15 text-amber-400 border-amber-500/20" : "bg-red-500/15 text-red-400 border-red-500/20"}`} data-testid={`badge-profit-${s.grinderId}`}>
                               <DollarSign className="w-3 h-3 mr-0.5" />
-                              Profit: ${profit.toFixed(2)} ({margin.toFixed(0)}%)
+                              Profit: ${profit.toFixed(2)} ({marginPct.toFixed(0)}%)
                             </Badge>
                           );
                         })()}
@@ -171,62 +310,6 @@ export default function Queue() {
         </Card>
         </FadeInUp>
       )}
-
-      <FadeInUp>
-      <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] via-background to-background overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.03] -translate-y-12 translate-x-12" />
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-            </div>
-            Emergency / Replacement Queue
-            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[10px]">AUTO-BUILT</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          {emergLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : emergency && emergency.length > 0 ? (
-            <div className="space-y-2">
-              {emergency.map((s, i) => (
-                <div key={`${s.grinderId}-${i}`} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] sm:hover:bg-white/[0.05] transition-colors" data-testid={`card-emergency-${i}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center text-xs font-bold text-muted-foreground">
-                      #{i + 1}
-                    </div>
-                    {categoryIcon(s.category)}
-                    <div>
-                      <p className="font-medium text-sm">{s.grinderName}</p>
-                      <p className="text-xs text-muted-foreground">{s.category} &middot; {s.activeOrders}/{s.capacity} active</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {s.strikes > 0 && (
-                      <div className="flex gap-1">
-                        {Array.from({ length: 3 }).map((_, j) => (
-                          <div key={j} className={`w-2 h-2 rounded-full ${j < s.strikes ? "bg-red-500" : "bg-white/10"}`} />
-                        ))}
-                      </div>
-                    )}
-                    <Badge className="bg-primary/15 text-primary border border-primary/20">
-                      Score: {(s.scores.finalScore * 100).toFixed(0)}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-32 flex items-center justify-center text-muted-foreground">
-              <Activity className="w-5 h-5 mr-2 opacity-30" />
-              No open orders requiring emergency assignment
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      </FadeInUp>
     </AnimatedPage>
   );
 }
