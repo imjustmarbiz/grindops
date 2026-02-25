@@ -154,12 +154,17 @@ export function LowerThirdNotifications() {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Get audio alerts for new orders, strikes, payouts, messages, and other important updates. Each event has a unique sound so you can tell what happened without looking.
                 </p>
-                <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-0.5">
+                <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-1">
                   <p>🔔 New Order — rising ding</p>
                   <p>⚠️ Strike — descending warning</p>
                   <p>💰 Payout — ascending chime</p>
                   <p>📨 Message — soft pop</p>
                   <p>ℹ️ Info — gentle ding</p>
+                </div>
+                <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-1">
+                  <p className="text-[11px] font-medium text-foreground">Controls</p>
+                  <p>▶ Play — preview the notification sound</p>
+                  <p>🔊 Speaker — toggle sounds on/off</p>
                 </div>
               </motion.div>
             )}
@@ -167,7 +172,12 @@ export function LowerThirdNotifications() {
         </div>
         <button
           onClick={testSound}
-          className="p-1.5 rounded-full backdrop-blur-sm border bg-primary/20 border-primary/30 text-primary hover:bg-primary/30 transition-colors"
+          disabled={!soundEnabled}
+          className={`p-1.5 rounded-full backdrop-blur-sm border transition-colors ${
+            soundEnabled
+              ? "bg-primary/20 border-primary/30 text-primary hover:bg-primary/30"
+              : "bg-white/5 border-white/10 text-muted-foreground/40 cursor-not-allowed"
+          }`}
           title="Test notification sound"
           data-testid="button-test-sound"
         >
