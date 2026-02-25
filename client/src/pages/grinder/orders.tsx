@@ -1,20 +1,47 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useGrinderData, getDiscordMessageLink, getBidWarLink, BID_WAR_CHANNEL_ID } from "@/hooks/use-grinder-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { InlineCountdown } from "@/components/bidding-countdown";
 import {
-  Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign
+  Loader2, Gavel, Zap, Target, ExternalLink, Sparkles, FileText, Gamepad2, Monitor, Hash, User, StickyNote, DollarSign, AlertTriangle,
+  Brain, ChevronDown, ChevronUp, Crown, Gauge, Scale, Shield, Star, Lightbulb, TrendingUp, Info
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 
+const QUEUE_FACTORS = [
+  { key: "margin", label: "Margin", icon: DollarSign, desc: "How much profit your bid leaves for the business" },
+  { key: "capacity", label: "Capacity", icon: Gauge, desc: "How much room you have for new orders" },
+  { key: "fairness", label: "Fairness", icon: Scale, desc: "How long since your last assignment — longer wait = higher score" },
+  { key: "reliability", label: "Reliability", icon: Shield, desc: "On-time rate, completion rate, and reassignment history" },
+  { key: "tier", label: "Tier", icon: Crown, desc: "Your grinder tier — Elite ranks highest" },
+  { key: "quality", label: "Quality", icon: Star, desc: "Your overall quality rating based on performance metrics" },
+  { key: "newGrinder", label: "New Grinder", icon: Sparkles, desc: "Boost for new grinders with no orders in their first 14 days" },
+  { key: "risk", label: "Risk", icon: AlertTriangle, desc: "Lower strikes and cancellations = higher score" },
+] as const;
+
+function factorColor(score: number): string {
+  if (score >= 0.7) return "text-emerald-400";
+  if (score >= 0.4) return "text-yellow-400";
+  return "text-red-400";
+}
+
+function factorBarColor(score: number): string {
+  if (score >= 0.7) return "[&>div]:bg-emerald-500";
+  if (score >= 0.4) return "[&>div]:bg-yellow-500";
+  return "[&>div]:bg-red-500";
+}
+
 export default function GrinderOrders() {
   const {
     grinder, isElite, availableOrders, serviceName, placeBidMutation,
+    eliteAccent, eliteGradient, eliteBorder,
   } = useGrinderData();
 
   const [placeBidDialog, setPlaceBidDialog] = useState<any>(null);
@@ -22,8 +49,105 @@ export default function GrinderOrders() {
   const [placeBidTimeline, setPlaceBidTimeline] = useState("");
   const [placeBidCanStart, setPlaceBidCanStart] = useState("");
   const [viewDetailsOrder, setViewDetailsOrder] = useState<any>(null);
+  const [showQueueStanding, setShowQueueStanding] = useState(false);
+
+  const { data: queuePosition, isLoading: queueLoading } = useQuery<any>({
+    queryKey: ["/api/grinder/me/queue-position"],
+  });
 
   if (!grinder) return null;
+
+  const replacementOrders = availableOrders.filter((o: any) => o.isEmergency === true);
+  const regularOrders = availableOrders.filter((o: any) => !o.isEmergency);
+
+  const renderOrderCard = (order: any, isReplacement?: boolean) => (
+    <Card
+      key={order.id}
+      className={`border-0 ${isReplacement ? "border border-red-500/20 bg-red-500/[0.04]" : "bg-white/[0.03]"} ${isElite ? "sm:hover:bg-cyan-500/[0.05]" : "sm:hover:bg-[#5865F2]/[0.05]"} transition-all duration-200`}
+      data-testid={`card-order-${order.id}`}
+    >
+      <CardContent className="p-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <span className="font-bold text-lg">
+                {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
+              </span>
+              <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
+              {isReplacement && <Badge className="bg-red-500/20 text-red-400 border-red-500/30">REPLACEMENT</Badge>}
+              {order.elitePriority && isElite && <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30"><Sparkles className="w-3 h-3 mr-0.5" />Elite Early Access</Badge>}
+              {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
+              {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
+              {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
+              <Badge variant="outline" className="text-muted-foreground">{serviceName(order.serviceId)}</Badge>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+              {order.platform && <span>Platform: {order.platform}</span>}
+              {order.gamertag && <span>GT: {order.gamertag}</span>}
+              <span>Due: {new Date(order.orderDueDate).toLocaleDateString()}</span>
+              <span>Complexity: {order.complexity}/5</span>
+              <span>{order.totalBids} bid{order.totalBids !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-0 sm:ml-4">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-white/10 text-muted-foreground hover:text-foreground"
+              data-testid={`button-details-${order.id}`}
+              onClick={() => setViewDetailsOrder(order)}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Details
+            </Button>
+            {order.hasBid ? (
+              <div className="flex items-center gap-2">
+                <Badge className="bg-blue-500/20 text-blue-400">
+                  Bid: ${order.myBidAmount}
+                </Badge>
+                {order.myBidStatus === "Pending" && (
+                  <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
+                )}
+              </div>
+            ) : order.isManual ? (
+              <Button
+                size="sm"
+                className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
+                data-testid={`button-bid-${order.id}`}
+                onClick={() => {
+                  setPlaceBidDialog(order);
+                  setPlaceBidAmount("");
+                  setPlaceBidTimeline("");
+                  setPlaceBidCanStart("");
+                }}
+              >
+                <Gavel className="w-4 h-4" />
+                Place Bid
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
+                data-testid={`button-bid-${order.id}`}
+                onClick={() => {
+                  const link = order.discordBidLink
+                    ? order.discordBidLink
+                    : order.discordMessageId
+                      ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
+                      : getBidWarLink();
+                  window.open(link, "_blank");
+                }}
+              >
+                <Gavel className="w-4 h-4" />
+                Place Bid
+                <ExternalLink className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <AnimatedPage className="space-y-4">
@@ -39,6 +163,162 @@ export default function GrinderOrders() {
         </h2>
       </div>
       </FadeInUp>
+
+      <FadeInUp>
+        <Card className={`border-0 overflow-hidden bg-white/[0.03]`} data-testid="card-queue-standing">
+          <button
+            className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
+            onClick={() => setShowQueueStanding(!showQueueStanding)}
+            data-testid="button-toggle-queue-standing"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-purple-500/15"} flex items-center justify-center`}>
+                <Brain className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">Your Queue Standing</span>
+                  <HelpTip text="See where you rank in the AI queue without seeing other grinders. Improve your weakest factors to move up." />
+                </div>
+                {queuePosition && queuePosition.rankedIn > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Avg. rank <span className={`font-bold ${isElite ? "text-cyan-400" : "text-purple-400"}`}>#{queuePosition.averagePosition}</span> across {queuePosition.rankedIn} order{queuePosition.rankedIn !== 1 ? "s" : ""}
+                    {queuePosition.totalGrindersInQueue > 0 && <span className="text-white/30"> · {queuePosition.totalGrindersInQueue} grinders eligible</span>}
+                  </p>
+                )}
+                {queuePosition && queuePosition.rankedIn === 0 && (
+                  <p className="text-xs text-red-400 mt-0.5">Not currently eligible for the queue</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {queuePosition && queuePosition.bestPosition > 0 && (
+                <Badge className={`border-0 ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-purple-500/20 text-purple-400"} text-xs`} data-testid="badge-best-position">
+                  Best: #{queuePosition.bestPosition}
+                </Badge>
+              )}
+              {showQueueStanding ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </div>
+          </button>
+          {showQueueStanding && (
+            <CardContent className="px-4 pb-4 pt-0 space-y-5">
+              {queueLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">Calculating your position...</span>
+                </div>
+              ) : queuePosition ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-xl bg-white/[0.04] p-3 text-center">
+                      <p className={`text-2xl font-bold ${isElite ? "text-cyan-400" : "text-purple-400"}`} data-testid="text-avg-position">
+                        {queuePosition.rankedIn > 0 ? `#${queuePosition.averagePosition}` : "—"}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Avg Position</p>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.04] p-3 text-center">
+                      <p className="text-2xl font-bold text-emerald-400" data-testid="text-best-position">
+                        {queuePosition.bestPosition > 0 ? `#${queuePosition.bestPosition}` : "—"}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Best Position</p>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.04] p-3 text-center">
+                      <p className="text-2xl font-bold" data-testid="text-ranked-in">
+                        {queuePosition.rankedIn}/{queuePosition.totalOpenOrders}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Orders Eligible</p>
+                    </div>
+                    <div className="rounded-xl bg-white/[0.04] p-3 text-center">
+                      <p className="text-2xl font-bold" data-testid="text-total-grinders">
+                        {queuePosition.totalGrindersInQueue || "—"}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Grinders in Queue</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
+                      <span className="text-sm font-semibold">Factor Breakdown</span>
+                      <HelpTip text="Each factor contributes to your queue ranking with its own weight. Green (≥70%) is strong, yellow (40-69%) is average, red (<40%) needs work." />
+                    </div>
+                    <div className="space-y-2.5">
+                      {QUEUE_FACTORS.map((factor) => {
+                        const score = queuePosition.factorScores?.[factor.key] ?? 0;
+                        const weight = queuePosition.queueWeights?.[factor.key] ?? 0;
+                        const Icon = factor.icon;
+                        return (
+                          <div key={factor.key} className="flex items-center gap-2" data-testid={`factor-${factor.key}`}>
+                            <Icon className={`w-4 h-4 shrink-0 ${factorColor(score)}`} />
+                            <div className="w-20 shrink-0">
+                              <span className="text-xs font-medium">{factor.label}</span>
+                              <span className="text-[10px] text-muted-foreground ml-1">({Math.round(weight * 100)}%)</span>
+                            </div>
+                            <div className="flex-1">
+                              <Progress value={score * 100} className={`h-2 ${factorBarColor(score)}`} />
+                            </div>
+                            <span className={`text-xs font-mono w-10 text-right ${factorColor(score)}`}>
+                              {Math.round(score * 100)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1.5">
+                      <Info className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-[11px] text-orange-400 font-medium">Emergency Boost: +{Math.round((queuePosition.queueWeights?.emergencyBoost || 0.25) * 100)}%</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1.5">
+                      <Crown className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-[11px] text-cyan-400 font-medium">Large Order Elite Boost: +{Math.round((queuePosition.queueWeights?.largeOrderEliteBoost || 0.15) * 100)}%</span>
+                    </div>
+                  </div>
+
+                  {queuePosition.improvementTips && queuePosition.improvementTips.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-yellow-400"}`} />
+                        <span className="text-sm font-semibold">How to Improve</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {queuePosition.improvementTips.map((tip: string, i: number) => (
+                          <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground" data-testid={`tip-${i}`}>
+                            <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${isElite ? "bg-cyan-400" : "bg-purple-400"}`} />
+                            <span>{tip}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : null}
+            </CardContent>
+          )}
+        </Card>
+      </FadeInUp>
+
+      {replacementOrders.length > 0 && (
+        <FadeInUp>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold" data-testid="text-replacement-orders-header">Replacement Orders</h3>
+              <Badge className="border-0 bg-red-500/20 text-red-400 text-xs" data-testid="badge-replacement-count">{replacementOrders.length}</Badge>
+              <HelpTip text="Replacement orders are high-priority. They come with an emergency boost in the queue, meaning your bid carries extra weight." />
+            </div>
+            <p className="text-sm text-muted-foreground">High-priority orders needing immediate attention</p>
+            <div className="grid gap-4" data-testid="section-replacement-orders">
+              {replacementOrders.map((order: any) => renderOrderCard(order, true))}
+            </div>
+          </div>
+        </FadeInUp>
+      )}
+
       <FadeInUp>
       {availableOrders.length === 0 ? (
         <Card className="border-0 bg-white/[0.03]">
@@ -50,90 +330,24 @@ export default function GrinderOrders() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {availableOrders.map((order: any) => (
-            <Card key={order.id} className={`border-0 bg-white/[0.03] ${isElite ? "sm:hover:bg-cyan-500/[0.05]" : "sm:hover:bg-[#5865F2]/[0.05]"} transition-all duration-200`} data-testid={`card-order-${order.id}`}>
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <span className="font-bold text-lg">
-                        {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
-                      </span>
-                      <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
-                      {order.elitePriority && isElite && <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30"><Sparkles className="w-3 h-3 mr-0.5" />Elite Early Access</Badge>}
-                      {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
-                      {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
-                      {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
-                      <Badge variant="outline" className="text-muted-foreground">{serviceName(order.serviceId)}</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                      {order.platform && <span>Platform: {order.platform}</span>}
-                      {order.gamertag && <span>GT: {order.gamertag}</span>}
-                      <span>Due: {new Date(order.orderDueDate).toLocaleDateString()}</span>
-                      <span>Complexity: {order.complexity}/5</span>
-                      <span>{order.totalBids} bid{order.totalBids !== 1 ? "s" : ""}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-0 sm:ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 border-white/10 text-muted-foreground hover:text-foreground"
-                      data-testid={`button-details-${order.id}`}
-                      onClick={() => setViewDetailsOrder(order)}
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      Details
-                    </Button>
-                    {order.hasBid ? (
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-500/20 text-blue-400">
-                          Bid: ${order.myBidAmount}
-                        </Badge>
-                        {order.myBidStatus === "Pending" && (
-                          <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
-                        )}
-                      </div>
-                    ) : order.isManual ? (
-                      <Button
-                        size="sm"
-                        className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
-                        data-testid={`button-bid-${order.id}`}
-                        onClick={() => {
-                          setPlaceBidDialog(order);
-                          setPlaceBidAmount("");
-                          setPlaceBidTimeline("");
-                          setPlaceBidCanStart("");
-                        }}
-                      >
-                        <Gavel className="w-4 h-4" />
-                        Place Bid
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
-                        data-testid={`button-bid-${order.id}`}
-                        onClick={() => {
-                          const link = order.discordBidLink
-                            ? order.discordBidLink
-                            : order.discordMessageId
-                              ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
-                              : getBidWarLink();
-                          window.open(link, "_blank");
-                        }}
-                      >
-                        <Gavel className="w-4 h-4" />
-                        Place Bid
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+        <div className="space-y-3">
+          {replacementOrders.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="text-lg font-bold" data-testid="text-open-orders-header">Open Orders</h3>
+              <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{regularOrders.length}</Badge>
+            </div>
+          )}
+          {regularOrders.length === 0 && replacementOrders.length > 0 ? (
+            <Card className="border-0 bg-white/[0.03]">
+              <CardContent className="p-8 text-center">
+                <p className="text-white/40">No additional open orders right now.</p>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="grid gap-4" data-testid="section-regular-orders">
+              {regularOrders.map((order: any) => renderOrderCard(order, false))}
+            </div>
+          )}
         </div>
       )}
       </FadeInUp>

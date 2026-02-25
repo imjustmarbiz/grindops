@@ -1480,6 +1480,83 @@ export async function registerRoutes(
     });
   });
 
+  app.get("/api/grinder/me/queue-position", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+
+    const allOrders = await storage.getOrders();
+    const openOrders = allOrders.filter((o: any) => o.status === "Open");
+    const config = await storage.getQueueConfig();
+
+    const positions: number[] = [];
+    const factorTotals = { margin: 0, capacity: 0, tier: 0, fairness: 0, newGrinder: 0, reliability: 0, quality: 0, risk: 0 };
+    let totalGrindersMax = 0;
+
+    for (const order of openOrders) {
+      const suggestions = await storage.getSuggestionsForOrder(order.id);
+      if (suggestions.length === 0) continue;
+      if (suggestions.length > totalGrindersMax) totalGrindersMax = suggestions.length;
+      const myIndex = suggestions.findIndex((s: any) => s.grinderId === myGrinder.id);
+      if (myIndex === -1) continue;
+      positions.push(myIndex + 1);
+      const myScores = suggestions[myIndex].scores;
+      factorTotals.margin += myScores.margin;
+      factorTotals.capacity += myScores.capacity;
+      factorTotals.tier += myScores.tier;
+      factorTotals.fairness += myScores.fairness;
+      factorTotals.newGrinder += myScores.newGrinder;
+      factorTotals.reliability += myScores.reliability;
+      factorTotals.quality += myScores.quality;
+      factorTotals.risk += myScores.risk;
+    }
+
+    const rankedIn = positions.length;
+    const avgPos = rankedIn > 0 ? Math.round((positions.reduce((a, b) => a + b, 0) / rankedIn) * 10) / 10 : 0;
+    const bestPos = rankedIn > 0 ? Math.min(...positions) : 0;
+
+    const avgFactors: any = {};
+    for (const key of Object.keys(factorTotals) as (keyof typeof factorTotals)[]) {
+      avgFactors[key] = rankedIn > 0 ? Math.round((factorTotals[key] / rankedIn) * 100) / 100 : 0;
+    }
+
+    const improvementTips: string[] = [];
+    if (avgFactors.margin < 0.3) improvementTips.push("Lower your bid amounts to improve your margin score. Competitive pricing moves you up the queue.");
+    if (avgFactors.capacity < 0.4) improvementTips.push("You're near full capacity. Complete current orders to free up slots and boost your capacity score.");
+    if (avgFactors.fairness < 0.3) improvementTips.push("You were recently assigned an order. Your fairness score will naturally improve over time as the system rotates work.");
+    if (avgFactors.reliability < 0.6) improvementTips.push("Improve your reliability by delivering on time, completing all orders, and avoiding reassignments.");
+    if (avgFactors.quality < 0.5) improvementTips.push("Boost your quality score by focusing on on-time delivery, faster turnaround, providing daily updates, and avoiding strikes.");
+    if (avgFactors.risk > 0 && avgFactors.risk < 0.5) improvementTips.push("Your risk score is low due to strikes or cancellations. Maintain a clean record to improve.");
+    if (avgFactors.tier < 0.5) improvementTips.push("Higher tier grinders rank better. Work toward Elite status for a significant queue advantage.");
+    if (avgFactors.newGrinder === 1) improvementTips.push("You're getting a new grinder boost! Make the most of it by bidding on orders now.");
+    if (rankedIn === 0 && myGrinder.strikes >= 3) improvementTips.push("You're suspended from the queue due to 3+ strikes. Contact staff to resolve outstanding strikes.");
+    if (rankedIn === 0 && myGrinder.activeOrders >= myGrinder.capacity) improvementTips.push("You're at full capacity. Complete current orders to appear in the queue again.");
+    if (improvementTips.length === 0 && rankedIn > 0) improvementTips.push("You're performing well across all factors. Keep it up to maintain your position!");
+
+    res.json({
+      totalOpenOrders: openOrders.length,
+      rankedIn,
+      averagePosition: avgPos,
+      bestPosition: bestPos,
+      totalGrindersInQueue: totalGrindersMax,
+      factorScores: avgFactors,
+      improvementTips,
+      queueWeights: config ? {
+        margin: Number(config.marginWeight),
+        capacity: Number(config.capacityWeight),
+        tier: Number(config.tierWeight),
+        fairness: Number(config.fairnessWeight),
+        newGrinder: Number(config.newGrinderWeight),
+        reliability: Number(config.reliabilityWeight),
+        quality: Number(config.qualityWeight),
+        risk: Number(config.riskWeight),
+        emergencyBoost: Number(config.emergencyBoost),
+        largeOrderEliteBoost: Number(config.largeOrderEliteBoost),
+      } : null,
+    });
+  });
+
   app.post("/api/grinder/me/order-updates", async (req, res) => {
     const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
