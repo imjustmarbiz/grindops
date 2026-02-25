@@ -659,7 +659,13 @@ export class DatabaseStorage implements IStorage {
     const allBids = await this.getBids();
     const orderBids = allBids.filter(b => b.orderId === orderId && b.status === "Pending");
 
-    const availableGrinders = allGrinders.filter(g => g.activeOrders < g.capacity && g.strikes < 3);
+    const availableGrinders = allGrinders.filter(g => 
+      !g.isRemoved && 
+      !g.suspended && 
+      g.availabilityStatus !== "unavailable" &&
+      g.activeOrders < g.capacity && 
+      g.strikes < 3
+    );
     
     const orderPrice = Number(order.customerPrice) || 0;
     const isEmergency = order.isEmergency;
@@ -675,7 +681,7 @@ export class DatabaseStorage implements IStorage {
         ? Math.min(1, (orderPrice - bidAmount) / orderPrice) 
         : 0;
 
-      const capacityScore = 1 - (g.activeOrders / g.capacity);
+      const capacityScore = g.capacity > 0 ? 1 - (g.activeOrders / g.capacity) : 0;
 
       let tierScore = 0;
       if (g.category === "Elite Grinder" || g.tier === "Elite") tierScore = 1;
@@ -688,12 +694,11 @@ export class DatabaseStorage implements IStorage {
       const daysSinceAssigned = lastAssigned > 0 ? (now - lastAssigned) / (1000 * 60 * 60 * 24) : 30;
       const fairnessScore = Math.min(1, daysSinceAssigned / 14);
 
-      const grinderCreatedAt = (g as any).createdAt ? new Date((g as any).createdAt).getTime() : 0;
-      const daysSinceCreated = grinderCreatedAt > 0 ? (now - grinderCreatedAt) / (1000 * 60 * 60 * 24) : 999;
-      const hasNoAssignments = g.totalOrders === 0;
-      const newGrinderScore = (hasNoAssignments && daysSinceCreated < 14) ? 1 : 0;
+      const completedOrders = g.completedOrders || 0;
+      const newGrinderScore = completedOrders < 3 ? Math.max(0, 1 - (completedOrders / 3)) : 0;
 
-      const onTimeRate = (Number(g.onTimeRate) || 0) / 100;
+      const hasHistory = g.totalOrders > 0;
+      const onTimeRate = hasHistory ? (Number(g.onTimeRate) || 0) / 100 : 0.7;
       const completionRate = (Number(g.completionRate) || 100) / 100;
       const reassignPenalty = g.reassignmentCount > 0 ? Math.max(0, 1 - (g.reassignmentCount * 0.2)) : 1;
       const reliabilityScore = (onTimeRate * 0.4 + completionRate * 0.4 + reassignPenalty * 0.2);
