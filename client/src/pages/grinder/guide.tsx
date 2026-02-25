@@ -12,7 +12,7 @@ const featureItems = [
   {
     icon: LayoutDashboard,
     title: "Overview",
-    desc: "Your personal dashboard showing active orders, performance metrics, alerts, and an earnings summary. Get a quick snapshot of everything happening with your account at a glance.",
+    desc: "Your personal dashboard showing active orders, performance metrics, achievement badges, and an earnings summary. Get a quick snapshot of everything happening with your account.",
     url: "/",
   },
   {
@@ -54,7 +54,7 @@ const featureItems = [
   {
     icon: Brain,
     title: "Queue",
-    desc: "See where you rank in the AI queue across all open orders. View your factor breakdown, improvement tips, and boost modifiers without revealing other grinders.",
+    desc: "See where you rank in the AI queue across all open orders. View your factor breakdown, queue evaluation with context-aware feedback based on your rank, and boost modifiers.",
     url: "/grinder/queue",
   },
   {
@@ -79,7 +79,7 @@ const featureItems = [
   {
     icon: AlertOctagon,
     title: "Strikes & Policy",
-    desc: "View your current strike count, outstanding fines, and account status. Read the full strike fine schedule, elite grinder benefits, and the complete list of actions that result in strikes.",
+    desc: "View your current strike count, outstanding fines, and account status. Appeal strikes you believe were issued in error. Read the full fine schedule, elite benefits, and strike rules.",
     url: "/grinder/strikes",
   },
   {
@@ -102,8 +102,8 @@ const featureItems = [
   },
   {
     icon: LinkIcon,
-    title: "Claim Order",
-    desc: "Request to link an existing order to your profile if it wasn't automatically assigned. Staff will review and approve valid claims.",
+    title: "Claim Missing Order",
+    desc: "Completed an order that isn't linked to your profile? Submit proof and staff will review it. Use this for orders that were missed or not automatically assigned to you.",
     url: "/grinder/order-claims",
   },
   {
@@ -136,7 +136,7 @@ export default function GrinderGuide() {
         <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-10 translate-x-10" />
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-3 text-xl">
+            <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl font-display tracking-tight">
               <BookOpen className={`w-7 h-7 ${eliteAccent}`} />
               Dashboard Features
             </CardTitle>
