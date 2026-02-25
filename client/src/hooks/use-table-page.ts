@@ -9,27 +9,31 @@ export function useTablePage() {
     if (!el) return;
 
     const rect = el.getBoundingClientRect();
-    const available = window.innerHeight - rect.top - 24;
-    setTableHeight(Math.max(200, available));
+    const available = window.innerHeight - rect.top - 16;
+    if (available > 200) {
+      setTableHeight(available);
+    }
   }, []);
 
   useEffect(() => {
-    const main = document.querySelector("main");
-    if (main) {
-      main.style.overflow = "hidden";
-    }
-
     recalculate();
 
-    const timer = setTimeout(recalculate, 100);
+    const timer = setTimeout(recalculate, 150);
+    const timer2 = setTimeout(recalculate, 500);
 
     window.addEventListener("resize", recalculate);
+
+    const observer = new MutationObserver(recalculate);
+    const el = tableContainerRef.current;
+    if (el?.parentElement) {
+      observer.observe(el.parentElement, { childList: true, subtree: true });
+    }
+
     return () => {
       window.removeEventListener("resize", recalculate);
       clearTimeout(timer);
-      if (main) {
-        main.style.overflow = "";
-      }
+      clearTimeout(timer2);
+      observer.disconnect();
     };
   }, [recalculate]);
 
