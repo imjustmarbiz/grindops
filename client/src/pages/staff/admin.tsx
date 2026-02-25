@@ -128,6 +128,29 @@ export default function StaffAdmin() {
     },
   });
 
+  const { data: strikeAppeals = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/strike-appeals"],
+  });
+
+  const [appealReviewId, setAppealReviewId] = useState<string | null>(null);
+  const [appealReviewNote, setAppealReviewNote] = useState("");
+
+  const appealReviewMutation = useMutation({
+    mutationFn: async ({ id, status, reviewNote }: { id: string; status: string; reviewNote: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/strike-appeals/${id}`, { status, reviewNote });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/strike-appeals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/strike-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      setAppealReviewId(null);
+      setAppealReviewNote("");
+      toast({ title: "Appeal reviewed" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const strikeMutation = useMutation({
     mutationFn: async (data: { grinderId: string; action: string; reason: string }) => {
       const res = await apiRequest("POST", "/api/staff/strikes", { ...data, createdBy: "staff" });
@@ -525,6 +548,141 @@ export default function StaffAdmin() {
         </Card>
       </div>
       </FadeInUp>
+
+      {strikeAppeals.length > 0 && (
+        <FadeInUp>
+          <Card className="border-0 bg-gradient-to-br from-violet-500/[0.08] via-background to-violet-900/[0.04] overflow-hidden relative" data-testid="card-strike-appeals">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-violet-500/[0.04] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                  <Gavel className="w-4 h-4 text-violet-400" />
+                </div>
+                Strike Appeals
+                {strikeAppeals.filter((a: any) => a.status === "pending").length > 0 && (
+                  <Badge className="bg-violet-500/15 text-violet-400 border border-violet-500/20 ml-auto text-xs animate-pulse">
+                    {strikeAppeals.filter((a: any) => a.status === "pending").length} pending
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {strikeAppeals.map((appeal: any) => {
+                  const grinder = allGrinders.find((g: any) => g.id === appeal.grinderId);
+                  const strikeLog = (strikeLogsList || []).find((l: any) => l.id === appeal.strikeLogId);
+                  const isReviewing = appealReviewId === appeal.id;
+                  return (
+                    <div
+                      key={appeal.id}
+                      className={`p-3 rounded-xl border ${
+                        appeal.status === "pending" ? "bg-violet-500/[0.04] border-violet-500/15" :
+                        appeal.status === "approved" ? "bg-emerald-500/[0.04] border-emerald-500/15 opacity-60" :
+                        "bg-red-500/[0.04] border-red-500/15 opacity-60"
+                      }`}
+                      data-testid={`card-appeal-${appeal.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold">{grinder?.name || appeal.grinderId}</span>
+                            <Badge className={`text-[10px] ${
+                              appeal.status === "pending" ? "bg-violet-500/20 text-violet-400 border-violet-500/20" :
+                              appeal.status === "approved" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" :
+                              "bg-red-500/20 text-red-400 border-red-500/20"
+                            }`}>
+                              {appeal.status === "pending" ? "Pending" : appeal.status === "approved" ? "Approved" : "Denied"}
+                            </Badge>
+                          </div>
+                          {strikeLog && (
+                            <div className="mt-1.5 p-2 rounded-lg bg-red-500/[0.04] border border-red-500/10">
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium text-red-400">Original strike:</span> {strikeLog.reason}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                Fine: ${parseFloat(strikeLog.fineAmount || "0").toFixed(2)} — {new Date(strikeLog.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                          <div className="mt-1.5">
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">Appeal reason:</span> {appeal.reason}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              Submitted {new Date(appeal.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          {appeal.reviewNote && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              <span className="font-medium">Staff note:</span> {appeal.reviewNote} — {appeal.reviewedByName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {appeal.status === "pending" && (
+                        <div className="mt-3 space-y-2">
+                          {isReviewing ? (
+                            <>
+                              <Textarea
+                                value={appealReviewNote}
+                                onChange={(e) => setAppealReviewNote(e.target.value)}
+                                placeholder="Review note (optional for approval, recommended for denial)"
+                                className="bg-background/50 border-white/10 min-h-[60px] resize-none text-xs"
+                                data-testid={`textarea-appeal-note-${appeal.id}`}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  className="text-xs bg-gradient-to-r from-emerald-600 to-emerald-500 text-white gap-1"
+                                  disabled={appealReviewMutation.isPending}
+                                  onClick={() => appealReviewMutation.mutate({ id: appeal.id, status: "approved", reviewNote: appealReviewNote })}
+                                  data-testid={`button-approve-appeal-${appeal.id}`}
+                                >
+                                  {appealReviewMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                  Approve & Remove Strike
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="text-xs bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 gap-1"
+                                  disabled={appealReviewMutation.isPending}
+                                  onClick={() => appealReviewMutation.mutate({ id: appeal.id, status: "denied", reviewNote: appealReviewNote })}
+                                  data-testid={`button-deny-appeal-${appeal.id}`}
+                                >
+                                  {appealReviewMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+                                  Deny
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-xs text-muted-foreground"
+                                  onClick={() => { setAppealReviewId(null); setAppealReviewNote(""); }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs border-violet-500/20 text-violet-400 hover:bg-violet-500/10 gap-1"
+                              onClick={() => { setAppealReviewId(appeal.id); setAppealReviewNote(""); }}
+                              data-testid={`button-review-appeal-${appeal.id}`}
+                            >
+                              <Gavel className="w-3 h-3" />
+                              Review Appeal
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      )}
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-order-limits">
