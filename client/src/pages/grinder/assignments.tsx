@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -42,6 +42,7 @@ export default function GrinderAssignments() {
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<string | null>(null);
   const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [ticketConfirm, setTicketConfirm] = useState<{ assignmentId: string; orderId: string; action: "accept" | "decline" } | null>(null);
+  const [briefDialog, setBriefDialog] = useState<{ orderId: string; brief: string } | null>(null);
 
   const checkpointMutation = useMutation({
     mutationFn: async (data: { assignmentId: string; orderId: string; type: string; response?: string; note?: string }) => {
@@ -126,6 +127,14 @@ export default function GrinderAssignments() {
                         }}
                       >
                         {joiningTicket === a.orderId ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} Join Ticket
+                      </Button>
+                    )}
+                    {a.orderBrief && (
+                      <Button size="sm" variant="outline"
+                        className="gap-1 text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20"
+                        data-testid={`button-view-brief-${a.id}`}
+                        onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
+                        <ClipboardList className="w-3 h-3" /> View Brief
                       </Button>
                     )}
                     <Button size="sm" variant="outline" className="gap-1 text-xs" data-testid={`button-update-${a.id}`}
@@ -569,6 +578,19 @@ export default function GrinderAssignments() {
                 {ticketConfirm?.action === "accept" ? "Accept Ticket" : "Continue to Decline"}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!briefDialog} onOpenChange={(open) => !open && setBriefDialog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-indigo-400" /> Order Brief — {briefDialog?.orderId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="whitespace-pre-wrap text-sm text-white/70 leading-relaxed max-h-[60vh] overflow-y-auto">
+            {briefDialog?.brief}
           </div>
         </DialogContent>
       </Dialog>

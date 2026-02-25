@@ -1398,6 +1398,7 @@ export async function registerRoutes(
           grinderId: a.grinderId,
           hasTicket: !!(order?.discordTicketChannelId),
           hasTicketAck,
+          orderBrief: order?.orderBrief || null,
         };
       })),
       bids: myBids.map((b: any) => ({
