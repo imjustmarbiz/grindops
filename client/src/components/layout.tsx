@@ -51,8 +51,8 @@ const staffNavItems = [
 const grinderNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Available Orders", url: "/grinder/orders", icon: Zap },
-  { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
+  { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
