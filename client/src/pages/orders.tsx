@@ -501,7 +501,7 @@ export default function Orders() {
             <col className="w-[10%]" />
             <col className="w-[4%]" />
           </colgroup>
-          <TableHeader className="bg-white/[0.03] sticky top-0 z-10">
+          <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
             <TableRow className="border-white/[0.06]">
               <SortableHeader label="MGT #" sortKey="mgtOrderNumber" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Service" sortKey="serviceId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
