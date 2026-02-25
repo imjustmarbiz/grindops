@@ -3662,6 +3662,73 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.get("/api/staff/grinder-badges/:grinderId", requireStaff, async (req, res) => {
+    const badges = await storage.getGrinderBadges(req.params.grinderId);
+    res.json(badges);
+  });
+
+  app.post("/api/staff/grinder-badges", requireStaff, async (req, res) => {
+    const user = (req as any).user;
+    const { grinderId, badgeId, note } = req.body;
+    if (!grinderId || !badgeId) return res.status(400).json({ error: "grinderId and badgeId are required" });
+
+    const existing = await storage.getGrinderBadges(grinderId);
+    if (existing.some(b => b.badgeId === badgeId)) {
+      return res.status(409).json({ error: "Badge already assigned to this grinder" });
+    }
+
+    const badge = await storage.createGrinderBadge({
+      id: `BDG-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      grinderId,
+      badgeId,
+      awardedBy: user.id,
+      awardedByName: user.firstName || user.discordUsername || "Staff",
+      note: note || null,
+    });
+
+    await storage.createAuditLog({
+      id: `AUD-${Date.now().toString(36)}`,
+      entityType: "grinder_badge",
+      entityId: badge.id,
+      action: "badge_awarded",
+      actor: user.discordUsername || user.firstName || user.id,
+      details: { grinderId, badgeId, note },
+    });
+
+    res.json(badge);
+  });
+
+  app.delete("/api/staff/grinder-badges/:id", requireStaff, async (req, res) => {
+    const user = (req as any).user;
+    const badges = await storage.getGrinderBadges();
+    const badge = badges.find(b => b.id === req.params.id);
+
+    const deleted = await storage.deleteGrinderBadge(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Badge not found" });
+
+    if (badge) {
+      await storage.createAuditLog({
+        id: `AUD-${Date.now().toString(36)}`,
+        entityType: "grinder_badge",
+        entityId: req.params.id,
+        action: "badge_removed",
+        actor: user.discordUsername || user.firstName || user.id,
+        details: { grinderId: badge.grinderId, badgeId: badge.badgeId },
+      });
+    }
+
+    res.json({ success: true });
+  });
+
+  app.get("/api/grinder/me/badges", async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const grinder = await storage.getGrinderByDiscordId(user.discordId || user.id);
+    if (!grinder) return res.status(404).json({ error: "Grinder not found" });
+    const badges = await storage.getGrinderBadges(grinder.id);
+    res.json(badges);
+  });
+
   app.get('/api/events', async (req, res) => {
     const allEvents = await storage.getEvents();
     res.json(allEvents);

@@ -465,6 +465,20 @@ export const grinderTasks = pgTable("grinder_tasks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const grinderBadges = pgTable("grinder_badges", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  badgeId: varchar("badge_id").notNull(),
+  awardedBy: varchar("awarded_by"),
+  awardedByName: text("awarded_by_name"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGrinderBadgeSchema = createInsertSchema(grinderBadges).omit({ createdAt: true });
+export type InsertGrinderBadge = z.infer<typeof insertGrinderBadgeSchema>;
+export type GrinderBadge = typeof grinderBadges.$inferSelect;
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],

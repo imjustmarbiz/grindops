@@ -3,7 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
-  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks,
+  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -31,6 +31,7 @@ import {
   type OrderClaimRequest, type InsertOrderClaimRequest,
   type ReviewAccessCode, type InsertReviewAccessCode,
   type GrinderTask, type InsertGrinderTask,
+  type GrinderBadge, type InsertGrinderBadge,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -171,6 +172,10 @@ export interface IStorage {
   createGrinderTask(task: InsertGrinderTask): Promise<GrinderTask>;
   updateGrinderTask(id: string, data: Partial<GrinderTask>): Promise<GrinderTask | undefined>;
   deleteGrinderTask(id: string): Promise<boolean>;
+
+  getGrinderBadges(grinderId?: string): Promise<GrinderBadge[]>;
+  createGrinderBadge(badge: InsertGrinderBadge): Promise<GrinderBadge>;
+  deleteGrinderBadge(id: string): Promise<boolean>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1324,6 +1329,23 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGrinderTask(id: string): Promise<boolean> {
     const result = await db.delete(grinderTasks).where(eq(grinderTasks.id, id));
+    return (result?.rowCount ?? 0) > 0;
+  }
+
+  async getGrinderBadges(grinderId?: string): Promise<GrinderBadge[]> {
+    if (grinderId) {
+      return await db.select().from(grinderBadges).where(eq(grinderBadges.grinderId, grinderId)).orderBy(desc(grinderBadges.createdAt));
+    }
+    return await db.select().from(grinderBadges).orderBy(desc(grinderBadges.createdAt));
+  }
+
+  async createGrinderBadge(badge: InsertGrinderBadge): Promise<GrinderBadge> {
+    const [created] = await db.insert(grinderBadges).values(badge).returning();
+    return created;
+  }
+
+  async deleteGrinderBadge(id: string): Promise<boolean> {
+    const result = await db.delete(grinderBadges).where(eq(grinderBadges.id, id));
     return (result?.rowCount ?? 0) > 0;
   }
 }

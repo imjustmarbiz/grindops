@@ -10,13 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare } from "lucide-react";
+import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare, Award, X } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
-import type { Grinder } from "@shared/schema";
+import { BADGE_COMPONENTS, BADGE_META, ALL_BADGE_IDS, type BadgeId } from "@/components/achievement-badges";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import type { Grinder, GrinderBadge } from "@shared/schema";
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
@@ -226,6 +229,154 @@ function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; h
           </div>
         )}
       </div>
+
+      <BadgeManagement grinderId={grinder.id} grinderName={grinder.name} />
+    </div>
+  );
+}
+
+function BadgeManagement({ grinderId, grinderName }: { grinderId: string; grinderName: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selectedBadge, setSelectedBadge] = useState<BadgeId | "">("");
+  const [badgeNote, setBadgeNote] = useState("");
+
+  const { data: assignedBadges, isLoading } = useQuery<GrinderBadge[]>({
+    queryKey: ["/api/staff/grinder-badges", grinderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/grinder-badges/${grinderId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch badges");
+      return res.json();
+    },
+  });
+
+  const assignedIds = new Set((assignedBadges || []).map(b => b.badgeId));
+
+  const availableBadges = ALL_BADGE_IDS.filter(id => !assignedIds.has(id));
+
+  const assignMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/staff/grinder-badges", {
+        grinderId,
+        badgeId: selectedBadge,
+        note: badgeNote || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/grinder-badges", grinderId] });
+      toast({ title: "Badge awarded", description: `${BADGE_META[selectedBadge as BadgeId]?.label} badge given to ${grinderName}` });
+      setSelectedBadge("");
+      setBadgeNote("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to assign badge", variant: "destructive" });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (badgeDbId: string) => {
+      await apiRequest("DELETE", `/api/staff/grinder-badges/${badgeDbId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/grinder-badges", grinderId] });
+      toast({ title: "Badge removed" });
+    },
+  });
+
+  return (
+    <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+      <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+        <Award className="w-4 h-4 text-amber-400" />
+        Achievement Badges
+        <Badge variant="outline" className="text-[10px] ml-auto">{assignedBadges?.length || 0} assigned</Badge>
+      </h3>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          {assignedBadges && assignedBadges.length > 0 && (
+            <TooltipProvider delayDuration={200}>
+              <div className="flex flex-wrap gap-2" data-testid="staff-badge-list">
+                {assignedBadges.map(badge => {
+                  const id = badge.badgeId as BadgeId;
+                  const BadgeComp = BADGE_COMPONENTS[id];
+                  const meta = BADGE_META[id];
+                  if (!BadgeComp || !meta) return null;
+                  return (
+                    <div key={badge.id} className="relative group" data-testid={`staff-badge-${id}`}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <BadgeComp />
+                            <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <p className="font-bold">{meta.label}</p>
+                          <p>{meta.tooltip}</p>
+                          {badge.awardedByName && <p className="text-muted-foreground mt-1">Awarded by {badge.awardedByName}</p>}
+                          {badge.note && <p className="text-muted-foreground italic">"{badge.note}"</p>}
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">{meta.category === "auto" ? "Auto-earned" : "Staff awarded"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {meta.category !== "auto" && (
+                        <button
+                          onClick={() => removeMutation.mutate(badge.id)}
+                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          data-testid={`remove-badge-${id}`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-white/[0.06]">
+            <Select value={selectedBadge} onValueChange={(v) => setSelectedBadge(v as BadgeId)}>
+              <SelectTrigger className="flex-1 h-9 text-sm bg-white/[0.03] border-white/10" data-testid="select-badge">
+                <SelectValue placeholder="Select badge to award..." />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {availableBadges.map(id => (
+                  <SelectItem key={id} value={id} data-testid={`badge-option-${id}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{BADGE_META[id].label}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {BADGE_META[id].category === "auto" ? "(auto)" : "(manual)"}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              value={badgeNote}
+              onChange={e => setBadgeNote(e.target.value)}
+              placeholder="Optional note..."
+              className="flex-1 h-9 min-h-[36px] text-sm bg-white/[0.03] border-white/10 resize-none"
+              rows={1}
+              data-testid="input-badge-note"
+            />
+            <Button
+              size="sm"
+              onClick={() => assignMutation.mutate()}
+              disabled={!selectedBadge || assignMutation.isPending}
+              className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border-amber-500/30"
+              data-testid="button-award-badge"
+            >
+              {assignMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4 mr-1" />}
+              Award
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

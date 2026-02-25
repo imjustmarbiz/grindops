@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, type BadgeId } from "@/components/achievement-badges";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { GrinderBadge } from "@shared/schema";
 
 export default function GrinderOverview() {
   const {
@@ -29,9 +31,13 @@ export default function GrinderOverview() {
   const [availStatus, setAvailStatus] = useState(grinder?.availabilityStatus || "available");
   const [availNote, setAvailNote] = useState(grinder?.availabilityNote || "");
 
-  const earnedBadgeIds = useMemo(() => {
+  const { data: manualBadges } = useQuery<GrinderBadge[]>({
+    queryKey: ["/api/grinder/me/badges"],
+  });
+
+  const allBadgeIds = useMemo(() => {
     if (!grinder) return [] as BadgeId[];
-    const ids: BadgeId[] = [];
+    const ids = new Set<BadgeId>();
     const completed = grinder.completedOrders || 0;
     const totalOrders = grinder.totalOrders || 0;
     const quality = Number(grinder.avgQualityRating) || 0;
@@ -43,25 +49,31 @@ export default function GrinderOverview() {
     const tier = grinder.tier;
     const daysSinceJoin = grinder.joinedAt ? Math.floor((Date.now() - new Date(grinder.joinedAt).getTime()) / 86400000) : 0;
 
-    if (isElite) ids.push("elite");
-    if (tier === "Veteran" || completed >= 20) ids.push("veteran");
-    if (completed >= 1) ids.push("first-order");
-    if (completed >= 5) ids.push("grind-5");
-    if (completed >= 10) ids.push("grind-10");
-    if (completed >= 50) ids.push("grind-50");
-    if (quality >= 95 && completed >= 3) ids.push("quality");
-    if (winRate >= 80 && totalOrders >= 3) ids.push("sharp");
-    if (onTime >= 100 && completed >= 3) ids.push("punctual");
-    if (completion >= 100 && completed >= 3) ids.push("reliable");
-    if (strikes === 0 && completed >= 5) ids.push("clean");
-    if (earned >= 500) ids.push("earn-500");
-    if (earned >= 2000) ids.push("earn-2k");
-    if (daysSinceJoin <= 7) ids.push("newbie");
-    if (daysSinceJoin >= 90) ids.push("loyal");
-    if (grinder.twitchUsername) ids.push("streamer");
+    if (isElite) ids.add("elite");
+    if (tier === "Veteran" || completed >= 20) ids.add("veteran");
+    if (completed >= 1) ids.add("first-order");
+    if (completed >= 5) ids.add("grind-5");
+    if (completed >= 10) ids.add("grind-10");
+    if (completed >= 50) ids.add("grind-50");
+    if (quality >= 95 && completed >= 3) ids.add("quality");
+    if (winRate >= 80 && totalOrders >= 3) ids.add("sharp");
+    if (onTime >= 100 && completed >= 3) ids.add("punctual");
+    if (completion >= 100 && completed >= 3) ids.add("reliable");
+    if (strikes === 0 && completed >= 5) ids.add("clean");
+    if (earned >= 500) ids.add("earn-500");
+    if (earned >= 2000) ids.add("earn-2k");
+    if (daysSinceJoin <= 7) ids.add("newbie");
+    if (daysSinceJoin >= 90) ids.add("loyal");
+    if (grinder.twitchUsername) ids.add("streamer");
 
-    return ids;
-  }, [grinder, stats, isElite]);
+    if (manualBadges) {
+      manualBadges.forEach(b => {
+        if (BADGE_META[b.badgeId as BadgeId]) ids.add(b.badgeId as BadgeId);
+      });
+    }
+
+    return Array.from(ids);
+  }, [grinder, stats, isElite, manualBadges]);
 
   if (!grinder) return null;
 
@@ -109,10 +121,10 @@ export default function GrinderOverview() {
                 <span className="text-cyan-400/70">Elite since {new Date(grinder.eliteSince).toLocaleDateString()}</span>
               )}
             </div>
-            {earnedBadgeIds.length > 0 && (
+            {allBadgeIds.length > 0 && (
               <TooltipProvider delayDuration={200}>
                 <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
-                  {earnedBadgeIds.map(id => {
+                  {allBadgeIds.map(id => {
                     const BadgeComp = BADGE_COMPONENTS[id];
                     const meta = BADGE_META[id];
                     return (
