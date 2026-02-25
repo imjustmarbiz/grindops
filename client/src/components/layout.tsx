@@ -44,6 +44,8 @@ const staffNavItems = [
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
   { title: "Services", url: "/services", icon: Package },
   { title: "Business", url: "/business", icon: DollarSign },
+  { title: "Features", url: "/features", icon: BookOpen },
+  { title: "Scorecard & Queue", url: "/scorecard-guide", icon: Brain },
 ];
 
 const grinderNavItems = [
@@ -59,7 +61,8 @@ const grinderNavItems = [
   { title: "Submit Review", url: "/grinder/reviews", icon: Star },
   { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
   { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
-  { title: "Guide", url: "/grinder/guide", icon: BookOpen },
+  { title: "Features", url: "/grinder/guide", icon: BookOpen },
+  { title: "Scorecard & Queue", url: "/scorecard-guide", icon: Brain },
 ];
 
 function AppSidebar() {

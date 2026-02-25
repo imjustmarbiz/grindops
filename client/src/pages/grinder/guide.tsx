@@ -1,84 +1,184 @@
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Eye, Gavel, Clock, FileCheck, DollarSign, Signal, Bell, Crown,
-  Target, Lightbulb, TrendingUp, CalendarClock, Send, Star, Zap, ArrowUpCircle
+  BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, Brain,
+  Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
+  CalendarClock, Send, ArrowUpCircle, Crown
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { Link } from "wouter";
+
+const featureItems = [
+  {
+    icon: LayoutDashboard,
+    title: "Overview",
+    desc: "Your personal dashboard showing active orders, performance metrics, alerts, and an earnings summary. Get a quick snapshot of everything happening with your account at a glance.",
+    url: "/",
+  },
+  {
+    icon: Zap,
+    title: "Available Orders",
+    desc: "Browse all open orders available for bidding. View countdowns, replacement orders, and your current queue standing. Place bids directly from this page when new work drops.",
+    url: "/grinder/orders",
+  },
+  {
+    icon: FileCheck,
+    title: "My Work",
+    desc: "Track your active assignments, send progress updates to staff, log in and out of sessions, report issues, and upload completion proof when you finish an order.",
+    url: "/grinder/assignments",
+  },
+  {
+    icon: Gavel,
+    title: "My Bids",
+    desc: "View your complete bid history including pending, accepted, and denied bids. Edit active bids before the countdown expires to stay competitive.",
+    url: "/grinder/bids",
+  },
+  {
+    icon: Banknote,
+    title: "Payouts",
+    desc: "Request payouts for completed work, view your full payment history, manage payout methods, and dispute or approve amounts if something doesn't look right.",
+    url: "/grinder/payouts",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Scorecard",
+    desc: "Your performance profile showing quality score, letter grade, completion rate, customer reviews, and staff reports. Track how you're doing over time.",
+    url: "/grinder/scorecard",
+  },
+  {
+    icon: Brain,
+    title: "Scorecard & Queue",
+    desc: "Understand how your scorecard grades feed into the AI queue ranking system. Learn the 9 factors that determine your queue position and how to improve.",
+    url: "/scorecard-guide",
+    isLink: true,
+  },
+  {
+    icon: Bell,
+    title: "Status",
+    desc: "View alerts from staff, review your strike history, acknowledge new strikes, and manage your availability settings so staff knows when you're ready to work.",
+    url: "/grinder/status",
+  },
+  {
+    icon: Calendar,
+    title: "Events & Promos",
+    desc: "Stay up to date with current events and promotions. Special events can offer bonus earnings, priority assignments, or other incentives for participating grinders.",
+    url: "/grinder/events",
+  },
+  {
+    icon: Newspaper,
+    title: "Patch Notes",
+    desc: "Read the latest platform updates and changes. Stay informed about new features, bug fixes, and improvements that affect how you use the dashboard.",
+    url: "/grinder/patch-notes",
+  },
+  {
+    icon: Star,
+    title: "Submit Review",
+    desc: "Submit customer reviews with ratings and proof screenshots. Reviews help build trust with the platform and can positively impact your scorecard.",
+    url: "/grinder/reviews",
+  },
+  {
+    icon: LinkIcon,
+    title: "Claim Order",
+    desc: "Request to link an existing order to your profile if it wasn't automatically assigned. Staff will review and approve valid claims.",
+    url: "/grinder/order-claims",
+  },
+  {
+    icon: CalendarDays,
+    title: "Calendar",
+    desc: "Your personal activity calendar showing completed orders, upcoming deadlines, events, and other important dates across the platform.",
+    url: "/grinder/calendar",
+  },
+];
+
+const quickTips = [
+  { icon: TrendingUp, tip: "Maintain a high completion rate to build your reputation and win more bids." },
+  { icon: CalendarClock, tip: "Submit realistic timelines. Missing deadlines can result in strikes." },
+  { icon: Send, tip: "Send regular progress updates on active orders to keep staff informed." },
+  { icon: Star, tip: "Quality matters. Consistently great work is the fastest path to Elite status." },
+  { icon: Zap, tip: "Bid quickly when new orders drop. The 10-minute countdown starts with the first bid." },
+  { icon: ArrowUpCircle, tip: "Keep your availability status updated so you get considered for direct assignments." },
+  { icon: Crown, tip: "Elite grinders get a higher order limit (5 vs 3), priority queue boosts, and a special theme." },
+  { icon: Brain, tip: "Your queue position is influenced by 9 factors. Focus on reliability and quality to climb the ranks." },
+];
 
 export default function GrinderGuide() {
-  const { grinder, isElite, eliteAccent } = useGrinderData();
+  const { grinder, isElite, eliteAccent, eliteGradient, eliteBorder } = useGrinderData();
 
   if (!grinder) return null;
 
   return (
-    <AnimatedPage className="space-y-4">
+    <AnimatedPage className="space-y-6">
       <FadeInUp>
-      <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
-              <Target className={`w-5 h-5 ${eliteAccent}`} />
-            </div>
-            How to Use Your Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            { step: 1, icon: Eye, title: "Check Available Orders", desc: "Go to the 'Available Orders' page to see all open orders you can bid on. Each card shows the service type, platform, and when bidding closes." },
-            { step: 2, icon: Gavel, title: "Place Your Bids", desc: "Click 'Place Bid' on any available order. Enter your bid amount, timeline, and when you can start. Lower bids with faster timelines tend to win." },
-            { step: 3, icon: Clock, title: "Watch the Countdown", desc: "Once the first bid is placed, a 10-minute countdown begins. You can edit your bid before time runs out. After the timer expires, bidding closes." },
-            { step: 4, icon: FileCheck, title: "Manage Your Work", desc: "When your bid is accepted, the order appears in 'My Work'. Send progress updates to staff, update deadlines, and mark orders complete when finished." },
-            { step: 5, icon: DollarSign, title: "Request Payouts", desc: "After completing an order, go to 'Payouts' to request payment. Enter the amount and any notes. Staff will review and process your payout." },
-            { step: 6, icon: Signal, title: "Set Your Availability", desc: "Use the availability dropdown at the top of your dashboard to let staff know when you're available, busy, away, or offline." },
-            { step: 7, icon: Bell, title: "Check Alerts & Strikes", desc: "The 'Status' page shows your alerts from staff and any strikes. Make sure to acknowledge new strikes and read important alerts." },
-            { step: 8, icon: Crown, title: "Aim for Elite Status", desc: "In the Status page, you can request Elite status. Elite grinders get a higher order limit (5 vs 3), a special cyan theme, and priority consideration." },
-          ].map(({ step, icon: StepIcon, title, desc }) => (
-            <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`guide-step-${step}`}>
-              <div className={`w-7 h-7 rounded-full ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} flex items-center justify-center flex-shrink-0 text-sm font-bold`}>{step}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <StepIcon className={`w-4 h-4 ${eliteAccent} flex-shrink-0`} />
-                  <span className="font-semibold text-sm">{title}</span>
-                </div>
-                <p className="text-xs text-white/40 mt-1">{desc}</p>
+        <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-10 translate-x-10" />
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${eliteGradient} flex items-center justify-center`}>
+                <BookOpen className={`w-5 h-5 ${eliteAccent}`} />
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+              Dashboard Features
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Everything you can do from your grinder dashboard. Tap any card to navigate directly to that page.
+            </p>
+          </CardHeader>
+        </Card>
       </FadeInUp>
 
       <FadeInUp>
-      <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
-              <Lightbulb className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
-            </div>
-            Tips for Success
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { icon: TrendingUp, tip: "Maintain a high completion rate to build your reputation and win more bids." },
-              { icon: CalendarClock, tip: "Submit realistic timelines. Missing deadlines can result in strikes." },
-              { icon: Send, tip: "Send regular progress updates on active orders to keep staff informed." },
-              { icon: Star, tip: "Quality matters. Consistently great work is the fastest path to Elite status." },
-              { icon: Zap, tip: "Bid quickly when new orders drop. The 10-minute countdown starts with the first bid." },
-              { icon: ArrowUpCircle, tip: "Keep your availability status updated so you get considered for direct assignments." },
-            ].map(({ icon: TipIcon, tip }, i) => (
-              <div key={i} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`tip-${i}`}>
-                <TipIcon className={`w-4 h-4 mt-0.5 ${eliteAccent} flex-shrink-0`} />
-                <p className="text-xs text-white/40">{tip}</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {featureItems.map((item) => {
+            const Icon = item.icon;
+            const content = (
+              <Card
+                className={`border-0 bg-white/[0.03] hover-elevate cursor-pointer transition-all duration-200 h-full`}
+                data-testid={`feature-card-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${eliteGradient} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-4.5 h-4.5 ${eliteAccent}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm mb-1">{item.title}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+
+            return (
+              <Link key={item.title} href={item.url}>
+                {content}
+              </Link>
+            );
+          })}
+        </div>
+      </FadeInUp>
+
+      <FadeInUp>
+        <Card className="border-0 bg-white/[0.03] overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
+                <Lightbulb className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              Quick Tips
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {quickTips.map(({ icon: TipIcon, tip }, i) => (
+                <div key={i} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`tip-${i}`}>
+                  <TipIcon className={`w-4 h-4 mt-0.5 ${eliteAccent} flex-shrink-0`} />
+                  <p className="text-xs text-muted-foreground">{tip}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </FadeInUp>
     </AnimatedPage>
   );

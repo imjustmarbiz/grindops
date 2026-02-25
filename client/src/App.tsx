@@ -30,6 +30,7 @@ import GrinderBids from "@/pages/grinder/bids";
 import GrinderPayouts from "@/pages/grinder/payouts";
 import GrinderStatus from "@/pages/grinder/status";
 import GrinderGuide from "@/pages/grinder/guide";
+import ScorecardGuide from "@/pages/scorecard-guide";
 import GrinderScorecard from "@/pages/grinder/scorecard";
 import StaffEvents from "@/pages/staff/events";
 import GrinderEvents from "@/pages/grinder/events";
@@ -43,6 +44,7 @@ import StaffCalendar from "@/pages/staff/calendar";
 import StaffServices from "@/pages/staff/services";
 import BusinessPerformance from "@/pages/staff/business";
 import GrinderCalendar from "@/pages/grinder/calendar";
+import StaffFeatures from "@/pages/staff/features";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean }) {
@@ -153,6 +155,7 @@ function Router() {
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly />} />
+      <Route path="/features" component={() => <ProtectedRoute component={StaffFeatures} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
@@ -166,6 +169,7 @@ function Router() {
       <Route path="/grinder/reviews" component={() => <ProtectedRoute component={GrinderReviews} />} />
       <Route path="/grinder/order-claims" component={() => <ProtectedRoute component={GrinderOrderClaims} />} />
       <Route path="/grinder/calendar" component={() => <ProtectedRoute component={GrinderCalendar} />} />
+      <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
       
       <Route component={NotFound} />
     </Switch>
