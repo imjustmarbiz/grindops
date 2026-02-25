@@ -17,6 +17,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Assignment, Order, Grinder } from "@shared/schema";
 import { HelpTip } from "@/components/help-tip";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/sortable-header";
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
@@ -92,6 +94,8 @@ export default function Assignments() {
   const totalOriginalPay = (assignments || []).reduce((sum, a) => sum + (Number(a.originalGrinderPay) || 0), 0);
   const totalProfit = (assignments || []).reduce((sum, a) => sum + (Number(a.companyProfit) || 0), 0);
 
+  const { sortedItems: sortedAssignments, sortKey, sortDir, toggleSort } = useTableSort<Assignment>(assignments || []);
+
   const availableGrinders = (grinders || []).filter(g => {
     if (!selectedAssignment) return true;
     return g.id !== selectedAssignment.grinderId && g.activeOrders < g.capacity;
@@ -146,25 +150,25 @@ export default function Assignments() {
         <Table className="min-w-[1100px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
-              <TableHead className="whitespace-nowrap">ID</TableHead>
-              <TableHead className="whitespace-nowrap">Order</TableHead>
-              <TableHead className="whitespace-nowrap">Grinder</TableHead>
-              <TableHead className="whitespace-nowrap">Assigned</TableHead>
-              <TableHead className="whitespace-nowrap">Due</TableHead>
-              <TableHead className="whitespace-nowrap">Delivered</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Order Price</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Grinder Pay</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Margin</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Profit</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Quality</TableHead>
-              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <SortableHeader label="ID" sortKey="id" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Order" sortKey="orderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Grinder" sortKey="grinderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Assigned" sortKey="assignedDateTime" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Due" sortKey="dueDateTime" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Delivered" sortKey="deliveredDateTime" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Order Price" sortKey="orderPrice" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
+              <SortableHeader label="Grinder Pay" sortKey="grinderEarnings" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
+              <SortableHeader label="Margin" sortKey="margin" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
+              <SortableHeader label="Profit" sortKey="companyProfit" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
+              <SortableHeader label="Quality" sortKey="qualityRating" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-center" />
+              <SortableHeader label="Status" sortKey="status" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={13} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : assignments && assignments.length > 0 ? assignments.map((a: Assignment) => {
+            ) : sortedAssignments && sortedAssignments.length > 0 ? sortedAssignments.map((a: Assignment) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === a.grinderId);
               const originalGrinder = a.originalGrinderId ? (grinders || []).find((g: Grinder) => g.id === a.originalGrinderId) : null;
               const order = (orders || []).find((o: Order) => o.id === a.orderId);

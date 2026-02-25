@@ -19,6 +19,8 @@ import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, Ro
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder } from "@shared/schema";
 import { HelpTip } from "@/components/help-tip";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/sortable-header";
 
 export default function Bids() {
   const { toast } = useToast();
@@ -170,6 +172,7 @@ export default function Bids() {
   };
 
   const filteredBids = filterOrderId === "all" ? bids : bids?.filter(b => b.orderId === filterOrderId);
+  const { sortedItems: sortedBids, sortKey, sortDir, toggleSort } = useTableSort<Bid>(filteredBids || []);
   const pendingCount = bids?.filter(b => b.status === "Pending").length || 0;
   const acceptedCount = bids?.filter(b => b.status === "Accepted").length || 0;
   const rejectedCount = bids?.filter(b => b.status === "Rejected" || b.status === "Denied").length || 0;
@@ -287,24 +290,24 @@ export default function Bids() {
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
               <TableHead className="whitespace-nowrap">Proposal</TableHead>
-              <TableHead className="whitespace-nowrap">Order</TableHead>
-              <TableHead className="whitespace-nowrap">Grinder</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Bid</TableHead>
+              <SortableHeader label="Order" sortKey="orderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Grinder" sortKey="grinderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Bid" sortKey="bidAmount" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
               <TableHead className="text-right whitespace-nowrap">Order Price</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Margin</TableHead>
-              <TableHead className="whitespace-nowrap">Timeline</TableHead>
+              <SortableHeader label="Margin" sortKey="margin" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
+              <SortableHeader label="Timeline" sortKey="timeline" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
               <TableHead className="whitespace-nowrap">Can Start</TableHead>
               <TableHead className="whitespace-nowrap">Est. Delivery</TableHead>
               <TableHead className="text-center whitespace-nowrap">QS</TableHead>
-              <TableHead className="whitespace-nowrap">Submitted</TableHead>
-              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <SortableHeader label="Submitted" sortKey="bidTime" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <SortableHeader label="Status" sortKey="status" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
               <TableHead className="whitespace-nowrap">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={13} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : filteredBids && filteredBids.length > 0 ? filteredBids.map((bid: Bid) => {
+            ) : sortedBids && sortedBids.length > 0 ? sortedBids.map((bid: Bid) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
               const order = (orders || []).find((o: Order) => o.id === bid.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;

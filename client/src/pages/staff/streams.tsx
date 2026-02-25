@@ -3,7 +3,7 @@ import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tv, Radio, Users, ExternalLink } from "lucide-react";
+import { Tv, Radio, Users, ExternalLink, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import spLogo from "@assets/image_1771930905137.png";
 
@@ -15,6 +15,7 @@ type StreamGrinder = {
   avatarUrl?: string;
   roles?: string[];
   isLive?: boolean;
+  activeOrders: { orderId: string; serviceId: string; platform: string }[];
 };
 
 export default function StaffStreams() {
@@ -121,6 +122,25 @@ export default function StaffStreams() {
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border/30" data-testid={`section-active-orders-${streamer.id}`}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Active Orders</span>
+                    </div>
+                    {streamer.activeOrders && streamer.activeOrders.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {streamer.activeOrders.map(order => (
+                          <Badge key={order.orderId} variant="secondary" className="text-[10px] px-1.5 py-0" data-testid={`badge-order-${order.orderId}`}>
+                            {order.orderId}
+                            {order.serviceId && <span className="ml-1 opacity-70">· {order.serviceId}</span>}
+                            {order.platform && <span className="ml-1 opacity-70">· {order.platform}</span>}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground/60" data-testid={`text-no-orders-${streamer.id}`}>No active orders</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

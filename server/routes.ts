@@ -123,15 +123,31 @@ export async function registerRoutes(
   app.get('/api/grinders/live-streams', async (req, res) => {
     const allGrinders = await storage.getGrinders();
     const streaming = allGrinders.filter(g => g.twitchUsername && !g.isRemoved);
-    res.json(streaming.map(g => ({
-      id: g.id,
-      name: g.name,
-      twitchUsername: g.twitchUsername,
-      tier: g.tier,
-      avatarUrl: (g as any).discordAvatarUrl,
-      roles: g.roles,
-      isLive: isGrinderLive(g.id),
-    })));
+    const allAssignments = await storage.getAssignments();
+    const allOrders = await storage.getOrders();
+    const ordersMap = new Map(allOrders.map(o => [o.id, o]));
+    res.json(streaming.map(g => {
+      const activeOrders = allAssignments
+        .filter((a: any) => a.grinderId === g.id && a.status === "Active")
+        .map((a: any) => {
+          const order = ordersMap.get(a.orderId);
+          return {
+            orderId: a.orderId,
+            serviceId: order?.serviceId || "",
+            platform: order?.platform || "",
+          };
+        });
+      return {
+        id: g.id,
+        name: g.name,
+        twitchUsername: g.twitchUsername,
+        tier: g.tier,
+        avatarUrl: (g as any).discordAvatarUrl,
+        roles: g.roles,
+        isLive: isGrinderLive(g.id),
+        activeOrders,
+      };
+    }));
   });
 
   app.get(api.grinders.get.path, requireStaff, async (req, res) => {

@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollText, Filter, Clock, Activity, FileText, Package, Gavel, Users, Settings, ClipboardCheck, BarChart3, DollarSign, Star, AlertTriangle } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/sortable-header";
 import type { AuditLog } from "@shared/schema";
 
 function formatLabel(str: string): string {
@@ -24,6 +26,8 @@ export default function AuditLogPage() {
 
   const entityTypes = ["all", "order", "bid", "assignment", "grinder", "report", "checkpoint", "payout", "payout_request", "order_update", "elite_request", "staff_alert", "config"];
   const filtered = entityFilter === "all" ? (logs || []) : (logs || []).filter(l => l.entityType === entityFilter);
+
+  const { sortedItems, sortKey, sortDir, toggleSort } = useTableSort<AuditLog>(filtered, "createdAt", "desc");
 
   const entityLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -168,18 +172,18 @@ export default function AuditLogPage() {
           <Table>
             <TableHeader className="bg-white/[0.03]">
               <TableRow className="border-white/[0.06]">
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Entity ID</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Actor</TableHead>
+                <SortableHeader label="Timestamp" sortKey="createdAt" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                <SortableHeader label="Entity" sortKey="entityType" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                <SortableHeader label="Entity ID" sortKey="entityId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                <SortableHeader label="Action" sortKey="action" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                <SortableHeader label="Actor" sortKey="actor" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
                 <TableHead>Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
-              ) : filtered.length > 0 ? filtered.map((log: AuditLog) => {
+              ) : sortedItems.length > 0 ? sortedItems.map((log: AuditLog) => {
                 let details: Record<string, any> = {};
                 try { details = JSON.parse(log.details || "{}"); } catch {}
                 return (

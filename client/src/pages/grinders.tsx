@@ -14,6 +14,8 @@ import { Users, Crown, Zap, Shield, AlertTriangle, Trophy, DollarSign, Target, M
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/sortable-header";
 import type { Grinder } from "@shared/schema";
 
 function formatCurrency(val: number) {
@@ -310,6 +312,124 @@ export default function Grinders() {
     return grinders.filter(g => grinderHasRole(g, category));
   };
 
+  function GrinderTable({ grinders: filteredGrinders, isLoading }: { grinders: Grinder[]; isLoading: boolean }) {
+    const { sortedItems, sortKey: currentSortKey, sortDir: currentSortDir, toggleSort } = useTableSort<Grinder>(filteredGrinders);
+    const sortProps = { currentSortKey, currentSortDir, onToggle: toggleSort };
+
+    return (
+      <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
+        <div className="overflow-x-auto">
+        <Table className="min-w-[900px]">
+          <TableHeader className="bg-white/[0.03]">
+            <TableRow className="border-white/[0.06]">
+              <SortableHeader label="Grinder" sortKey="name" {...sortProps} />
+              <SortableHeader label="Tier" sortKey="category" {...sortProps} />
+              <SortableHeader label="Capacity" sortKey="activeOrders" className="text-center" {...sortProps} />
+              <SortableHeader label="Orders" sortKey="totalOrders" className="text-center" {...sortProps} />
+              <SortableHeader label="Earnings" sortKey="totalEarnings" className="text-right" {...sortProps} />
+              <SortableHeader label="Win Rate" sortKey="winRate" className="text-center" {...sortProps} />
+              <SortableHeader label="Last Order" sortKey="lastAssigned" className="text-center" {...sortProps} />
+              <SortableHeader label="Strikes" sortKey="strikes" className="text-center" {...sortProps} />
+              <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow><TableCell colSpan={10} className="text-center h-24">Loading...</TableCell></TableRow>
+            ) : sortedItems.length > 0 ? sortedItems.map(g => {
+              const winRateNum = g.winRate ? Number(g.winRate) : null;
+              return (
+                <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {categoryIcon(g.category || "Grinder")}
+                      <div>
+                        <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
+                        {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
+                        <Badge key={r} variant="outline" className={`text-xs ${r === "Elite Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : r === "VC Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : r === "Event Grinder" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "bg-white/[0.03]"}`}>{r}</Badge>
+                      )) : (
+                        <Badge variant="outline" className="text-xs bg-white/[0.03]">{g.category || "Grinder"}</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className={g.activeOrders >= g.capacity ? "text-red-400 font-bold" : "text-muted-foreground"}>
+                      {g.activeOrders}/{g.capacity}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    <div>
+                      <span className="font-medium">{g.totalOrders}</span>
+                      <span className="text-xs text-muted-foreground ml-1">({g.completedOrders} done)</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">
+                    {formatCurrency(Number(g.totalEarnings))}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {winRateNum !== null ? (
+                      <span className={`font-medium ${winRateNum >= 70 ? "text-green-400" : winRateNum >= 40 ? "text-yellow-400" : "text-red-400"}`}>
+                        {winRateNum.toFixed(0)}%
+                      </span>
+                    ) : <span className="text-muted-foreground">N/A</span>}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {(() => {
+                      const info = daysAgo(g.lastAssigned);
+                      const colorClass = info.days === null ? "text-muted-foreground" : info.days <= 3 ? "text-green-400" : info.days <= 7 ? "text-yellow-400" : "text-red-400";
+                      return (
+                        <div className="flex flex-col items-center">
+                          <span className={`text-sm font-medium ${colorClass}`}>{info.label}</span>
+                          {g.lastAssigned && (
+                            <span className="text-[10px] text-muted-foreground">{new Date(g.lastAssigned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, -1)} disabled={g.strikes <= 0} data-testid={`button-strike-minus-${g.id}`}>
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <div className="flex gap-1">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className={`w-3 h-3 rounded-full ${i < g.strikes ? "bg-red-500" : "bg-white/10"}`} />
+                        ))}
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, 1)} disabled={g.strikes >= 3} data-testid={`button-strike-plus-${g.id}`}>
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="outline" size="sm" className="text-xs bg-white/[0.03] border-white/10 hover:bg-white/10 hover:text-primary" onClick={(e) => { e.stopPropagation(); setSelectedGrinder(g); }} data-testid={`button-scorecard-${g.id}`}>
+                      Scorecard
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            }) : (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                  No grinders in this category
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <AnimatedPage className="space-y-5">
       <FadeInUp>
@@ -372,116 +492,7 @@ export default function Grinders() {
 
         {categories.map(cat => (
           <TabsContent key={cat} value={cat}>
-            <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-              <div className="overflow-x-auto">
-              <Table className="min-w-[900px]">
-                <TableHeader className="bg-white/[0.03]">
-                  <TableRow className="border-white/[0.06]">
-                    <TableHead className="whitespace-nowrap">Grinder</TableHead>
-                    <TableHead className="whitespace-nowrap">Tier</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Capacity</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Orders</TableHead>
-                    <TableHead className="text-right whitespace-nowrap">Earnings</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Win Rate</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Last Order</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Strikes</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={10} className="text-center h-24">Loading...</TableCell></TableRow>
-                  ) : filterGrinders(cat).length > 0 ? filterGrinders(cat).map(g => {
-                    const winRateNum = g.winRate ? Number(g.winRate) : null;
-                    return (
-                      <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {categoryIcon(g.category || "Grinder")}
-                            <div>
-                              <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
-                              {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
-                              <Badge key={r} variant="outline" className={`text-xs ${r === "Elite Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : r === "VC Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : r === "Event Grinder" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "bg-white/[0.03]"}`}>{r}</Badge>
-                            )) : (
-                              <Badge variant="outline" className="text-xs bg-white/[0.03]">{g.category || "Grinder"}</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={g.activeOrders >= g.capacity ? "text-red-400 font-bold" : "text-muted-foreground"}>
-                            {g.activeOrders}/{g.capacity}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center whitespace-nowrap">
-                          <div>
-                            <span className="font-medium">{g.totalOrders}</span>
-                            <span className="text-xs text-muted-foreground ml-1">({g.completedOrders} done)</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">
-                          {formatCurrency(Number(g.totalEarnings))}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {winRateNum !== null ? (
-                            <span className={`font-medium ${winRateNum >= 70 ? "text-green-400" : winRateNum >= 40 ? "text-yellow-400" : "text-red-400"}`}>
-                              {winRateNum.toFixed(0)}%
-                            </span>
-                          ) : <span className="text-muted-foreground">N/A</span>}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {(() => {
-                            const info = daysAgo(g.lastAssigned);
-                            const colorClass = info.days === null ? "text-muted-foreground" : info.days <= 3 ? "text-green-400" : info.days <= 7 ? "text-yellow-400" : "text-red-400";
-                            return (
-                              <div className="flex flex-col items-center">
-                                <span className={`text-sm font-medium ${colorClass}`}>{info.label}</span>
-                                {g.lastAssigned && (
-                                  <span className="text-[10px] text-muted-foreground">{new Date(g.lastAssigned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, -1)} disabled={g.strikes <= 0} data-testid={`button-strike-minus-${g.id}`}>
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <div className="flex gap-1">
-                              {Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className={`w-3 h-3 rounded-full ${i < g.strikes ? "bg-red-500" : "bg-white/10"}`} />
-                              ))}
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, 1)} disabled={g.strikes >= 3} data-testid={`button-strike-plus-${g.id}`}>
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="text-xs bg-white/[0.03] border-white/10 hover:bg-white/10 hover:text-primary" onClick={(e) => { e.stopPropagation(); setSelectedGrinder(g); }} data-testid={`button-scorecard-${g.id}`}>
-                            Scorecard
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }) : (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
-                        <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                        No grinders in this category
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              </div>
-            </Card>
+            <GrinderTable grinders={filterGrinders(cat)} isLoading={!!isLoading} />
           </TabsContent>
         ))}
       </Tabs>

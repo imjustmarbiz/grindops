@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText } from "lucide-react";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/sortable-header";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -347,6 +349,8 @@ export default function Orders() {
     return "text-red-400";
   };
 
+  const { sortedItems: sortedOrders, sortKey: currentSortKey, sortDir: currentSortDir, toggleSort } = useTableSort<Order>(orders || []);
+
   const openCount = (orders || []).filter(o => o.status === "Open").length;
   const assignedCount = (orders || []).filter(o => o.status === "Assigned" || o.status === "In Progress").length;
   const completedCount = (orders || []).filter(o => o.status === "Completed").length;
@@ -487,25 +491,25 @@ export default function Orders() {
         <Table className="min-w-[950px]">
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
-              <TableHead className="whitespace-nowrap">MGT #</TableHead>
-              <TableHead className="whitespace-nowrap">Service</TableHead>
-              <TableHead className="whitespace-nowrap">Platform</TableHead>
+              <SortableHeader label="MGT #" sortKey="mgtOrderNumber" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
+              <SortableHeader label="Service" sortKey="serviceId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
+              <SortableHeader label="Platform" sortKey="platform" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <TableHead className="whitespace-nowrap">Gamertag</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Complexity</TableHead>
-              <TableHead className="whitespace-nowrap">Assigned To</TableHead>
-              <TableHead className="whitespace-nowrap">Due Date</TableHead>
-              <TableHead className="whitespace-nowrap">Completed</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Price</TableHead>
+              <SortableHeader label="Complexity" sortKey="complexity" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-center" />
+              <SortableHeader label="Assigned To" sortKey="assignedGrinderId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
+              <SortableHeader label="Due Date" sortKey="orderDueDate" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
+              <SortableHeader label="Completed" sortKey="completedAt" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
+              <SortableHeader label="Price" sortKey="customerPrice" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-right" />
               <TableHead className="text-right whitespace-nowrap">Bid</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Profit</TableHead>
-              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <SortableHeader label="Profit" sortKey="companyProfit" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-right" />
+              <SortableHeader label="Status" sortKey="status" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={11} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : orders && orders.length > 0 ? orders.map((order: Order) => {
+            ) : sortedOrders && sortedOrders.length > 0 ? sortedOrders.map((order: Order) => {
               const service = (services || []).find((s: Service) => s.id === order.serviceId);
               const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
               return (
