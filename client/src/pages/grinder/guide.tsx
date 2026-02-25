@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, Brain,
   Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
-  CalendarClock, Send, ArrowUpCircle, Crown
+  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -129,28 +129,27 @@ export default function GrinderGuide() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {featureItems.map((item) => {
             const Icon = item.icon;
-            const content = (
-              <Card
-                className={`border-0 bg-white/[0.03] hover-elevate cursor-pointer transition-all duration-200 h-full`}
-                data-testid={`feature-card-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${eliteGradient} flex items-center justify-center flex-shrink-0`}>
-                      <Icon className={`w-4.5 h-4.5 ${eliteAccent}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm mb-1">{item.title}</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-
             return (
               <Link key={item.title} href={item.url}>
-                {content}
+                <Card
+                  className="border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/[0.12] active:scale-[0.98] cursor-pointer transition-all duration-200 h-full group"
+                  data-testid={`feature-card-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${eliteGradient} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`w-4.5 h-4.5 ${eliteAccent}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1">
+                          {item.title}
+                          <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all duration-200" />
+                        </h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             );
           })}
