@@ -488,14 +488,29 @@ export default function Orders() {
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-x-auto">
-        <Table className="min-w-[1400px]">
+        <Table className="min-w-[1200px] table-fixed w-full">
+          <colgroup>
+            <col className="w-[7%]" />
+            <col className="w-[12%]" />
+            <col className="w-[6%]" />
+            <col className="w-[8%]" />
+            <col className="w-[5%]" />
+            <col className="w-[10%]" />
+            <col className="w-[8%]" />
+            <col className="w-[8%]" />
+            <col className="w-[6%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[10%]" />
+            <col className="w-[3%]" />
+          </colgroup>
           <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
               <SortableHeader label="MGT #" sortKey="mgtOrderNumber" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Service" sortKey="serviceId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Platform" sortKey="platform" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <TableHead className="whitespace-nowrap">Gamertag</TableHead>
-              <SortableHeader label="Complexity" sortKey="complexity" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-center" />
+              <SortableHeader label="Cmplx" sortKey="complexity" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-center" />
               <SortableHeader label="Assigned To" sortKey="assignedGrinderId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Due Date" sortKey="orderDueDate" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Completed" sortKey="completedAt" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
@@ -538,14 +553,14 @@ export default function Orders() {
                       </Tooltip>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="overflow-hidden">
                     <div className="flex flex-col gap-1">
                       <Select
                         value={order.serviceId}
                         onValueChange={(val) => saveField(order.id, { serviceId: val })}
                       >
-                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 w-auto min-w-[100px] -mx-1 transition-colors" data-testid={`select-edit-service-${order.id}`}>
-                          <SelectValue>{service?.name || order.serviceId}</SelectValue>
+                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 w-full -mx-1 transition-colors" data-testid={`select-edit-service-${order.id}`}>
+                          <SelectValue><span className="truncate block">{service?.name || order.serviceId}</span></SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {(services || []).map((s: Service) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -602,14 +617,14 @@ export default function Orders() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="overflow-hidden">
                     {assignedGrinder ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 min-w-0">
                         <User className="w-3 h-3 text-primary shrink-0" />
-                        <span className="text-sm font-medium">{assignedGrinder.name}</span>
+                        <span className="text-sm font-medium truncate">{assignedGrinder.name}</span>
                       </div>
                     ) : order.assignedGrinderId ? (
-                      <span className="text-xs text-muted-foreground">{order.assignedGrinderId}</span>
+                      <span className="text-xs text-muted-foreground truncate block">{order.assignedGrinderId}</span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell>
@@ -692,7 +707,7 @@ export default function Orders() {
                       value={order.status}
                       onValueChange={(val) => statusMutation.mutate({ id: order.id, status: val })}
                     >
-                      <SelectTrigger className={`h-7 text-xs bg-transparent border-transparent w-auto min-w-[90px] ${
+                      <SelectTrigger className={`h-7 text-xs bg-transparent border-transparent w-full ${
                         order.status === "Open" ? "text-blue-400" :
                         order.status === "Assigned" ? "text-amber-400" :
                         order.status === "In Progress" ? "text-purple-400" :
