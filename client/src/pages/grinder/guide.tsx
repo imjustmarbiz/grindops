@@ -137,9 +137,7 @@ export default function GrinderGuide() {
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-10 translate-x-10" />
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-3 text-xl">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${eliteGradient} flex items-center justify-center`}>
-                <BookOpen className={`w-5 h-5 ${eliteAccent}`} />
-              </div>
+              <BookOpen className={`w-7 h-7 ${eliteAccent}`} />
               Dashboard Features
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">

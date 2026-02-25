@@ -154,9 +154,7 @@ export default function GrinderOrders() {
       <FadeInUp>
       <div className="flex items-center justify-between">
         <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
-            <Zap className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
-          </div>
+          <Zap className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           Available Orders
           <HelpTip text="Browse open orders available for bidding." />
           <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{availableOrders.length}</Badge>

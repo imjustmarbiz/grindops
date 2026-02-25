@@ -47,9 +47,7 @@ export default function GrinderQueue() {
       <FadeInUp>
         <div className="flex items-center justify-between">
           <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3" data-testid="text-queue-title">
-            <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-purple-500/15"} flex items-center justify-center`}>
-              <Brain className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
-            </div>
+            <Brain className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
             Your Queue Standing
             <HelpTip text="See where you rank in the AI queue across all open orders. Improve your weakest factors to move up." />
           </h2>

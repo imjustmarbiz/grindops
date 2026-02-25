@@ -47,9 +47,7 @@ export default function GrinderEvents() {
     <AnimatedPage className="space-y-6">
       <FadeInUp>
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
-            <Calendar className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
-          </div>
+          <Calendar className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
             <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-events-title">Events & Promos</h2>
             <p className="text-sm text-muted-foreground">Stay up to date with upcoming events and promotions</p>

@@ -156,9 +156,7 @@ export default function StaffOrderClaims() {
     <AnimatedPage className="space-y-6">
       <FadeInUp>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
-            <FileText className="w-5 h-5 text-amber-400" />
-          </div>
+          <FileText className="w-7 h-7 text-amber-400" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-order-claims-title">
               Order Claim Requests

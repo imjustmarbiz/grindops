@@ -363,9 +363,7 @@ export default function Orders() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-orders-title">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <ListOrdered className="w-5 h-5 text-primary" />
-            </div>
+            <ListOrdered className="w-7 h-7 text-primary" />
             Order Management
             <HelpTip text="View and manage all orders. Edit prices, assign grinders, and track status." />
           </h1>

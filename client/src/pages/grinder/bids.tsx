@@ -55,9 +55,7 @@ export default function GrinderBids() {
     <AnimatedPage className="space-y-4">
       <FadeInUp>
       <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-purple-500/15"} flex items-center justify-center`}>
-          <Gavel className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
-        </div>
+        <Gavel className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
         My Bids
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{allBids.length}</Badge>
       </h2>

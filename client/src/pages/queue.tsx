@@ -97,9 +97,7 @@ export default function Queue() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-queue-title">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Brain className="w-5 h-5 text-primary" />
-            </div>
+            <Brain className="w-7 h-7 text-primary" />
             AI Queue
           </h1>
           <p className="text-sm text-muted-foreground mt-1">9-factor weighted scoring · ranked grinder suggestions for every open order</p>

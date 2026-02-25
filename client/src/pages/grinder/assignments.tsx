@@ -156,9 +156,7 @@ export default function GrinderAssignments() {
     <AnimatedPage className="space-y-4">
       <FadeInUp>
       <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
-          <FileCheck className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
-        </div>
+        <FileCheck className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         My Orders
         <HelpTip text="Track your active assignments and completed work." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>

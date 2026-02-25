@@ -200,9 +200,7 @@ export default function Bids() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold flex items-center gap-3" data-testid="text-bids-title">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Gavel className="w-5 h-5 text-primary" />
-            </div>
+            <Gavel className="w-7 h-7 text-primary" />
             Proposals & Bids
             <HelpTip text="Review grinder bids on orders. Accept, deny, or counter-offer bids." />
           </h1>

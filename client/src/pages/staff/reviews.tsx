@@ -266,9 +266,7 @@ export default function StaffReviews() {
       <FadeInUp>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
-              <Star className="w-5 h-5 text-amber-400" />
-            </div>
+            <Star className="w-7 h-7 text-amber-400" />
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-reviews-title">
                 Customer Reviews

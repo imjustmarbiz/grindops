@@ -205,9 +205,7 @@ export default function GrinderReviews() {
     <AnimatedPage className="space-y-6">
       <FadeInUp>
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
-            <Star className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
-          </div>
+          <Star className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
             <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-reviews-title">Customer Reviews</h2>
             <p className="text-sm text-muted-foreground">Invite customers to review, submit reviews, and manage access</p>

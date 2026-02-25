@@ -83,9 +83,7 @@ export default function GrinderScorecard() {
     <AnimatedPage className="space-y-6" data-testid="scorecard-page">
       <FadeInUp>
       <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
-          <ClipboardCheck className={`w-5 h-5 ${eliteAccent}`} />
-        </div>
+        <ClipboardCheck className={`w-7 h-7 ${eliteAccent}`} />
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-scorecard-header">My Scorecard <HelpTip text="Your performance profile — quality score, completion rate, and customer reviews." /></h1>
       </div>
       <p className="text-sm text-muted-foreground mt-1">Your performance metrics, quality score, and customer reviews</p>

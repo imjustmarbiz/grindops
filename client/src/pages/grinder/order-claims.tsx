@@ -76,9 +76,7 @@ export default function GrinderOrderClaims() {
     <AnimatedPage className="space-y-6">
       <FadeInUp>
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
-            <FileText className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
-          </div>
+          <FileText className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
             <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2" data-testid="text-order-claims-title">Claim an Order <HelpTip text="Browse open orders available for bidding." /></h2>
             <p className="text-sm text-muted-foreground">Submit proof to claim an order or view your claim history</p>

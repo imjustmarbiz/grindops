@@ -181,9 +181,7 @@ export default function ScorecardGuide() {
     <AnimatedPage className="space-y-6" data-testid="scorecard-guide-page">
       <FadeInUp>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-primary" />
-          </div>
+          <Brain className="w-7 h-7 text-primary" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-scorecard-guide-header">
               Scorecard & AI Queue System
