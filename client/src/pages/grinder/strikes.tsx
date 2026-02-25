@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertOctagon, Shield, Crown, DollarSign, Ban, CheckCircle2,
-  AlertTriangle, Loader2, Clock, Info, Scale, Send, XCircle
+  AlertTriangle, Loader2, Clock, Info, Scale, Send, XCircle, TrendingUp
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -348,16 +348,16 @@ export default function GrinderStrikes() {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Grinders who earn the Elite role will receive special perks. Consistency = more money + more work.
+                Grinders who earn the Elite role receive real advantages in the system. Consistency = more money + more work.
               </p>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                   <div className="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center shrink-0">
-                    <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Priority Access to Orders</p>
-                    <p className="text-xs text-muted-foreground">Elite grinders see and can bid on orders before the normal bid system opens.</p>
+                    <p className="text-sm font-medium">Early Access Window</p>
+                    <p className="text-xs text-muted-foreground">Elite grinders see and can bid on new orders 5 minutes before the bid war opens to regular grinders.</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
@@ -366,7 +366,25 @@ export default function GrinderStrikes() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">Higher Payout Cuts</p>
-                    <p className="text-xs text-muted-foreground">Elite grinders receive better payout percentages than normal grinders.</p>
+                    <p className="text-xs text-muted-foreground">Elite grinders receive better payout percentages on every completed order.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="w-7 h-7 rounded-md bg-violet-500/10 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-3.5 h-3.5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">+15% Queue Boost on Large Orders</p>
+                    <p className="text-xs text-muted-foreground">Elite grinders get an automatic 15% boost in the AI queue ranking on high-value orders.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center shrink-0">
+                    <Shield className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Elite Coaching & Metrics</p>
+                    <p className="text-xs text-muted-foreground">Access detailed performance comparisons against elite averages with personalized tips on the Grinder Status page.</p>
                   </div>
                 </div>
               </div>
