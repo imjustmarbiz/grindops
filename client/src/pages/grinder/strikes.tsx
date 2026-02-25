@@ -1,0 +1,347 @@
+import { useGrinderData } from "@/hooks/use-grinder-data";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  AlertOctagon, Shield, Crown, DollarSign, Ban, CheckCircle2,
+  AlertTriangle, Loader2, Clock, Info, ChevronDown, ChevronRight
+} from "lucide-react";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+export default function GrinderStrikes() {
+  const {
+    grinder, isElite, strikeLogs, isLoading,
+    eliteGradient, eliteBorder, eliteAccent,
+  } = useGrinderData();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const ackMutation = useMutation({
+    mutationFn: async (strikeId: string) => {
+      const res = await apiRequest("POST", `/api/grinder/me/strikes/${strikeId}/ack`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      toast({ title: "Strike acknowledged" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const currentStrikes = grinder?.strikes || 0;
+  const outstandingFine = parseFloat(grinder?.outstandingFine || "0");
+  const isSuspended = grinder?.suspended || false;
+  const unpaidLogs = strikeLogs.filter((l: any) => l.delta > 0 && !l.finePaid && parseFloat(l.fineAmount || "0") > 0);
+  const paidLogs = strikeLogs.filter((l: any) => l.finePaid);
+
+  const strikeActions = [
+    "Boosting",
+    "Exploiting the 2x REP glitch",
+    "Not completing an order",
+    "Getting a customer banned",
+    "Lack of communication",
+    "Not updating your customer",
+    "Disrespect toward staff or customers",
+  ];
+
+  return (
+    <AnimatedPage>
+      <div className="space-y-6">
+        <FadeInUp delay={0}>
+          <div>
+            <h1 className="text-2xl font-bold font-display tracking-tight">Strikes & Policy</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Your strike status, fines, and grinder policy overview
+            </p>
+          </div>
+        </FadeInUp>
+
+        <FadeInUp delay={0.05}>
+          <Card className={`border-0 bg-gradient-to-br ${currentStrikes > 0 ? "from-red-500/[0.08] via-background to-red-900/[0.04]" : "from-emerald-500/[0.08] via-background to-emerald-900/[0.04]"} overflow-hidden relative`} data-testid="card-strike-status">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg ${currentStrikes > 0 ? "bg-red-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
+                  <AlertOctagon className={`w-4 h-4 ${currentStrikes > 0 ? "text-red-400" : "text-emerald-400"}`} />
+                </div>
+                Your Strike Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className={`w-4 h-4 rounded-full ${i < currentStrikes ? "bg-red-500 shadow-lg shadow-red-500/30" : "bg-white/[0.1]"}`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-2xl font-bold mt-1" data-testid="text-strike-count">{currentStrikes}/3</p>
+                  <p className="text-[10px] text-muted-foreground">Active Strikes</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                  <p className={`text-2xl font-bold ${outstandingFine > 0 ? "text-red-400" : "text-emerald-400"}`} data-testid="text-outstanding-fine">
+                    ${outstandingFine.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Outstanding Fine</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                  <Badge className={`text-sm px-3 py-1 ${isSuspended ? "bg-red-500/20 text-red-400 border-red-500/20" : "bg-emerald-500/20 text-emerald-400 border-emerald-500/20"}`} data-testid="badge-suspension-status">
+                    {isSuspended ? "Suspended" : "Active"}
+                  </Badge>
+                  <p className="text-[10px] text-muted-foreground mt-2">Account Status</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                  <p className="text-2xl font-bold text-muted-foreground" data-testid="text-total-strikes-history">{strikeLogs.filter((l: any) => l.delta > 0).length}</p>
+                  <p className="text-[10px] text-muted-foreground">Total Strikes Received</p>
+                </div>
+              </div>
+
+              {isSuspended && outstandingFine > 0 && (
+                <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/[0.06] p-4" data-testid="alert-suspension">
+                  <div className="flex items-start gap-3">
+                    <Ban className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-300">Account Suspended</p>
+                      <p className="text-xs text-red-200/70 mt-1">
+                        You have an outstanding fine of <span className="font-bold text-red-300">${outstandingFine.toFixed(2)}</span>. You cannot bid on or receive new orders until this fine is paid. Contact staff to arrange payment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </FadeInUp>
+
+        {unpaidLogs.length > 0 && (
+          <FadeInUp delay={0.08}>
+            <Card className="border-0 bg-gradient-to-br from-red-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-unpaid-fines">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-red-400" />
+                  </div>
+                  Unpaid Fines
+                  <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 ml-auto text-xs">
+                    {unpaidLogs.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {unpaidLogs.map((log: any) => (
+                  <div
+                    key={log.id}
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg bg-red-500/[0.04] border border-red-500/15"
+                    data-testid={`row-unpaid-fine-${log.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{log.reason}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(log.createdAt).toLocaleString()} — Strike #{log.resultingStrikes}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold text-red-400">${parseFloat(log.fineAmount).toFixed(2)}</p>
+                      <p className="text-[10px] text-red-400/60">Contact staff to pay</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        )}
+
+        <FadeInUp delay={0.1}>
+          <Card className="border-0 bg-gradient-to-br from-amber-500/[0.06] via-background to-amber-900/[0.03] overflow-hidden relative" data-testid="card-strike-fines-policy">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.03] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                </div>
+                Strike Fine Schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                If you receive a strike on an order, a fine must be paid before you can resume taking orders.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className={`p-3 rounded-xl border text-center ${currentStrikes >= 1 ? "bg-red-500/10 border-red-500/25" : "bg-white/[0.03] border-white/[0.06]"}`}>
+                  <p className="text-xs text-muted-foreground mb-1">Strike 1</p>
+                  <p className={`text-xl font-bold ${currentStrikes >= 1 ? "text-red-400" : "text-white/60"}`}>$25</p>
+                </div>
+                <div className={`p-3 rounded-xl border text-center ${currentStrikes >= 2 ? "bg-red-500/10 border-red-500/25" : "bg-white/[0.03] border-white/[0.06]"}`}>
+                  <p className="text-xs text-muted-foreground mb-1">Strike 2</p>
+                  <p className={`text-xl font-bold ${currentStrikes >= 2 ? "text-red-400" : "text-white/60"}`}>$50</p>
+                </div>
+                <div className={`p-3 rounded-xl border text-center ${currentStrikes >= 3 ? "bg-red-500/10 border-red-500/25" : "bg-white/[0.03] border-white/[0.06]"}`}>
+                  <p className="text-xs text-muted-foreground mb-1">Strike 3</p>
+                  <p className={`text-xl font-bold ${currentStrikes >= 3 ? "text-red-400" : "text-white/60"}`}>$100</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3">
+                <p className="text-xs text-amber-200/80 flex items-start gap-2">
+                  <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  Failure to pay fines will result in removal of grinder roles. We take service quality seriously — this protects both the brand and our customers.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+
+        <FadeInUp delay={0.12}>
+          <Card className={`border-0 bg-gradient-to-br ${eliteGradient} overflow-hidden relative`} data-testid="card-elite-benefits">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                  <Crown className="w-4 h-4 text-cyan-400" />
+                </div>
+                Elite Grinder Benefits
+                {isElite && (
+                  <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 ml-auto text-xs">
+                    You're Elite
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Grinders who earn the Elite role will receive special perks. Consistency = more money + more work.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center shrink-0">
+                    <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Priority Access to Orders</p>
+                    <p className="text-xs text-muted-foreground">Elite grinders see and can bid on orders before the normal bid system opens.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Higher Payout Cuts</p>
+                    <p className="text-xs text-muted-foreground">Elite grinders receive better payout percentages than normal grinders.</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+
+        <FadeInUp delay={0.14}>
+          <Card className="border-0 bg-gradient-to-br from-red-500/[0.04] via-background to-background overflow-hidden relative" data-testid="card-strike-actions">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-red-500/[0.02] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                  <Ban className="w-4 h-4 text-red-400" />
+                </div>
+                Actions That Result in Strikes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                Strikes may be issued for violating the grinder agreement, including but not limited to:
+              </p>
+              <div className="space-y-1.5">
+                {strikeActions.map((action, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                    <p className="text-sm text-white/80">{action}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+
+        {strikeLogs.length > 0 && (
+          <FadeInUp delay={0.16}>
+            <Card className="border-0 bg-gradient-to-br from-background to-background overflow-hidden" data-testid="card-strike-history">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  Strike History
+                  <Badge variant="outline" className="ml-auto border-white/10 text-muted-foreground text-xs">
+                    {strikeLogs.length} entries
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {strikeLogs.map((log: any) => (
+                  <div
+                    key={log.id}
+                    className={`flex items-start justify-between gap-3 p-3 rounded-lg border ${
+                      log.delta > 0 ? "bg-red-500/[0.04] border-red-500/15" : "bg-emerald-500/[0.04] border-emerald-500/15"
+                    }`}
+                    data-testid={`card-strike-history-${log.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-[10px] ${log.delta > 0 ? "bg-red-500/20 text-red-400 border-red-500/20" : "bg-emerald-500/20 text-emerald-400 border-emerald-500/20"}`}>
+                          {log.delta > 0 ? `+${log.delta} Strike` : `${log.delta} Strike`}
+                        </Badge>
+                        {parseFloat(log.fineAmount || "0") > 0 && (
+                          <Badge className={`text-[10px] ${log.finePaid ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" : "bg-red-500/20 text-red-400 border-red-500/20"}`}>
+                            {log.finePaid ? "Fine Paid" : "Fine Unpaid"}: ${parseFloat(log.fineAmount).toFixed(2)}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm mt-1.5">{log.reason}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(log.createdAt).toLocaleString()} — Resulting strikes: {log.resultingStrikes}
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-1">
+                      {log.acknowledgedAt ? (
+                        <Badge variant="outline" className="border-white/10 text-muted-foreground text-[10px]">
+                          <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> Acknowledged
+                        </Badge>
+                      ) : log.delta > 0 ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs h-7"
+                          onClick={() => ackMutation.mutate(log.id)}
+                          disabled={ackMutation.isPending}
+                          data-testid={`button-ack-strike-${log.id}`}
+                        >
+                          {ackMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Acknowledge"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        )}
+      </div>
+    </AnimatedPage>
+  );
+}

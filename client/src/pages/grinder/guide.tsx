@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, ClipboardList, Brain,
   Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
-  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight
+  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -66,9 +66,15 @@ const featureItems = [
   },
   {
     icon: Bell,
-    title: "Status",
+    title: "Grinder Status",
     desc: "View alerts from staff, review your strike history, acknowledge new strikes, and manage your availability settings so staff knows when you're ready to work.",
     url: "/grinder/status",
+  },
+  {
+    icon: AlertOctagon,
+    title: "Strikes & Policy",
+    desc: "View your current strike count, outstanding fines, and account status. Read the full strike fine schedule, elite grinder benefits, and the complete list of actions that result in strikes.",
+    url: "/grinder/strikes",
   },
   {
     icon: Calendar,
