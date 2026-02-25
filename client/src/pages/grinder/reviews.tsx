@@ -253,7 +253,6 @@ export default function GrinderReviews() {
                       <SelectValue placeholder="Select an order..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-muted-foreground">No order (general code)</SelectItem>
                       {orderOptions.map((opt) => (
                         <SelectItem
                           key={opt.orderId}
