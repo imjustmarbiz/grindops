@@ -244,6 +244,7 @@ export const payoutRequests = pgTable("payout_requests", {
   requestedDetails: text("requested_details"),
   requestedAmount: numeric("requested_amount"),
   completionProofUrl: text("completion_proof_url"),
+  paymentProofUrl: text("payment_proof_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

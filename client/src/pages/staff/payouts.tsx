@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -7,7 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import spLogo from "@assets/image_1771930905137.png";
@@ -19,17 +21,45 @@ export default function StaffPayouts() {
   const queryClient = useQueryClient();
   const { payoutReqs, grinders, grinderUpdates, analyticsLoading } = useStaffData();
 
+  const [markPaidDialog, setMarkPaidDialog] = useState<{ id: string; grinder: string; amount: number } | null>(null);
+  const [proofUrl, setProofUrl] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const payoutMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, paymentProofUrl }: { id: string; status: string; paymentProofUrl?: string }) => {
       const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
-      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy });
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy, paymentProofUrl });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
       toast({ title: "Payout request updated" });
+      setMarkPaidDialog(null);
+      setProofUrl("");
     },
   });
+
+  const handleProofUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/staff/upload-payment-proof", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setProofUrl(data.url);
+      toast({ title: "Proof uploaded" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const resolveDisputeMutation = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: string }) => {
@@ -285,7 +315,7 @@ export default function StaffPayouts() {
                       {(p.status === "Approved" || p.status === "Pending") && (
                         <Button size="sm" className="text-xs bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20" data-testid={`button-mark-paid-${p.id}`}
                           disabled={payoutMutation.isPending}
-                          onClick={() => payoutMutation.mutate({ id: p.id, status: "Paid" })}>
+                          onClick={() => setMarkPaidDialog({ id: p.id, grinder: grinder?.name || p.grinderId, amount: Number(p.amount) })}>
                           <Banknote className="w-3 h-3 mr-1" /> Mark Paid
                         </Button>
                       )}
@@ -314,6 +344,11 @@ export default function StaffPayouts() {
                     <span className="text-xs text-muted-foreground">Order {p.orderId}</span>
                     <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">Paid</Badge>
                     {p.reviewedBy && <span className="text-xs text-muted-foreground">by {p.reviewedBy}</span>}
+                    {p.paymentProofUrl && (
+                      <a href={p.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] hover:bg-blue-500/20 transition-colors" data-testid={`link-payment-proof-${p.id}`}>
+                        <ImageIcon className="w-2.5 h-2.5" /> Proof
+                      </a>
+                    )}
                     {p.paidAt && <span className="text-xs text-muted-foreground ml-auto">{new Date(p.paidAt).toLocaleDateString()}</span>}
                   </div>
                 );
@@ -360,6 +395,110 @@ export default function StaffPayouts() {
         </Card>
         </FadeInUp>
       )}
+
+      <Dialog open={!!markPaidDialog} onOpenChange={(open) => { if (!open) { setMarkPaidDialog(null); setProofUrl(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-emerald-400" />
+              Confirm Payment
+            </DialogTitle>
+          </DialogHeader>
+          {markPaidDialog && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <p className="text-sm">
+                  Mark <span className="font-semibold text-white">{markPaidDialog.grinder}</span>'s payout of{" "}
+                  <span className="text-emerald-400 font-bold">{formatCurrency(markPaidDialog.amount)}</span> as paid?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Proof (optional)</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleProofUpload(file);
+                    e.target.value = "";
+                  }}
+                  data-testid="input-payment-proof"
+                />
+                {proofUrl ? (
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    {proofUrl.match(/\.pdf$/i) ? (
+                      <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+                    )}
+                    <span className="text-xs text-emerald-400 truncate flex-1">{proofUrl.split("/").pop()}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-white/40 hover:text-white"
+                      onClick={() => setProofUrl("")}
+                      data-testid="button-remove-proof"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs border-dashed border-white/15 text-muted-foreground hover:text-white hover:border-white/30 gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    data-testid="button-upload-proof"
+                  >
+                    {uploading ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
+                    ) : (
+                      <><Upload className="w-3.5 h-3.5" /> Upload screenshot or receipt</>
+                    )}
+                  </Button>
+                )}
+                <p className="text-[10px] text-muted-foreground">Accepts images (JPG, PNG, GIF, WebP) and PDF files up to 25MB</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-white/10"
+              onClick={() => { setMarkPaidDialog(null); setProofUrl(""); }}
+              data-testid="button-cancel-mark-paid"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20 gap-1"
+              disabled={payoutMutation.isPending || uploading}
+              onClick={() => {
+                if (markPaidDialog) {
+                  payoutMutation.mutate({
+                    id: markPaidDialog.id,
+                    status: "Paid",
+                    paymentProofUrl: proofUrl || undefined,
+                  });
+                }
+              }}
+              data-testid="button-confirm-mark-paid"
+            >
+              {payoutMutation.isPending ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Processing...</>
+              ) : (
+                <><CheckCircle className="w-3 h-3" /> Confirm Paid</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AnimatedPage>
   );
 }

@@ -25,6 +25,11 @@ if (!fs.existsSync(proofsDir)) {
   fs.mkdirSync(proofsDir, { recursive: true });
 }
 
+const paymentProofsDir = path.join(process.cwd(), "uploads", "payment-proofs");
+if (!fs.existsSync(paymentProofsDir)) {
+  fs.mkdirSync(paymentProofsDir, { recursive: true });
+}
+
 const proofUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, proofsDir),
@@ -41,6 +46,26 @@ const proofUpload = multer({
       cb(null, true);
     } else {
       cb(new Error("Only video files are allowed (mp4, mov, webm, mkv, avi)"));
+    }
+  },
+});
+
+const paymentProofUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, paymentProofsDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const ext = path.extname(file.originalname);
+      cb(null, `${uniqueSuffix}${ext}`);
+    },
+  }),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp|pdf)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image and PDF files are allowed (jpg, png, gif, webp, pdf)"));
     }
   },
 });
@@ -2080,8 +2105,18 @@ export async function registerRoutes(
     res.json(requests);
   });
 
+  app.post("/api/staff/upload-payment-proof", requireStaff, paymentProofUpload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const fileUrl = `/uploads/payment-proofs/${req.file.filename}`;
+      res.json({ url: fileUrl });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Upload failed" });
+    }
+  });
+
   app.patch("/api/staff/payout-requests/:id", requireStaff, async (req, res) => {
-    const { status, reviewedBy } = req.body;
+    const { status, reviewedBy, paymentProofUrl } = req.body;
     const updateData: any = {
       status,
       reviewedBy: reviewedBy || "staff",
@@ -2089,6 +2124,9 @@ export async function registerRoutes(
     };
     if (status === "Paid") {
       updateData.paidAt = new Date();
+    }
+    if (paymentProofUrl) {
+      updateData.paymentProofUrl = paymentProofUrl;
     }
 
     const payoutReq = await storage.getPayoutRequest(req.params.id);

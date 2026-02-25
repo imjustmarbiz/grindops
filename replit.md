@@ -1,7 +1,7 @@
 # Grinder Queue Dashboard
 
 ## Overview
-The Grinder Queue Dashboard is a full-stack web application and Discord bot designed to manage gaming service queues. Its primary purpose is to optimize service delivery, improve staff efficiency, and enhance the grinder experience by providing tools for order management, performance tracking, and communication. Key capabilities include overseeing grinders, orders, bids, and assignments through both a web interface and Discord commands. A unique feature is the Grinder Bot, which passively monitors an existing MGT Bot in Discord to automatically populate the database with real-time order and proposal data.
+The Grinder Queue Dashboard is a full-stack web application and Discord bot designed to manage gaming service queues. Its core purpose is to optimize service delivery, enhance staff efficiency, and improve the grinder experience. The system provides comprehensive tools for order management, performance tracking, and communication through both a web interface and Discord. A key feature is the Grinder Bot, which passively monitors an existing MGT Bot in Discord to automatically populate the database with real-time order and proposal data.
 
 ## User Preferences
 I prefer iterative development with clear communication on major changes. I appreciate detailed explanations, especially for complex architectural decisions. Do not make changes to files related to Discord IDs unless explicitly requested.
@@ -10,51 +10,45 @@ I prefer iterative development with clear communication on major changes. I appr
 The system employs a modern full-stack architecture. The frontend is built with React, Vite, Tailwind CSS, and shadcn/ui, featuring a professional dark mode theme. The backend is an Express.js application utilizing PostgreSQL with Drizzle ORM for data persistence. Authentication is handled via Discord OAuth2, implementing role-based access control for Staff and Grinders. A discord.js v14 bot runs alongside the web server, sharing the same database.
 
 **UI/UX Decisions:**
-- **Dashboards:** Dedicated dashboards for Staff and Grinders, each with a multi-page sidebar navigation for focused functionality. Both dashboards emphasize clear presentation of KPIs, order pipelines, bidding countdowns, and alerts. Grinder dashboard theming adjusts based on role (regular vs. elite).
-- **Order Flow:** Comprehensive lifecycle management with distinct visual indicators for statuses like "Need Replacement", "In Progress", "Completed", and "Paid Out".
-- **Payout Workflow:** A multi-step confirmation process involving grinder approval, dispute resolution, and staff review.
-- **Chat Messaging System:** Integrated group chat and DM functionality between staff and grinders via a slide-out panel, supporting file attachments and @mentions.
-- **Notifications:** Lower-third popups with distinct sounds for various event types (e.g., new order, strike).
-- **Activity Calendar:** Reusable component for tracking various activities for both staff and grinders.
-- **Help Tooltips:** Contextual `HelpTip` components for on-demand explanations across the platform.
+- **Dashboards:** Dedicated, multi-page dashboards for Staff and Grinders, emphasizing KPIs, order pipelines, bidding countdowns, alerts, and role-based theming.
+- **Order Flow:** Visual lifecycle management for orders with distinct status indicators.
+- **Payout Workflow:** A multi-step confirmation process for payouts including approval, dispute resolution, and staff review.
+- **Chat Messaging System:** Integrated group chat and DM functionality with file attachments and @mentions.
+- **Notifications:** Lower-third popups with distinct sounds for various event types.
+- **Activity Calendar:** Reusable component for tracking activities.
+- **Help Tooltips:** Contextual `HelpTip` components for on-demand explanations.
 
 **Technical Implementations:**
-- **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds to automatically extract order, grinder, and bid data. On startup, backfills the last 100 messages from both bid war and proposals channels to catch any missed while offline. Edited proposal messages are fully re-processed (data + status) via `handleMessageUpdate`, which also handles bid war channel edits.
+- **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds, extracting and backfilling order, grinder, and bid data.
 - **Role-Based Features:** Supports multi-role grinders, elite priority order access, and staff alert messaging.
-- **Performance Management:** Includes an Elite Path Coaching system for personalized tips, a Strike Management System with fines and suspensions, and an Activity Checkpoint System for daily update compliance.
-- **Order Management:** Features live bidding countdown timers, staff override assignment capabilities (including replacement logic with profit calculation), manual order creation, and a system for linking Discord tickets to orders.
-- **Reporting & Analytics:** Centralized stats recalculation for consistent quality scores, completion rates, win rates, and earnings. Auto-generated performance reports per assignment with grades and staff review. Dedicated pages for Services Overview and Business Performance (owner-only) providing detailed analytics, financial insights, and profitability summaries.
-- **Scorecard & AI Queue Guide:** Combined page (`/scorecard-guide`, `client/src/pages/scorecard-guide.tsx`) accessible from both staff and grinder dashboards. Explains: letter grading system (A-F), 5 quality score factors with weights, all 9 AI queue factors with weights/tips/icons, boost modifiers (emergency +25%, large order elite +15%), and a disclaimer that queue position is a guide — not a guarantee.
-- **Features Pages:** Staff Features page (`/features`) and Grinder Features page (replaces Guide at `/grinder/guide`). Each provides a comprehensive overview of every dashboard page with descriptions of capabilities.
-- **Content Management:** Systems for Events & Promotions, Order Briefs (auto-populated and editable), and Dev Patch Notes (AI-rewritten for grinders).
-- **Customer Reviews (Password-Protected):** Two-step secure customer review system. Grinders generate an 8-character access code (valid 7 days), share it + the `/customer-review` page link with customers. Customer enters code + name → system creates "pending_approval" request → grinder/staff approves → customer gets session token and can submit review → review goes through normal staff approval. Public routes at `/api/public/review-access/verify`, `/api/public/review-access/:id/status`, `/api/public/review/submit` (no auth). Schema: `review_access_codes` table. Grinders can also submit reviews directly (still requires staff approval). Access requests visible on both grinder reviews page (Requests tab) and staff reviews page.
-- **Order Claim Requests:** Grinders can request to link existing orders to their profile, subject to staff approval. Ticket name is required; order ID is optional. Claim form includes optional `dueDate`, `startDateTime`, and `completedDateTime` fields, plus payout details (`grinderAmount`, `payoutPlatform`, `payoutDetails`). Staff review page displays all fields with color-coded icons.
+- **Performance Management:** Includes Elite Path Coaching, a Strike Management System, and an Activity Checkpoint System.
+- **Order Management:** Features live bidding countdowns, staff override capabilities, manual order creation, and Discord ticket linking.
+- **Reporting & Analytics:** Centralized stats recalculation for quality scores, completion rates, win rates, and earnings. Auto-generated performance reports and detailed business analytics.
+- **Scorecard & AI Queue Guide:** A combined page explaining the letter grading system, quality score factors, AI queue factors, boost modifiers, and queue position guidance.
+- **Features Pages:** Comprehensive overviews of dashboard capabilities for both Staff and Grinders.
+- **Content Management:** Systems for Events & Promotions, Order Briefs, and AI-rewritten Dev Patch Notes.
+- **Customer Reviews:** A two-step secure system for customers to submit reviews, including a password-protected access mechanism and staff approval workflow.
+- **Order Claim Requests:** Grinders can request to link existing orders to their profile, pending staff approval.
 - **Daily Checkup Controls:** Global and per-order controls for enabling/disabling daily update checks.
-- **Twitch Integration:** Grinders can link Twitch accounts, allowing staff to view embedded live streams. Automatic stream detection via Twitch Helix API (`server/twitchStreamChecker.ts`) checks every 60s if linked grinders are live. Auto-creates `stream_live` and `stream_offline` checkpoints on active assignments. Stream status badge shows in Activity Checkpoints section: "No Stream Linked" (grey), "Stream Offline" (grey), or "Stream Live" (red with blinking dot). Staff Streams page sorts live streamers first with "LIVE" overlay. Requires `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` env vars; gracefully skips if not set.
-- **Completion Video Proof:** Grinders must upload video proof (order completion + account removal from console) via `/api/grinder/me/upload-proof` when marking an order complete. Stored in `payoutRequests.completionProofUrl`. Staff can view proof links on the Payouts page. Videos stored in `uploads/proofs/` with 100MB limit.
-- **Activity Checkpoint Ticket Response:** Accept/Decline ticket buttons disappear after response (tracked via `hasTicketAck` flag from API). Confirmation modal required before submitting. Declined tickets require a reason note.
-- **Platform-Specific Icons:** Log In/Log Off buttons on grinder assignment cards show platform logos (Xbox, PS5, Steam, Nintendo Switch) based on the order's platform field. Uses `react-icons/fa6` (FaXbox) and `react-icons/si` (SiPlaystation5, SiSteam, SiNintendoswitch).
-- **Start Order Flow:** Grinder assignment cards have button order: Ticket → Start Order → Log In → Log Off → Issue → History. Start Order and Log Off are disabled until Log In is clicked. Log In and Log Off are mutually exclusive (only one enabled at a time based on `isLoggedIn` state from API). Start Order can only be clicked once, then shows "Order Started" badge. Sets `startedAt` on assignment and updates order status to "In Progress". `start_order` checkpoint type validated server-side.
-- **Checkpoint Time Editing:** Staff/owners can edit checkpoint timestamps via pencil icon in Reports → Activity Checkpoints tab. Route: `PATCH /api/staff/checkpoints/:id/edit-time`. Creates audit log entry for accountability.
-- **Grinder Audit Logging:** All grinder self-service actions are audit-logged for owner/staff visibility: bids, availability changes, twitch updates, payout method deletions, rules acceptance, alert reads, strike acknowledgments, elite requests, checkpoints, order completions, proof uploads, order updates, and payout disputes/approvals.
-- **Audit Log Formatting:** All audit log displays (audit log page, staff overview, dashboard, grinder assignments, reports) use Title Case formatting for entity types, actions, and detail keys. Converts both `snake_case` and `camelCase` to readable labels (e.g., `fields_updated` → "Fields Updated", `orderId` → "Order Id").
-- **Order To-Do List:** Grinder page (`/grinder/todo`, `client/src/pages/grinder/todo.tsx`) that combines an activity checkpoints guide with auto-generated to-do items and staff custom tasks. Auto-todos detect: orders needing login, start, ticket acknowledgment, or missing completion proof. Staff/owners can send custom tasks via Admin page "Send Task to Grinder" section. Schema: `grinder_tasks` table with grinderId, assignmentId, orderId, title, description, type (custom), status (pending/completed), priority (normal/high/urgent), createdBy/createdByName. Routes: `GET /api/grinder/me/tasks`, `PATCH /api/grinder/me/tasks/:taskId/complete`, `GET /api/staff/grinder-tasks`, `POST /api/staff/grinder-tasks`, `DELETE /api/staff/grinder-tasks/:id`. Sidebar: "To-Do List" with ClipboardList icon, placed after "My Orders".
+- **Twitch Integration:** Grinders can link Twitch accounts, enabling staff to view live streams and automatically generate activity checkpoints.
+- **Completion Video Proof:** Grinders must upload video proof upon order completion, which staff can review.
+- **Activity Checkpoint Ticket Response:** Accept/Decline options with confirmation modals and required reasons for declines.
+- **Platform-Specific Icons:** Dynamic display of gaming platform logos on grinder assignment cards.
+- **Start Order Flow:** Guided process for grinders to start orders, log in/out, and track order status with corresponding checkpoints.
+- **Checkpoint Time Editing:** Staff/owners can edit checkpoint timestamps with audit logging.
+- **Grinder Audit Logging:** Comprehensive logging of all grinder self-service actions for accountability.
+- **Audit Log Formatting:** Standardized Title Case formatting for all audit log displays.
+- **Order To-Do List:** A grinder-specific page combining an activity checkpoints guide with auto-generated and custom staff tasks.
+- **Grinder Queue Position:** Calculates and displays a grinder's rank across open orders using a 9-factor AI queue system, providing personalized tips without revealing other grinders' data.
+- **Replacement Orders Section:** Emergency/replacement orders are highlighted in a dedicated section on the Available Orders page.
+- **Grinder Notifications Page:** Dedicated page for an alerts inbox with unread badge count.
+- **Grinder Status Page:** Refocused to contain Elite Status/coaching metrics, requests, and Twitch Integration linking.
+- **Strike Appeals System:** Grinders can appeal strikes, which staff can review, approve, or deny, with audit trails.
+- **Operations Guides:** Slide-deck-style presentation pages for both Grinders and Staff, providing step-by-step instructions and key feature descriptions.
+- **Payment Proof on Mark Paid:** Staff/owners can upload payment proof when marking a payout as paid.
 
 ## External Dependencies
-- **PostgreSQL:** Primary database for all application data, managed with Drizzle ORM.
-- **Discord API:** Used for OAuth2 authentication, Discord bot interactions, slash commands, and real-time monitoring of MGT Bot messages.
-- **MGT Bot:** An existing Discord bot that this system passively monitors for order and proposal data.
-- **OpenAI:** Utilized for AI-driven rewriting of dev patch notes.
-
-## Key Implementation Details
-- **Platform Normalization:** `normalizePlatform()` function in `shared/schema.ts` standardizes platform names: anything with "xbox"/"xb" → "Xbox", anything with "ps"/"playstation" → "PS5", "pc"/"steam"/"epic" → "PC", "switch"/"nintendo" → "Nintendo". Applied server-side on order create/update, in MGT watcher on ingest, and client-side in analytics (services.tsx, business.tsx). Both files import from `@shared/schema` instead of local copies.
-- **Daily Checkup Controls:** Owner-only controls in Admin tab. Global toggle via `queueConfig.dailyCheckupsEnabled`, per-order via `orders.skipDailyCheckup`. Routes: `GET /api/daily-checkups/config`, `PATCH /api/daily-checkups/global`, `PATCH /api/daily-checkups/order/:orderId`. The checker in `server/dailyUpdateChecker.ts` respects both flags.
-- **Location Field Removed:** Removed from orders UI (form + inline edit). Column remains in DB schema but is unused.
-- **Grinder Queue Position:** `GET /api/grinder/me/queue-position` calculates the grinder's rank across all open orders using the 9-factor AI queue system. Returns average/best position, factor scores, improvement tips, and queue weights — without revealing other grinders. Displayed as a collapsible "Your Queue Standing" card on the Available Orders page (`client/src/pages/grinder/orders.tsx`).
-- **Replacement Orders Section:** On the grinder Available Orders page, emergency/replacement orders (`isEmergency === true`) are separated into a dedicated red-accented section at the top, distinct from regular open orders. Uses shared `renderOrderCard` helper to avoid duplication.
-- **Grinder Notifications Page:** Dedicated page (`/grinder/notifications`, `client/src/pages/grinder/notifications.tsx`) for alerts inbox with unread badge count on the sidebar. Separated from Grinder Status page to keep each page focused.
-- **Grinder Status Page (Refocused):** Now contains only Elite Status/coaching metrics/request and Twitch Integration linking. Strike history and alerts inbox were moved to their own dedicated pages (Strikes & Policy and Notifications respectively).
-- **Strike Appeals System:** `strike_appeals` table — grinders can appeal strikes from the Strikes & Policy page via a dialog. Staff can review pending appeals. Approval auto-removes strike, waives fine, and alerts grinder. Schema: id, strikeLogId, grinderId, reason, status (pending/approved/denied), reviewedBy, reviewedByName, reviewNote, reviewedAt. Routes: `POST /api/grinder/me/strike-appeals`, `GET /api/grinder/me/strike-appeals`, `GET /api/staff/strike-appeals`, `PATCH /api/staff/strike-appeals/:id`. Appeals visible in "My Appeals" section on Strikes & Policy page with status badges and staff response notes.
-- **Grinder Operations Guide:** Slide-deck-style presentation page (`/grinder/ops-guide`, `client/src/pages/grinder-ops-guide.tsx`) accessible from grinder sidebar. 20 slides covering every grinder dashboard page with step-by-step instructions, key features, and pro tips. Matches dark dashboard theme. Supports keyboard navigation (arrow keys, spacebar). Bottom nav bar with slide dots and quick-jump labels.
-- **Staff Operations Guide:** Slide-deck-style presentation page (`/staff/ops-guide`, `client/src/pages/staff-ops-guide.tsx`) accessible from staff sidebar. 25 slides covering every staff/owner management page with step-by-step instructions, key features, and pro tips. Uses staff blue (#4cadd0) accent color, owner-only slides tagged with orange badge. Supports keyboard navigation. Bottom nav bar with slide dots and quick-jump labels.
-- **Grinder Sidebar Order:** Operations Guide → Overview → Notifications (with unread badge) → To-Do List → Available Orders → Claim Missing Order → My Bids → My Orders → My Scorecard → Queue → Scorecard & Queue Info → Grinder Status (Crown icon) → Strikes & Policy → Payouts → Reviews → Calendar → Events & Promos → Staff Notes → Features.
+- **PostgreSQL:** Primary database, managed with Drizzle ORM.
+- **Discord API:** Used for OAuth2 authentication, bot interactions, slash commands, and MGT Bot message monitoring.
+- **MGT Bot:** An existing Discord bot passively monitored for order and proposal data.
+- **OpenAI:** Utilized for AI-driven text rewriting (e.g., dev patch notes).
