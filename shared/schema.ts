@@ -78,6 +78,8 @@ export const grinders = pgTable("grinders", {
   availabilityUpdatedAt: timestamp("availability_updated_at"),
   notes: text("notes"),
   twitchUsername: text("twitch_username"),
+  joinedAt: timestamp("joined_at"),
+  eliteSince: timestamp("elite_since"),
   isRemoved: boolean("is_removed").notNull().default(false),
   removedAt: timestamp("removed_at"),
   removedBy: text("removed_by"),

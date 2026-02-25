@@ -68,7 +68,10 @@ export default function GrinderOverview() {
               {grinder.roles && grinder.roles.length > 0 && grinder.roles.map((r: string, i: number) => (
                 <Badge key={i} variant="outline" className="text-xs">{r}</Badge>
               ))}
-              <span>Joined {grinder.joinedAt ? new Date(grinder.joinedAt).toLocaleDateString() : "N/A"}</span>
+              <span>Joined {grinder.joinedAt ? new Date(grinder.joinedAt).toLocaleDateString() : grinder.createdAt ? new Date(grinder.createdAt).toLocaleDateString() : "N/A"}</span>
+              {isElite && grinder.eliteSince && (
+                <span className="text-cyan-400/70">Elite since {new Date(grinder.eliteSince).toLocaleDateString()}</span>
+              )}
             </div>
           </div>
         </div>

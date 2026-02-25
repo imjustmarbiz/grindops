@@ -1230,6 +1230,35 @@ export async function registerRoutes(
     const ELITE_PRIORITY_MINUTES = 5;
     const now = new Date();
 
+    const updates: any = {};
+    if (!myGrinder.joinedAt && myGrinder.discordUserId) {
+      try {
+        const { getDiscordBotClient } = await import("./discord/auth");
+        const botClient = getDiscordBotClient();
+        if (botClient) {
+          for (const guild of botClient.guilds.cache.values()) {
+            try {
+              const member = await guild.members.fetch({ user: myGrinder.discordUserId, force: true });
+              if (member?.joinedAt) {
+                updates.joinedAt = member.joinedAt;
+                break;
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+      if (!updates.joinedAt) {
+        updates.joinedAt = myGrinder.createdAt || new Date();
+      }
+    }
+    if (isElite && !myGrinder.eliteSince) {
+      updates.eliteSince = new Date();
+    }
+    if (Object.keys(updates).length > 0) {
+      await storage.updateGrinder(myGrinder.id, updates);
+      myGrinder = { ...myGrinder, ...updates };
+    }
+
     const openOrders = allOrders.filter((o: any) => {
       if (o.status !== "Open" || o.visibleToGrinders === false) return false;
       if (isElite) return true;
@@ -1403,6 +1432,8 @@ export async function registerRoutes(
       twitchUsername: myGrinder.twitchUsername,
       isStreaming: isGrinderLive(myGrinder.id),
       notes: myGrinder.notes,
+      joinedAt: myGrinder.joinedAt,
+      eliteSince: myGrinder.eliteSince,
     };
 
     res.json({
