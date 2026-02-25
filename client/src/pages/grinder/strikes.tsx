@@ -89,13 +89,13 @@ export default function GrinderStrikes() {
   const pendingAppeals = strikeAppeals.filter((a: any) => a.status === "pending");
 
   const strikeActions = [
-    "Boosting",
-    "Exploiting the 2x REP glitch",
-    "Not completing an order",
-    "Getting a customer banned",
-    "Lack of communication",
-    "Not updating your customer",
-    "Disrespect toward staff or customers",
+    "Using exploits, glitches, or unauthorized boosting methods",
+    "Failing to complete an assigned order within the agreed timeline",
+    "Actions resulting in a customer account being banned or suspended",
+    "Unresponsive or inadequate communication with staff during an active order",
+    "Failing to provide timely progress updates to the customer",
+    "Disrespectful or unprofessional behavior toward staff, customers, or other grinders",
+    "Violating any terms outlined in the grinder service agreement",
   ];
 
   return (
