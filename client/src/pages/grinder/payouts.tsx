@@ -9,13 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PAYOUT_PLATFORMS } from "@shared/schema";
 import {
-  Loader2, Banknote, DollarSign, CheckCircle, AlertCircle, X
+  Loader2, Banknote, DollarSign, CheckCircle, AlertCircle, X,
+  TrendingUp, Clock, Wallet, ArrowUpRight
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 
 export default function GrinderPayouts() {
   const {
-    grinder, isElite, payoutRequests, payoutMethods,
+    grinder, isElite, payoutRequests, payoutMethods, assignments, stats,
     approvePayoutMutation, disputePayoutMutation,
   } = useGrinderData();
 
@@ -30,6 +32,31 @@ export default function GrinderPayouts() {
   if (!grinder) return null;
 
   const allPayouts = (payoutRequests || []) as any[];
+  const allAssignments = (assignments || []) as any[];
+
+  const totalPaidOut = allPayouts
+    .filter((p: any) => p.status === "Paid" || p.status === "Completed")
+    .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+
+  const pendingAmount = allPayouts
+    .filter((p: any) => ["Pending", "Approved", "Pending Grinder Approval", "Grinder Disputed"].includes(p.status))
+    .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+
+  const activeEarnings = allAssignments
+    .filter((a: any) => a.status === "Active")
+    .reduce((sum: number, a: any) => sum + Number(a.grinderEarnings || 0), 0);
+
+  const paidPayouts = allPayouts.filter((p: any) => p.status === "Paid" || p.status === "Completed");
+  const avgPayout = paidPayouts.length > 0
+    ? paidPayouts.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0) / paidPayouts.length
+    : 0;
+
+  const platformCounts: Record<string, number> = {};
+  allPayouts.forEach((p: any) => {
+    if (p.payoutPlatform) platformCounts[p.payoutPlatform] = (platformCounts[p.payoutPlatform] || 0) + 1;
+  });
+  const topPlatform = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
   const payoutFilterCounts = {
     all: allPayouts.length,
     needs_approval: allPayouts.filter((p: any) => p.status === "Pending Grinder Approval").length,
@@ -65,10 +92,68 @@ export default function GrinderPayouts() {
         <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
           <Banknote className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         </div>
-        Payout Requests
+        Payouts
+        <HelpTip text="Track your earnings, pending payouts, and payment history." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{allPayouts.length}</Badge>
       </h2>
       </FadeInUp>
+
+      <FadeInUp>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className="border-0 bg-white/[0.03]" data-testid="kpi-total-earned">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`w-8 h-8 rounded-lg ${isElite ? "bg-cyan-500/15" : "bg-emerald-500/15"} flex items-center justify-center`}>
+                  <DollarSign className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
+                </div>
+                <span className="text-xs text-white/40">Total Earned</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-400" data-testid="text-total-earned">${totalPaidOut.toFixed(2)}</p>
+              <p className="text-[10px] text-white/30 mt-1">{paidPayouts.length} payout{paidPayouts.length !== 1 ? "s" : ""} received</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/[0.03]" data-testid="kpi-pending-payouts">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                </div>
+                <span className="text-xs text-white/40">In Pipeline</span>
+              </div>
+              <p className="text-2xl font-bold text-amber-400" data-testid="text-pending-amount">${pendingAmount.toFixed(2)}</p>
+              <p className="text-[10px] text-white/30 mt-1">{payoutFilterCounts.needs_approval + payoutFilterCounts.pending + payoutFilterCounts.disputed} request{(payoutFilterCounts.needs_approval + payoutFilterCounts.pending + payoutFilterCounts.disputed) !== 1 ? "s" : ""} pending</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/[0.03]" data-testid="kpi-active-earnings">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-blue-400" />
+                </div>
+                <span className="text-xs text-white/40">Active Earnings</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-400" data-testid="text-active-earnings">${activeEarnings.toFixed(2)}</p>
+              <p className="text-[10px] text-white/30 mt-1">{allAssignments.filter((a: any) => a.status === "Active").length} order{allAssignments.filter((a: any) => a.status === "Active").length !== 1 ? "s" : ""} in progress</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/[0.03]" data-testid="kpi-avg-payout">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                  <Wallet className="w-4 h-4 text-violet-400" />
+                </div>
+                <span className="text-xs text-white/40">Avg Payout</span>
+              </div>
+              <p className="text-2xl font-bold text-violet-400" data-testid="text-avg-payout">${avgPayout.toFixed(2)}</p>
+              <p className="text-[10px] text-white/30 mt-1">{topPlatform ? `Preferred: ${topPlatform}` : "No payouts yet"}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </FadeInUp>
+
       {allPayouts.length > 0 && (
         <FadeInUp>
           <div className="flex items-center gap-2 flex-wrap" data-testid="filter-payout-status">
