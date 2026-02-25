@@ -1437,17 +1437,21 @@ export async function registerRoutes(
           isLoggedIn,
         };
       })),
-      bids: myBids.map((b: any) => ({
-        id: b.id,
-        orderId: b.orderId,
-        status: b.status,
-        bidAmount: b.bidAmount,
-        bidTime: b.bidTime,
-        estDeliveryDate: b.estDeliveryDate,
-        timeline: b.timeline,
-        canStart: b.canStart,
-        discordMessageId: b.discordMessageId,
-      })),
+      bids: myBids.map((b: any) => {
+        const order = allOrders.find((o: any) => o.id === b.orderId);
+        return {
+          id: b.id,
+          orderId: b.orderId,
+          status: b.status,
+          bidAmount: b.bidAmount,
+          bidTime: b.bidTime,
+          estDeliveryDate: b.estDeliveryDate,
+          timeline: b.timeline,
+          canStart: b.canStart,
+          discordMessageId: b.discordMessageId,
+          hasTicket: !!(order?.discordTicketChannelId),
+        };
+      }),
       availableOrders,
       lostBids: lostBids.map((b: any) => ({
         id: b.id,

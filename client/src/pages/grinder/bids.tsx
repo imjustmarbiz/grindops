@@ -1,21 +1,24 @@
 import { useState } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Loader2, Gavel, X, Edit3
+  Loader2, Gavel, X, Edit3, ExternalLink, FileCheck
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { Link } from "wouter";
 
 export default function GrinderBids() {
   const {
-    grinder, isElite, bids, lostBids, editBidMutation,
+    grinder, isElite, bids, lostBids, editBidMutation, toast,
   } = useGrinderData();
 
   const [editBidDialog, setEditBidDialog] = useState<any>(null);
+  const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [editBidAmount, setEditBidAmount] = useState("");
   const [editTimeline, setEditTimeline] = useState("");
   const [editCanStart, setEditCanStart] = useState("");
@@ -67,7 +70,7 @@ export default function GrinderBids() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge className={`border-0 ${
                         b.status === "Accepted" ? "bg-emerald-500/20 text-emerald-400" :
                         b.status === "Denied" ? "bg-red-500/20 text-red-400" :
@@ -87,6 +90,38 @@ export default function GrinderBids() {
                           }}>
                           <Edit3 className="w-3 h-3" /> Edit
                         </Button>
+                      )}
+                      {b.status === "Accepted" && (
+                        <>
+                          <Link href="/grinder/assignments">
+                            <Button size="sm" variant="outline" className="gap-1 text-xs bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-view-order-${b.id}`}>
+                              <FileCheck className="w-3 h-3" /> View Order
+                            </Button>
+                          </Link>
+                          {b.hasTicket && (
+                            <Button size="sm" variant="outline"
+                              className="gap-1 text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                              data-testid={`button-join-ticket-${b.id}`}
+                              disabled={joiningTicket === b.orderId}
+                              onClick={async () => {
+                                setJoiningTicket(b.orderId);
+                                try {
+                                  const res = await apiRequest("POST", `/api/orders/${b.orderId}/ticket-invite`);
+                                  const data = await res.json();
+                                  if (data.inviteUrl) window.open(data.inviteUrl, '_blank');
+                                  else if (data.channelUrl) window.open(data.channelUrl, '_blank');
+                                  toast({ title: "Ticket opened" });
+                                } catch (err: any) {
+                                  toast({ title: "Could not join ticket", description: err.message || "The bot may not have access.", variant: "destructive" });
+                                } finally {
+                                  setJoiningTicket(null);
+                                }
+                              }}
+                            >
+                              {joiningTicket === b.orderId ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} Join Ticket
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
