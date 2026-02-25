@@ -631,13 +631,15 @@ export default function Grinders() {
 
       <FadeInUp>
       <Tabs defaultValue="All">
-        <TabsList className="bg-white/[0.03] border border-white/[0.06]">
-          {categories.map(cat => (
-            <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary" data-testid={`tab-${cat.toLowerCase().replace(/\s/g, "-")}`}>
-              {cat}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1 pb-1">
+          <TabsList className="bg-white/[0.03] border border-white/[0.06] w-max">
+            {categories.map(cat => (
+              <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary text-xs sm:text-sm whitespace-nowrap" data-testid={`tab-${cat.toLowerCase().replace(/\s/g, "-")}`}>
+                {cat}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         {categories.map(cat => (
           <TabsContent key={cat} value={cat}>
