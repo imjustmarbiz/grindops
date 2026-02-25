@@ -146,7 +146,7 @@ export default function GrinderAssignments() {
                       <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
                       <span>Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</span>
                       {a.deliveredDateTime && <span>Completed: {new Date(a.deliveredDateTime).toLocaleDateString()}</span>}
-                      {a.grinderEarnings && <span className="text-emerald-400 font-medium">${Number(a.grinderEarnings).toFixed(2)}</span>}
+                      {a.grinderEarnings && <span className="text-emerald-400 font-medium">Grinder Payout: ${Number(a.grinderEarnings).toFixed(2)}</span>}
                     </div>
                   </div>
                   <Badge className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
