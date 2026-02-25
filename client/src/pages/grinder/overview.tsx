@@ -93,7 +93,7 @@ export default function GrinderOverview() {
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2">
                 {grinder.name || grinder.discordUsername}
                 <HelpTip text="Your personal dashboard with active orders, performance metrics, and alerts." />
                 {grinder.discordUsername && (

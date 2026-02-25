@@ -105,7 +105,7 @@ export default function GrinderStrikes() {
           <div className="flex items-center gap-3">
             <Shield className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-red-400"}`} />
             <div>
-              <h1 className="text-2xl font-bold font-display tracking-tight">Strikes & Policy</h1>
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Strikes & Policy</h1>
               <p className="text-muted-foreground text-sm mt-1">
                 Your strike status, fines, appeals, and grinder policy overview
               </p>

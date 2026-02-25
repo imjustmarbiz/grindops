@@ -45,15 +45,17 @@ export default function GrinderQueue() {
   return (
     <AnimatedPage className="space-y-5">
       <FadeInUp>
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3" data-testid="text-queue-title">
-            <Brain className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
-            Your Queue Standing
-            <HelpTip text="See where you rank in the AI queue across all open orders. Improve your weakest factors to move up." />
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">See where you rank and how to improve your position</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-queue-title">
+              <Brain className={`w-6 h-6 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
+              Your Queue Standing
+              <HelpTip text="See where you rank in the AI queue across all open orders. Improve your weakest factors to move up." />
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">See where you rank and how to improve your position</p>
+          </div>
           {queuePosition && queuePosition.bestPosition > 0 && (
-            <Badge className={`border-0 ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-purple-500/20 text-purple-400"}`} data-testid="badge-best-position">
+            <Badge className={`border-0 ${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-purple-500/20 text-purple-400"} shrink-0`} data-testid="badge-best-position">
               Best: #{queuePosition.bestPosition}
             </Badge>
           )}

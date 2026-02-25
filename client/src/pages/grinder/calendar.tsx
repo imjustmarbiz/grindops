@@ -146,7 +146,7 @@ export default function GrinderCalendar() {
           <div className="flex items-center gap-3 mb-2">
             <CalendarDays className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
             <div>
-              <h1 className={`text-2xl font-bold text-foreground`} data-testid="text-grinder-calendar-title">
+              <h1 className={`text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground`} data-testid="text-grinder-calendar-title">
                 My Activity Calendar
               </h1>
               <p className="text-sm text-muted-foreground">

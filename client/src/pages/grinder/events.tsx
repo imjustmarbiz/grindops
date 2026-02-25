@@ -49,7 +49,7 @@ export default function GrinderEvents() {
         <div className="flex items-center gap-3">
           <Calendar className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-events-title">Events & Promos</h2>
+            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-events-title">Events & Promos</h2>
             <p className="text-sm text-muted-foreground">Stay up to date with upcoming events and promotions</p>
           </div>
         </div>
