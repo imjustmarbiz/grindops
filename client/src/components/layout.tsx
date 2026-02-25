@@ -61,7 +61,7 @@ const grinderNavItems = [
   { title: "Grinder Status", url: "/grinder/status", icon: Bell },
   { title: "Strikes & Policy", url: "/grinder/strikes", icon: AlertOctagon },
   { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
-  { title: "Submit Review", url: "/grinder/reviews", icon: Star },
+  { title: "Reviews", url: "/grinder/reviews", icon: Star },
   { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
