@@ -29,6 +29,16 @@ function PlatformIcon({ platform, className }: { platform: string | null; classN
   return <LogIn className={className} />;
 }
 
+function platformLoginColors(platform: string | null): string {
+  if (!platform) return "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20";
+  const p = platform.toLowerCase();
+  if (p.includes("xbox") || p.includes("xb")) return "bg-[#107C10]/10 border-[#107C10]/30 text-[#4CC94C] hover:bg-[#107C10]/20";
+  if (p.includes("ps") || p.includes("playstation")) return "bg-[#003087]/10 border-[#003087]/30 text-[#5B8DEF] hover:bg-[#003087]/20";
+  if (p.includes("pc") || p.includes("steam") || p.includes("epic")) return "bg-[#1B2838]/10 border-[#66C0F4]/30 text-[#66C0F4] hover:bg-[#1B2838]/20";
+  if (p.includes("switch") || p.includes("nintendo")) return "bg-[#E60012]/10 border-[#E60012]/30 text-[#FF4654] hover:bg-[#E60012]/20";
+  return "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20";
+}
+
 export default function GrinderAssignments() {
   const {
     grinder, isElite, assignments, orderUpdates, payoutRequests, payoutMethods,
@@ -206,7 +216,7 @@ export default function GrinderAssignments() {
                           <Play className="w-3 h-3 mr-1" /> Order Started
                         </Badge>
                       )}
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20" data-testid={`button-login-${a.id}`}
+                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
                         disabled={checkpointMutation.isPending || a.isLoggedIn}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
