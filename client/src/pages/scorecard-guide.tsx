@@ -34,8 +34,8 @@ const qualityFactors = [
     icon: TrendingUp,
     color: "text-emerald-400",
     bg: "bg-emerald-500/15",
-    description: "Tracks your average turnaround time from assignment to delivery. Faster completion earns a higher score (2 days or less = 100%).",
-    tips: "Start working on orders as soon as they're assigned. Prioritize active orders and avoid taking on more than you can handle.",
+    description: "Measures how fast you complete orders relative to the available time. Orders finished in under 2 days always score 100%. For longer orders, speed is calculated by comparing your actual turnaround against the deadline — finishing in half the available time or less scores 100%, while using 75% or less scores 90%. Each order is scored individually and averaged.",
+    tips: "Start orders as soon as they're assigned. Same-day or next-day completions always get a perfect speed score. For longer orders, aim to finish well before the deadline rather than just on time.",
   },
   {
     name: "Strike Penalty",

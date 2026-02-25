@@ -14,14 +14,38 @@ export async function recalcGrinderStats(grinderId: string) {
 
   const completionRate = totalNonCancelled > 0 ? ((completedCount / totalNonCancelled) * 100) : 100;
 
+  let totalSpeedScore = 0;
+  let speedCount = 0;
   let totalTurnaroundDays = 0;
   let turnaroundCount = 0;
   for (const a of completed) {
     const startTime = (a as any).startedAt || a.assignedDateTime;
     if (startTime && a.deliveredDateTime) {
-      const days = (new Date(a.deliveredDateTime).getTime() - new Date(startTime).getTime()) / (1000 * 60 * 60 * 24);
-      totalTurnaroundDays += days;
+      const startMs = new Date(startTime).getTime();
+      const deliveredMs = new Date(a.deliveredDateTime).getTime();
+      const actualDays = (deliveredMs - startMs) / (1000 * 60 * 60 * 24);
+      totalTurnaroundDays += actualDays;
       turnaroundCount++;
+
+      if (actualDays <= 2) {
+        totalSpeedScore += 100;
+      } else {
+        const dueDate = a.dueDateTime || (a as any).orderDueDate;
+        if (dueDate) {
+          const dueMs = new Date(dueDate).getTime();
+          const availableDays = Math.max(0.5, (dueMs - startMs) / (1000 * 60 * 60 * 24));
+          const ratio = actualDays / availableDays;
+          if (ratio <= 0.5) totalSpeedScore += 100;
+          else if (ratio <= 0.75) totalSpeedScore += 90;
+          else if (ratio <= 1.0) totalSpeedScore += 75;
+          else totalSpeedScore += Math.max(40, 75 - ((ratio - 1) * 35));
+        } else {
+          if (actualDays <= 4) totalSpeedScore += 85;
+          else if (actualDays <= 6) totalSpeedScore += 70;
+          else totalSpeedScore += Math.max(40, 100 - (actualDays * 8));
+        }
+      }
+      speedCount++;
     }
   }
   const avgTurnaroundDays = turnaroundCount > 0 ? (totalTurnaroundDays / turnaroundCount).toFixed(2) : null;
@@ -55,14 +79,7 @@ export async function recalcGrinderStats(grinderId: string) {
   let qualityScore = 100;
   if (completedCount > 0 || active.length > 0) {
     const onTimeFactor = completedCount > 0 ? (onTimeCount / completedCount) * 100 : 100;
-    let speedFactor = 100;
-    if (turnaroundCount > 0) {
-      const avgDays = totalTurnaroundDays / turnaroundCount;
-      if (avgDays <= 2) speedFactor = 100;
-      else if (avgDays <= 4) speedFactor = 85;
-      else if (avgDays <= 6) speedFactor = 70;
-      else speedFactor = Math.max(40, 100 - (avgDays * 8));
-    }
+    const speedFactor = speedCount > 0 ? totalSpeedScore / speedCount : 100;
     const strikePenalty = Math.min(strikes * 15, 60);
     const reassignPenalty = completedCount > 0 ? Math.min((reassignedCount / (completedCount + reassignedCount)) * 100, 50) : 0;
 
