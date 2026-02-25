@@ -51,18 +51,18 @@ const staffNavItems = [
 const grinderNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Available Orders", url: "/grinder/orders", icon: Zap },
+  { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
   { title: "My Work", url: "/grinder/assignments", icon: FileCheck },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
-  { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
+  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Status", url: "/grinder/status", icon: Bell },
-  { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
+  { title: "Payouts", url: "/grinder/payouts", icon: Banknote },
   { title: "Submit Review", url: "/grinder/reviews", icon: Star },
-  { title: "Claim Order", url: "/grinder/order-claims", icon: LinkIcon },
+  { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
-  { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Features", url: "/grinder/guide", icon: BookOpen },
 ];
 
