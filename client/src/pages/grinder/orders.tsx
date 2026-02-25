@@ -200,13 +200,10 @@ export default function GrinderOrders() {
       </FadeInUp>
 
       <FadeInUp>
-        <div className="flex flex-wrap items-center gap-2" data-testid="section-order-filters">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-            <Filter className="w-3.5 h-3.5" />
-            <span>Filter:</span>
-          </div>
+        <div className="flex items-center gap-1.5 sm:gap-2" data-testid="section-order-filters">
+          <Filter className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground shrink-0" />
           <Select value={filterService} onValueChange={setFilterService}>
-            <SelectTrigger className="h-8 text-xs bg-white/[0.03] border-white/10 w-auto min-w-[120px]" data-testid="filter-service">
+            <SelectTrigger className="h-7 sm:h-8 text-[11px] sm:text-xs bg-white/[0.03] border-white/10 w-auto min-w-0 px-2 sm:px-3 gap-1" data-testid="filter-service">
               <SelectValue placeholder="Service" />
             </SelectTrigger>
             <SelectContent>
@@ -217,7 +214,7 @@ export default function GrinderOrders() {
             </SelectContent>
           </Select>
           <Select value={filterPlatform} onValueChange={setFilterPlatform}>
-            <SelectTrigger className="h-8 text-xs bg-white/[0.03] border-white/10 w-auto min-w-[100px]" data-testid="filter-platform">
+            <SelectTrigger className="h-7 sm:h-8 text-[11px] sm:text-xs bg-white/[0.03] border-white/10 w-auto min-w-0 px-2 sm:px-3 gap-1" data-testid="filter-platform">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -228,33 +225,33 @@ export default function GrinderOrders() {
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="h-8 text-xs bg-white/[0.03] border-white/10 w-auto min-w-[120px]" data-testid="sort-orders">
-              <ArrowUpDown className="w-3 h-3 mr-1 shrink-0" />
+            <SelectTrigger className="h-7 sm:h-8 text-[11px] sm:text-xs bg-white/[0.03] border-white/10 w-auto min-w-0 px-2 sm:px-3 gap-1" data-testid="sort-orders">
+              <ArrowUpDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest">Newest First</SelectItem>
-              <SelectItem value="oldest">Oldest First</SelectItem>
-              <SelectItem value="due-soon">Due Soonest</SelectItem>
-              <SelectItem value="complexity-high">Complexity: High</SelectItem>
-              <SelectItem value="complexity-low">Complexity: Low</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="oldest">Oldest</SelectItem>
+              <SelectItem value="due-soon">Due Soon</SelectItem>
+              <SelectItem value="complexity-high">Hard First</SelectItem>
+              <SelectItem value="complexity-low">Easy First</SelectItem>
               <SelectItem value="most-bids">Most Bids</SelectItem>
-              <SelectItem value="fewest-bids">Fewest Bids</SelectItem>
+              <SelectItem value="fewest-bids">Few Bids</SelectItem>
             </SelectContent>
           </Select>
           {activeFilterCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 text-xs text-muted-foreground hover:text-foreground px-2"
+              className="h-7 sm:h-8 text-[11px] sm:text-xs text-muted-foreground hover:text-foreground px-1.5 sm:px-2 shrink-0"
               onClick={() => { setFilterService("all"); setFilterPlatform("all"); }}
               data-testid="button-clear-filters"
             >
-              Clear filters ({activeFilterCount})
+              Clear
             </Button>
           )}
-          <span className="text-xs text-muted-foreground ml-auto">
-            {filteredOrders.length}{filteredOrders.length !== availableOrders.length ? ` of ${availableOrders.length}` : ""} order{filteredOrders.length !== 1 ? "s" : ""}
+          <span className="text-[11px] sm:text-xs text-muted-foreground ml-auto shrink-0">
+            {filteredOrders.length}{filteredOrders.length !== availableOrders.length ? `/${availableOrders.length}` : ""}
           </span>
         </div>
       </FadeInUp>
