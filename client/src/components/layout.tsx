@@ -24,7 +24,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const staffNavItems = [
-  { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Operations", url: "/operations", icon: Wrench },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
@@ -46,11 +45,11 @@ const staffNavItems = [
   { title: "Services", url: "/services", icon: Package },
   { title: "Business Performance", url: "/business", icon: DollarSign },
   { title: "Features", url: "/features", icon: BookOpen },
+  { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
 ];
 
 const grinderNavItems = [
-  { title: "Operations Guide", url: "/grinder/ops-guide", icon: ScrollText },
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Notifications", url: "/grinder/notifications", icon: Bell },
   { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
@@ -69,6 +68,7 @@ const grinderNavItems = [
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
   { title: "Features", url: "/grinder/guide", icon: BookOpen },
+  { title: "Operations Guide", url: "/grinder/ops-guide", icon: ScrollText },
 ];
 
 function AppSidebar() {
