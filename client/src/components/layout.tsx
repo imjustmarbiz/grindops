@@ -178,6 +178,7 @@ function AppSidebar() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const userId = (user as any)?.discordId || user?.id || "";
   const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : "";
@@ -231,14 +232,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </span>
                 )}
               </Button>
-              {unreadNotifs > 0 && (
-                <div className="relative">
-                  <Bell className="w-5 h-5 text-muted-foreground" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9"
+                onClick={() => setLocation("/grinder/notifications")}
+                data-testid="button-notifications"
+              >
+                <Bell className="w-5 h-5 text-muted-foreground" />
+                {unreadNotifs > 0 && (
                   <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-amber-500 text-black text-[9px] font-bold rounded-full flex items-center justify-center">
                     {unreadNotifs}
                   </span>
-                </div>
-              )}
+                )}
+              </Button>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 relative z-10">
