@@ -91,6 +91,7 @@ export default function GrinderAssignments() {
   const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [ticketConfirm, setTicketConfirm] = useState<{ assignmentId: string; orderId: string; action: "accept" | "decline" } | null>(null);
   const [briefDialog, setBriefDialog] = useState<{ orderId: string; brief: string } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
@@ -112,6 +113,45 @@ export default function GrinderAssignments() {
 
   if (!grinder) return null;
 
+  const filterCounts = {
+    all: assignments.length,
+    active: assignments.filter((a: any) => a.status === "Active").length,
+    completed: assignments.filter((a: any) => a.status === "Completed" && !payoutRequests?.find((p: any) => p.assignmentId === a.id)).length,
+    awaiting_payout: assignments.filter((a: any) => {
+      const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+      return pr && ["Pending", "Disputed", "Grinder Approved"].includes(pr.status);
+    }).length,
+    paid: assignments.filter((a: any) => {
+      const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+      return pr && ["Paid", "Completed"].includes(pr.status);
+    }).length,
+  };
+
+  const filteredAssignments = assignments.filter((a: any) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "active") return a.status === "Active";
+    if (statusFilter === "completed") {
+      return a.status === "Completed" && !payoutRequests?.find((p: any) => p.assignmentId === a.id);
+    }
+    if (statusFilter === "awaiting_payout") {
+      const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+      return pr && ["Pending", "Disputed", "Grinder Approved"].includes(pr.status);
+    }
+    if (statusFilter === "paid") {
+      const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+      return pr && ["Paid", "Completed"].includes(pr.status);
+    }
+    return true;
+  });
+
+  const filters = [
+    { key: "all", label: "All", color: "bg-white/[0.06] text-white/60" },
+    { key: "active", label: "In Progress", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
+    { key: "completed", label: "Needs Payout", color: "bg-amber-500/15 text-amber-400 border-amber-500/20" },
+    { key: "awaiting_payout", label: "Payout Pending", color: "bg-violet-500/15 text-violet-400 border-violet-500/20" },
+    { key: "paid", label: "Paid Out", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
+  ];
+
   return (
     <AnimatedPage className="space-y-4">
       <FadeInUp>
@@ -124,6 +164,37 @@ export default function GrinderAssignments() {
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
       </h2>
       </FadeInUp>
+      {assignments.length > 0 && (
+        <FadeInUp>
+          <div className="flex items-center gap-2 flex-wrap" data-testid="filter-assignment-status">
+            {filters.map((f) => {
+              const count = filterCounts[f.key as keyof typeof filterCounts];
+              const isActive = statusFilter === f.key;
+              return (
+                <Button
+                  key={f.key}
+                  size="sm"
+                  variant="outline"
+                  className={`text-xs h-8 gap-1.5 transition-all ${
+                    isActive
+                      ? `${f.color} border shadow-sm`
+                      : "bg-transparent border-white/[0.06] text-muted-foreground hover:bg-white/[0.04]"
+                  }`}
+                  onClick={() => setStatusFilter(f.key)}
+                  data-testid={`button-filter-${f.key}`}
+                >
+                  {f.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center ${
+                      isActive ? "bg-white/10" : "bg-white/[0.06]"
+                    }`}>{count}</span>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+        </FadeInUp>
+      )}
       <FadeInUp>
       {assignments.length === 0 ? (
         <Card className="border-0 bg-white/[0.03]">
@@ -134,9 +205,24 @@ export default function GrinderAssignments() {
             <p className="text-white/40">No assignments yet. Win a bid to get your first order!</p>
           </CardContent>
         </Card>
+      ) : filteredAssignments.length === 0 ? (
+        <Card className="border-0 bg-white/[0.03]">
+          <CardContent className="p-8 text-center">
+            <p className="text-white/40 text-sm">No assignments match this filter.</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 text-xs text-muted-foreground"
+              onClick={() => setStatusFilter("all")}
+              data-testid="button-clear-filter"
+            >
+              Show all assignments
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {assignments.map((a: any) => (
+          {filteredAssignments.map((a: any) => (
             <Card key={a.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-work-assignment-${a.id}`}>
               <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
