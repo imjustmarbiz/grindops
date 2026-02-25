@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ const staffNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "To-Do List", url: "/todo", icon: ClipboardList },
+  { title: "Staff Overview", url: "/staff-overview", icon: UserCheck },
   { title: "Operations", url: "/operations", icon: Wrench },
   { title: "Admin", url: "/admin", icon: Settings },
   { title: "Business Performance", url: "/business", icon: DollarSign },
@@ -96,7 +97,7 @@ function AppSidebar() {
   }).length;
   const isElite = !isStaff && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const navItems = isStaff
-    ? staffNavItems.filter(item => item.url !== "/business" || isOwner)
+    ? staffNavItems.filter(item => (item.url !== "/business" && item.url !== "/staff-overview") || isOwner)
     : grinderNavItems;
   const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
   const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || undefined;

@@ -7,7 +7,7 @@ import {
   Settings, Brain, ListOrdered, Users, Gavel, FileCheck, FileBarChart,
   Tv, ScrollText, Calendar, Newspaper, Star, CalendarDays, Package,
   DollarSign, BookOpen, LinkIcon, Sparkles, CheckCircle, ArrowRight,
-  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList, Award
+  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList, Award, UserCheck
 } from "lucide-react";
 
 type Slide = {
@@ -125,6 +125,50 @@ const slides: Slide[] = [
     tip: "Use Urgent priority sparingly for truly time-sensitive items. High priority is usually sufficient for important tasks.",
   },
   {
+    id: "staff-overview",
+    title: "Staff Overview",
+    subtitle: "Team performance dashboard with activity metrics and audit trail (Owner Only)",
+    icon: UserCheck,
+    iconColor: "text-red-400",
+    ownerOnly: true,
+    sections: [
+      {
+        heading: "Team Metrics",
+        points: [
+          "Real-time KPI cards: Total Staff, Today's Actions, 7-Day Actions, All-Time Actions",
+          "Pending task count and completed task totals across all staff",
+          "Live indicator refreshes every 30 seconds",
+        ],
+      },
+      {
+        heading: "Member Cards",
+        points: [
+          "Each staff member shows: avatar, name, role badge, and activity bar",
+          "Activity bar compares each member's 7-day actions relative to the top performer",
+          "'Active today' indicator for members who have performed actions in the last 24 hours",
+          "Tooltips show detailed breakdowns: today's actions, total actions, pending/completed/assigned tasks",
+          "Last active timestamp for every member",
+        ],
+      },
+      {
+        heading: "Staff Activity Log",
+        points: [
+          "Scrollable audit log filtered to show only staff member actions",
+          "Color-coded action dots: green (created/accepted), red (rejected/denied), blue (updated), purple (imported)",
+          "Entity type, entity ID, action, actor, and timestamp for each entry",
+        ],
+      },
+    ],
+    steps: [
+      "Open the Staff Overview page from the sidebar",
+      "Review the KPI cards for a quick health check on team activity",
+      "Check individual member cards — look for inactive staff or high pending task counts",
+      "Scroll the activity log to see recent staff actions chronologically",
+      "Use this page during team check-ins to discuss workload distribution",
+    ],
+    tip: "If a team member shows zero actions for 24+ hours, reach out to check if they need support or reassignment of their tasks.",
+  },
+  {
     id: "overview",
     title: "Overview (Command Center)",
     subtitle: "Real-time snapshot of business health and the order pipeline",
@@ -184,6 +228,7 @@ const slides: Slide[] = [
           "Staff Alerts: broadcast Info, Success, or Urgent alerts to all grinders",
           "Discord Ticket Linking: connect orders to Discord support channels",
           "Send Tasks: create custom to-do items for specific grinders",
+          "Service Active Toggle (Owner): enable/disable services — inactive services hide from analytics and order creation",
         ],
       },
     ],
@@ -852,41 +897,43 @@ const slides: Slide[] = [
       {
         heading: "Morning Check-In",
         points: [
-          "1. Open Overview to check financial stats and order pipeline",
-          "2. Review fleet health \u2014 are enough grinders available?",
-          "3. Check for pending bids that need decisions",
-          "4. Review any pending elite requests or order claims",
+          "1. Check Notifications for any urgent alerts or overnight updates",
+          "2. Review your To-Do List for pending tasks from other team members",
+          "3. Open Overview to check financial stats and order pipeline",
+          "4. Review fleet health \u2014 are enough grinders available?",
+          "5. Check for pending bids that need decisions",
         ],
       },
       {
         heading: "Active Management",
         points: [
-          "5. Monitor the AI Queue for optimal assignment recommendations",
-          "6. Handle any override assignments or manual orders",
-          "7. Check Reports for checkpoint activity and grinder updates",
-          "8. Process pending payouts and resolve disputes",
+          "6. Review any pending elite requests or order claims",
+          "7. Monitor the AI Queue for optimal assignment recommendations",
+          "8. Handle any override assignments or manual orders",
+          "9. Check Reports for checkpoint activity and grinder updates",
+          "10. Process pending payouts and resolve disputes",
         ],
       },
       {
         heading: "Quality & Communication",
         points: [
-          "9. Review customer reviews in the moderation queue",
-          "10. Check Streams to monitor live grinders",
-          "11. Send alerts for new opportunities or important updates",
-          "12. Publish staff notes for any system or process changes",
+          "11. Review customer reviews in the moderation queue",
+          "12. Check Streams to monitor live grinders",
+          "13. Send alerts for new opportunities or important updates",
+          "14. Publish staff notes for any system or process changes",
         ],
       },
       {
         heading: "End of Day",
         points: [
-          "13. Check Analytics for daily performance trends",
-          "14. Review the Audit Log for any unusual activity",
-          "15. Update Calendar events or promotions as needed",
-          "16. (Owner) Review Business Performance for financial health",
+          "15. Check Analytics for daily performance trends",
+          "16. Review the Audit Log for any unusual activity",
+          "17. Update Calendar events or promotions as needed",
+          "18. (Owner) Review Staff Overview and Business Performance",
         ],
       },
     ],
-    tip: "Consistent daily check-ins prevent problems from snowballing. The Overview page is your best starting point every morning.",
+    tip: "Start every shift with Notifications and your To-Do List, then move to the Overview. Consistent check-ins prevent problems from snowballing.",
   },
 ];
 
