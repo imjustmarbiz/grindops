@@ -105,20 +105,18 @@ export default function StaffBadges() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Select Grinder</label>
-                  <select
-                    value={selectedGrinderId}
-                    onChange={(e) => setSelectedGrinderId(e.target.value)}
-                    className="flex h-10 w-full items-center rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
-                    data-testid="select-grinder"
-                  >
-                    <option value="" disabled>Choose a grinder...</option>
-                    {grinders.map(g => (
-                      <option key={g.id} value={g.id} data-testid={`grinder-option-${g.id}`}>
-                        {g.name}{g.discordUsername ? ` (@${g.discordUsername})` : ""} — {g.category || "grinder"}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={selectedGrinderId} onValueChange={setSelectedGrinderId}>
+                    <SelectTrigger className="w-full h-10 text-sm bg-white/[0.03] border-white/10" data-testid="select-grinder">
+                      <SelectValue placeholder="Choose a grinder..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grinders.map(g => (
+                        <SelectItem key={g.id} value={g.id} data-testid={`grinder-option-${g.id}`}>
+                          {g.name}{g.discordUsername ? ` (@${g.discordUsername})` : ""} — {g.category || "grinder"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {selectedGrinder && (
