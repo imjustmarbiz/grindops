@@ -380,7 +380,7 @@ export default function Orders() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createMutation.mutate(values, {
+    createMutation.mutate({ ...values, isManual: true }, {
       onSuccess: () => {
         setIsDialogOpen(false);
         form.reset();

@@ -1444,6 +1444,7 @@ export async function registerRoutes(
       }
       if (o.status !== "Open") return false;
       if (isElite) return true;
+      if (o.isManual) return true;
       const orderAge = (now.getTime() - new Date(o.createdAt).getTime()) / (1000 * 60);
       return orderAge >= ELITE_PRIORITY_MINUTES;
     });
