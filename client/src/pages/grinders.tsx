@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Crown, Coins, Landmark, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare, Award, X } from "lucide-react";
+import { Users, Crown, Coins, Landmark, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare, Award, X, Settings, Wrench } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -36,7 +36,24 @@ function daysAgo(date: string | Date | null | undefined): { label: string; days:
   return { label: `${diffDays}d ago`, days: diffDays };
 }
 
-function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; handleStrikeChange: (g: Grinder, delta: number) => void }) {
+const ROLE_OPTIONS = ["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"];
+const TIER_OPTIONS = ["New", "Bronze", "Silver", "Gold", "Diamond", "Elite"];
+
+const roleStyle = (r: string) =>
+  r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
+  r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+  r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+  "border-purple-500/30 text-purple-400 bg-purple-500/10";
+
+const tierStyle = (t: string) =>
+  t === "Diamond" ? "border-cyan-500/30 text-cyan-300 bg-cyan-500/10" :
+  t === "Elite" ? "border-amber-500/30 text-amber-300 bg-amber-500/10" :
+  t === "Gold" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+  t === "Silver" ? "border-slate-400/30 text-slate-300 bg-slate-400/10" :
+  t === "Bronze" ? "border-orange-500/30 text-orange-400 bg-orange-500/10" :
+  "border-white/10 text-muted-foreground bg-white/[0.04]";
+
+function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: Grinder; handleStrikeChange: (g: Grinder, delta: number) => void; onUpdate: (id: string, data: any) => void }) {
   const { data: scorecardData, isLoading: scorecardLoading } = useQuery<any>({
     queryKey: ["/api/staff/grinder-scorecard", grinder.id],
     queryFn: async () => {
@@ -49,8 +66,184 @@ function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; h
   const reports: any[] = scorecardData?.reports || [];
   const orderLogs: any[] = scorecardData?.orderLogs || [];
 
+  const currentRoles: string[] = (grinder as any).roles || [];
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState(grinder.name);
+  const [editRoles, setEditRoles] = useState<string[]>(currentRoles.length > 0 ? currentRoles : [grinder.category || "Grinder"]);
+  const [editTier, setEditTier] = useState(grinder.tier || "New");
+  const [editCapacity, setEditCapacity] = useState(String(grinder.capacity));
+  const [editNotes, setEditNotes] = useState(grinder.notes || "");
+  const [editTwitch, setEditTwitch] = useState(grinder.twitchUsername || "");
+  const { toast } = useToast();
+
+  const toggleRole = (role: string) => {
+    setEditRoles(prev =>
+      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+    );
+  };
+
+  const handleSave = () => {
+    if (editRoles.length === 0) {
+      toast({ title: "At least one role required", variant: "destructive" });
+      return;
+    }
+    onUpdate(grinder.id, {
+      name: editName.trim() || grinder.name,
+      roles: editRoles,
+      category: editRoles[0],
+      tier: editTier,
+      capacity: parseInt(editCapacity) || grinder.capacity,
+      notes: editNotes.trim() || null,
+      twitchUsername: editTwitch.trim() || null,
+    });
+    setEditMode(false);
+  };
+
   return (
     <div className="space-y-4 mt-2">
+      <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <Settings className="w-4 h-4 text-primary" />
+            Profile
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs gap-1.5 border-white/10"
+            onClick={() => setEditMode(!editMode)}
+            data-testid="button-toggle-edit-profile"
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            {editMode ? "Cancel" : "Edit"}
+          </Button>
+        </div>
+
+        {editMode ? (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Display Name</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="bg-white/[0.03] border-white/10 h-9"
+                data-testid="input-edit-grinder-name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Roles (select multiple)</Label>
+              <div className="flex flex-wrap gap-2">
+                {ROLE_OPTIONS.map(role => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleRole(role)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      editRoles.includes(role)
+                        ? roleStyle(role) + " ring-1 ring-white/20"
+                        : "border-white/[0.06] text-muted-foreground bg-white/[0.02] hover:bg-white/[0.05]"
+                    }`}
+                    data-testid={`toggle-role-${role.toLowerCase().replace(/\s/g, "-")}`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Tier</Label>
+                <Select value={editTier} onValueChange={setEditTier}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 h-9" data-testid="select-edit-tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIER_OPTIONS.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Order Capacity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={editCapacity}
+                  onChange={(e) => setEditCapacity(e.target.value)}
+                  className="bg-white/[0.03] border-white/10 h-9"
+                  data-testid="input-edit-capacity"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Twitch Username</Label>
+              <Input
+                value={editTwitch}
+                onChange={(e) => setEditTwitch(e.target.value)}
+                placeholder="twitch_username"
+                className="bg-white/[0.03] border-white/10 h-9"
+                data-testid="input-edit-twitch"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Notes</Label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder="Internal notes about this grinder..."
+                className="bg-white/[0.03] border-white/10 resize-none min-h-[60px]"
+                data-testid="input-edit-notes"
+              />
+            </div>
+
+            <Button
+              className="w-full bg-primary/20 text-primary hover:bg-primary/30"
+              onClick={handleSave}
+              data-testid="button-save-profile"
+            >
+              Save Changes
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground w-16 shrink-0">Roles</span>
+              <div className="flex flex-wrap gap-1.5">
+                {currentRoles.length > 0 ? currentRoles.map(r => (
+                  <Badge key={r} variant="outline" className={`text-xs ${roleStyle(r)}`} data-testid={`badge-role-${r.toLowerCase().replace(/\s/g, "-")}`}>{r}</Badge>
+                )) : (
+                  <Badge variant="outline" className={`text-xs ${roleStyle(grinder.category || "Grinder")}`}>{grinder.category || "Grinder"}</Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-16 shrink-0">Tier</span>
+              <Badge variant="outline" className={`text-xs ${tierStyle(grinder.tier || "New")}`} data-testid="badge-tier">
+                {grinder.tier || "New"}
+              </Badge>
+            </div>
+            {grinder.twitchUsername && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-16 shrink-0">Twitch</span>
+                <span className="text-sm text-purple-400">{grinder.twitchUsername}</span>
+              </div>
+            )}
+            {grinder.discordUsername && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-16 shrink-0">Discord</span>
+                <span className="text-sm">@{grinder.discordUsername}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { icon: DollarSign, value: formatCurrency(Number(grinder.totalEarnings)), label: "Total Earned", color: "text-emerald-400", bg: "bg-emerald-500/15" },
@@ -73,7 +266,6 @@ function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; h
         <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: "Tier", value: ((grinder as any).roles as string[] | null)?.join(", ") || grinder.category || "Grinder" },
             { label: "Capacity", value: `${grinder.activeOrders}/${grinder.capacity}` },
             { label: "Utilization", value: grinder.utilization ? `${Number(grinder.utilization).toFixed(0)}%` : "0%" },
             { label: "Orders (Last 7d)", value: String(grinder.ordersAssignedL7D) },
@@ -115,7 +307,7 @@ function ScorecardContent({ grinder, handleStrikeChange }: { grinder: Grinder; h
         </div>
       </div>
 
-      {grinder.notes && (
+      {grinder.notes && !editMode && (
         <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-1">Notes</h3>
           <p className="text-sm">{grinder.notes}</p>
@@ -503,9 +695,12 @@ export default function Grinders() {
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
-                        <Badge key={r} variant="outline" className={`text-xs ${r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" : r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" : "border-purple-500/30 text-purple-400 bg-purple-500/10"}`}>{r}</Badge>
+                        <Badge key={r} variant="outline" className={`text-xs ${roleStyle(r)}`}>{r}</Badge>
                       )) : (
-                        <Badge variant="outline" className="text-xs bg-white/[0.03]">{g.category || "Grinder"}</Badge>
+                        <Badge variant="outline" className={`text-xs ${roleStyle(g.category || "Grinder")}`}>{g.category || "Grinder"}</Badge>
+                      )}
+                      {g.tier && g.tier !== "New" && (
+                        <Badge variant="outline" className={`text-[10px] ${tierStyle(g.tier)}`}>{g.tier}</Badge>
                       )}
                     </div>
                   </TableCell>
@@ -658,7 +853,7 @@ export default function Grinders() {
             </DialogTitle>
           </DialogHeader>
           {selectedGrinder && (
-            <ScorecardContent grinder={selectedGrinder} handleStrikeChange={handleStrikeChange} />
+            <ScorecardContent grinder={selectedGrinder} handleStrikeChange={handleStrikeChange} onUpdate={(id, data) => updateMutation.mutate({ id, data })} />
           )}
         </DialogContent>
       </Dialog>
