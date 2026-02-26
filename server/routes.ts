@@ -2162,13 +2162,10 @@ export async function registerRoutes(
       const bidderIsElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder";
       if (!bidderIsElite && order.createdAt) {
         const orderAgeSec = (Date.now() - new Date(order.createdAt).getTime()) / 1000;
-        const isManualOrder = order.isManual || (!order.discordMessageId && !order.discordBidLink);
-        const priorityWindowSec = isManualOrder ? 30 : 300;
+        const priorityWindowSec = 30;
         if (orderAgeSec < priorityWindowSec) {
-          const remaining = isManualOrder
-            ? `${Math.ceil(priorityWindowSec - orderAgeSec)} seconds`
-            : `${Math.ceil((priorityWindowSec - orderAgeSec) / 60)} minutes`;
-          return res.status(403).json({ message: `This order is in the Elite priority window. Regular grinders can bid after ${remaining}.` });
+          const remaining = Math.ceil(priorityWindowSec - orderAgeSec);
+          return res.status(403).json({ message: `This order is in the Elite priority window. Regular grinders can bid after ${remaining} seconds.` });
         }
       }
 

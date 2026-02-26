@@ -360,7 +360,7 @@ export default function GrinderStrikes() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">Early Access Window</p>
-                    <p className="text-xs text-muted-foreground">Elite grinders get early access to bid on new orders before regular grinders (30 seconds for manual orders, 5 minutes for Discord orders).</p>
+                    <p className="text-xs text-muted-foreground">Elite grinders get a 30-second early access window to bid on new orders before regular grinders.</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
