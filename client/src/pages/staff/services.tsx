@@ -4,7 +4,9 @@ import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Gamepad2, Monitor, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Package, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle, BarChart3, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { FaXbox } from "react-icons/fa6";
+import { SiPlaystation } from "react-icons/si";
 import { normalizePlatform } from "@shared/schema";
 import type { Order, Service, Assignment } from "@shared/schema";
 
@@ -21,14 +23,14 @@ function ProgressBar({ value, max, color }: { value: number; max: number; color:
 function StatCard({ label, value, icon: Icon, color, subtitle }: { label: string; value: string | number; icon: any; color: string; subtitle?: string }) {
   return (
     <Card className="bg-card/50 border-border/30 h-full">
-      <CardContent className="p-4 h-full">
-        <div className="flex items-center justify-between h-full">
-          <div>
+      <CardContent className="p-4 h-full flex flex-col justify-center">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-xl font-bold mt-0.5">{value}</p>
-            {subtitle && <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}
+            <p className="text-xl font-bold mt-1 leading-tight truncate">{value}</p>
+            {subtitle && <p className="text-[10px] text-muted-foreground mt-1">{subtitle}</p>}
           </div>
-          <div className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center`}>
+          <div className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center shrink-0`}>
             <Icon className="w-5 h-5" />
           </div>
         </div>
@@ -153,8 +155,8 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
             <div className="flex gap-1 flex-wrap">
               {Object.entries(platforms).sort((a, b) => b[1] - a[1]).map(([platform, count]) => (
                 <Badge key={platform} variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
-                  {platform === "PlayStation" && <Gamepad2 className="w-2.5 h-2.5 text-blue-400" />}
-                  {platform === "Xbox" && <Monitor className="w-2.5 h-2.5 text-green-400" />}
+                  {platform === "PlayStation" && <SiPlaystation className="w-2.5 h-2.5 text-blue-500" />}
+                  {platform === "Xbox" && <FaXbox className="w-2.5 h-2.5 text-green-400" />}
                   {platform} ({count})
                 </Badge>
               ))}
@@ -225,7 +227,7 @@ export default function StaffServices() {
 
         <FadeInUp delay={0.05}>
           <div className={`grid gap-4 ${sortedPlatforms.length <= 2 ? "lg:grid-cols-[1fr_auto]" : ""}`}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <StatCard label="Total Services" value={allServices.length} icon={Package} color="bg-primary/20 text-primary" />
               <StatCard label="Total Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} color="bg-emerald-500/20 text-emerald-400" />
               <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${totalOrders} orders`} />
@@ -235,7 +237,7 @@ export default function StaffServices() {
           <Card className="bg-card/50 border-border/30 lg:min-w-[320px]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Gamepad2 className="w-4 h-4 text-primary" />
+                <SiPlaystation className="w-4 h-4 text-primary" />
                 Console / Platform Comparison
               </CardTitle>
             </CardHeader>
@@ -253,16 +255,19 @@ export default function StaffServices() {
                         <div
                           key={platform}
                           className={`rounded-xl p-4 border transition-all ${
-                            isTop ? "border-primary/30 bg-primary/5" : "border-border/30 bg-white/[0.02]"
+                            isTop ? "border-primary/30 bg-primary/5" :
+                            platform === "PlayStation" ? "border-blue-500/20 bg-blue-500/[0.04]" :
+                            platform === "Xbox" ? "border-green-500/20 bg-green-500/[0.04]" :
+                            "border-border/30 bg-white/[0.02]"
                           }`}
                           data-testid={`card-platform-${platform.toLowerCase()}`}
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               {platform === "PlayStation" ? (
-                                <Gamepad2 className="w-5 h-5 text-blue-400" />
+                                <SiPlaystation className="w-5 h-5 text-blue-500" />
                               ) : platform === "Xbox" ? (
-                                <Monitor className="w-5 h-5 text-green-400" />
+                                <FaXbox className="w-5 h-5 text-green-400" />
                               ) : (
                                 <Package className="w-5 h-5 text-muted-foreground" />
                               )}

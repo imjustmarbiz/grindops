@@ -9,8 +9,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   DollarSign, TrendingUp, Percent, Users, BarChart3, PieChart,
   ArrowUpRight, ArrowDownRight, Minus, CalendarRange, Filter, Loader2,
-  Wallet, Target, Package, Gamepad2, Monitor
+  Wallet, Target, Package
 } from "lucide-react";
+import { FaXbox } from "react-icons/fa6";
+import { SiPlaystation } from "react-icons/si";
 import { normalizePlatform } from "@shared/schema";
 import type { Order, Assignment, Grinder, Service } from "@shared/schema";
 
@@ -700,7 +702,7 @@ export default function BusinessPerformance() {
             <Card className="bg-card/50 border-border/30 h-full" data-testid="card-platform-financials">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Gamepad2 className="w-4 h-4 text-primary" />
+                  <SiPlaystation className="w-4 h-4 text-primary" />
                   Platform Financial Comparison
                 </CardTitle>
               </CardHeader>
@@ -713,8 +715,8 @@ export default function BusinessPerformance() {
                     <div key={platform} className="rounded-xl p-3 border border-border/20 bg-white/[0.02]" data-testid={`row-platform-${platform.toLowerCase()}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          {platform === "PlayStation" ? <Monitor className="w-4 h-4 text-blue-400" /> :
-                           platform === "Xbox" ? <Monitor className="w-4 h-4 text-green-400" /> :
+                          {platform === "PlayStation" ? <SiPlaystation className="w-4 h-4 text-blue-500" /> :
+                           platform === "Xbox" ? <FaXbox className="w-4 h-4 text-green-400" /> :
                            <Package className="w-4 h-4 text-muted-foreground" />}
                           <span className="text-sm font-medium">{platform}</span>
                           <Badge variant="outline" className="text-[10px]">{stats.orders} orders</Badge>

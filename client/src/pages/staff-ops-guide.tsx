@@ -705,7 +705,7 @@ const slides: Slide[] = [
   },
   {
     id: "grind-repair",
-    title: "Orders Repair",
+    title: "Order Repairs",
     subtitle: "Review and approve grinder repair requests (fix orders, claim missing, add completed)",
     icon: LinkIcon,
     iconColor: "text-orange-400",
@@ -930,7 +930,7 @@ const slides: Slide[] = [
       {
         heading: "Active Management",
         points: [
-          "6. Review any pending elite requests or orders repair requests",
+          "6. Review any pending elite requests or order repair requests",
           "7. Monitor the AI Queue for optimal assignment recommendations",
           "8. Handle any override assignments or manual orders",
           "9. Check Reports for checkpoint activity and grinder updates",

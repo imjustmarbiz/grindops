@@ -210,7 +210,7 @@ const slides: Slide[] = [
   },
   {
     id: "grind-repair",
-    title: "Orders Repair",
+    title: "Order Repairs",
     subtitle: "Your one-stop shop for order auditing and corrections",
     icon: FileText,
     iconColor: "text-orange-400",
@@ -245,7 +245,7 @@ const slides: Slide[] = [
       },
     ],
     steps: [
-      "Navigate to 'Orders Repair' in the sidebar",
+      "Navigate to 'Order Repairs' in the sidebar",
       "Select the repair type that matches your situation",
       "Fill in the required fields for your chosen type",
       "Add proof links and supporting details",
