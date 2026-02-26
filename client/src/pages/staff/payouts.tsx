@@ -65,6 +65,7 @@ export default function StaffPayouts() {
 
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterGrinder, setFilterGrinder] = useState("");
+  const [filterMethod, setFilterMethod] = useState("all");
 
   const [reduceDialog, setReduceDialog] = useState<{ id: string; grinder: string; amount: number; orderId: string } | null>(null);
   const [reduceAmount, setReduceAmount] = useState("");
@@ -131,8 +132,10 @@ export default function StaffPayouts() {
 
   const allGrinders = grinders || [];
   const rawPayoutReqs = payoutReqs || [];
+  const uniqueMethods = Array.from(new Set(rawPayoutReqs.map((p: any) => p.payoutPlatform).filter(Boolean))).sort() as string[];
   const allPayoutReqs = rawPayoutReqs.filter((p: any) => {
     if (filterStatus !== "all" && p.status !== filterStatus) return false;
+    if (filterMethod !== "all" && (p.payoutPlatform || "") !== filterMethod) return false;
     if (filterGrinder.trim()) {
       const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
       const name = (grinder?.name || p.grinderId || "").toLowerCase();
@@ -215,6 +218,17 @@ export default function StaffPayouts() {
               <SelectItem value="Denied">Denied</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filterMethod} onValueChange={setFilterMethod}>
+            <SelectTrigger className="w-[200px] bg-background/50 border-white/10" data-testid="select-filter-method">
+              <SelectValue placeholder="All Methods" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Methods</SelectItem>
+              {uniqueMethods.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             placeholder="Search grinder..."
             value={filterGrinder}
@@ -222,11 +236,11 @@ export default function StaffPayouts() {
             className="w-[200px] bg-background/50 border-white/10"
             data-testid="input-filter-grinder"
           />
-          {(filterStatus !== "all" || filterGrinder) && (
+          {(filterStatus !== "all" || filterGrinder || filterMethod !== "all") && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setFilterStatus("all"); setFilterGrinder(""); }}
+              onClick={() => { setFilterStatus("all"); setFilterGrinder(""); setFilterMethod("all"); }}
               className="text-xs text-muted-foreground gap-1"
               data-testid="button-clear-filters"
             >
