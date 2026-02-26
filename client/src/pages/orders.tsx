@@ -616,8 +616,19 @@ export default function Orders() {
             ) : sortedOrders && sortedOrders.length > 0 ? sortedOrders.map((order: Order) => {
               const service = (services || []).find((s: Service) => s.id === order.serviceId);
               const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
+              const orderRowStyle =
+                order.status === "Open" ? "border-l-2 border-l-blue-500/60 bg-blue-500/[0.03] hover:bg-blue-500/[0.06]" :
+                order.status === "Bidding Open" ? "border-l-2 border-l-indigo-500/60 bg-indigo-500/[0.03] hover:bg-indigo-500/[0.06]" :
+                order.status === "Bidding Closed" ? "border-l-2 border-l-indigo-400/40 bg-indigo-400/[0.02] hover:bg-indigo-400/[0.05]" :
+                order.status === "Assigned" ? "border-l-2 border-l-amber-500/60 bg-amber-500/[0.03] hover:bg-amber-500/[0.06]" :
+                order.status === "In Progress" ? "border-l-2 border-l-purple-500/60 bg-purple-500/[0.03] hover:bg-purple-500/[0.06]" :
+                order.status === "Completed" ? "border-l-2 border-l-emerald-500/60 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06]" :
+                order.status === "Paid Out" ? "border-l-2 border-l-cyan-500/40 opacity-60 hover:opacity-80" :
+                order.status === "Cancelled" ? "border-l-2 border-l-red-500/40 opacity-40 hover:opacity-65" :
+                order.status === "Need Replacement" ? "border-l-2 border-l-orange-500/60 bg-orange-500/[0.04] hover:bg-orange-500/[0.07]" :
+                "hover:bg-white/[0.03]";
               return (
-                <TableRow key={order.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-order-${order.id}`}>
+                <TableRow key={order.id} className={`${orderRowStyle} border-white/[0.04] transition-all`} data-testid={`row-order-${order.id}`}>
                   <TableCell className="font-mono font-medium" data-testid={`text-order-id-${order.id}`}>
                     <div className="flex items-center gap-1.5">
                       <div className="flex flex-col">
