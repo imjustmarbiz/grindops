@@ -4434,7 +4434,7 @@ export async function registerRoutes(
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: "New Review Submitted",
-        message: `A new review has been submitted for review.`,
+        body: `A new review has been submitted for review.`,
         type: "info",
         roleScope: "staff",
         userId: null,
@@ -4528,7 +4528,7 @@ export async function registerRoutes(
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: "New Order Claim Request",
-        message: `A grinder has submitted a claim request for ${orderLabel}.`,
+        body: `A grinder has submitted a claim request for ${orderLabel}.`,
         type: "info",
         roleScope: "staff",
         userId: null,
@@ -5070,7 +5070,7 @@ export async function registerRoutes(
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: "New Customer Review Submitted",
-        message: `${code.customerName || "A customer"} submitted a review. Awaiting staff approval.`,
+        body: `${code.customerName || "A customer"} submitted a review. Awaiting staff approval.`,
         type: "info",
         roleScope: "staff",
         userId: null,
