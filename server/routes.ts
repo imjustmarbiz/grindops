@@ -1413,19 +1413,31 @@ export async function registerRoutes(
     const authUser = await authStorage.getUser(userId);
 
     if (!myGrinder && authUser && (authUser.role === "grinder" || authUser.role === "owner" || authUser.role === "staff")) {
+      const { GRINDER_ROLES: GR, ROLE_LABELS: RL } = await import("@shared/schema");
       const displayName = authUser.firstName || authUser.discordUsername || authUser.username || "Unknown";
       const isDevElite = userId === "dev-elite-user";
       const discordRoles = (authUser as any).discordRoles as string[] | null;
-      const hasEliteRole = isDevElite || (discordRoles && discordRoles.includes("1466370965016412316"));
+
+      const detectedRoles = new Set<string>(["Grinder"]);
+      if (discordRoles) {
+        for (const dRoleId of discordRoles) {
+          const label = RL[dRoleId];
+          if (label) detectedRoles.add(label);
+        }
+      }
+      if (isDevElite) detectedRoles.add("Elite Grinder");
+      const hasElite = detectedRoles.has("Elite Grinder");
+      const rolesArr = Array.from(detectedRoles);
+
       myGrinder = await storage.createGrinder({
         id: `G-${Date.now().toString(36)}`,
         name: displayName,
         discordUserId: userId,
         discordUsername: authUser.discordUsername || authUser.username || null,
-        discordRoleId: hasEliteRole ? "1466370965016412316" : null,
-        category: hasEliteRole ? "Elite Grinder" : "Grinder",
-        tier: hasEliteRole ? "Elite" : "New",
-        roles: hasEliteRole ? ["Elite Grinder", "Grinder"] : ["Grinder"],
+        discordRoleId: hasElite ? GR.ELITE : null,
+        category: hasElite ? "Elite Grinder" : rolesArr.find(r => r !== "Grinder") || "Grinder",
+        tier: hasElite ? "Elite" : "New",
+        roles: rolesArr,
         capacity: 3,
       });
     }
@@ -1442,31 +1454,42 @@ export async function registerRoutes(
     }
 
     if (authUser) {
+      const { GRINDER_ROLES, ROLE_LABELS } = await import("@shared/schema");
       const discordRoles = (authUser as any).discordRoles as string[] | null;
-      const hasEliteDiscordRole = discordRoles && discordRoles.includes("1466370965016412316");
       const grinderCurrentRoles = (myGrinder as any).roles as string[] | null;
-      const isCurrentlyElite = myGrinder.category === "Elite Grinder" || myGrinder.discordRoleId === "1466370965016412316" || (grinderCurrentRoles && grinderCurrentRoles.includes("Elite Grinder"));
 
-      if (hasEliteDiscordRole && !isCurrentlyElite) {
-        const roleSync: any = {
-          category: "Elite Grinder",
-          tier: "Elite",
-          discordRoleId: "1466370965016412316",
-          roles: ["Elite Grinder", "Grinder"],
-        };
-        if (!myGrinder.eliteSince) roleSync.eliteSince = new Date();
-        await storage.updateGrinder(myGrinder.id, roleSync);
-        myGrinder = { ...myGrinder, ...roleSync };
-      } else if (!hasEliteDiscordRole && isCurrentlyElite) {
-        const roleSync: any = {
-          category: "Grinder",
-          tier: "New",
-          discordRoleId: null,
-          roles: ["Grinder"],
-          eliteSince: null,
-        };
-        await storage.updateGrinder(myGrinder.id, roleSync);
-        myGrinder = { ...myGrinder, ...roleSync };
+      if (discordRoles && discordRoles.length > 0) {
+        const detectedRoles = new Set<string>();
+        for (const dRoleId of discordRoles) {
+          const label = ROLE_LABELS[dRoleId];
+          if (label) detectedRoles.add(label);
+        }
+        if (detectedRoles.size === 0) detectedRoles.add("Grinder");
+        if (!detectedRoles.has("Grinder") && detectedRoles.size > 0) detectedRoles.add("Grinder");
+
+        const newRolesArr = Array.from(detectedRoles);
+        const hasElite = detectedRoles.has("Elite Grinder");
+        const wasElite = grinderCurrentRoles && grinderCurrentRoles.includes("Elite Grinder");
+        const currentSorted = (grinderCurrentRoles || []).slice().sort().join(",");
+        const newSorted = newRolesArr.slice().sort().join(",");
+
+        if (currentSorted !== newSorted) {
+          const roleSync: any = {
+            roles: newRolesArr,
+            category: hasElite ? "Elite Grinder" : newRolesArr.find(r => r !== "Grinder") || "Grinder",
+            discordRoleId: hasElite ? GRINDER_ROLES.ELITE : null,
+          };
+          if (hasElite) {
+            roleSync.tier = "Elite";
+            if (!myGrinder.eliteSince) roleSync.eliteSince = new Date();
+          } else if (wasElite && !hasElite) {
+            roleSync.tier = "New";
+            roleSync.eliteSince = null;
+          }
+          await storage.updateGrinder(myGrinder.id, roleSync);
+          myGrinder = { ...myGrinder, ...roleSync };
+          console.log(`[grinder-me] Synced roles for ${myGrinder.name}: ${newRolesArr.join(", ")}`);
+        }
       }
     }
 
