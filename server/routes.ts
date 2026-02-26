@@ -110,7 +110,7 @@ async function createSystemNotification(opts: {
     await storage.createNotification({
       id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       userId: opts.userId || null,
-      roleScope: opts.roleScope || "all",
+      roleScope: opts.roleScope || (opts.userId ? "user" : "all"),
       type: opts.type,
       title: opts.title,
       body: opts.body,
