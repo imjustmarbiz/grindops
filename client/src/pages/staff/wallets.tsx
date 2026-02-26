@@ -218,18 +218,18 @@ export default function StaffWallets() {
             <Wallet className="w-7 h-7 text-primary" />
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">
-                {isOwner ? "Business Wallet Dashboard" : "My Wallet"}
+                {isOwner ? "Business Wallet" : "My Wallet"}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isOwner ? "Track business finances across all wallets" : "Track finances you owe to the business and your payouts from the business"}
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => { setTransferForm({ fromWalletId: myWallets[0]?.id || "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid="button-open-transfer"><ArrowLeftRight className="w-4 h-4 mr-1.5" />Transfer</Button>
-            {isOwner && <Button variant="outline" onClick={() => setPayoutOpen(true)} data-testid="button-open-payout"><Send className="w-4 h-4 mr-1.5" />Create Payout</Button>}
-            <Button variant="outline" onClick={() => setLinkOrderOpen(true)} data-testid="button-link-order"><LinkIcon className="w-4 h-4 mr-1.5" />Link Order Payment</Button>
-            <Button onClick={() => { setWalletForm({ name: "", type: "PayPal", accountIdentifier: "", startingBalance: "0", notes: "", scope: isOwner ? "company" : "personal" }); setCreateWalletOpen(true); }} data-testid="button-add-wallet"><Plus className="w-4 h-4 mr-1.5" />Add Wallet</Button>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => { setTransferForm({ fromWalletId: myWallets[0]?.id || "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid="button-open-transfer"><ArrowLeftRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />Transfer</Button>
+            {isOwner && <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setPayoutOpen(true)} data-testid="button-open-payout"><Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />Payout</Button>}
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setLinkOrderOpen(true)} data-testid="button-link-order"><LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" /><span className="hidden sm:inline">Link </span>Payment</Button>
+            <Button size="sm" className="text-xs sm:text-sm" onClick={() => { setWalletForm({ name: "", type: "PayPal", accountIdentifier: "", startingBalance: "0", notes: "", scope: isOwner ? "company" : "personal" }); setCreateWalletOpen(true); }} data-testid="button-add-wallet"><Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" /><span className="hidden sm:inline">Add </span>Wallet</Button>
           </div>
         </div>
       </FadeInUp>
@@ -447,42 +447,44 @@ export default function StaffWallets() {
 
       <FadeInUp>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList data-testid="tabs-wallet">
-            <TabsTrigger value="transactions" data-testid="tab-transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="payouts" data-testid="tab-payouts">Business Payouts</TabsTrigger>
-            <TabsTrigger value="transfers" data-testid="tab-transfers">Transfers</TabsTrigger>
-            <TabsTrigger value="order-payments" data-testid="tab-order-payments" className="relative">
-              Order Payments
-              {pendingTransferCount > 0 && <span className="ml-1.5 w-4 h-4 rounded-full bg-amber-500/80 text-[10px] text-white inline-flex items-center justify-center">{pendingTransferCount}</span>}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="w-full sm:w-auto" data-testid="tabs-wallet">
+              <TabsTrigger value="transactions" data-testid="tab-transactions" className="text-xs sm:text-sm">Txns</TabsTrigger>
+              <TabsTrigger value="payouts" data-testid="tab-payouts" className="text-xs sm:text-sm">Payouts</TabsTrigger>
+              <TabsTrigger value="transfers" data-testid="tab-transfers" className="text-xs sm:text-sm">Transfers</TabsTrigger>
+              <TabsTrigger value="order-payments" data-testid="tab-order-payments" className="relative text-xs sm:text-sm">
+                Payments
+                {pendingTransferCount > 0 && <span className="ml-1 w-4 h-4 rounded-full bg-amber-500/80 text-[10px] text-white inline-flex items-center justify-center">{pendingTransferCount}</span>}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="transactions" className="space-y-4 mt-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Filter className="w-4 h-4 text-muted-foreground" />
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <Filter className="w-4 h-4 text-muted-foreground hidden sm:block" />
               <Select value={txFilters.walletId || "all"} onValueChange={v => setTxFilters(f => ({ ...f, walletId: v === "all" ? "" : v }))}>
-                <SelectTrigger className="w-[180px]" data-testid="select-tx-wallet"><SelectValue placeholder="All Wallets" /></SelectTrigger>
+                <SelectTrigger className="w-[140px] sm:w-[180px] text-xs sm:text-sm" data-testid="select-tx-wallet"><SelectValue placeholder="All Wallets" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Wallets</SelectItem>
                   {wallets.map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={txFilters.category || "all"} onValueChange={v => setTxFilters(f => ({ ...f, category: v === "all" ? "" : v }))}>
-                <SelectTrigger className="w-[160px]" data-testid="select-tx-category"><SelectValue placeholder="All Categories" /></SelectTrigger>
+                <SelectTrigger className="w-[130px] sm:w-[160px] text-xs sm:text-sm" data-testid="select-tx-category"><SelectValue placeholder="All Categories" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {TRANSACTION_CATEGORIES.map(c => <SelectItem key={c} value={c}>{titleCase(c)}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={txFilters.type || "all"} onValueChange={v => setTxFilters(f => ({ ...f, type: v === "all" ? "" : v }))}>
-                <SelectTrigger className="w-[160px]" data-testid="select-tx-type"><SelectValue placeholder="All Types" /></SelectTrigger>
+                <SelectTrigger className="w-[130px] sm:w-[160px] text-xs sm:text-sm" data-testid="select-tx-type"><SelectValue placeholder="All Types" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   {["deposit", "withdrawal", "transfer_in", "transfer_out", "grinder_payout", "business_payout", "fine_received", "order_income", "adjustment"].map(t => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Input type="date" value={txFilters.startDate} onChange={e => setTxFilters(f => ({ ...f, startDate: e.target.value }))} className="w-[150px]" data-testid="input-tx-start-date" />
-              <Input type="date" value={txFilters.endDate} onChange={e => setTxFilters(f => ({ ...f, endDate: e.target.value }))} className="w-[150px]" data-testid="input-tx-end-date" />
+              <Input type="date" value={txFilters.startDate} onChange={e => setTxFilters(f => ({ ...f, startDate: e.target.value }))} className="w-[130px] sm:w-[150px] text-xs sm:text-sm" data-testid="input-tx-start-date" />
+              <Input type="date" value={txFilters.endDate} onChange={e => setTxFilters(f => ({ ...f, endDate: e.target.value }))} className="w-[130px] sm:w-[150px] text-xs sm:text-sm" data-testid="input-tx-end-date" />
               {(txFilters.walletId || txFilters.category || txFilters.type || txFilters.startDate || txFilters.endDate) && (
                 <Button variant="ghost" size="sm" onClick={() => setTxFilters({ walletId: "", category: "", type: "", startDate: "", endDate: "" })} data-testid="button-clear-tx-filters">
                   <X className="w-3 h-3 mr-1" />Clear
@@ -493,14 +495,14 @@ export default function StaffWallets() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Wallet</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Balance After</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Order</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Wallet</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Type</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Category</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">Amount</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm hidden md:table-cell">Balance</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Description</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Order</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -509,16 +511,16 @@ export default function StaffWallets() {
                     const isPositive = ["deposit", "transfer_in", "order_income", "fine_received"].includes(tx.type);
                     return (
                       <TableRow key={tx.id} data-testid={`row-tx-${tx.id}`}>
-                        <TableCell className="text-sm whitespace-nowrap">{fmtDate(tx.createdAt)}</TableCell>
-                        <TableCell className="text-sm">{walletsMap.get(tx.walletId)?.name || tx.walletId}</TableCell>
-                        <TableCell><Badge className="text-xs capitalize">{titleCase(tx.type || "")}</Badge></TableCell>
-                        <TableCell className="text-sm text-muted-foreground capitalize">{titleCase(tx.category || "")}</TableCell>
-                        <TableCell className={`text-right font-medium ${isPositive ? "text-emerald-400" : "text-red-400"}`} data-testid={`text-tx-amount-${tx.id}`}>
+                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">{fmtDate(tx.createdAt)}</TableCell>
+                        <TableCell className="text-xs sm:text-sm hidden sm:table-cell">{walletsMap.get(tx.walletId)?.name || tx.walletId}</TableCell>
+                        <TableCell><Badge className="text-[10px] sm:text-xs capitalize">{titleCase(tx.type || "")}</Badge></TableCell>
+                        <TableCell className="text-xs sm:text-sm text-muted-foreground capitalize hidden md:table-cell">{titleCase(tx.category || "")}</TableCell>
+                        <TableCell className={`text-right text-xs sm:text-sm font-medium ${isPositive ? "text-emerald-400" : "text-red-400"}`} data-testid={`text-tx-amount-${tx.id}`}>
                           {isPositive ? "+" : "-"}{formatCurrency(Math.abs(Number(tx.amount || 0)))}
                         </TableCell>
-                        <TableCell className="text-right text-sm">{formatCurrency(Number(tx.balanceAfter || 0))}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{tx.description || "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{tx.relatedOrderId || "—"}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm hidden md:table-cell">{formatCurrency(Number(tx.balanceAfter || 0))}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-muted-foreground max-w-[200px] truncate hidden lg:table-cell">{tx.description || "—"}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">{tx.relatedOrderId || "—"}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -529,30 +531,30 @@ export default function StaffWallets() {
 
           <TabsContent value="payouts" className="space-y-4 mt-4">
             <div className="flex flex-wrap items-center gap-3">
-              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Filter className="w-4 h-4 text-muted-foreground hidden sm:block" />
               <Select value={payoutFilters.status || "all"} onValueChange={v => setPayoutFilters(f => ({ ...f, status: v === "all" ? "" : v }))}>
-                <SelectTrigger className="w-[160px]" data-testid="select-payout-status"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                <SelectTrigger className="w-[130px] sm:w-[160px] text-xs sm:text-sm" data-testid="select-payout-status"><SelectValue placeholder="All Statuses" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   {["pending", "approved", "paid", "rejected"].map(s => <SelectItem key={s} value={s}>{titleCase(s)}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={payoutFilters.category || "all"} onValueChange={v => setPayoutFilters(f => ({ ...f, category: v === "all" ? "" : v }))}>
-                <SelectTrigger className="w-[160px]" data-testid="select-payout-category"><SelectValue placeholder="All Categories" /></SelectTrigger>
+                <SelectTrigger className="w-[130px] sm:w-[160px] text-xs sm:text-sm" data-testid="select-payout-category"><SelectValue placeholder="All Categories" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={payoutFilters.recipientRole || "all"} onValueChange={v => setPayoutFilters(f => ({ ...f, recipientRole: v === "all" ? "" : v }))}>
-                <SelectTrigger className="w-[160px]" data-testid="select-payout-role"><SelectValue placeholder="All Roles" /></SelectTrigger>
+                <SelectTrigger className="w-[130px] sm:w-[160px] text-xs sm:text-sm" data-testid="select-payout-role"><SelectValue placeholder="All Roles" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   {allRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Input type="date" value={payoutFilters.startDate} onChange={e => setPayoutFilters(f => ({ ...f, startDate: e.target.value }))} className="w-[150px]" data-testid="input-payout-start-date" />
-              <Input type="date" value={payoutFilters.endDate} onChange={e => setPayoutFilters(f => ({ ...f, endDate: e.target.value }))} className="w-[150px]" data-testid="input-payout-end-date" />
+              <Input type="date" value={payoutFilters.startDate} onChange={e => setPayoutFilters(f => ({ ...f, startDate: e.target.value }))} className="w-[130px] sm:w-[150px] text-xs sm:text-sm" data-testid="input-payout-start-date" />
+              <Input type="date" value={payoutFilters.endDate} onChange={e => setPayoutFilters(f => ({ ...f, endDate: e.target.value }))} className="w-[130px] sm:w-[150px] text-xs sm:text-sm" data-testid="input-payout-end-date" />
               {(payoutFilters.status || payoutFilters.category || payoutFilters.recipientRole || payoutFilters.startDate || payoutFilters.endDate) && (
                 <Button variant="ghost" size="sm" onClick={() => setPayoutFilters({ status: "", category: "", recipientRole: "", startDate: "", endDate: "" })} data-testid="button-clear-payout-filters">
                   <X className="w-3 h-3 mr-1" />Clear
@@ -563,31 +565,31 @@ export default function StaffWallets() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Recipient</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Wallet</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Proof</TableHead>
-                    {isOwner && <TableHead>Actions</TableHead>}
+                    <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Recipient</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Role</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Category</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">Amount</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Wallet</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Order</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Proof</TableHead>
+                    {isOwner && <TableHead className="text-xs sm:text-sm">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payouts.length === 0 && <TableRow><TableCell colSpan={isOwner ? 10 : 9} className="text-center text-muted-foreground py-8">No payouts found</TableCell></TableRow>}
                   {payouts.map((p: any) => (
                     <TableRow key={p.id} data-testid={`row-payout-${p.id}`}>
-                      <TableCell className="text-sm whitespace-nowrap">{fmtDate(p.createdAt)}</TableCell>
-                      <TableCell className="text-sm font-medium">{p.recipientName}</TableCell>
-                      <TableCell><Badge className="text-xs capitalize">{p.recipientRole}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground capitalize">{p.category}</TableCell>
-                      <TableCell className="text-right font-medium text-red-400" data-testid={`text-payout-amount-${p.id}`}>{formatCurrency(Number(p.amount || 0))}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{p.walletId ? (walletsMap.get(p.walletId)?.name || p.walletId) : "—"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">{fmtDate(p.createdAt)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm font-medium">{p.recipientName}</TableCell>
+                      <TableCell className="hidden sm:table-cell"><Badge className="text-[10px] sm:text-xs capitalize">{p.recipientRole}</Badge></TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground capitalize hidden md:table-cell">{p.category}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm font-medium text-red-400" data-testid={`text-payout-amount-${p.id}`}>{formatCurrency(Number(p.amount || 0))}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">{p.walletId ? (walletsMap.get(p.walletId)?.name || p.walletId) : "—"}</TableCell>
                       <TableCell>{statusBadge(p.status)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{p.orderId || "—"}</TableCell>
-                      <TableCell>{p.proofUrl ? <a href={p.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">{p.orderId || "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{p.proofUrl ? <a href={p.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                       {isOwner && (
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
@@ -621,33 +623,33 @@ export default function StaffWallets() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>From Wallet</TableHead>
-                    <TableHead>To Wallet</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Fee</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Proof</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>By</TableHead>
-                    {isOwner && <TableHead>Actions</TableHead>}
+                    <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm">From</TableHead>
+                    <TableHead className="text-xs sm:text-sm">To</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">Amount</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm hidden md:table-cell">Fee</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Description</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Order</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Proof</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">By</TableHead>
+                    {isOwner && <TableHead className="text-xs sm:text-sm">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {transfers.length === 0 && <TableRow><TableCell colSpan={isOwner ? 11 : 10} className="text-center text-muted-foreground py-8">No transfers found</TableCell></TableRow>}
                   {transfers.map((t: any) => (
                     <TableRow key={t.id} data-testid={`row-transfer-${t.id}`}>
-                      <TableCell className="text-sm whitespace-nowrap">{fmtDate(t.createdAt)}</TableCell>
-                      <TableCell className="text-sm">{walletsMap.get(t.fromWalletId)?.name || t.fromWalletId}</TableCell>
-                      <TableCell className="text-sm">{walletsMap.get(t.toWalletId)?.name || t.toWalletId}</TableCell>
-                      <TableCell className="text-right font-medium text-blue-400" data-testid={`text-transfer-amount-${t.id}`}>{formatCurrency(Number(t.amount || 0))}</TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground">{Number(t.transferFee || 0) > 0 ? formatCurrency(Number(t.transferFee)) : "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{t.description || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{t.relatedOrderId || "—"}</TableCell>
-                      <TableCell>{t.proofUrl ? <a href={t.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">{fmtDate(t.createdAt)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{walletsMap.get(t.fromWalletId)?.name || t.fromWalletId}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{walletsMap.get(t.toWalletId)?.name || t.toWalletId}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm font-medium text-blue-400" data-testid={`text-transfer-amount-${t.id}`}>{formatCurrency(Number(t.amount || 0))}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm text-muted-foreground hidden md:table-cell">{Number(t.transferFee || 0) > 0 ? formatCurrency(Number(t.transferFee)) : "—"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground max-w-[200px] truncate hidden lg:table-cell">{t.description || "—"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">{t.relatedOrderId || "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{t.proofUrl ? <a href={t.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                       <TableCell>{statusBadge(t.status)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{t.performedByName || "—"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">{t.performedByName || "—"}</TableCell>
                       {isOwner && (
                         <TableCell>
                           {t.status === "pending" && (
@@ -669,28 +671,28 @@ export default function StaffWallets() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Received By</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Transfer Status</TableHead>
-                    <TableHead>Proof</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead>Created By</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Order</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Received By</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">Amount</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Proof</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Notes</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Created By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paymentLinks.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No order payments linked yet</TableCell></TableRow>}
                   {paymentLinks.map((l: any) => (
                     <TableRow key={l.id} data-testid={`row-opl-${l.id}`} className={l.transferStatus === "pending_transfer" ? "bg-amber-500/5" : ""}>
-                      <TableCell className="text-sm whitespace-nowrap">{fmtDate(l.createdAt)}</TableCell>
-                      <TableCell className="text-sm font-medium">{l.orderId}</TableCell>
-                      <TableCell className="text-sm">{walletsMap.get(l.receivedByWalletId)?.name || l.receivedByWalletId}</TableCell>
-                      <TableCell className="text-right font-medium text-emerald-400">{formatCurrency(Number(l.amount || 0))}</TableCell>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">{fmtDate(l.createdAt)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm font-medium">{l.orderId}</TableCell>
+                      <TableCell className="text-xs sm:text-sm hidden sm:table-cell">{walletsMap.get(l.receivedByWalletId)?.name || l.receivedByWalletId}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm font-medium text-emerald-400">{formatCurrency(Number(l.amount || 0))}</TableCell>
                       <TableCell>{statusBadge(l.transferStatus)}</TableCell>
-                      <TableCell>{l.proofUrl ? <a href={l.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{l.notes || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{l.createdByName}</TableCell>
+                      <TableCell className="hidden md:table-cell">{l.proofUrl ? <a href={l.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground max-w-[150px] truncate hidden lg:table-cell">{l.notes || "—"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden md:table-cell">{l.createdByName}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
