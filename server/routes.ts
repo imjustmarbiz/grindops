@@ -5008,7 +5008,7 @@ export async function registerRoutes(
       const orderLabel = orderId ? orderId : `ticket "${(ticketName || "").trim()}"`;
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        title: "New Grind Repair Request",
+        title: "New Order Repair Request",
         body: `${typeLabels[repairType]}: A grinder has submitted a repair request for ${orderLabel}.`,
         type: "info",
         roleScope: "staff",
@@ -6500,28 +6500,13 @@ export async function registerRoutes(
       const allGrinders = await storage.getGrinders();
       const recipients: { name: string; discordId?: string; source: string }[] = [];
 
-      if (role === "staff") {
+      if (role === "staff" || role === "staff pay") {
         allUsers.filter(u => u.role === "staff").forEach(u => {
           recipients.push({ name: u.discordUsername || u.firstName || u.email || "Unknown", discordId: u.discordId || undefined, source: "staff" });
         });
-      } else if (role === "owner") {
+      } else if (role === "owner" || role === "owner pay") {
         allUsers.filter(u => u.role === "owner").forEach(u => {
           recipients.push({ name: u.discordUsername || u.firstName || u.email || "Unknown", discordId: u.discordId || undefined, source: "owner" });
-        });
-      } else if (role === "creator" || role === "vendor" || role === "misc") {
-        allGrinders.forEach(g => {
-          recipients.push({ name: g.name || g.discordUsername || "Unknown", discordId: g.discordUserId || undefined, source: "grinder" });
-        });
-      }
-
-      if (recipients.length === 0) {
-        allUsers.filter(u => u.role === "staff" || u.role === "owner").forEach(u => {
-          recipients.push({ name: u.discordUsername || u.firstName || u.email || "Unknown", discordId: u.discordId || undefined, source: u.role || "user" });
-        });
-        allGrinders.forEach(g => {
-          if (!recipients.some(r => r.discordId === g.discordUserId)) {
-            recipients.push({ name: g.name || g.discordUsername || "Unknown", discordId: g.discordUserId || undefined, source: "grinder" });
-          }
         });
       }
 

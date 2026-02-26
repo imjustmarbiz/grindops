@@ -102,7 +102,7 @@ const featureItems = [
   },
   {
     icon: Wrench,
-    title: "Grind Repair",
+    title: "Order Repair",
     desc: "Fix existing orders, claim missing in-progress orders, or add completed orders not in your dashboard. Your one-stop shop for order auditing.",
     url: "/grinder/order-claims",
   },

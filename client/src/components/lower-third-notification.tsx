@@ -156,7 +156,7 @@ export function LowerThirdNotifications() {
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
       <div className="pointer-events-auto self-end mb-1 flex items-center gap-1.5 relative" ref={soundInfoRef}>
-        <div className="relative">
+        <div className="relative hidden sm:block">
           <button
             onClick={() => setShowSoundInfo(prev => !prev)}
             onMouseEnter={() => setShowSoundInfo(true)}
@@ -198,7 +198,7 @@ export function LowerThirdNotifications() {
         </div>
 
         {soundEnabled && (
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10" data-testid="volume-slider-container">
+          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10" data-testid="volume-slider-container">
             <Volume1 className="w-3 h-3 text-muted-foreground shrink-0" />
             <input
               type="range"

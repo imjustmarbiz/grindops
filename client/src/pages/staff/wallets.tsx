@@ -67,7 +67,7 @@ export default function StaffWallets() {
   const [walletForm, setWalletForm] = useState({ name: "", type: "PayPal", accountIdentifier: "", startingBalance: "0", notes: "", scope: isOwner ? "company" : "personal" });
   const [adjustForm, setAdjustForm] = useState({ amount: "", type: "deposit", description: "", category: "misc" });
   const [transferForm, setTransferForm] = useState({ fromWalletId: "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" });
-  const [payoutForm, setPayoutForm] = useState({ recipientName: "", recipientRole: "", category: "", amount: "", description: "", walletId: "", orderId: "", proofUrl: "" });
+  const [payoutForm, setPayoutForm] = useState({ recipientName: "", recipientRole: "", category: "", amount: "", description: "", walletId: "", orderId: "", proofUrl: "", customRecipient: false });
   const [markPaidWalletId, setMarkPaidWalletId] = useState("");
   const [linkForm, setLinkForm] = useState({ orderId: "", receivedByWalletId: "", amount: "", proofUrl: "", notes: "" });
   const [uploadingProof, setUploadingProof] = useState(false);
@@ -170,7 +170,7 @@ export default function StaffWallets() {
 
   const createPayoutMut = useMutation({
     mutationFn: async (data: any) => { const r = await apiRequest("POST", "/api/business-payouts", data); return r.json(); },
-    onSuccess: () => { invalidateAll(); setPayoutOpen(false); setPayoutForm({ recipientName: "", recipientRole: "", category: "", amount: "", description: "", walletId: "", orderId: "", proofUrl: "" }); toast({ title: "Payout created" }); },
+    onSuccess: () => { invalidateAll(); setPayoutOpen(false); setPayoutForm({ recipientName: "", recipientRole: "", category: "", amount: "", description: "", walletId: "", orderId: "", proofUrl: "", customRecipient: false }); toast({ title: "Payout created" }); },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
 
@@ -848,7 +848,7 @@ export default function StaffWallets() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Role</label>
-                <Select value={payoutForm.recipientRole || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientRole: v === "none" ? "" : v, recipientName: "" }))}>
+                <Select value={payoutForm.recipientRole || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientRole: v === "none" ? "" : v, recipientName: "", customRecipient: false }))}>
                   <SelectTrigger data-testid="select-payout-role-input"><SelectValue placeholder="Select Role" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Select Role</SelectItem>
@@ -869,16 +869,22 @@ export default function StaffWallets() {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Recipient</label>
-              {payoutRecipients.length > 0 ? (
-                <Select value={payoutForm.recipientName || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientName: v === "none" ? "" : v }))}>
+              {!payoutForm.customRecipient && payoutRecipients.length > 0 ? (
+                <Select value={payoutForm.recipientName || "none"} onValueChange={v => { if (v === "__custom__") { setPayoutForm(f => ({ ...f, recipientName: "", customRecipient: true })); } else { setPayoutForm(f => ({ ...f, recipientName: v === "none" ? "" : v })); } }}>
                   <SelectTrigger data-testid="select-payout-recipient"><SelectValue placeholder="Select Recipient" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Select Recipient</SelectItem>
-                    {payoutRecipients.map((r: any, i: number) => <SelectItem key={`${r.name}-${i}`} value={r.name}>{r.name}{r.discordId ? ` (Discord)` : ""}</SelectItem>)}
+                    {payoutRecipients.map((r: any, i: number) => <SelectItem key={`${r.name}-${i}`} value={r.name}>{r.name}{r.discordId ? " (Discord)" : ""}</SelectItem>)}
+                    <SelectItem value="__custom__">Enter Custom Name...</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
-                <Input value={payoutForm.recipientName} onChange={e => setPayoutForm(f => ({ ...f, recipientName: e.target.value }))} placeholder={payoutForm.recipientRole ? "Enter name" : "Select a role first"} data-testid="input-payout-recipient" />
+                <div className="flex gap-2">
+                  <Input value={payoutForm.recipientName} onChange={e => setPayoutForm(f => ({ ...f, recipientName: e.target.value }))} placeholder={payoutForm.recipientRole ? "Enter name" : "Select a role first"} data-testid="input-payout-recipient" className="flex-1" />
+                  {payoutForm.customRecipient && payoutRecipients.length > 0 && (
+                    <Button type="button" size="sm" variant="ghost" className="shrink-0 text-xs text-muted-foreground" onClick={() => setPayoutForm(f => ({ ...f, recipientName: "", customRecipient: false }))} data-testid="button-back-to-dropdown">List</Button>
+                  )}
+                </div>
               )}
             </div>
             <div className="space-y-1.5">

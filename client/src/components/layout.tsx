@@ -30,6 +30,7 @@ const staffNavItems = [
   { title: "Staff Overview", url: "/staff-overview", icon: UserCheck },
   { title: "Operations", url: "/operations", icon: Wrench },
   { title: "Admin", url: "/admin", icon: Settings },
+  { title: "Business Wallet", url: "/wallets", icon: Wallet },
   { title: "Business Performance", url: "/business", icon: DollarSign },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Services", url: "/services", icon: Package },
@@ -38,12 +39,11 @@ const staffNavItems = [
   { title: "Reports", url: "/reports", icon: FileBarChart },
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Orders", url: "/orders", icon: ListOrdered },
-  { title: "Grind Repair", url: "/order-claims", icon: Wrench },
+  { title: "Order Repair", url: "/order-claims", icon: Wrench },
   { title: "Assignments", url: "/assignments", icon: FileCheck },
   { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
-  { title: "Wallets", url: "/wallets", icon: DollarSign },
-  { title: "Payouts", url: "/payouts", icon: Wallet },
+  { title: "Payouts", url: "/payouts", icon: DollarSign },
   { title: "Reviews", url: "/reviews", icon: Star },
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
   { title: "Streams", url: "/streams", icon: Tv },
@@ -59,7 +59,7 @@ const grinderNavItems = [
   { title: "Notifications", url: "/grinder/notifications", icon: Bell },
   { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
   { title: "Available Orders", url: "/grinder/orders", icon: Zap },
-  { title: "Grind Repair", url: "/grinder/order-claims", icon: Wrench },
+  { title: "Order Repair", url: "/grinder/order-claims", icon: Wrench },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
   { title: "My Orders", url: "/grinder/assignments", icon: FileCheck },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
@@ -105,6 +105,9 @@ function AppSidebar() {
         if (item.url === "/wallets") return true;
         if (item.url === "/staff-overview") return isOwner;
         return true;
+      }).map(item => {
+        if (item.url === "/wallets" && !isOwner) return { ...item, title: "My Wallet" };
+        return item;
       })
     : grinderNavItems;
   const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";

@@ -24,7 +24,7 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - **Performance Management:** Includes Elite Path Coaching, a Strike Management System, and an Activity Checkpoint System.
 - **Order Management:** Features live bidding countdowns, staff override capabilities, manual order creation, Discord ticket linking, and automated price setting prompts for priceless orders.
 - **Reporting & Analytics:** Centralized stats recalculation for quality scores, completion rates, win rates, and earnings; auto-generated performance reports and detailed business analytics.
-- **Grind Repair System:** Comprehensive order auditing with types for fixing existing orders, claiming missing in-progress orders, and adding completed orders.
+- **Order Repair System:** Comprehensive order auditing with types for fixing existing orders, claiming missing in-progress orders, and adding completed orders.
 - **Twitch Integration:** Grinders can link Twitch accounts for staff viewing and automatic activity checkpoint generation.
 - **Completion Video Proof:** Grinders must upload video proof for staff review upon order completion.
 - **Audit Logging:** Comprehensive logging of all grinder self-service actions and checkpoint time edits.

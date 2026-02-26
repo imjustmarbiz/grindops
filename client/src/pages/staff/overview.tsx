@@ -12,7 +12,7 @@ import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } fro
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
-  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard,
+  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
 } from "lucide-react";
 
 
@@ -314,7 +314,7 @@ export default function StaffOverview() {
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm font-medium">Payouts</p>
+                <p className="text-sm font-medium">Grinder Payouts</p>
                 <p className="text-[10px] text-muted-foreground">Pending approvals</p>
               </div>
             </div>
@@ -327,13 +327,13 @@ export default function StaffOverview() {
                 <p className="text-[10px] text-muted-foreground">Team & settings</p>
               </div>
             </div>
-            <div onClick={() => navigate("/badges")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-badges">
+            <div onClick={() => navigate("/wallets")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-wallets">
               <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Crown className="w-4 h-4 text-purple-400" />
+                <Wallet className="w-4 h-4 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium">Badges</p>
-                <p className="text-[10px] text-muted-foreground">Award & manage</p>
+                <p className="text-sm font-medium">Business Wallet</p>
+                <p className="text-[10px] text-muted-foreground">Wallets & payouts</p>
               </div>
             </div>
           </div>
