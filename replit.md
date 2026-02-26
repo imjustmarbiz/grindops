@@ -40,6 +40,7 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - **Combined Admin Page:** Operations and Admin merged into a single page with 3 tabs — Operations (order management, alerts, overrides), Management (elite requests, strikes, limits, profiles, tasks), and System (owner-only: bot toggle, maintenance mode, services, deletion requests, clear data). The `/operations` route redirects to `/admin`.
 - **MGT Bot Data Tracking Toggle:** Owners can enable/disable automatic data import from the MGT Discord bot via `queueConfig.mgtBotEnabled` field. Toggle in Admin > System tab.
 - **Maintenance Mode:** Owner "imjustmar" can toggle maintenance mode to restrict site access. Stored in `queueConfig.maintenanceMode` and `maintenanceModeSetBy`. Banner shown at top of Admin page when active.
+- **Site Alerts System:** Owners can broadcast scrolling ticker-bar alerts that stick to the bottom of every page. Stored in `site_alerts` table with fields: id, message, target (all/staff/grinders/user), targetUserId, targetUserName, enabled, createdBy, createdByName, createdAt. Managed in Admin > System tab. Targeting options: Everyone, Staff Only, Grinders Only, Specific User (with grinder search). Users can dismiss alerts locally. API routes: GET/POST /api/site-alerts, GET /api/site-alerts/all (owner), PATCH/DELETE /api/site-alerts/:id (owner). Component: `SiteAlertTicker` in layout.tsx renders a CSS-animated scrolling marquee with amber/dark theme styling.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database, managed with Drizzle ORM.

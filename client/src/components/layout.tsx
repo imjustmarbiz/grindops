@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { LowerThirdNotifications } from "@/components/lower-third-notification";
+import { SiteAlertTicker } from "@/components/site-alert-ticker";
 import type { MessageThread, Notification, ThreadParticipant } from "@shared/schema";
 import { 
   Sidebar, 
@@ -298,6 +299,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
       <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
       <LowerThirdNotifications />
+      <SiteAlertTicker />
     </SidebarProvider>
   );
 }

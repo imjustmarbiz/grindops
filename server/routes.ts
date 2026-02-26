@@ -8,7 +8,8 @@ import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats } from "./recalcStats";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
-import { or, eq, sql } from "drizzle-orm";
+import { siteAlerts } from "@shared/schema";
+import { or, eq, sql, desc, and } from "drizzle-orm";
 import multer from "multer";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
@@ -5803,6 +5804,99 @@ export async function registerRoutes(
       res.json({ success: true, enabled });
     } catch (error) {
       res.status(500).json({ error: "Failed to update maintenance config" });
+    }
+  });
+
+  app.get("/api/site-alerts", isAuthenticated, async (req, res) => {
+    try {
+      const userRole = (req.user as any)?.role || "none";
+      const discordId = (req.user as any)?.discordId || "";
+      const odId = (req.user as any)?.id || "";
+      const isStaffOrOwner = userRole === "staff" || userRole === "owner";
+
+      const allAlerts = await db.select().from(siteAlerts).where(eq(siteAlerts.enabled, true)).orderBy(desc(siteAlerts.createdAt));
+
+      const filtered = allAlerts.filter(a => {
+        if (a.target === "all") return true;
+        if (a.target === "staff" && isStaffOrOwner) return true;
+        if (a.target === "grinders" && userRole === "grinder") return true;
+        if (a.target === "user" && a.targetUserId && (a.targetUserId === discordId || a.targetUserId === odId)) return true;
+        return false;
+      });
+
+      res.json(filtered);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch site alerts" });
+    }
+  });
+
+  app.get("/api/site-alerts/all", requireOwner, async (req, res) => {
+    try {
+      const allAlerts = await db.select().from(siteAlerts).orderBy(desc(siteAlerts.createdAt));
+      res.json(allAlerts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch site alerts" });
+    }
+  });
+
+  app.post("/api/site-alerts", requireOwner, async (req, res) => {
+    try {
+      const { message, target, targetUserId, targetUserName } = req.body;
+      if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
+      if (!["all", "staff", "grinders", "user"].includes(target)) return res.status(400).json({ error: "Invalid target" });
+      if (target === "user" && !targetUserId) return res.status(400).json({ error: "Target user ID is required" });
+
+      const actorName = (req.user as any)?.discordUsername || (req.user as any)?.firstName || "Owner";
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+
+      const id = `alert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await db.insert(siteAlerts).values({
+        id,
+        message: message.trim(),
+        target,
+        targetUserId: target === "user" ? targetUserId : null,
+        targetUserName: target === "user" ? (targetUserName || null) : null,
+        enabled: true,
+        createdBy: actorId,
+        createdByName: actorName,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: "site_alert_created",
+        entityType: "site_alert",
+        entityId: id,
+        actor: actorName,
+        details: `Site alert created: "${message.trim().slice(0, 80)}" → ${target}${target === "user" ? ` (${targetUserName || targetUserId})` : ""}`,
+      });
+
+      res.json({ success: true, id });
+    } catch (error) {
+      console.error("[site-alerts] create error:", error);
+      res.status(500).json({ error: "Failed to create site alert" });
+    }
+  });
+
+  app.patch("/api/site-alerts/:id", requireOwner, async (req, res) => {
+    try {
+      const { enabled, message } = req.body;
+      const updates: any = {};
+      if (typeof enabled === "boolean") updates.enabled = enabled;
+      if (typeof message === "string" && message.trim()) updates.message = message.trim();
+
+      await db.update(siteAlerts).set(updates).where(eq(siteAlerts.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update site alert" });
+    }
+  });
+
+  app.delete("/api/site-alerts/:id", requireOwner, async (req, res) => {
+    try {
+      await db.delete(siteAlerts).where(eq(siteAlerts.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete site alert" });
     }
   });
 

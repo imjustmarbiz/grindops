@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -292,6 +292,71 @@ export default function StaffAdmin() {
   const isImjustmar = actorUsername === "imjustmar" || actorUsername === "demoowner" || actorDiscordId === "172526626888876032";
 
   const [activeTab, setActiveTab] = useState("operations");
+
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertTarget, setAlertTarget] = useState("all");
+  const [alertTargetUserId, setAlertTargetUserId] = useState("");
+  const [alertUserSearch, setAlertUserSearch] = useState("");
+
+  const { data: allSiteAlerts = [] } = useQuery<any[]>({
+    queryKey: ["/api/site-alerts/all"],
+    enabled: isOwner,
+  });
+
+  const createAlertMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/site-alerts", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/site-alerts/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-alerts"] });
+      setAlertMessage("");
+      setAlertTarget("all");
+      setAlertTargetUserId("");
+      setAlertUserSearch("");
+      toast({ title: "Site alert published" });
+    },
+    onError: (e: any) => toast({ title: "Failed to create alert", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleAlertMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/site-alerts/${id}`, { enabled });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/site-alerts/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-alerts"] });
+    },
+  });
+
+  const deleteAlertMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/site-alerts/${id}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/site-alerts/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-alerts"] });
+      toast({ title: "Alert deleted" });
+    },
+  });
+
+  const alertTargetOptions = [
+    { value: "all", label: "Everyone", icon: Users, desc: "All staff & grinders" },
+    { value: "staff", label: "Staff Only", icon: Shield, desc: "Staff & owners only" },
+    { value: "grinders", label: "Grinders Only", icon: User, desc: "Grinders only" },
+    { value: "user", label: "Specific User", icon: UserPlus, desc: "One person" },
+  ];
+
+  const allUsersForAlert = [
+    ...(allGrinders || []).map((g: any) => ({ id: g.discordUserId || g.id, name: g.name, type: "grinder" })),
+  ].filter(u => u.id);
+
+  const filteredAlertUsers = alertUserSearch.trim()
+    ? allUsersForAlert.filter(u => u.name.toLowerCase().includes(alertUserSearch.toLowerCase()))
+    : allUsersForAlert.slice(0, 10);
 
   return (
     <AnimatedPage className="space-y-5 sm:space-y-6" data-testid="page-staff-admin">
@@ -1626,6 +1691,167 @@ export default function StaffAdmin() {
                 </Card>
               </FadeInUp>
             )}
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-orange-500/[0.08] via-background to-orange-900/[0.04] overflow-hidden relative" data-testid="card-site-alerts">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-orange-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                      <Megaphone className="w-4 h-4 text-orange-400" />
+                    </div>
+                    Site Alerts
+                    {allSiteAlerts.filter((a: any) => a.enabled).length > 0 && (
+                      <Badge className="ml-auto text-xs bg-orange-500/15 text-orange-400 border border-orange-500/20">
+                        {allSiteAlerts.filter((a: any) => a.enabled).length} Active
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-4">
+                  <div className="space-y-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Alert Message</label>
+                      <Textarea
+                        value={alertMessage}
+                        onChange={(e) => setAlertMessage(e.target.value)}
+                        placeholder="Type your alert message..."
+                        className="bg-white/[0.04] border-white/[0.08] resize-none text-sm"
+                        rows={2}
+                        data-testid="input-alert-message"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Send To</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {alertTargetOptions.map(opt => {
+                          const Icon = opt.icon;
+                          const isActive = alertTarget === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => { setAlertTarget(opt.value); if (opt.value !== "user") setAlertTargetUserId(""); }}
+                              className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition-all ${
+                                isActive
+                                  ? "border-orange-500/40 bg-orange-500/10 text-orange-300"
+                                  : "border-white/[0.06] bg-white/[0.02] text-muted-foreground hover:bg-white/[0.05]"
+                              }`}
+                              data-testid={`button-alert-target-${opt.value}`}
+                            >
+                              <Icon className="w-3.5 h-3.5 shrink-0" />
+                              <span className="font-medium truncate">{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {alertTarget === "user" && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Select User</label>
+                        <Input
+                          value={alertUserSearch}
+                          onChange={(e) => setAlertUserSearch(e.target.value)}
+                          placeholder="Search grinders..."
+                          className="bg-white/[0.04] border-white/[0.08] text-sm mb-2"
+                          data-testid="input-alert-user-search"
+                        />
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {filteredAlertUsers.map(u => (
+                            <button
+                              key={u.id}
+                              onClick={() => { setAlertTargetUserId(u.id); setAlertUserSearch(u.name); }}
+                              className={`w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-colors ${
+                                alertTargetUserId === u.id
+                                  ? "bg-orange-500/15 text-orange-300 border border-orange-500/20"
+                                  : "hover:bg-white/[0.05] text-muted-foreground"
+                              }`}
+                              data-testid={`button-alert-user-${u.id}`}
+                            >
+                              <User className="w-3 h-3 shrink-0" />
+                              <span>{u.name}</span>
+                              <span className="ml-auto text-[10px] opacity-60">{u.type}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={() => {
+                        const selectedUser = allUsersForAlert.find(u => u.id === alertTargetUserId);
+                        createAlertMutation.mutate({
+                          message: alertMessage,
+                          target: alertTarget,
+                          targetUserId: alertTarget === "user" ? alertTargetUserId : undefined,
+                          targetUserName: alertTarget === "user" ? (selectedUser?.name || alertUserSearch) : undefined,
+                        });
+                      }}
+                      disabled={!alertMessage.trim() || (alertTarget === "user" && !alertTargetUserId) || createAlertMutation.isPending}
+                      className="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/20"
+                      data-testid="button-send-alert"
+                    >
+                      {createAlertMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                      Publish Alert
+                    </Button>
+                  </div>
+
+                  {allSiteAlerts.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Active & Past Alerts</p>
+                      {allSiteAlerts.map((alert: any) => (
+                        <div
+                          key={alert.id}
+                          className={`p-3 rounded-lg border flex items-start gap-3 ${
+                            alert.enabled
+                              ? "border-orange-500/20 bg-orange-500/[0.05]"
+                              : "border-white/[0.06] bg-white/[0.02] opacity-60"
+                          }`}
+                          data-testid={`alert-item-${alert.id}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" data-testid={`text-alert-message-${alert.id}`}>{alert.message}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <Badge className="text-[10px] bg-white/[0.06] border-white/[0.08]">
+                                {alert.target === "all" ? "Everyone" : alert.target === "staff" ? "Staff" : alert.target === "grinders" ? "Grinders" : alert.targetUserName || "User"}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                by {alert.createdByName} · {new Date(alert.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => toggleAlertMutation.mutate({ id: alert.id, enabled: !alert.enabled })}
+                              data-testid={`button-toggle-alert-${alert.id}`}
+                            >
+                              {alert.enabled ? <Eye className="w-3.5 h-3.5 text-orange-400" /> : <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 hover:text-destructive"
+                              onClick={() => deleteAlertMutation.mutate(alert.id)}
+                              data-testid={`button-delete-alert-${alert.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground px-1">
+                    Alerts appear as a scrolling ticker bar at the bottom of every page. Users can dismiss alerts locally but they'll reappear on refresh until disabled.
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeInUp>
 
             <FadeInUp>
               <ServiceManagement services={allServices} />

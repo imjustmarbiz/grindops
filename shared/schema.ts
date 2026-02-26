@@ -866,6 +866,22 @@ export const insertOrderPaymentLinkSchema = createInsertSchema(orderPaymentLinks
 export type InsertOrderPaymentLink = z.infer<typeof insertOrderPaymentLinkSchema>;
 export type OrderPaymentLink = typeof orderPaymentLinks.$inferSelect;
 
+export const siteAlerts = pgTable("site_alerts", {
+  id: varchar("id").primaryKey(),
+  message: text("message").notNull(),
+  target: text("target").notNull().default("all"),
+  targetUserId: varchar("target_user_id"),
+  targetUserName: text("target_user_name"),
+  enabled: boolean("enabled").notNull().default(true),
+  createdBy: varchar("created_by").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSiteAlertSchema = createInsertSchema(siteAlerts).omit({ createdAt: true });
+export type InsertSiteAlert = z.infer<typeof insertSiteAlertSchema>;
+export type SiteAlert = typeof siteAlerts.$inferSelect;
+
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
   const lower = platform.toLowerCase().trim();
