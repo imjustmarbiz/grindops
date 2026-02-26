@@ -1828,11 +1828,13 @@ export async function registerRoutes(
       eliteCoaching,
       systemNotifications: mySystemNotifications.map((n: any) => {
         const rb = Array.isArray(n.readBy) ? n.readBy : [];
-        return { ...n, isRead: rb.includes(userId) || rb.includes(myGrinder.discordUserId) };
+        const readIds = [userId, myGrinder.discordUserId, authUser?.discordId].filter(Boolean);
+        return { ...n, isRead: readIds.some(id => rb.includes(id)) };
       }),
       unreadAlertCount: unreadAlerts.length + mySystemNotifications.filter((n: any) => {
         const rb = Array.isArray(n.readBy) ? n.readBy : [];
-        return !rb.includes(userId) && !rb.includes(myGrinder.discordUserId);
+        const readIds = [userId, myGrinder.discordUserId, authUser?.discordId].filter(Boolean);
+        return !readIds.some(id => rb.includes(id));
       }).length,
       unackedStrikeCount: unackedStrikes.length,
       stats: {
