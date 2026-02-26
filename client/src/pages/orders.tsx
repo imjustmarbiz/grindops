@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText, UserMinus, RefreshCw } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText, UserMinus, RefreshCw, ShieldAlert, ShieldX, ShieldCheck } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
@@ -252,6 +253,9 @@ export default function Orders() {
   const [reassignNotes, setReassignNotes] = useState("");
   const [deleteRequestOrder, setDeleteRequestOrder] = useState<Order | null>(null);
   const [deleteRequestReason, setDeleteRequestReason] = useState("");
+  const [replacementPromptOrder, setReplacementPromptOrder] = useState<Order | null>(null);
+  const [replacementAction, setReplacementAction] = useState<"strike" | "warning" | "no_penalty">("no_penalty");
+  const [replacementReason, setReplacementReason] = useState("");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -266,13 +270,25 @@ export default function Orders() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/orders/${id}/status`, { status });
+    mutationFn: async ({ id, status, replacementAction: rAction, replacementReason: rReason }: { id: string; status: string; replacementAction?: string; replacementReason?: string }) => {
+      const body: any = { status };
+      if (rAction) body.replacementAction = rAction;
+      if (rReason) body.replacementReason = rReason;
+      const res = await apiRequest("PATCH", `/api/orders/${id}/status`, body);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      if (variables.replacementAction === "strike") {
+        toast({ title: "Grinder replaced with strike", description: "A strike and fine have been applied." });
+      } else if (variables.replacementAction === "warning") {
+        toast({ title: "Grinder replaced with warning", description: "A formal warning has been sent." });
+      } else if (variables.status === "Need Replacement") {
+        toast({ title: "Grinder replaced", description: "No penalties applied." });
+      }
+      setReplacementPromptOrder(null);
     },
   });
 
@@ -831,7 +847,15 @@ export default function Orders() {
                   <TableCell>
                     <Select
                       value={order.status}
-                      onValueChange={(val) => statusMutation.mutate({ id: order.id, status: val })}
+                      onValueChange={(val) => {
+                        if (val === "Need Replacement" && order.assignedGrinderId) {
+                          setReplacementPromptOrder(order);
+                          setReplacementAction("no_penalty");
+                          setReplacementReason("");
+                          return;
+                        }
+                        statusMutation.mutate({ id: order.id, status: val });
+                      }}
                     >
                       <SelectTrigger className={`h-7 text-xs bg-transparent border-transparent w-full ${
                         order.status === "Open" ? "text-blue-400" :
@@ -972,6 +996,114 @@ export default function Orders() {
             </div>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={!!replacementPromptOrder} onOpenChange={(open) => { if (!open) setReplacementPromptOrder(null); }}>
+      <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+              <ShieldAlert className="w-4 h-4 text-orange-400" />
+            </div>
+            Grinder Replacement
+          </DialogTitle>
+        </DialogHeader>
+
+        {replacementPromptOrder && (() => {
+          const prevGrinder = (grinders || []).find((g: Grinder) => g.id === replacementPromptOrder.assignedGrinderId);
+          const orderRef = replacementPromptOrder.mgtOrderNumber ? `#${replacementPromptOrder.mgtOrderNumber}` : replacementPromptOrder.id;
+          return (
+            <div className="space-y-5 mt-2">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">Order</span>
+                  <span className="font-bold text-primary">{orderRef}</span>
+                </div>
+                {prevGrinder && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Current Grinder</span>
+                    <span className="font-medium text-red-400">{prevGrinder.name}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">What action should be taken?</Label>
+                <RadioGroup value={replacementAction} onValueChange={(val: any) => setReplacementAction(val)} className="space-y-2">
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "no_penalty" ? "bg-emerald-500/[0.08] border-emerald-500/30" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-no-penalty">
+                    <RadioGroupItem value="no_penalty" id="no_penalty" />
+                    <ShieldCheck className={`w-4 h-4 ${replacementAction === "no_penalty" ? "text-emerald-400" : "text-muted-foreground"}`} />
+                    <div>
+                      <div className="text-sm font-medium">No Penalty</div>
+                      <div className="text-xs text-muted-foreground">Simply replace — no strike or warning issued</div>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "warning" ? "bg-amber-500/[0.08] border-amber-500/30" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-warning">
+                    <RadioGroupItem value="warning" id="warning" />
+                    <ShieldAlert className={`w-4 h-4 ${replacementAction === "warning" ? "text-amber-400" : "text-muted-foreground"}`} />
+                    <div>
+                      <div className="text-sm font-medium">Formal Warning</div>
+                      <div className="text-xs text-muted-foreground">Notify grinder with a warning — no fine applied</div>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "strike" ? "bg-red-500/[0.08] border-red-500/30" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-strike">
+                    <RadioGroupItem value="strike" id="strike" />
+                    <ShieldX className={`w-4 h-4 ${replacementAction === "strike" ? "text-red-400" : "text-muted-foreground"}`} />
+                    <div>
+                      <div className="text-sm font-medium">Issue Strike</div>
+                      <div className="text-xs text-muted-foreground">Add a strike with fine and suspend the grinder</div>
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">
+                  Reason {replacementAction !== "no_penalty" && <span className="text-red-400 ml-1">*</span>}
+                </Label>
+                <Textarea
+                  value={replacementReason}
+                  onChange={(e) => setReplacementReason(e.target.value)}
+                  placeholder="Why is this grinder being replaced?"
+                  className="mt-1.5 bg-background/50 border-white/10 min-h-[80px]"
+                  data-testid="input-replacement-reason"
+                />
+                {replacementAction !== "no_penalty" && !replacementReason.trim() && (
+                  <p className="text-xs text-red-400/80 mt-1">A reason is required when issuing a strike or warning</p>
+                )}
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" className="border-white/10" onClick={() => setReplacementPromptOrder(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  className={
+                    replacementAction === "strike" ? "bg-red-600 hover:bg-red-700 text-white" :
+                    replacementAction === "warning" ? "bg-amber-600 hover:bg-amber-700 text-white" :
+                    "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }
+                  disabled={statusMutation.isPending || (replacementAction !== "no_penalty" && !replacementReason.trim())}
+                  onClick={() => {
+                    statusMutation.mutate({
+                      id: replacementPromptOrder.id,
+                      status: "Need Replacement",
+                      replacementAction: replacementAction,
+                      replacementReason: replacementReason,
+                    });
+                  }}
+                  data-testid="button-confirm-replacement"
+                >
+                  {statusMutation.isPending ? "Processing..." :
+                   replacementAction === "strike" ? "Replace & Strike" :
+                   replacementAction === "warning" ? "Replace & Warn" :
+                   "Replace — No Penalty"}
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </DialogContent>
     </Dialog>
 

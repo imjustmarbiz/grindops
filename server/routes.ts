@@ -557,7 +557,7 @@ export async function registerRoutes(
 
   app.patch(api.orders.updateStatus.path, requireStaff, async (req, res) => {
     try {
-      const { status } = api.orders.updateStatus.input.parse(req.body);
+      const { status, replacementAction, replacementReason } = api.orders.updateStatus.input.parse(req.body);
       const order = await storage.getOrder(req.params.id);
       if (!order) return res.status(404).json({ message: "Order not found" });
 
@@ -567,6 +567,79 @@ export async function registerRoutes(
         if (activeAssignment) {
           await storage.updateAssignment(activeAssignment.id, { status: "Cancelled" });
         }
+
+        const grinder = await storage.getGrinder(order.assignedGrinderId);
+        const staffUser = (req as any).user;
+        const staffName = staffUser?.username || staffUser?.discordUsername || "Staff";
+        const orderRef = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id;
+        const reasonText = replacementReason || "No reason provided";
+
+        if (replacementAction === "strike" && grinder) {
+          const newStrikes = grinder.strikes + 1;
+          const STRIKE_FINES: Record<number, number> = { 1: 25, 2: 50, 3: 100 };
+          const fineAmount = STRIKE_FINES[newStrikes] || 100;
+          const currentFine = parseFloat(grinder.outstandingFine?.toString() || "0");
+          const newOutstandingFine = (currentFine + fineAmount).toString();
+
+          await storage.updateGrinder(order.assignedGrinderId, {
+            strikes: newStrikes,
+            suspended: true,
+            outstandingFine: newOutstandingFine,
+          });
+
+          await storage.createStrikeLog({
+            id: `SL-${Date.now().toString(36)}`,
+            grinderId: order.assignedGrinderId,
+            action: "add",
+            reason: `Replacement on order ${orderRef}: ${reasonText}`,
+            delta: 1,
+            resultingStrikes: newStrikes,
+            fineAmount: fineAmount.toString(),
+            createdBy: staffName,
+          });
+
+          await createSystemNotification({
+            userId: grinder.discordUserId,
+            type: "replacement_strike",
+            title: `Strike Issued — Order ${orderRef}`,
+            body: `You have been removed from order ${orderRef} and received Strike ${newStrikes} with a $${fineAmount} fine. Reason: ${reasonText}`,
+            severity: "error",
+            linkUrl: "/my-orders",
+          });
+        } else if (replacementAction === "warning" && grinder) {
+          await createSystemNotification({
+            userId: grinder.discordUserId,
+            type: "replacement_warning",
+            title: `Warning — Removed from Order ${orderRef}`,
+            body: `You have been removed from order ${orderRef} with a formal warning. Further issues may result in a strike. Reason: ${reasonText}`,
+            severity: "warning",
+            linkUrl: "/my-orders",
+          });
+        } else if (grinder) {
+          await createSystemNotification({
+            userId: grinder.discordUserId,
+            type: "replacement_no_penalty",
+            title: `Removed from Order ${orderRef}`,
+            body: `You have been removed from order ${orderRef} with no penalties. Reason: ${reasonText}`,
+            severity: "info",
+            linkUrl: "/my-orders",
+          });
+        }
+
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "order",
+          entityId: order.id,
+          action: "need_replacement",
+          actor: staffName,
+          details: JSON.stringify({
+            previousGrinderId: order.assignedGrinderId,
+            previousGrinderName: grinder?.name || "Unknown",
+            replacementAction: replacementAction || "no_penalty",
+            reason: reasonText,
+          }),
+        });
+
         await recalcGrinderStats(order.assignedGrinderId);
       }
 

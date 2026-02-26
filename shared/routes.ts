@@ -63,7 +63,11 @@ export const api = {
     updateStatus: {
       method: 'PATCH' as const,
       path: '/api/orders/:id/status' as const,
-      input: z.object({ status: z.string() }),
+      input: z.object({
+        status: z.string(),
+        replacementAction: z.enum(["strike", "warning", "no_penalty"]).optional(),
+        replacementReason: z.string().optional(),
+      }),
     },
     updatePrice: {
       method: 'PATCH' as const,
