@@ -444,6 +444,22 @@ export default function Orders() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
         </div>
+        {(() => {
+          const needsPrice = (orders || []).filter((o: Order) =>
+            (!o.customerPrice || Number(o.customerPrice) <= 0) &&
+            (o.status === "Assigned" || o.status === "In Progress" || o.status === "Completed")
+          );
+          if (needsPrice.length === 0) return null;
+          return (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400" data-testid="banner-orders-need-price">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-medium">
+                {needsPrice.length} assigned order{needsPrice.length > 1 ? "s" : ""} missing price — margins cannot be calculated.
+                Set price to proceed.
+              </span>
+            </div>
+          );
+        })()}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -759,6 +775,21 @@ export default function Orders() {
                         >
                           <X className="w-3.5 h-3.5" />
                         </Button>
+                      </div>
+                    ) : !order.customerPrice || Number(order.customerPrice) <= 0 ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 gap-1 text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 hover:text-amber-300 animate-pulse"
+                          onClick={() => { setEditingPriceId(order.id); setEditPriceValue(""); }}
+                          data-testid={`button-set-price-${order.id}`}
+                        >
+                          <AlertTriangle className="w-3 h-3" /> Set Price Now
+                        </Button>
+                        {(order.status === "Assigned" || order.status === "In Progress" || order.status === "Completed") && (
+                          <span className="text-[10px] text-amber-400/70">Required for margin</span>
+                        )}
                       </div>
                     ) : (
                       <div

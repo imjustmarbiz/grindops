@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2 } from "lucide-react";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2, AlertTriangle } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
@@ -46,6 +46,9 @@ export default function Bids() {
 
   const [ticketDialog, setTicketDialog] = useState<{ orderId: string; orderLabel: string } | null>(null);
   const [ticketChannelId, setTicketChannelId] = useState("");
+
+  const [pricePrompt, setPricePrompt] = useState<{ bidId: string; orderId: string; orderLabel: string; isOverride?: boolean } | null>(null);
+  const [promptPrice, setPromptPrice] = useState("");
 
   const openEditDialog = (bid: Bid) => {
     setEditForm({
@@ -368,19 +371,30 @@ export default function Bids() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">${bid.bidAmount}</TableCell>
-                  <TableCell className="text-right text-muted-foreground whitespace-nowrap">{order ? `$${order.customerPrice}` : "-"}</TableCell>
+                  <TableCell className="text-right text-muted-foreground whitespace-nowrap">
+                    {order && (!order.customerPrice || Number(order.customerPrice) <= 0) ? (
+                      <Link href="/orders">
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-400 bg-amber-500/15 border border-amber-500/30 rounded px-1.5 py-0.5 hover:bg-amber-500/25 cursor-pointer" data-testid={`link-set-price-bid-${bid.id}`}>
+                          <AlertTriangle className="w-3 h-3" /> Set Price
+                        </span>
+                      </Link>
+                    ) : order ? `$${order.customerPrice}` : "-"}
+                  </TableCell>
                   <TableCell className="text-right">
                     {(() => {
                       const orderPrice = order?.customerPrice ? parseFloat(order.customerPrice) : 0;
                       const bidAmt = bid.bidAmount ? parseFloat(bid.bidAmount) : 0;
-                      const liveMargin = orderPrice > 0 ? orderPrice - bidAmt : parseFloat(bid.margin || "0");
-                      const liveMarginPct = orderPrice > 0 ? ((liveMargin / orderPrice) * 100).toFixed(1) : bid.marginPct || "0";
-                      return liveMargin !== 0 || bid.margin ? (
+                      if (orderPrice <= 0) {
+                        return <span className="text-amber-400/70 text-xs whitespace-nowrap">Needs price</span>;
+                      }
+                      const liveMargin = orderPrice - bidAmt;
+                      const liveMarginPct = ((liveMargin / orderPrice) * 100).toFixed(1);
+                      return (
                         <span className={`font-medium whitespace-nowrap ${liveMargin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                           ${liveMargin.toFixed(2)}
                           <span className="text-xs text-muted-foreground ml-1">({liveMarginPct}%)</span>
                         </span>
-                      ) : <span className="text-muted-foreground">-</span>;
+                      );
                     })()}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
@@ -445,7 +459,16 @@ export default function Bids() {
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400 hover:bg-emerald-500/10"
                             data-testid={`button-accept-bid-${bid.id}`}
                             disabled={bidStatusMutation.isPending}
-                            onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" })}>
+                            onClick={() => {
+                              const bidOrder = (orders || []).find((o: Order) => o.id === bid.orderId);
+                              if (bidOrder && (!bidOrder.customerPrice || Number(bidOrder.customerPrice) <= 0)) {
+                                const label = bidOrder.mgtOrderNumber ? `#${bidOrder.mgtOrderNumber}` : bid.orderId;
+                                setPricePrompt({ bidId: bid.id, orderId: bid.orderId, orderLabel: label });
+                                setPromptPrice("");
+                              } else {
+                                bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" });
+                              }
+                            }}>
                             <CheckCircle className="w-3.5 h-3.5" />
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-red-400 hover:bg-red-500/10"
@@ -464,7 +487,16 @@ export default function Bids() {
                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-400 hover:bg-amber-500/10"
                                   data-testid={`button-override-accept-${bid.id}`}
                                   disabled={bidOverrideMutation.isPending}
-                                  onClick={() => bidOverrideMutation.mutate({ bidId: bid.id, status: "Accepted" })}>
+                                  onClick={() => {
+                                    const bidOrder = (orders || []).find((o: Order) => o.id === bid.orderId);
+                                    if (bidOrder && (!bidOrder.customerPrice || Number(bidOrder.customerPrice) <= 0)) {
+                                      const label = bidOrder.mgtOrderNumber ? `#${bidOrder.mgtOrderNumber}` : bid.orderId;
+                                      setPricePrompt({ bidId: bid.id, orderId: bid.orderId, orderLabel: label, isOverride: true });
+                                      setPromptPrice("");
+                                    } else {
+                                      bidOverrideMutation.mutate({ bidId: bid.id, status: "Accepted" });
+                                    }
+                                  }}>
                                   <Shield className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
@@ -736,6 +768,82 @@ export default function Bids() {
             >
               {createBidMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Create Bid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pricePrompt} onOpenChange={(open) => { if (!open) setPricePrompt(null); }}>
+        <DialogContent className="max-w-md" data-testid="dialog-set-price-prompt">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400">
+              <AlertTriangle className="w-5 h-5" />
+              Set Order Price to Proceed
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Order <span className="font-semibold text-foreground">{pricePrompt?.orderLabel}</span> does not have a price set. A price is required so that margin and profit calculations are processed correctly.
+            </p>
+            <div className="space-y-2">
+              <Label>Order Price ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Enter order price..."
+                value={promptPrice}
+                onChange={(e) => setPromptPrice(e.target.value)}
+                className="bg-background/50 border-white/10"
+                data-testid="input-price-prompt"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && promptPrice && Number(promptPrice) > 0 && pricePrompt) {
+                    apiRequest("PATCH", `/api/orders/${pricePrompt.orderId}/price`, { customerPrice: parseFloat(promptPrice).toFixed(2) })
+                      .then(() => {
+                        queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+                        if (pricePrompt.isOverride) {
+                          bidOverrideMutation.mutate({ bidId: pricePrompt.bidId, status: "Accepted" });
+                        } else {
+                          bidStatusMutation.mutate({ bidId: pricePrompt.bidId, status: "Accepted" });
+                        }
+                        setPricePrompt(null);
+                        toast({ title: "Price set", description: "Order price updated and bid accepted." });
+                      }).catch(() => {
+                        toast({ title: "Failed to set price", variant: "destructive" });
+                      });
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPricePrompt(null)} className="border-white/[0.08]" data-testid="button-cancel-price-prompt">
+              Cancel
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white gap-2"
+              disabled={!promptPrice || Number(promptPrice) <= 0}
+              onClick={async () => {
+                if (!pricePrompt || !promptPrice || Number(promptPrice) <= 0) return;
+                try {
+                  await apiRequest("PATCH", `/api/orders/${pricePrompt.orderId}/price`, { customerPrice: parseFloat(promptPrice).toFixed(2) });
+                  await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+                  if (pricePrompt.isOverride) {
+                    bidOverrideMutation.mutate({ bidId: pricePrompt.bidId, status: "Accepted" });
+                  } else {
+                    bidStatusMutation.mutate({ bidId: pricePrompt.bidId, status: "Accepted" });
+                  }
+                  setPricePrompt(null);
+                  toast({ title: "Price set", description: "Order price updated and bid accepted." });
+                } catch {
+                  toast({ title: "Failed to set price", variant: "destructive" });
+                }
+              }}
+              data-testid="button-confirm-price-accept"
+            >
+              <DollarSign className="w-4 h-4" />
+              Set Price & Accept Bid
             </Button>
           </DialogFooter>
         </DialogContent>

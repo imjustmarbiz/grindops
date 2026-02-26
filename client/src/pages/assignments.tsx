@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { Link } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -219,7 +220,15 @@ export default function Assignments() {
                       </div>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">{displayPrice > 0 ? formatCurrency(displayPrice) : "-"}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {displayPrice > 0 ? formatCurrency(displayPrice) : (
+                      <Link href="/orders">
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-400 bg-amber-500/15 border border-amber-500/30 rounded px-1.5 py-0.5 hover:bg-amber-500/25 cursor-pointer whitespace-nowrap" data-testid={`link-set-price-assignment-${a.id}`}>
+                          <AlertTriangle className="w-3 h-3" /> Set Price
+                        </span>
+                      </Link>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     {a.wasReassigned ? (
                       <Tooltip>
