@@ -148,7 +148,7 @@ export default function GrinderOrderClaims() {
         <div className="flex items-center gap-3">
           <Wrench className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-grind-repair-title">Order Repair</h2>
+            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-grind-repair-title">Orders Repair</h2>
             <p className="text-sm text-muted-foreground">Fix orders, claim missing work, or add completed orders to your profile</p>
           </div>
         </div>

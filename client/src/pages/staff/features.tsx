@@ -70,7 +70,7 @@ const features = [
   },
   {
     icon: LinkIcon,
-    title: "Order Repair",
+    title: "Orders Repair",
     description: "Review and approve grinder repair requests: fix existing orders, claim missing in-progress orders, or add completed orders to their profiles.",
     url: "/order-claims",
   },

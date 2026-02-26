@@ -51,6 +51,15 @@ const roleStyle = (r: string) =>
   r === "PS5 Grinder" ? "border-blue-600/30 text-blue-400 bg-blue-600/10" :
   "border-purple-500/30 text-purple-400 bg-purple-500/10";
 
+const rowBgColor = (role: string) =>
+  role === "Elite Grinder" ? "bg-cyan-500/[0.04] hover:bg-cyan-500/[0.08] border-l-2 border-l-cyan-500/40" :
+  role === "VC Grinder" ? "bg-yellow-500/[0.04] hover:bg-yellow-500/[0.08] border-l-2 border-l-yellow-500/40" :
+  role === "Event Grinder" ? "bg-blue-500/[0.04] hover:bg-blue-500/[0.08] border-l-2 border-l-blue-500/40" :
+  role === "International Grinder" ? "bg-pink-500/[0.04] hover:bg-pink-500/[0.08] border-l-2 border-l-pink-500/40" :
+  role === "Xbox Grinder" ? "bg-green-500/[0.04] hover:bg-green-500/[0.08] border-l-2 border-l-green-500/40" :
+  role === "PS5 Grinder" ? "bg-blue-600/[0.04] hover:bg-blue-600/[0.08] border-l-2 border-l-blue-600/40" :
+  "bg-purple-500/[0.04] hover:bg-purple-500/[0.08] border-l-2 border-l-purple-500/40";
+
 const tierStyle = (t: string) =>
   t === "Diamond" ? "border-cyan-500/30 text-cyan-300 bg-cyan-500/10" :
   t === "Elite" ? "border-amber-500/30 text-amber-300 bg-amber-500/10" :
@@ -860,7 +869,7 @@ export default function Grinders() {
             const lastInfo = daysAgo(g.lastAssigned);
             const lastColor = lastInfo.days === null ? "text-muted-foreground" : lastInfo.days <= 3 ? "text-green-400" : lastInfo.days <= 7 ? "text-yellow-400" : "text-red-400";
             return (
-              <Card key={g.id} className="border-0 bg-white/[0.03] active:bg-white/[0.06] transition-colors cursor-pointer" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+              <Card key={g.id} className={`border-0 ${rowBgColor(g.displayRole || g.category || "Grinder")} active:brightness-125 transition-colors cursor-pointer`} onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -932,7 +941,7 @@ export default function Grinders() {
               {sortedItems.map(g => {
                 const winRateNum = g.winRate ? Number(g.winRate) : null;
                 return (
-                  <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+                  <TableRow key={g.id} className={`${rowBgColor(g.displayRole || g.category || "Grinder")} cursor-pointer border-white/[0.04] transition-colors`} onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {categoryIcon(g.displayRole || g.category || "Grinder")}

@@ -5009,7 +5009,7 @@ export async function registerRoutes(
       const orderLabel = orderId ? orderId : `ticket "${(ticketName || "").trim()}"`;
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        title: "New Order Repair Request",
+        title: "New Orders Repair Request",
         body: `${typeLabels[repairType]}: A grinder has submitted a repair request for ${orderLabel}.`,
         type: "info",
         roleScope: "staff",

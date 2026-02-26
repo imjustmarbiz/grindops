@@ -195,7 +195,7 @@ export default function StaffOrderClaims() {
           <Wrench className="w-7 h-7 text-amber-400" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-grind-repair-title">
-              Order Repair
+              Orders Repair
             </h1>
             <p className="text-sm text-muted-foreground">Review and approve grinder repair requests</p>
           </div>
