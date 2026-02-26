@@ -61,55 +61,6 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(httpServer, app);
-  
-  // Seed the database
-  try {
-    const { seedDatabase } = await import("./routes");
-    await seedDatabase();
-    log("Database seeded successfully");
-  } catch (error) {
-    console.error("Failed to seed database:", error);
-  }
-
-  // Start Discord bot
-  try {
-    const { startDiscordBot } = await import("./discord/bot");
-    await startDiscordBot();
-  } catch (error) {
-    console.error("Failed to start Discord bot:", error);
-  }
-
-  // Start bidding timer scheduler
-  try {
-    const { startBiddingTimerScheduler } = await import("./discord/biddingTimer");
-    startBiddingTimerScheduler();
-  } catch (error) {
-    console.error("Failed to start bidding timer scheduler:", error);
-  }
-
-  // Start daily update deadline checker
-  try {
-    const { startDailyUpdateChecker } = await import("./dailyUpdateChecker");
-    startDailyUpdateChecker();
-  } catch (error) {
-    console.error("Failed to start daily update checker:", error);
-  }
-
-  // Start Twitch stream checker
-  try {
-    const { startTwitchStreamChecker } = await import("./twitchStreamChecker");
-    startTwitchStreamChecker();
-  } catch (error) {
-    console.error("Failed to start Twitch stream checker:", error);
-  }
-
-  // Repair accepted bids that are missing assignments
-  try {
-    const { repairMissingAssignments } = await import("./repairSync");
-    await repairMissingAssignments();
-  } catch (error) {
-    console.error("Failed to repair missing assignments:", error);
-  }
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -124,9 +75,6 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -134,10 +82,6 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     {
@@ -147,6 +91,52 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      initializeBackgroundServices();
     },
   );
 })();
+
+async function initializeBackgroundServices() {
+  try {
+    const { seedDatabase } = await import("./routes");
+    await seedDatabase();
+    log("Database seeded successfully");
+  } catch (error) {
+    console.error("Failed to seed database:", error);
+  }
+
+  try {
+    const { startBiddingTimerScheduler } = await import("./discord/biddingTimer");
+    startBiddingTimerScheduler();
+  } catch (error) {
+    console.error("Failed to start bidding timer scheduler:", error);
+  }
+
+  try {
+    const { startDailyUpdateChecker } = await import("./dailyUpdateChecker");
+    startDailyUpdateChecker();
+  } catch (error) {
+    console.error("Failed to start daily update checker:", error);
+  }
+
+  try {
+    const { startTwitchStreamChecker } = await import("./twitchStreamChecker");
+    startTwitchStreamChecker();
+  } catch (error) {
+    console.error("Failed to start Twitch stream checker:", error);
+  }
+
+  try {
+    const { startDiscordBot } = await import("./discord/bot");
+    await startDiscordBot();
+  } catch (error) {
+    console.error("Failed to start Discord bot:", error);
+  }
+
+  try {
+    const { repairMissingAssignments } = await import("./repairSync");
+    await repairMissingAssignments();
+  } catch (error) {
+    console.error("Failed to repair missing assignments:", error);
+  }
+}
