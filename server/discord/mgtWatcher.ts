@@ -647,23 +647,11 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
 
   const knownOrderMessageIds = new Set(allOrders.map((o: any) => o.discordMessageId).filter(Boolean));
   const knownBidMessageIds = new Set(allBids.map((b: any) => b.discordMessageId).filter(Boolean));
+  const knownMgtOrderNumbers = new Set(allOrders.map((o: any) => o.mgtOrderNumber).filter(Boolean));
 
-  let lastTrackedTime = 0;
-  for (const o of allOrders) {
-    if (o.mgtOrderNumber && o.createdAt) {
-      const t = new Date(o.createdAt).getTime();
-      if (t > lastTrackedTime) lastTrackedTime = t;
-    }
-  }
-  for (const b of allBids) {
-    if (b.createdAt) {
-      const t = new Date(b.createdAt).getTime();
-      if (t > lastTrackedTime) lastTrackedTime = t;
-    }
-  }
-
-  const cutoff = lastTrackedTime > 0 ? new Date(lastTrackedTime) : null;
-  console.log(`[mgt-watcher] Backfill cutoff: ${cutoff ? cutoff.toISOString() : "none (first run)"} — only importing messages after this time`);
+  const BACKFILL_WINDOW_MS = 30 * 60 * 1000;
+  const cutoff = new Date(Date.now() - BACKFILL_WINDOW_MS);
+  console.log(`[mgt-watcher] Backfill cutoff: ${cutoff.toISOString()} — only importing messages from last 30 minutes`);
 
   try {
     const bidWarChannel = await discordClient.channels.fetch(BID_WAR_CHANNEL_ID).catch(() => null);
@@ -672,10 +660,16 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
       const mgtMessages = messages
         .filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0)
         .filter((m: Message) => !knownOrderMessageIds.has(m.id))
-        .filter((m: Message) => !cutoff || m.createdTimestamp > cutoff.getTime());
+        .filter((m: Message) => m.createdTimestamp > cutoff.getTime());
 
       for (const [, msg] of mgtMessages) {
         try {
+          const embed = msg.embeds[0];
+          const titleAndDesc = (embed?.title || "") + " " + (embed?.description || "");
+          const orderNumMatch = titleAndDesc.match(/#(\d+)/);
+          if (orderNumMatch && knownMgtOrderNumbers.has(parseInt(orderNumMatch[1], 10))) {
+            continue;
+          }
           await handleNewOrderMessage(msg);
           orderCount++;
         } catch (e) {
@@ -694,7 +688,7 @@ export async function backfillMissedMessages(discordClient: Client): Promise<voi
       const mgtMessages = messages
         .filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0)
         .filter((m: Message) => !knownBidMessageIds.has(m.id))
-        .filter((m: Message) => !cutoff || m.createdTimestamp > cutoff.getTime());
+        .filter((m: Message) => m.createdTimestamp > cutoff.getTime());
 
       for (const [, msg] of mgtMessages) {
         try {

@@ -341,13 +341,14 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getOrderByMgtNumber(mgtOrderNumber);
     if (existing) {
       const updateData: Record<string, any> = {};
-      if (data.customerPrice) updateData.customerPrice = data.customerPrice;
-      if (data.platform) updateData.platform = data.platform;
-      if (data.gamertag) updateData.gamertag = data.gamertag;
-      if (data.status) updateData.status = data.status;
-      if (data.notes) updateData.notes = data.notes;
+      if (data.customerPrice && data.customerPrice !== "0" && (!existing.customerPrice || existing.customerPrice === "0")) updateData.customerPrice = data.customerPrice;
+      if (data.platform && !existing.platform) updateData.platform = data.platform;
+      if (data.gamertag && !existing.gamertag) updateData.gamertag = data.gamertag;
+      if (data.notes && !existing.notes) updateData.notes = data.notes;
       if (data.discordMessageId) updateData.discordMessageId = data.discordMessageId;
-      if (data.serviceId) updateData.serviceId = data.serviceId;
+      if (data.discordBidLink && !existing.discordBidLink) updateData.discordBidLink = data.discordBidLink;
+      if (data.orderBrief && !existing.orderBrief) updateData.orderBrief = data.orderBrief;
+      if (data.serviceId && existing.serviceId === "UNKNOWN") updateData.serviceId = data.serviceId;
       if (data.isEmergency !== undefined) updateData.isEmergency = data.isEmergency;
 
       if (Object.keys(updateData).length > 0) {
