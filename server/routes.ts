@@ -164,6 +164,22 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/services/:id", requireOwner, async (req, res) => {
+    try {
+      const { name, group, defaultComplexity, slaDays } = req.body;
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (group !== undefined) updateData.group = group;
+      if (defaultComplexity !== undefined) updateData.defaultComplexity = defaultComplexity;
+      if (slaDays !== undefined) updateData.slaDays = slaDays;
+      const updated = await storage.updateService(req.params.id, updateData);
+      if (!updated) return res.status(404).json({ error: "Service not found" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/services/:id/toggle", requireOwner, async (req, res) => {
     try {
       const allServices = await storage.getServices();

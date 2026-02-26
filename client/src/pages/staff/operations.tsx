@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
   CheckCircle, X, CreditCard, Package, Zap, AlertTriangle, Link2, ExternalLink, Unlink, Wrench,
-  DatabaseZap, Settings,
+  DatabaseZap, Settings, Pencil, Save,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -288,10 +288,25 @@ function ServiceManagement({ services }: { services: Service[] }) {
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editGroup, setEditGroup] = useState("");
+  const [editComplexity, setEditComplexity] = useState("1");
+  const [editSla, setEditSla] = useState("5");
   const [newName, setNewName] = useState("");
   const [newGroup, setNewGroup] = useState("");
   const [newComplexity, setNewComplexity] = useState("1");
   const [newSla, setNewSla] = useState("5");
+
+  const startEdit = (s: Service) => {
+    setEditId(s.id);
+    setEditName(s.name);
+    setEditGroup(s.group);
+    setEditComplexity(String(s.defaultComplexity));
+    setEditSla(String(s.slaDays));
+  };
+
+  const cancelEdit = () => setEditId(null);
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -305,6 +320,21 @@ function ServiceManagement({ services }: { services: Service[] }) {
       toast({ title: "Service added" });
       setAddOpen(false);
       setNewName(""); setNewGroup(""); setNewComplexity("1"); setNewSla("5");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PATCH", `/api/services/${id}`, {
+        name: editName, group: editGroup,
+        defaultComplexity: parseInt(editComplexity), slaDays: parseInt(editSla),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      toast({ title: "Service updated" });
+      setEditId(null);
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -388,7 +418,48 @@ function ServiceManagement({ services }: { services: Service[] }) {
       </CardHeader>
       <CardContent className="relative">
         <div className="space-y-2">
-          {services.map(s => (
+          {services.map(s => editId === s.id ? (
+            <div key={s.id} className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.04] space-y-3" data-testid={`row-service-edit-${s.id}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">Name</label>
+                  <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-8 text-sm" data-testid={`input-edit-name-${s.id}`} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">Group</label>
+                  <Input value={editGroup} onChange={e => setEditGroup(e.target.value)} className="h-8 text-sm" data-testid={`input-edit-group-${s.id}`} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">Complexity</label>
+                  <Select value={editComplexity} onValueChange={setEditComplexity}>
+                    <SelectTrigger className="h-8 text-sm" data-testid={`select-edit-complexity-${s.id}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">SLA Days</label>
+                  <Select value={editSla} onValueChange={setEditSla}>
+                    <SelectTrigger className="h-8 text-sm" data-testid={`select-edit-sla-${s.id}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1,2,3,4,5,6,7,10,14].map(n => <SelectItem key={n} value={String(n)}>{n} days</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="ghost" className="text-xs h-7" onClick={cancelEdit} data-testid={`button-cancel-edit-${s.id}`}>
+                  <X className="w-3.5 h-3.5 mr-1" /> Cancel
+                </Button>
+                <Button size="sm" className="text-xs h-7 bg-emerald-600 hover:bg-emerald-500" onClick={() => updateMutation.mutate(s.id)} disabled={!editName || !editGroup || updateMutation.isPending} data-testid={`button-save-edit-${s.id}`}>
+                  {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />} Save
+                </Button>
+              </div>
+            </div>
+          ) : (
             <div key={s.id} className={`flex items-center justify-between py-2 px-3 rounded-lg border border-border/20 ${s.isActive ? "bg-white/[0.02]" : "bg-white/[0.01] opacity-50"}`} data-testid={`row-service-${s.id}`}>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className={`font-medium text-sm ${!s.isActive ? "line-through text-muted-foreground" : ""}`}>{s.name}</span>
@@ -396,7 +467,10 @@ function ServiceManagement({ services }: { services: Service[] }) {
                 <span className="text-[10px] text-muted-foreground">Complexity: {s.defaultComplexity} | SLA: {s.slaDays}d</span>
                 {!s.isActive && <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30">Inactive</Badge>}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-400" onClick={() => startEdit(s)} data-testid={`button-edit-service-${s.id}`}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
                 <Switch
                   checked={s.isActive}
                   onCheckedChange={() => toggleMutation.mutate(s.id)}
@@ -1139,10 +1213,10 @@ export default function StaffOperations() {
       {isOwner && (
         <>
           <FadeInUp>
-            <DeletionRequestsPanel />
+            <ServiceManagement services={allServices} />
           </FadeInUp>
           <FadeInUp>
-            <ServiceManagement services={allServices} />
+            <DeletionRequestsPanel />
           </FadeInUp>
           <FadeInUp>
             <ClearDataPanel />
