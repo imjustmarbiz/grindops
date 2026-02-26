@@ -206,6 +206,7 @@ export interface IStorage {
   getWallet(id: string): Promise<BusinessWallet | undefined>;
   createWallet(data: InsertBusinessWallet): Promise<BusinessWallet>;
   updateWallet(id: string, data: Partial<BusinessWallet>): Promise<BusinessWallet | undefined>;
+  deleteWallet(id: string, preserveHistory: boolean): Promise<void>;
 
   getWalletTransactions(filters?: { walletId?: string; category?: string; type?: string; startDate?: Date; endDate?: Date; orderId?: string }): Promise<WalletTransaction[]>;
   createWalletTransaction(data: InsertWalletTransaction): Promise<WalletTransaction>;
@@ -1517,6 +1518,16 @@ export class DatabaseStorage implements IStorage {
   async updateWallet(id: string, data: Partial<BusinessWallet>): Promise<BusinessWallet | undefined> {
     const [updated] = await db.update(businessWallets).set(data).where(eq(businessWallets.id, id)).returning();
     return updated;
+  }
+
+  async deleteWallet(id: string, preserveHistory: boolean): Promise<void> {
+    if (!preserveHistory) {
+      await db.delete(walletTransactions).where(eq(walletTransactions.walletId, id));
+      await db.delete(walletTransfers).where(or(eq(walletTransfers.fromWalletId, id), eq(walletTransfers.toWalletId, id)));
+      await db.delete(orderPaymentLinks).where(eq(orderPaymentLinks.receivedByWalletId, id));
+      await db.delete(businessPayouts).where(eq(businessPayouts.walletId, id));
+    }
+    await db.delete(businessWallets).where(eq(businessWallets.id, id));
   }
 
   async getWalletTransactions(filters?: { walletId?: string; category?: string; type?: string; startDate?: Date; endDate?: Date; orderId?: string }): Promise<WalletTransaction[]> {
