@@ -173,8 +173,8 @@ function AppSidebar() {
                   className={`w-fit text-[10px] px-1.5 py-0 ${
                     isOwner ? "bg-red-500/20 text-red-400 border-red-500/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
-                    isElite ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" :
-                    "bg-muted text-muted-foreground"
+                    isElite ? "bg-cyan-950 text-cyan-300 border-cyan-500/40" :
+                    "bg-[#1a1a3e] text-[#8b9aff] border-[#5865F2]/40"
                   }`}
                   data-testid="text-user-role"
                 >
