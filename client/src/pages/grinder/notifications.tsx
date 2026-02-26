@@ -1,14 +1,29 @@
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Eye, ExternalLink, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bell, Eye, ExternalLink, Loader2, CheckCheck } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { useLocation } from "wouter";
+
+function inferLinkUrl(title: string, body: string): string | null {
+  const text = `${title} ${body}`.toLowerCase();
+  if (text.includes("order") && (text.includes("available") || text.includes("open") || text.includes("bidding"))) return "/grinder/orders";
+  if (text.includes("bid") && (text.includes("accepted") || text.includes("won"))) return "/grinder/assignments";
+  if (text.includes("bid")) return "/grinder/bids";
+  if (text.includes("assignment") || text.includes("assigned")) return "/grinder/assignments";
+  if (text.includes("payout") || text.includes("payment")) return "/grinder/payouts";
+  if (text.includes("strike") || text.includes("warning")) return "/grinder/strikes";
+  if (text.includes("review")) return "/grinder/reviews";
+  if (text.includes("scorecard") || text.includes("performance")) return "/grinder/scorecard";
+  if (text.includes("event")) return "/grinder/events";
+  return null;
+}
 
 export default function GrinderNotifications() {
   const {
     alerts, systemNotifications, unreadAlertCount, isLoading, isElite,
-    markAlertReadMutation, markNotifReadMutation,
+    markAlertReadMutation, markNotifReadMutation, toast, invalidate,
   } = useGrinderData();
   const [, navigate] = useLocation();
 
@@ -28,7 +43,7 @@ export default function GrinderNotifications() {
       body: a.message,
       severity: a.severity || "info",
       isRead: a.isRead,
-      linkUrl: null as string | null,
+      linkUrl: (a.linkUrl as string | null) || inferLinkUrl(a.title || "", a.message || ""),
       createdAt: a.createdAt,
     })),
     ...systemNotifications.map((n: any) => ({
@@ -38,10 +53,12 @@ export default function GrinderNotifications() {
       body: n.body,
       severity: n.severity || "info",
       isRead: !!n.isRead,
-      linkUrl: n.linkUrl as string | null,
+      linkUrl: (n.linkUrl as string | null) || inferLinkUrl(n.title || "", n.body || ""),
       createdAt: n.createdAt,
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const unreadItems = allItems.filter(i => !i.isRead);
 
   const handleClick = (item: typeof allItems[0]) => {
     if (!item.isRead) {
@@ -56,6 +73,21 @@ export default function GrinderNotifications() {
     }
   };
 
+  const handleMarkAllRead = () => {
+    let count = 0;
+    for (const item of unreadItems) {
+      if (item.kind === "alert") {
+        markAlertReadMutation.mutate(item.id);
+      } else {
+        markNotifReadMutation.mutate(item.id);
+      }
+      count++;
+    }
+    if (count > 0) {
+      toast({ title: "All caught up", description: `Marked ${count} notification${count > 1 ? "s" : ""} as read.` });
+    }
+  };
+
   const severityColors: Record<string, string> = {
     info: "text-blue-400 bg-blue-500/[0.06] border-blue-500/20",
     warning: "text-yellow-400 bg-yellow-500/[0.06] border-yellow-500/20",
@@ -67,14 +99,28 @@ export default function GrinderNotifications() {
     <AnimatedPage>
       <div className="space-y-6">
         <FadeInUp delay={0}>
-          <div className="flex items-center gap-3">
-            <Bell className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Notifications</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Alerts and messages from staff
-              </p>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Bell className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Notifications</h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Alerts and messages from staff
+                </p>
+              </div>
             </div>
+            {unreadItems.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={handleMarkAllRead}
+                data-testid="button-mark-all-read"
+              >
+                <CheckCheck className="w-3.5 h-3.5" />
+                Mark All Read
+              </Button>
+            )}
           </div>
         </FadeInUp>
 
@@ -123,7 +169,12 @@ export default function GrinderNotifications() {
                             {item.linkUrl && <ExternalLink className="w-3 h-3 text-muted-foreground/60" />}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">{item.body}</p>
-                          <p className="text-xs text-muted-foreground/60 mt-1.5">{new Date(item.createdAt).toLocaleString()}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <p className="text-xs text-muted-foreground/60">{new Date(item.createdAt).toLocaleString()}</p>
+                            {item.linkUrl && !item.isRead && (
+                              <span className="text-xs text-blue-400/60">Tap to view</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
