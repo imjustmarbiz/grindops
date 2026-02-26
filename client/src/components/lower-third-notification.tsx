@@ -154,7 +154,7 @@ export function LowerThirdNotifications() {
   const VolumeIcon = !soundEnabled ? VolumeX : volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
+    <div className="fixed bottom-14 sm:bottom-14 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
       <div className="pointer-events-auto self-end mb-1 flex items-center gap-1.5 relative" ref={soundInfoRef}>
         <div className="relative hidden md:block">
           <button

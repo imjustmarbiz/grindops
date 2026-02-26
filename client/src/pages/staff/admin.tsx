@@ -1693,16 +1693,16 @@ export default function StaffAdmin() {
             )}
 
             <FadeInUp>
-              <Card className="border-0 bg-gradient-to-br from-orange-500/[0.08] via-background to-orange-900/[0.04] overflow-hidden relative" data-testid="card-site-alerts">
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-orange-500/[0.04] -translate-y-12 translate-x-12" />
+              <Card className="border-0 bg-gradient-to-br from-primary/[0.08] via-background to-primary/[0.04] overflow-hidden relative" data-testid="card-site-alerts">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-primary/[0.04] -translate-y-12 translate-x-12" />
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                      <Megaphone className="w-4 h-4 text-orange-400" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                      <Megaphone className="w-4 h-4 text-primary" />
                     </div>
                     Site Alerts
                     {allSiteAlerts.filter((a: any) => a.enabled).length > 0 && (
-                      <Badge className="ml-auto text-xs bg-orange-500/15 text-orange-400 border border-orange-500/20">
+                      <Badge className="ml-auto text-xs bg-primary/15 text-primary border border-primary/20">
                         {allSiteAlerts.filter((a: any) => a.enabled).length} Active
                       </Badge>
                     )}
@@ -1734,7 +1734,7 @@ export default function StaffAdmin() {
                               onClick={() => { setAlertTarget(opt.value); if (opt.value !== "user") setAlertTargetUserId(""); }}
                               className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition-all ${
                                 isActive
-                                  ? "border-orange-500/40 bg-orange-500/10 text-orange-300"
+                                  ? "border-primary/40 bg-primary/10 text-primary"
                                   : "border-white/[0.06] bg-white/[0.02] text-muted-foreground hover:bg-white/[0.05]"
                               }`}
                               data-testid={`button-alert-target-${opt.value}`}
@@ -1764,7 +1764,7 @@ export default function StaffAdmin() {
                               onClick={() => { setAlertTargetUserId(u.id); setAlertUserSearch(u.name); }}
                               className={`w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-colors ${
                                 alertTargetUserId === u.id
-                                  ? "bg-orange-500/15 text-orange-300 border border-orange-500/20"
+                                  ? "bg-primary/15 text-primary border border-primary/20"
                                   : "hover:bg-white/[0.05] text-muted-foreground"
                               }`}
                               data-testid={`button-alert-user-${u.id}`}
@@ -1789,7 +1789,7 @@ export default function StaffAdmin() {
                         });
                       }}
                       disabled={!alertMessage.trim() || (alertTarget === "user" && !alertTargetUserId) || createAlertMutation.isPending}
-                      className="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/20"
+                      className="w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20"
                       data-testid="button-send-alert"
                     >
                       {createAlertMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
@@ -1805,7 +1805,7 @@ export default function StaffAdmin() {
                           key={alert.id}
                           className={`p-3 rounded-lg border flex items-start gap-3 ${
                             alert.enabled
-                              ? "border-orange-500/20 bg-orange-500/[0.05]"
+                              ? "border-primary/20 bg-primary/[0.05]"
                               : "border-white/[0.06] bg-white/[0.02] opacity-60"
                           }`}
                           data-testid={`alert-item-${alert.id}`}
@@ -1829,7 +1829,7 @@ export default function StaffAdmin() {
                               onClick={() => toggleAlertMutation.mutate({ id: alert.id, enabled: !alert.enabled })}
                               data-testid={`button-toggle-alert-${alert.id}`}
                             >
-                              {alert.enabled ? <Eye className="w-3.5 h-3.5 text-orange-400" /> : <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                              {alert.enabled ? <Eye className="w-3.5 h-3.5 text-primary" /> : <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />}
                             </Button>
                             <Button
                               variant="ghost"

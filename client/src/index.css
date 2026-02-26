@@ -201,21 +201,5 @@
   background: hsl(240 10% 36%);
 }
 
-@keyframes ticker {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
 
-.animate-ticker {
-  display: inline-block;
-  animation: ticker linear infinite;
-}
-
-.animate-ticker:hover {
-  animation-play-state: paused;
-}
 
