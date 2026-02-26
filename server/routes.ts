@@ -1635,7 +1635,7 @@ export async function registerRoutes(
         discordUsername: authUser.discordUsername || authUser.username || null,
         discordRoleId: hasElite ? GR.ELITE : null,
         category: hasElite ? "Elite Grinder" : rolesArr.find(r => r !== "Grinder") || "Grinder",
-        tier: hasElite ? "Elite" : "New",
+        tier: "New",
         roles: rolesArr,
         capacity: 3,
       });
@@ -1684,10 +1684,8 @@ export async function registerRoutes(
             discordRoleId: hasElite ? GRINDER_ROLES.ELITE : null,
           };
           if (hasElite) {
-            roleSync.tier = "Elite";
             if (!myGrinder.eliteSince) roleSync.eliteSince = new Date();
           } else if (wasElite && !hasElite) {
-            roleSync.tier = "New";
             roleSync.eliteSince = null;
           }
           await storage.updateGrinder(myGrinder.id, roleSync);
