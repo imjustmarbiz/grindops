@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX, CircleHelp, Play } from "lucide-react";
 import type { Notification } from "@shared/schema";
@@ -32,8 +33,22 @@ const severityIconColors: Record<string, string> = {
   danger: "text-red-400",
 };
 
+const notifTypeToRoute: Record<string, string> = {
+  new_order: "/grinder/orders",
+  bid_accepted: "/grinder/orders",
+  bid_rejected: "/grinder/orders",
+  order_assigned: "/grinder/orders",
+  order_update: "/grinder/orders",
+  payout_approved: "/grinder/payouts",
+  payout_rejected: "/grinder/payouts",
+  strike_issued: "/grinder/profile",
+  elite_approved: "/grinder/profile",
+  elite_rejected: "/grinder/profile",
+};
+
 export function LowerThirdNotifications() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const userId = (user as any)?.discordId || user?.id || "";
   const [visibleNotifs, setVisibleNotifs] = useState<Notification[]>([]);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
@@ -209,7 +224,14 @@ export function LowerThirdNotifications() {
               exit={{ opacity: 0, x: 80, scale: 0.9 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={`pointer-events-auto rounded-xl border ${severityColors[severity]} backdrop-blur-md p-3 pr-8 shadow-lg shadow-black/20 cursor-pointer`}
-              onClick={() => dismiss(notif.id)}
+              onClick={() => {
+                dismiss(notif.id);
+                const route = notif.linkUrl || notifTypeToRoute[notif.type];
+                if (route) {
+                  queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+                  setLocation(route);
+                }
+              }}
               data-testid={`notification-popup-${notif.id}`}
             >
               <button

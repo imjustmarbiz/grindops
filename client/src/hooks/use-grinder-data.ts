@@ -23,6 +23,7 @@ export function useGrinderData() {
 
   const { data: profile, isLoading } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
+    refetchInterval: 15000,
   });
 
   const { data: services } = useQuery<any[]>({
