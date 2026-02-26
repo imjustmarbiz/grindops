@@ -151,17 +151,24 @@ export default function GrinderBids() {
                       }`}>
                         {b.status === "Order Assigned" ? "Order Assigned" : isLost ? "Not Selected" : b.status}
                       </Badge>
-                      {b.status === "Pending" && !isLost && (
-                        <Button size="sm" variant="ghost" className="gap-1 text-xs" data-testid={`button-edit-bid-${b.id}`}
-                          onClick={() => {
-                            setEditBidDialog(b);
-                            setEditBidAmount(b.bidAmount || "");
-                            setEditTimeline(b.timeline || "");
-                            setEditCanStart(b.canStart || "");
-                          }}>
-                          <Edit3 className="w-3 h-3" /> Edit
-                        </Button>
-                      )}
+                      {b.status === "Pending" && !isLost && (() => {
+                        const biddingOpen = !b.biddingClosesAt || new Date(b.biddingClosesAt) > new Date();
+                        return biddingOpen ? (
+                          <Button size="sm" variant="ghost" className="gap-1 text-xs" data-testid={`button-edit-bid-${b.id}`}
+                            onClick={() => {
+                              setEditBidDialog(b);
+                              setEditBidAmount(b.bidAmount || "");
+                              setEditTimeline(b.timeline || "");
+                              setEditCanStart(b.canStart || "");
+                            }}>
+                            <Edit3 className="w-3 h-3" /> Edit
+                          </Button>
+                        ) : (
+                          <Badge className="bg-white/[0.06] text-white/40 border-0 text-[10px]" data-testid={`badge-bidding-closed-${b.id}`}>
+                            Bidding Closed
+                          </Badge>
+                        );
+                      })()}
                       {b.status === "Accepted" && (
                         <>
                           <Link href="/grinder/assignments">

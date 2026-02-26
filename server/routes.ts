@@ -1800,6 +1800,7 @@ export async function registerRoutes(
           canStart: b.canStart,
           discordMessageId: b.discordMessageId,
           hasTicket: !!(order?.discordTicketChannelId),
+          biddingClosesAt: order?.biddingClosesAt || null,
         };
       }),
       availableOrders,
@@ -2289,6 +2290,11 @@ export async function registerRoutes(
     }
     if (bid.status !== "Pending") {
       return res.status(400).json({ message: "Can only edit pending bids" });
+    }
+
+    const order = await storage.getOrder(bid.orderId);
+    if (order && order.biddingClosesAt && new Date(order.biddingClosesAt) <= new Date()) {
+      return res.status(400).json({ message: "Bidding window has closed. Contact staff to update your bid manually." });
     }
 
     const { bidAmount, estDeliveryDate, timeline, canStart } = req.body;

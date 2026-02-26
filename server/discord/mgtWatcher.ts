@@ -534,8 +534,6 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
 
     if (message.channel.id !== BID_PROPOSALS_CHANNEL_ID) return;
 
-    await handleProposalMessage(message);
-
     const embed = message.embeds[0];
     const footerText = embed.footer?.text || "";
     const description = embed.description || "";
@@ -552,10 +550,16 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
       if (pMatch) proposalId = parseInt(pMatch[1], 10);
     }
 
-    if (!proposalId) return;
+    if (!proposalId) {
+      await handleProposalMessage(message);
+      return;
+    }
 
     const existingBid = await storage.getBidByProposalId(proposalId);
-    if (!existingBid) return;
+    if (!existingBid) {
+      await handleProposalMessage(message);
+      return;
+    }
 
     let newStatus = existingBid.status;
     let acceptedBy: string | undefined;
@@ -569,6 +573,98 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
       newStatus = "Rejected";
     } else if (/\bCOUNTER(?:ED)?\b/i.test(statusLine)) {
       newStatus = "Countered";
+    }
+
+    if (existingBid.status === "Pending" || existingBid.status === "Countered") {
+      const order = await storage.getOrder(existingBid.orderId);
+      const biddingStillOpen = order && order.biddingClosesAt && new Date(order.biddingClosesAt) > new Date();
+
+      if (biddingStillOpen && newStatus === existingBid.status) {
+        let newBidAmount: number | null = null;
+        let newTimeline: string | null = null;
+        let newCanStart: string | null = null;
+        let newMargin: number | null = null;
+        let newMarginPct: number | null = null;
+
+        for (const field of embed.fields || []) {
+          const name = field.name.replace(/[^\w\s]/g, "").trim().toLowerCase();
+          const value = field.value.trim();
+
+          if (name.includes("bid amount") || name.includes("grinder bid")) {
+            newBidAmount = extractNumber(value);
+          } else if (name.includes("timeline")) {
+            newTimeline = value;
+          } else if (name.includes("can start")) {
+            newCanStart = value;
+          } else if (name.includes("margin")) {
+            const marginMatch = value.match(/\$?([\d,]+\.?\d*)\s*\((\d+)%?\)/);
+            if (marginMatch) {
+              newMargin = parseFloat(marginMatch[1].replace(/,/g, ""));
+              newMarginPct = parseFloat(marginMatch[2]);
+            } else {
+              newMargin = extractNumber(value);
+            }
+          }
+        }
+
+        const changes: Record<string, any> = {};
+        const changeDetails: Record<string, { old: any; new: any }> = {};
+
+        if (newBidAmount !== null && newBidAmount.toFixed(2) !== existingBid.bidAmount) {
+          changeDetails.bidAmount = { old: existingBid.bidAmount, new: newBidAmount.toFixed(2) };
+          changes.bidAmount = newBidAmount.toFixed(2);
+        }
+        if (newTimeline && newTimeline !== existingBid.timeline) {
+          changeDetails.timeline = { old: existingBid.timeline, new: newTimeline };
+          changes.timeline = newTimeline;
+        }
+        if (newCanStart && newCanStart !== existingBid.canStart) {
+          changeDetails.canStart = { old: existingBid.canStart, new: newCanStart };
+          changes.canStart = newCanStart;
+        }
+        if (newMargin !== null) {
+          changes.margin = newMargin.toFixed(2);
+        }
+        if (newMarginPct !== null) {
+          changes.marginPct = newMarginPct.toFixed(2);
+        }
+
+        if (newTimeline) {
+          const estDelivery = new Date();
+          const hoursMatch = newTimeline.match(/(\d+)\s*hours?/i);
+          const daysMatch = newTimeline.match(/(\d+)\s*days?/i);
+          if (hoursMatch) estDelivery.setHours(estDelivery.getHours() + parseInt(hoursMatch[1], 10));
+          else if (daysMatch) estDelivery.setDate(estDelivery.getDate() + parseInt(daysMatch[1], 10));
+          else estDelivery.setDate(estDelivery.getDate() + 1);
+          changes.estDeliveryDate = estDelivery;
+        }
+
+        if (Object.keys(changeDetails).length > 0) {
+          await storage.updateBid(existingBid.id, changes);
+
+          await storage.createAuditLog({
+            id: `AL-${Date.now().toString(36)}-bedit`,
+            entityType: "bid",
+            entityId: existingBid.id,
+            action: "bid_edited_from_discord",
+            actor: "mgt-bot",
+            details: JSON.stringify({ proposalId, changes: changeDetails, orderNumber: order?.mgtOrderNumber }),
+          });
+
+          console.log(`[mgt-watcher] Bid #${existingBid.id} edited via Discord during bidding window: ${JSON.stringify(changeDetails)}`);
+        }
+      } else if (!biddingStillOpen && newStatus === existingBid.status) {
+        let newBidAmount: number | null = null;
+        for (const field of embed.fields || []) {
+          const name = field.name.replace(/[^\w\s]/g, "").trim().toLowerCase();
+          if (name.includes("bid amount") || name.includes("grinder bid")) {
+            newBidAmount = extractNumber(field.value.trim());
+          }
+        }
+        if (newBidAmount !== null && newBidAmount.toFixed(2) !== existingBid.bidAmount) {
+          console.log(`[mgt-watcher] Bid edit rejected for proposal #${proposalId} - bidding window closed. Bid: $${newBidAmount} (was $${existingBid.bidAmount}). Staff must update manually.`);
+        }
+      }
     }
 
     if (newStatus !== existingBid.status) {
@@ -641,6 +737,152 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
     }
   } catch (error) {
     console.error("[mgt-watcher] Error handling message update:", error);
+  }
+}
+
+const PROPOSAL_POLL_INTERVAL_MS = 30 * 1000;
+let proposalPollTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startProposalBidSync(discordClient: Client): void {
+  if (proposalPollTimer) return;
+
+  proposalPollTimer = setInterval(async () => {
+    try {
+      const allOrders = await storage.getOrders();
+      const activelyBiddingOrders = allOrders.filter(o =>
+        o.biddingClosesAt && new Date(o.biddingClosesAt) > new Date() &&
+        (o.status === "Open" || o.status === "Bidding Closed")
+      );
+
+      if (activelyBiddingOrders.length === 0) return;
+
+      const proposalsChannel = await discordClient.channels.fetch(BID_PROPOSALS_CHANNEL_ID).catch(() => null);
+      if (!proposalsChannel || !proposalsChannel.isTextBased()) return;
+
+      const messages = await (proposalsChannel as any).messages.fetch({ limit: 50 });
+      const mgtMessages = messages.filter((m: Message) => m.author.id === MGT_BOT_USER_ID && m.embeds.length > 0);
+
+      let syncCount = 0;
+
+      for (const [, msg] of mgtMessages) {
+        try {
+          const embed = msg.embeds[0];
+          const titleText = embed.title || "";
+          const descText = embed.description || "";
+          const footerText = embed.footer?.text || "";
+
+          if (!titleText.toLowerCase().includes("proposal") && !descText.toLowerCase().includes("proposal")) continue;
+
+          let proposalId: number | null = null;
+          const allText = titleText + " " + descText + " " + footerText;
+          for (const field of embed.fields || []) {
+            const pMatch = (field.name + " " + field.value).match(/Proposal\s*ID:?\s*(\d+)/i);
+            if (pMatch) { proposalId = parseInt(pMatch[1], 10); break; }
+          }
+          if (!proposalId) {
+            const pMatch = allText.match(/Proposal\s*ID:?\s*(\d+)/i);
+            if (pMatch) proposalId = parseInt(pMatch[1], 10);
+          }
+          if (!proposalId) continue;
+
+          const existingBid = await storage.getBidByProposalId(proposalId);
+          if (!existingBid) continue;
+          if (existingBid.status !== "Pending" && existingBid.status !== "Countered") continue;
+
+          const order = activelyBiddingOrders.find(o => o.id === existingBid.orderId);
+          if (!order) continue;
+
+          let newBidAmount: number | null = null;
+          let newTimeline: string | null = null;
+          let newCanStart: string | null = null;
+          let newMargin: number | null = null;
+          let newMarginPct: number | null = null;
+
+          for (const field of embed.fields || []) {
+            const name = field.name.replace(/[^\w\s]/g, "").trim().toLowerCase();
+            const value = field.value.trim();
+
+            if (name.includes("bid amount") || name.includes("grinder bid")) {
+              newBidAmount = extractNumber(value);
+            } else if (name.includes("timeline")) {
+              newTimeline = value;
+            } else if (name.includes("can start")) {
+              newCanStart = value;
+            } else if (name.includes("margin")) {
+              const marginMatch = value.match(/\$?([\d,]+\.?\d*)\s*\((\d+)%?\)/);
+              if (marginMatch) {
+                newMargin = parseFloat(marginMatch[1].replace(/,/g, ""));
+                newMarginPct = parseFloat(marginMatch[2]);
+              } else {
+                newMargin = extractNumber(value);
+              }
+            }
+          }
+
+          const changes: Record<string, any> = {};
+          const changeDetails: Record<string, { old: any; new: any }> = {};
+
+          if (newBidAmount !== null && newBidAmount.toFixed(2) !== existingBid.bidAmount) {
+            changeDetails.bidAmount = { old: existingBid.bidAmount, new: newBidAmount.toFixed(2) };
+            changes.bidAmount = newBidAmount.toFixed(2);
+          }
+          if (newTimeline && newTimeline !== existingBid.timeline) {
+            changeDetails.timeline = { old: existingBid.timeline, new: newTimeline };
+            changes.timeline = newTimeline;
+          }
+          if (newCanStart && newCanStart !== existingBid.canStart) {
+            changeDetails.canStart = { old: existingBid.canStart, new: newCanStart };
+            changes.canStart = newCanStart;
+          }
+          if (newMargin !== null) changes.margin = newMargin.toFixed(2);
+          if (newMarginPct !== null) changes.marginPct = newMarginPct.toFixed(2);
+
+          if (newTimeline && changeDetails.timeline) {
+            const estDelivery = new Date();
+            const hoursMatch = newTimeline.match(/(\d+)\s*hours?/i);
+            const daysMatch = newTimeline.match(/(\d+)\s*days?/i);
+            if (hoursMatch) estDelivery.setHours(estDelivery.getHours() + parseInt(hoursMatch[1], 10));
+            else if (daysMatch) estDelivery.setDate(estDelivery.getDate() + parseInt(daysMatch[1], 10));
+            else estDelivery.setDate(estDelivery.getDate() + 1);
+            changes.estDeliveryDate = estDelivery;
+          }
+
+          if (Object.keys(changeDetails).length > 0) {
+            await storage.updateBid(existingBid.id, changes);
+
+            await storage.createAuditLog({
+              id: `AL-${Date.now().toString(36)}-bsync`,
+              entityType: "bid",
+              entityId: existingBid.id,
+              action: "bid_synced_from_discord",
+              actor: "mgt-bot",
+              details: JSON.stringify({ proposalId, changes: changeDetails, orderNumber: order.mgtOrderNumber }),
+            });
+
+            syncCount++;
+            console.log(`[mgt-watcher] Synced bid #${existingBid.id} from Discord poll: ${JSON.stringify(changeDetails)}`);
+          }
+        } catch (e) {
+          // Skip individual message errors
+        }
+      }
+
+      if (syncCount > 0) {
+        console.log(`[mgt-watcher] Proposal poll: synced ${syncCount} bid edit(s) from Discord`);
+      }
+    } catch (error) {
+      console.error("[mgt-watcher] Error in proposal bid sync poll:", error);
+    }
+  }, PROPOSAL_POLL_INTERVAL_MS);
+
+  console.log(`[mgt-watcher] Started proposal bid sync poll (every ${PROPOSAL_POLL_INTERVAL_MS / 1000}s)`);
+}
+
+export function stopProposalBidSync(): void {
+  if (proposalPollTimer) {
+    clearInterval(proposalPollTimer);
+    proposalPollTimer = null;
+    console.log("[mgt-watcher] Stopped proposal bid sync poll");
   }
 }
 

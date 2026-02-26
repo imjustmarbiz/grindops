@@ -449,6 +449,7 @@ export class DatabaseStorage implements IStorage {
       if (data.bidAmount) updateData.bidAmount = data.bidAmount;
       if (data.timeline) updateData.timeline = data.timeline;
       if (data.canStart) updateData.canStart = data.canStart;
+      if (data.estDeliveryDate) updateData.estDeliveryDate = data.estDeliveryDate;
       if (data.qualityScore !== undefined) updateData.qualityScore = data.qualityScore;
       if (data.margin) updateData.margin = data.margin;
       if (data.marginPct) updateData.marginPct = data.marginPct;

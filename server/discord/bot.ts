@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials } from "discord.js";
 import { storage } from "../storage";
-import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance, backfillMissedMessages } from "./mgtWatcher";
+import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance, backfillMissedMessages, startProposalBidSync } from "./mgtWatcher";
 import { GRINDER_ROLES, ROLE_LABELS } from "@shared/schema";
 
 let client: Client | null = null;
@@ -561,6 +561,8 @@ export async function startDiscordBot() {
     backfillMissedMessages(client!).catch(err => {
       console.error("[discord] Backfill error:", err);
     });
+
+    startProposalBidSync(client!);
 
     try {
       const allGrinders = await storage.getGrinders();
