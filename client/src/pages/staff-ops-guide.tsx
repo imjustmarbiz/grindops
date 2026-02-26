@@ -514,7 +514,7 @@ const slides: Slide[] = [
   },
   {
     id: "assignments",
-    title: "Assignments",
+    title: "Orders Assigned",
     subtitle: "Active worker-order tracking, replacements, and financial details",
     icon: FileCheck,
     iconColor: "text-violet-400",
@@ -679,7 +679,7 @@ const slides: Slide[] = [
   },
   {
     id: "reviews",
-    title: "Reviews",
+    title: "Customer Reviews",
     subtitle: "Moderate customer reviews and manage access requests",
     icon: Star,
     iconColor: "text-yellow-400",

@@ -584,7 +584,7 @@ const slides: Slide[] = [
   },
   {
     id: "reviews",
-    title: "Reviews",
+    title: "Customer Reviews",
     subtitle: "Manage customer feedback and generate review access codes",
     icon: Star,
     iconColor: "text-yellow-400",

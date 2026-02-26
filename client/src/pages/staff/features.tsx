@@ -64,9 +64,15 @@ const features = [
   },
   {
     icon: FileCheck,
-    title: "Assignments",
+    title: "Orders Assigned",
     description: "Track all active and completed assignments. Monitor pay splits, margin percentages, reassignment history, and ensure work is progressing on schedule.",
     url: "/assignments",
+  },
+  {
+    icon: LinkIcon,
+    title: "Order Repair",
+    description: "Review and approve grinder repair requests: fix existing orders, claim missing in-progress orders, or add completed orders to their profiles.",
+    url: "/order-claims",
   },
   {
     icon: FileBarChart,
@@ -100,15 +106,9 @@ const features = [
   },
   {
     icon: Star,
-    title: "Reviews",
+    title: "Customer Reviews",
     description: "Approve or reject customer reviews submitted by grinders. Maintain quality control over feedback and ensure only legitimate reviews are published.",
     url: "/reviews",
-  },
-  {
-    icon: LinkIcon,
-    title: "Order Repair",
-    description: "Review and approve grinder repair requests: fix existing orders, claim missing in-progress orders, or add completed orders to their profiles.",
-    url: "/order-claims",
   },
   {
     icon: CalendarDays,
