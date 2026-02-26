@@ -45,9 +45,10 @@ export default function StaffAdmin() {
   const [deleteHistoricalData, setDeleteHistoricalData] = useState(false);
   const [editProfileGrinder, setEditProfileGrinder] = useState<any>(null);
   const [editProfileName, setEditProfileName] = useState("");
-  const [editProfileCategory, setEditProfileCategory] = useState("");
+  const [editProfileRoles, setEditProfileRoles] = useState<string[]>([]);
   const [editProfileCapacity, setEditProfileCapacity] = useState("");
   const [editProfileNotes, setEditProfileNotes] = useState("");
+  const [editProfileTwitch, setEditProfileTwitch] = useState("");
   const [checkupOrderSearch, setCheckupOrderSearch] = useState("");
   const [taskGrinderId, setTaskGrinderId] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
@@ -703,7 +704,26 @@ export default function StaffAdmin() {
                     <span className="text-sm font-medium truncate">{g.name}</span>
                     {g.suspended && <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[9px]"><Ban className="w-2.5 h-2.5 mr-0.5" />Suspended</Badge>}
                     {!(g as any).rulesAccepted && <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[9px]">Rules Pending</Badge>}
-                    <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
+                    {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
+                      <Badge key={r} variant="outline" className={`text-[10px] ${
+                        r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
+                        r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+                        r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                        "border-purple-500/30 text-purple-400 bg-purple-500/10"
+                      }`}>{r}</Badge>
+                    )) : (
+                      <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
+                    )}
+                    {g.tier && g.tier !== "New" && (
+                      <Badge variant="outline" className={`text-[9px] ${
+                        g.tier === "Diamond" ? "border-cyan-500/30 text-cyan-300 bg-cyan-500/10" :
+                        g.tier === "Elite" ? "border-amber-500/30 text-amber-300 bg-amber-500/10" :
+                        g.tier === "Gold" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+                        g.tier === "Silver" ? "border-slate-400/30 text-slate-300 bg-slate-400/10" :
+                        g.tier === "Bronze" ? "border-orange-500/30 text-orange-400 bg-orange-500/10" :
+                        "border-white/10 text-muted-foreground"
+                      }`}>{g.tier}</Badge>
+                    )}
                     <Badge className={`text-[10px] border ${
                       (g as any).availabilityStatus === "busy" ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" :
                       (g as any).availabilityStatus === "away" ? "bg-orange-500/15 text-orange-400 border-orange-500/20" :
@@ -778,7 +798,26 @@ export default function StaffAdmin() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-sm font-medium ${g.isRemoved ? "line-through text-muted-foreground" : ""}`}>{g.name}</span>
                       {g.isRemoved && <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[10px]">Removed</Badge>}
-                      <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
+                      {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
+                        <Badge key={r} variant="outline" className={`text-[10px] ${
+                          r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
+                          r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+                          r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                          "border-purple-500/30 text-purple-400 bg-purple-500/10"
+                        }`}>{r}</Badge>
+                      )) : (
+                        <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{g.category}</Badge>
+                      )}
+                      {g.tier && g.tier !== "New" && (
+                        <Badge variant="outline" className={`text-[9px] ${
+                          g.tier === "Diamond" ? "border-cyan-500/30 text-cyan-300 bg-cyan-500/10" :
+                          g.tier === "Elite" ? "border-amber-500/30 text-amber-300 bg-amber-500/10" :
+                          g.tier === "Gold" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+                          g.tier === "Silver" ? "border-slate-400/30 text-slate-300 bg-slate-400/10" :
+                          g.tier === "Bronze" ? "border-orange-500/30 text-orange-400 bg-orange-500/10" :
+                          "border-white/10 text-muted-foreground"
+                        }`}>{g.tier}</Badge>
+                      )}
                       <span className="text-[10px] text-muted-foreground">
                         {pluralize(g.activeOrders, 'order')}/{g.capacity} · {g.completedOrders} completed · {pluralize(g.strikes, 'strike')}
                       </span>
@@ -804,10 +843,11 @@ export default function StaffAdmin() {
                           onClick={() => {
                             setEditProfileGrinder(g);
                             setEditProfileName(g.name);
-                            setEditProfileCategory(g.category);
-
+                            const roles = (g as any).roles as string[] | null;
+                            setEditProfileRoles(roles && roles.length > 0 ? roles : [g.category || "Grinder"]);
                             setEditProfileCapacity(String(g.capacity));
                             setEditProfileNotes(g.notes || "");
+                            setEditProfileTwitch(g.twitchUsername || "");
                           }}>
                           Edit
                         </Button>
@@ -829,7 +869,7 @@ export default function StaffAdmin() {
       )}
 
       <Dialog open={!!editProfileGrinder} onOpenChange={(open) => !open && setEditProfileGrinder(null)}>
-        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl">
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-display">
               <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
@@ -840,27 +880,60 @@ export default function StaffAdmin() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Name</label>
+              <label className="text-sm font-medium mb-1 block">Display Name</label>
               <Input value={editProfileName} onChange={(e) => setEditProfileName(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-profile-name" />
             </div>
+
             <div>
-              <label className="text-sm font-medium mb-1 block">Tier</label>
-              <Select value={editProfileCategory} onValueChange={setEditProfileCategory}>
-                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-profile-category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Grinder">Grinder</SelectItem>
-                  <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
-                  <SelectItem value="VC Grinder">VC Grinder</SelectItem>
-                  <SelectItem value="Event Grinder">Event Grinder</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-1.5 block">Roles (select multiple)</label>
+              <div className="flex flex-wrap gap-2">
+                {["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"].map(role => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setEditProfileRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      editProfileRoles.includes(role)
+                        ? (role === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
+                           role === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+                           role === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                           "border-purple-500/30 text-purple-400 bg-purple-500/10") + " ring-1 ring-white/20"
+                        : "border-white/[0.06] text-muted-foreground bg-white/[0.02] hover:bg-white/[0.05]"
+                    }`}
+                    data-testid={`toggle-admin-role-${role.toLowerCase().replace(/\s/g, "-")}`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
             </div>
+
             <div>
-              <label className="text-sm font-medium mb-1 block">Order Limit</label>
-              <Input type="number" min="1" max="20" value={editProfileCapacity} onChange={(e) => setEditProfileCapacity(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-profile-capacity" />
+              <label className="text-sm font-medium mb-1 block">Tier (auto-calculated)</label>
+              <div className="h-9 flex items-center px-3 rounded-md bg-background/50 border border-white/10">
+                <Badge variant="outline" className={`text-xs ${
+                  editProfileGrinder?.tier === "Diamond" ? "border-cyan-500/30 text-cyan-300 bg-cyan-500/10" :
+                  editProfileGrinder?.tier === "Elite" ? "border-amber-500/30 text-amber-300 bg-amber-500/10" :
+                  editProfileGrinder?.tier === "Gold" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
+                  editProfileGrinder?.tier === "Silver" ? "border-slate-400/30 text-slate-300 bg-slate-400/10" :
+                  editProfileGrinder?.tier === "Bronze" ? "border-orange-500/30 text-orange-400 bg-orange-500/10" :
+                  "border-white/10 text-muted-foreground bg-white/[0.04]"
+                }`}>{editProfileGrinder?.tier || "New"}</Badge>
+                <span className="text-[10px] text-muted-foreground ml-2">Updates automatically based on performance</span>
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Order Limit</label>
+                <Input type="number" min="1" max="20" value={editProfileCapacity} onChange={(e) => setEditProfileCapacity(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-profile-capacity" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Twitch Username</label>
+                <Input value={editProfileTwitch} onChange={(e) => setEditProfileTwitch(e.target.value)} placeholder="twitch_username" className="bg-background/50 border-white/10" data-testid="input-profile-twitch" />
+              </div>
+            </div>
+
             <div>
               <label className="text-sm font-medium mb-1 block">Notes</label>
               <Textarea value={editProfileNotes} onChange={(e) => setEditProfileNotes(e.target.value)} className="bg-background/50 border-white/10 resize-none" data-testid="input-profile-notes" />
@@ -868,16 +941,22 @@ export default function StaffAdmin() {
             <Button
               className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/20"
               data-testid="button-save-profile"
-              disabled={updateProfileMutation.isPending}
+              disabled={updateProfileMutation.isPending || editProfileRoles.length === 0}
               onClick={() => {
                 if (!editProfileGrinder) return;
+                if (editProfileRoles.length === 0) {
+                  toast({ title: "At least one role required", variant: "destructive" });
+                  return;
+                }
                 updateProfileMutation.mutate({
                   grinderId: editProfileGrinder.id,
                   data: {
                     name: editProfileName,
-                    category: editProfileCategory,
+                    roles: editProfileRoles,
+                    category: editProfileRoles[0],
                     capacity: parseInt(editProfileCapacity),
                     notes: editProfileNotes || null,
+                    twitchUsername: editProfileTwitch.trim() || null,
                   },
                 });
               }}
