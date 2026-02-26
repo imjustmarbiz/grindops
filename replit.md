@@ -28,7 +28,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Features Pages:** Comprehensive overviews of dashboard capabilities for both Staff and Grinders.
 - **Content Management:** Systems for Events & Promotions, Order Briefs, and AI-rewritten Dev Patch Notes.
 - **Customer Reviews:** A two-step secure system for customers to submit reviews, including a password-protected access mechanism and staff approval workflow.
-- **Missing Order Claims:** Grinders can request to link existing orders to their profile, pending staff approval. Staff sidebar label: "Missing Order Claims".
+- **Grind Repair System:** Comprehensive order auditing with 3 repair types: Fix Order (update info on existing assigned orders), Claim Missing (add in-progress orders not in dashboard), Add Completed (submit completed orders not in dashboard). Schema: `order_claim_requests` table with `repairType` (fix_order/claim_missing/add_completed) and `fixFields` (JSON) columns. Fix Order approval applies corrections to order/assignment fields and recalculates margins. Claim/Add approval creates orders, assignments, payouts and recalculates grinder stats. Sidebar label: "Grind Repair".
 - **Daily Checkup Controls:** Global and per-order controls for enabling/disabling daily update checks.
 - **Twitch Integration:** Grinders can link Twitch accounts, enabling staff to view live streams and automatically generate activity checkpoints.
 - **Completion Video Proof:** Grinders must upload video proof upon order completion, which staff can review.

@@ -434,6 +434,7 @@ export const customerReviews = pgTable("customer_reviews", {
 export const orderClaimRequests = pgTable("order_claim_requests", {
   id: varchar("id").primaryKey(),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  repairType: text("repair_type").notNull().default("claim_missing"),
   orderId: varchar("order_id"),
   ticketName: text("ticket_name").notNull(),
   serviceId: varchar("service_id"),
@@ -445,6 +446,7 @@ export const orderClaimRequests = pgTable("order_claim_requests", {
   grinderAmount: numeric("grinder_amount"),
   payoutPlatform: text("payout_platform"),
   payoutDetails: text("payout_details"),
+  fixFields: text("fix_fields"),
   status: text("status").notNull().default("pending"),
   decidedBy: varchar("decided_by"),
   decidedByName: text("decided_by_name"),

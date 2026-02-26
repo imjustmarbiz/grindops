@@ -105,9 +105,9 @@ const features = [
     url: "/reviews",
   },
   {
-    icon: LinkIcon,
-    title: "Missing Order Claims",
-    description: "Approve or reject grinder requests to link missing orders to their profiles. Verify claims and maintain accurate order attribution records.",
+    icon: Wrench,
+    title: "Grind Repair",
+    description: "Review and approve grinder repair requests: fix existing orders, claim missing in-progress orders, or add completed orders to their profiles.",
     url: "/order-claims",
   },
   {

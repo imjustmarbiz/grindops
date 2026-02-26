@@ -695,17 +695,17 @@ const slides: Slide[] = [
     tip: "Approved reviews directly impact grinder quality scores. Be fair but thorough \u2014 fake reviews hurt everyone.",
   },
   {
-    id: "order-claims",
-    title: "Missing Order Claims",
-    subtitle: "Review and approve grinder requests to claim missing orders",
+    id: "grind-repair",
+    title: "Grind Repair",
+    subtitle: "Review and approve grinder repair requests (fix orders, claim missing, add completed)",
     icon: LinkIcon,
     iconColor: "text-orange-400",
     sections: [
       {
-        heading: "Claim Review Process",
+        heading: "Repair Review Process",
         points: [
-          "Grinders submit claims for orders not on their profile",
-          "Each claim shows: ticket name, order ID, service, proof links, dates",
+          "Three repair types: Fix Order (update existing), Claim Missing (add in-progress), Add Completed (add finished order)",
+          "Each request shows: repair type badge, ticket name, order ID, service, proof links, dates",
           "Payout details: grinder amount, platform, payment info",
           "Staff Fill-In panel: add Customer Price, Platform, Gamertag, Service if missing",
         ],
@@ -921,7 +921,7 @@ const slides: Slide[] = [
       {
         heading: "Active Management",
         points: [
-          "6. Review any pending elite requests or order claims",
+          "6. Review any pending elite requests or grind repair requests",
           "7. Monitor the AI Queue for optimal assignment recommendations",
           "8. Handle any override assignments or manual orders",
           "9. Check Reports for checkpoint activity and grinder updates",

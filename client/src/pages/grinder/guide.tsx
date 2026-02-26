@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, ClipboardList, Brain,
   Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
-  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon, ScrollText
+  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon, ScrollText, Wrench
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -101,9 +101,9 @@ const featureItems = [
     url: "/grinder/reviews",
   },
   {
-    icon: LinkIcon,
-    title: "Claim Missing Order",
-    desc: "Completed an order that isn't linked to your profile? Submit proof and staff will review it. Use this for orders that were missed or not automatically assigned to you.",
+    icon: Wrench,
+    title: "Grind Repair",
+    desc: "Fix existing orders, claim missing in-progress orders, or add completed orders not in your dashboard. Your one-stop shop for order auditing.",
     url: "/grinder/order-claims",
   },
   {

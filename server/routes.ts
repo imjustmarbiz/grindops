@@ -4874,26 +4874,45 @@ export async function registerRoutes(
   app.post('/api/order-claims', isAuthenticated, async (req, res) => {
     try {
       const user = (req as any).user;
-      if (!user.grinderId) return res.status(403).json({ error: "Only grinders can submit claims" });
+      if (!user.grinderId) return res.status(403).json({ error: "Only grinders can submit repair requests" });
 
-      const { orderId, ticketName, serviceId, proofLinks, proofNotes, dueDate, startDateTime, completedDateTime, grinderAmount, payoutPlatform, payoutDetails } = req.body;
-      if (!ticketName || !ticketName.trim()) return res.status(400).json({ error: "Ticket name is required" });
+      const { repairType, orderId, ticketName, serviceId, proofLinks, proofNotes, dueDate, startDateTime, completedDateTime, grinderAmount, payoutPlatform, payoutDetails, fixFields } = req.body;
+      const validTypes = ["fix_order", "claim_missing", "add_completed"];
+      if (!repairType || !validTypes.includes(repairType)) return res.status(400).json({ error: "Invalid repair type" });
 
-      if (orderId) {
+      if (repairType === "fix_order") {
+        if (!orderId) return res.status(400).json({ error: "Order ID is required for fix requests" });
         const order = await storage.getOrder(orderId);
         if (!order) return res.status(404).json({ error: "Order not found" });
-
+        if (order.assignedGrinderId !== user.grinderId) return res.status(403).json({ error: "You can only fix orders assigned to you" });
+        if (!fixFields) return res.status(400).json({ error: "Please specify what needs to be fixed" });
+        let parsedFix: any = {};
+        try { parsedFix = JSON.parse(fixFields); } catch { return res.status(400).json({ error: "Invalid fix fields format" }); }
+        if (!parsedFix.description || !parsedFix.description.trim()) return res.status(400).json({ error: "Please describe what needs to be fixed" });
         const existing = await storage.getOrderClaimRequests(user.grinderId, "pending");
-        const alreadyClaimed = existing.find(c => c.orderId === orderId);
-        if (alreadyClaimed) return res.status(400).json({ error: "You already have a pending claim for this order" });
+        const alreadyPending = existing.find(c => c.orderId === orderId && (c as any).repairType === "fix_order");
+        if (alreadyPending) return res.status(400).json({ error: "You already have a pending fix request for this order" });
       }
 
-      const id = `OCR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      if (repairType === "claim_missing" || repairType === "add_completed") {
+        if (!ticketName || !ticketName.trim()) return res.status(400).json({ error: "Ticket name is required" });
+        if (repairType === "add_completed" && !completedDateTime) return res.status(400).json({ error: "Completed date is required for completed order submissions" });
+        if (orderId) {
+          const order = await storage.getOrder(orderId);
+          if (!order) return res.status(404).json({ error: "Order not found" });
+          const existing = await storage.getOrderClaimRequests(user.grinderId, "pending");
+          const alreadyClaimed = existing.find(c => c.orderId === orderId);
+          if (alreadyClaimed) return res.status(400).json({ error: "You already have a pending request for this order" });
+        }
+      }
+
+      const id = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       const claim = await storage.createOrderClaimRequest({
         id,
         grinderId: user.grinderId,
+        repairType,
         orderId: orderId || null,
-        ticketName: ticketName.trim(),
+        ticketName: (ticketName || "").trim() || (repairType === "fix_order" ? `fix-${orderId}` : ""),
         serviceId: serviceId || null,
         proofLinks: proofLinks || [],
         proofNotes: proofNotes || null,
@@ -4903,14 +4922,16 @@ export async function registerRoutes(
         grinderAmount: grinderAmount || null,
         payoutPlatform: payoutPlatform || null,
         payoutDetails: payoutDetails || null,
+        fixFields: fixFields || null,
         status: "pending",
       });
 
-      const orderLabel = orderId ? orderId : `ticket "${ticketName.trim()}"`;
+      const typeLabels: Record<string, string> = { fix_order: "Fix Order", claim_missing: "Claim Missing Order", add_completed: "Add Completed Order" };
+      const orderLabel = orderId ? orderId : `ticket "${(ticketName || "").trim()}"`;
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        title: "New Order Claim Request",
-        body: `A grinder has submitted a claim request for ${orderLabel}.`,
+        title: "New Grind Repair Request",
+        body: `${typeLabels[repairType]}: A grinder has submitted a repair request for ${orderLabel}.`,
         type: "info",
         roleScope: "staff",
         userId: null,
@@ -4919,8 +4940,8 @@ export async function registerRoutes(
 
       res.json(claim);
     } catch (error) {
-      console.error("Error creating order claim:", error);
-      res.status(500).json({ error: "Failed to create order claim" });
+      console.error("Error creating grind repair:", error);
+      res.status(500).json({ error: "Failed to create repair request" });
     }
   });
 
@@ -4934,112 +4955,203 @@ export async function registerRoutes(
       if (!claim) return res.status(404).json({ error: "Claim not found" });
 
       if (status === "approved") {
-        let resolvedOrderId = claim.orderId;
-        const resolvedServiceId = staffServiceId || claim.serviceId;
+        const repairType = claim.repairType || "claim_missing";
 
-        if (!resolvedOrderId) {
-          if (!resolvedServiceId) return res.status(400).json({ error: "Service is required to approve a claim without an order ID" });
-          if (!customerPrice) return res.status(400).json({ error: "Customer price is required to approve a claim without an order ID" });
+        if (repairType === "fix_order") {
+          const orderId = claim.orderId;
+          if (!orderId) return res.status(400).json({ error: "Fix request has no order ID" });
+          const order = await storage.getOrder(orderId);
+          if (!order) return res.status(404).json({ error: "Order not found" });
 
-          const newOrderId = `CLM-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-          const orderDueDate = claim.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          const isCompleted = !!claim.completedDateTime;
+          let fixData: Record<string, any> = {};
+          try { fixData = JSON.parse(claim.fixFields || "{}"); } catch { fixData = {}; }
 
-          await storage.createOrder({
-            id: newOrderId,
-            serviceId: resolvedServiceId,
-            customerPrice: String(customerPrice),
-            platform: platform || null,
-            gamertag: gamertag || null,
-            orderDueDate,
-            status: isCompleted ? "Completed" : "In Progress",
-            assignedGrinderId: claim.grinderId,
-            isManual: true,
-            complexity: 1,
-            isRush: false,
-            isEmergency: false,
-            completedAt: claim.completedDateTime || null,
-            skipDailyCheckup: true,
-          });
+          const orderUpdate: any = {};
+          if (fixData.serviceId) orderUpdate.serviceId = fixData.serviceId;
+          if (fixData.dueDate) orderUpdate.orderDueDate = new Date(fixData.dueDate);
+          if (fixData.customerPrice) orderUpdate.customerPrice = String(fixData.customerPrice);
+          if (fixData.platform) orderUpdate.platform = fixData.platform;
+          if (fixData.gamertag) orderUpdate.gamertag = fixData.gamertag;
+          if (customerPrice) orderUpdate.customerPrice = String(customerPrice);
+          if (platform) orderUpdate.platform = platform;
+          if (gamertag) orderUpdate.gamertag = gamertag;
+          if (staffServiceId) orderUpdate.serviceId = staffServiceId;
 
-          resolvedOrderId = newOrderId;
-          await storage.updateOrderClaimRequest(req.params.id, { orderId: newOrderId });
-        } else {
-          const updateData: any = { assignedGrinderId: claim.grinderId, skipDailyCheckup: true };
-          if (customerPrice) updateData.customerPrice = String(customerPrice);
-          if (platform) updateData.platform = platform;
-          if (gamertag) updateData.gamertag = gamertag;
-          if (resolvedServiceId) updateData.serviceId = resolvedServiceId;
-          if (claim.completedDateTime) {
-            updateData.status = "Completed";
-            updateData.completedAt = claim.completedDateTime;
-          } else {
-            updateData.status = "In Progress";
+          if (Object.keys(orderUpdate).length > 0) {
+            await storage.updateOrder(orderId, orderUpdate);
           }
-          await storage.updateOrder(resolvedOrderId, updateData);
-        }
 
-        let existingAssignments = (await storage.getAssignments()).filter(a => a.orderId === resolvedOrderId);
-        if (existingAssignments.length === 0) {
+          const assignments = (await storage.getAssignments()).filter(a => a.orderId === orderId && a.grinderId === claim.grinderId);
+          if (assignments.length > 0) {
+            const assignment = assignments[0];
+            const assignUpdate: any = {};
+            const updatedOrder = await storage.getOrder(orderId);
+            if (fixData.grinderAmount || claim.grinderAmount) {
+              const newGrinderPay = fixData.grinderAmount || claim.grinderAmount;
+              assignUpdate.grinderEarnings = String(newGrinderPay);
+              const orderPriceNum = updatedOrder?.customerPrice ? parseFloat(updatedOrder.customerPrice) : 0;
+              const grinderPayNum = parseFloat(newGrinderPay) || 0;
+              const profit = orderPriceNum - grinderPayNum;
+              assignUpdate.companyProfit = String(profit.toFixed(2));
+              assignUpdate.margin = String(profit.toFixed(2));
+              assignUpdate.marginPct = orderPriceNum > 0 ? String(((profit / orderPriceNum) * 100).toFixed(1)) : "0";
+              if (updatedOrder) {
+                await storage.updateOrder(orderId, { companyProfit: String(profit.toFixed(2)) });
+              }
+            }
+            if (fixData.dueDate) assignUpdate.dueDateTime = new Date(fixData.dueDate);
+            if (fixData.startDateTime) assignUpdate.assignedDateTime = new Date(fixData.startDateTime);
+            if (Object.keys(assignUpdate).length > 0) {
+              await storage.updateAssignment(assignment.id, assignUpdate);
+            }
+          }
+
+          const { recalcGrinderStats } = await import("./recalcStats");
+          await recalcGrinderStats(claim.grinderId);
+
+          await storage.createAuditLog({
+            id: `AL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            action: "grind_repair_approved",
+            performedBy: user.id,
+            performedByName: user.displayName || user.username,
+            entityType: "grind_repair",
+            entityId: claim.id,
+            details: `Approved fix order repair for order ${orderId} by grinder ${claim.grinderId}. Fields updated: ${Object.keys(fixData).join(", ")}`,
+          });
+        } else {
+          let resolvedOrderId = claim.orderId;
+          const resolvedServiceId = staffServiceId || claim.serviceId;
+          const isAddCompleted = repairType === "add_completed";
+
+          if (!resolvedOrderId) {
+            if (!resolvedServiceId) return res.status(400).json({ error: "Service is required to approve a repair without an order ID" });
+            if (!customerPrice) return res.status(400).json({ error: "Customer price is required to approve a repair without an order ID" });
+
+            const newOrderId = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const orderDueDate = claim.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            const isCompleted = isAddCompleted || !!claim.completedDateTime;
+
+            await storage.createOrder({
+              id: newOrderId,
+              serviceId: resolvedServiceId,
+              customerPrice: String(customerPrice),
+              platform: platform || null,
+              gamertag: gamertag || null,
+              orderDueDate,
+              status: isCompleted ? "Completed" : "In Progress",
+              assignedGrinderId: claim.grinderId,
+              isManual: true,
+              complexity: 1,
+              isRush: false,
+              isEmergency: false,
+              completedAt: isCompleted ? (claim.completedDateTime || new Date()) : null,
+              skipDailyCheckup: true,
+            });
+
+            resolvedOrderId = newOrderId;
+            await storage.updateOrderClaimRequest(req.params.id, { orderId: newOrderId });
+          } else {
+            const updateData: any = { assignedGrinderId: claim.grinderId, skipDailyCheckup: true };
+            if (customerPrice) updateData.customerPrice = String(customerPrice);
+            if (platform) updateData.platform = platform;
+            if (gamertag) updateData.gamertag = gamertag;
+            if (resolvedServiceId) updateData.serviceId = resolvedServiceId;
+            if (isAddCompleted || claim.completedDateTime) {
+              updateData.status = "Completed";
+              updateData.completedAt = claim.completedDateTime || new Date();
+            } else {
+              updateData.status = "In Progress";
+            }
+            await storage.updateOrder(resolvedOrderId, updateData);
+          }
+
+          let existingAssignments = (await storage.getAssignments()).filter(a => a.orderId === resolvedOrderId);
           const order = await storage.getOrder(resolvedOrderId);
           const grinderPay = claim.grinderAmount || "0";
           const orderPriceNum = order?.customerPrice ? parseFloat(order.customerPrice) : 0;
           const grinderPayNum = parseFloat(grinderPay) || 0;
           const profit = orderPriceNum - grinderPayNum;
           const marginPct = orderPriceNum > 0 ? (profit / orderPriceNum) * 100 : 0;
-          const isCompleted = !!claim.completedDateTime;
+          const isCompleted = isAddCompleted || !!claim.completedDateTime;
 
-          const newAssignmentId = `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-          await storage.createAssignment({
-            id: newAssignmentId,
-            orderId: resolvedOrderId,
-            grinderId: claim.grinderId,
-            status: isCompleted ? "Completed" : "Active",
-            grinderEarnings: grinderPay,
-            orderPrice: order?.customerPrice || String(customerPrice || "0"),
-            companyProfit: String(profit.toFixed(2)),
-            margin: String(profit.toFixed(2)),
-            marginPct: String(marginPct.toFixed(1)),
-            dueDateTime: claim.dueDate || order?.orderDueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            assignedDateTime: claim.startDateTime || new Date(),
-            deliveredDateTime: claim.completedDateTime || null,
-            isOnTime: claim.completedDateTime && claim.dueDate
-              ? new Date(claim.completedDateTime) <= new Date(claim.dueDate)
-              : null,
-          });
-          existingAssignments = [{ id: newAssignmentId } as any];
-        }
-
-        if (claim.grinderAmount && claim.completedDateTime) {
-          const existingPayouts = (await storage.getPayoutRequests(claim.grinderId))
-            .filter(p => p.orderId === resolvedOrderId);
-          if (existingPayouts.length === 0) {
-            await storage.createPayoutRequest({
-              id: `PR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-              assignmentId: existingAssignments[0].id,
+          if (existingAssignments.length === 0) {
+            const newAssignmentId = `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            await storage.createAssignment({
+              id: newAssignmentId,
               orderId: resolvedOrderId,
               grinderId: claim.grinderId,
-              amount: claim.grinderAmount,
-              payoutPlatform: claim.payoutPlatform || null,
-              payoutDetails: claim.payoutDetails || null,
-              status: "Pending",
-              completionProofUrl: "claimed-order",
+              status: isCompleted ? "Completed" : "Active",
+              grinderEarnings: grinderPay,
+              orderPrice: order?.customerPrice || String(customerPrice || "0"),
+              companyProfit: String(profit.toFixed(2)),
+              margin: String(profit.toFixed(2)),
+              marginPct: String(marginPct.toFixed(1)),
+              dueDateTime: claim.dueDate || order?.orderDueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              assignedDateTime: claim.startDateTime || new Date(),
+              deliveredDateTime: isCompleted ? (claim.completedDateTime || new Date()) : null,
+              isOnTime: claim.completedDateTime && claim.dueDate
+                ? new Date(claim.completedDateTime) <= new Date(claim.dueDate)
+                : null,
             });
+            existingAssignments = [{ id: newAssignmentId } as any];
+          } else {
+            const assignment = existingAssignments[0];
+            const assignUpdate: any = {
+              grinderId: claim.grinderId,
+              status: isCompleted ? "Completed" : "Active",
+              grinderEarnings: grinderPay,
+              orderPrice: order?.customerPrice || String(customerPrice || "0"),
+              companyProfit: String(profit.toFixed(2)),
+              margin: String(profit.toFixed(2)),
+              marginPct: String(marginPct.toFixed(1)),
+            };
+            if (isCompleted) {
+              assignUpdate.deliveredDateTime = claim.completedDateTime || new Date();
+              assignUpdate.isOnTime = claim.completedDateTime && claim.dueDate
+                ? new Date(claim.completedDateTime) <= new Date(claim.dueDate)
+                : null;
+            }
+            if (claim.startDateTime) assignUpdate.assignedDateTime = claim.startDateTime;
+            if (claim.dueDate) assignUpdate.dueDateTime = claim.dueDate;
+            await storage.updateAssignment(assignment.id, assignUpdate);
           }
+
+          if (order && grinderPayNum > 0) {
+            await storage.updateOrder(resolvedOrderId, { companyProfit: String(profit.toFixed(2)) });
+          }
+
+          if (claim.grinderAmount && (isAddCompleted || claim.completedDateTime)) {
+            const existingPayouts = (await storage.getPayoutRequests(claim.grinderId))
+              .filter(p => p.orderId === resolvedOrderId);
+            if (existingPayouts.length === 0) {
+              await storage.createPayoutRequest({
+                id: `PR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                assignmentId: existingAssignments[0].id,
+                orderId: resolvedOrderId,
+                grinderId: claim.grinderId,
+                amount: claim.grinderAmount,
+                payoutPlatform: claim.payoutPlatform || null,
+                payoutDetails: claim.payoutDetails || null,
+                status: "Pending",
+                completionProofUrl: "grind-repair",
+              });
+            }
+          }
+
+          const { recalcGrinderStats } = await import("./recalcStats");
+          await recalcGrinderStats(claim.grinderId);
+
+          const typeLabel = repairType === "add_completed" ? "add completed order" : "claim missing order";
+          await storage.createAuditLog({
+            id: `AL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            action: "grind_repair_approved",
+            performedBy: user.id,
+            performedByName: user.displayName || user.username,
+            entityType: "grind_repair",
+            entityId: claim.id,
+            details: `Approved ${typeLabel} repair for order ${resolvedOrderId} by grinder ${claim.grinderId}. ${!claim.orderId ? "New order created from repair." : ""}`,
+          });
         }
-
-        const { recalcGrinderStats } = await import("./recalcStats");
-        await recalcGrinderStats(claim.grinderId);
-
-        await storage.createAuditLog({
-          id: `AL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-          action: "order_claim_approved",
-          performedBy: user.id,
-          performedByName: user.displayName || user.username,
-          entityType: "order_claim",
-          entityId: claim.id,
-          details: `Approved order claim for order ${resolvedOrderId} by grinder ${claim.grinderId}. ${!claim.orderId ? "New order created from claim." : ""}`,
-        });
       }
 
       const updated = await storage.updateOrderClaimRequest(req.params.id, {
