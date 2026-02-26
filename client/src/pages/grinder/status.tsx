@@ -43,7 +43,7 @@ export default function GrinderStatus() {
               <div className={`w-8 h-8 rounded-lg ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
                 <Crown className={`w-4 h-4 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
               </div>
-              {isElite ? "Elite Status" : "Elite Grinder Role"}
+              {isElite ? "Elite Status" : "Path to Elite"}
               {isElite && (
                 <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 ml-auto text-xs">
                   Active

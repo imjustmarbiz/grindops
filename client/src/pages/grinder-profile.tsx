@@ -1296,7 +1296,7 @@ export default function GrinderProfile() {
                 <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-amber-500/15"} flex items-center justify-center`}>
                   <Crown className={`w-5 h-5 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
                 </div>
-                {isElite ? "Elite Status" : "Elite Grinder Role"}
+                {isElite ? "Elite Status" : "Path to Elite"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
