@@ -166,8 +166,7 @@ export default function GrinderNotifications() {
         </FadeInUp>
 
         {filtersOpen && (
-          <FadeInUp delay={0}>
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-2.5">
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Filters</span>
                 <div className="flex items-center gap-1.5">
@@ -211,7 +210,6 @@ export default function GrinderNotifications() {
                 </div>
               </div>
             </div>
-          </FadeInUp>
         )}
 
         {hasActiveFilters && !filtersOpen && (
