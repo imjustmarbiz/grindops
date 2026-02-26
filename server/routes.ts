@@ -487,6 +487,23 @@ export async function registerRoutes(
       if (!input.discordMessageId && !input.discordBidLink && input.isManual === undefined) {
         (input as any).isManual = true;
       }
+      if (!input.orderBrief && !input.discordMessageId) {
+        const allServices = await storage.getServices();
+        const svc = allServices.find((s: any) => s.id === input.serviceId);
+        const briefLines: string[] = [];
+        if (svc) briefLines.push(`**Service:** ${svc.name.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}`);
+        if (input.platform) briefLines.push(`**Platform:** ${input.platform}`);
+        if (input.gamertag) briefLines.push(`**Gamertag:** ${input.gamertag}`);
+        if (input.customerPrice && Number(input.customerPrice) > 0) briefLines.push(`**Price:** $${Number(input.customerPrice).toFixed(2)}`);
+        if (input.complexity && input.complexity > 1) briefLines.push(`**Complexity:** ${input.complexity}/5`);
+        if (input.isRush) briefLines.push(`**Rush:** Yes`);
+        if (input.isEmergency) briefLines.push(`**Emergency:** Yes`);
+        if (input.location) briefLines.push(`**Location:** ${input.location}`);
+        if (input.notes) briefLines.push(`**Notes:** ${input.notes}`);
+        if (briefLines.length > 0) {
+          (input as any).orderBrief = briefLines.join("\n");
+        }
+      }
       const result = await storage.createOrder(input);
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
@@ -847,6 +864,32 @@ export async function registerRoutes(
       if (input.completedAt !== undefined) {
         updateData.completedAt = input.completedAt ? new Date(input.completedAt) : null;
       }
+      const briefFields = ["platform", "serviceId", "gamertag", "complexity", "location", "notes", "customerPrice", "isRush", "isEmergency"];
+      const touchesBriefFields = briefFields.some(f => f in input);
+
+      if (touchesBriefFields && input.orderBrief === undefined) {
+        const existingOrder = await storage.getOrder(req.params.id);
+        if (existingOrder) {
+          const merged = { ...existingOrder, ...updateData };
+          const allServices = await storage.getServices();
+          const svc = allServices.find((s: any) => s.id === merged.serviceId);
+          const briefLines: string[] = [];
+          if (svc) briefLines.push(`**Service:** ${svc.name.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}`);
+          if (merged.platform) briefLines.push(`**Platform:** ${merged.platform}`);
+          if (merged.gamertag) briefLines.push(`**Gamertag:** ${merged.gamertag}`);
+          if (merged.mgtOrderNumber) briefLines.push(`**Order ID:** #${merged.mgtOrderNumber}`);
+          if (merged.customerPrice && Number(merged.customerPrice) > 0) briefLines.push(`**Price:** $${Number(merged.customerPrice).toFixed(2)}`);
+          if (merged.complexity && merged.complexity > 1) briefLines.push(`**Complexity:** ${merged.complexity}/5`);
+          if (merged.isRush) briefLines.push(`**Rush:** Yes`);
+          if (merged.isEmergency) briefLines.push(`**Emergency:** Yes`);
+          if (merged.location) briefLines.push(`**Location:** ${merged.location}`);
+          if (merged.notes) briefLines.push(`**Notes:** ${merged.notes}`);
+          if (briefLines.length > 0) {
+            updateData.orderBrief = briefLines.join("\n");
+          }
+        }
+      }
+
       const result = await storage.updateOrder(req.params.id, updateData);
       if (!result) return res.status(404).json({ message: "Order not found" });
       if (input.customerPrice !== undefined) {
@@ -1497,6 +1540,9 @@ export async function registerRoutes(
         status: o.status,
         isManual: o.isManual,
         discordMessageId: o.discordMessageId,
+        discordBidLink: o.discordBidLink,
+        orderBrief: o.orderBrief,
+        notes: o.notes,
         createdAt: o.createdAt,
         firstBidAt: o.firstBidAt,
         biddingClosesAt: o.biddingClosesAt,
