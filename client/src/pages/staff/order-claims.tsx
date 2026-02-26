@@ -390,7 +390,7 @@ export default function StaffOrderClaims() {
                       </div>
 
                       {claim.status === "pending" && (
-                        <div className="flex flex-col gap-2 shrink-0 w-72">
+                        <div className="flex flex-col gap-2 shrink-0 w-full sm:w-72">
                           {rt !== "fix_order" && (
                             <div className="border border-white/[0.06] rounded-lg p-3 bg-white/[0.02] space-y-2">
                               <p className="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Staff Fill-In</p>

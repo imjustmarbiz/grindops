@@ -808,7 +808,7 @@ export default function StaffWallets() {
                 <SelectContent>{staffTransferToWallets.filter((w: any) => w.id !== transferForm.fromWalletId).map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name}{w.scope === "company" ? " (Company)" : ""}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Amount</label>
                 <Input type="number" value={transferForm.amount} onChange={e => setTransferForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" data-testid="input-transfer-amount" />
@@ -847,7 +847,7 @@ export default function StaffWallets() {
         <DialogContent>
           <DialogHeader><DialogTitle>Create Business Payout</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Role</label>
                 <Select value={payoutForm.recipientRole || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientRole: v === "none" ? "" : v, recipientName: "", customRecipient: false }))}>
@@ -897,7 +897,7 @@ export default function StaffWallets() {
               <label className="text-sm font-medium">Description</label>
               <Textarea value={payoutForm.description} onChange={e => setPayoutForm(f => ({ ...f, description: e.target.value }))} placeholder="What is this payout for?" data-testid="input-payout-description" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Wallet (Optional)</label>
                 <Select value={payoutForm.walletId || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, walletId: v === "none" ? "" : v }))}>

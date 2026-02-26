@@ -105,7 +105,7 @@ function TierProgressBar({ currentTier, grinder }: { currentTier: string; grinde
   return (
     <div className="ml-16 space-y-1">
       <p className="text-[10px] text-muted-foreground">Next: <span className={tierStyle(nextReqs.tier).split(" ").find(c => c.startsWith("text-")) || "text-muted-foreground"}>{nextReqs.tier}</span></p>
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1">
         {metrics.map(m => {
           const pct = Math.min(100, (m.current / m.required) * 100);
           const met = m.current >= m.required;

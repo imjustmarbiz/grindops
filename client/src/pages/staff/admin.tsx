@@ -1599,12 +1599,14 @@ export default function StaffAdmin() {
                 const repl = allGrinders.find(g => g.id === a.grinderId);
                 const order = allOrders.find(o => o.id === a.orderId);
                 return (
-                  <div key={a.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs" data-testid={`row-replacement-${a.id}`}>
-                    <span className="text-primary font-medium">{order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId}</span>
-                    <span className="text-red-400">{orig?.name || "?"}</span>
-                    <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-blue-400">{repl?.name || "?"}</span>
-                    <span className="text-muted-foreground ml-auto">{a.replacementReason || "No reason"}</span>
+                  <div key={a.id} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs" data-testid={`row-replacement-${a.id}`}>
+                    <span className="text-primary font-medium shrink-0">{order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-red-400 truncate">{orig?.name || "?"}</span>
+                      <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="text-blue-400 truncate">{repl?.name || "?"}</span>
+                    </div>
+                    <span className="text-muted-foreground sm:ml-auto truncate">{a.replacementReason || "No reason"}</span>
                   </div>
                 );
               })}

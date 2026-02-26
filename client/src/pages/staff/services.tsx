@@ -87,7 +87,7 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="text-center">
             <p className="text-lg font-bold">{total}</p>
             <p className="text-[10px] text-muted-foreground">Total</p>
@@ -114,7 +114,7 @@ function ServiceCard({ service, orders, assignments }: { service: Service; order
           <ProgressBar value={completed} max={total || 1} color="bg-green-500" />
         </div>
 
-        <div className="grid grid-cols-4 gap-2 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div className="flex items-center gap-1.5">
             <DollarSign className="w-3 h-3 text-emerald-400 shrink-0" />
             <div>

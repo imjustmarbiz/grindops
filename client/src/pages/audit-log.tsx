@@ -160,8 +160,8 @@ export default function AuditLogPage() {
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader className="bg-white/[0.03]">
               <TableRow className="border-white/[0.06]">
                 <SortableHeader label="Timestamp" sortKey="createdAt" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
