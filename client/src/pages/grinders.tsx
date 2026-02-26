@@ -865,7 +865,7 @@ export default function Grinders() {
       <>
         <div className="sm:hidden space-y-2">
           {sortedItems.map(g => {
-            const winRateNum = g.winRate ? Number(g.winRate) : null;
+            const winRateNum = g.completedOrders > 0 && g.winRate != null && g.winRate !== "" ? Number(g.winRate) : null;
             const lastInfo = daysAgo(g.lastAssigned);
             const lastColor = lastInfo.days === null ? "text-muted-foreground" : lastInfo.days <= 3 ? "text-green-400" : lastInfo.days <= 7 ? "text-yellow-400" : "text-red-400";
             return (
@@ -939,7 +939,7 @@ export default function Grinders() {
             </TableHeader>
             <TableBody>
               {sortedItems.map(g => {
-                const winRateNum = g.winRate ? Number(g.winRate) : null;
+                const winRateNum = g.completedOrders > 0 && g.winRate != null && g.winRate !== "" ? Number(g.winRate) : null;
                 return (
                   <TableRow key={g.id} className={`${rowBgColor(g.displayRole || g.category || "Grinder")} cursor-pointer border-white/[0.04] transition-colors`} onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                     <TableCell>
