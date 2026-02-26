@@ -236,10 +236,10 @@ export default function Orders() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
   const queryClient = useQueryClient();
-  const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
+  const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 15000 });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
-  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
-  const { data: bids } = useQuery<Bid[]>({ queryKey: ["/api/bids"] });
+  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 15000 });
+  const { data: bids } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 15000 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");

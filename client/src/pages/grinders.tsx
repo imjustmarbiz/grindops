@@ -383,7 +383,7 @@ function BadgeManagement({ grinderId, grinderName }: { grinderId: string; grinde
 
 export default function Grinders() {
   const queryClient = useQueryClient();
-  const { data: grinders, isLoading } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
+  const { data: grinders, isLoading } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 15000 });
   const [selectedGrinder, setSelectedGrinder] = useState<Grinder | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addForm, setAddForm] = useState({ discordUserId: "", name: "", category: "Grinder", capacity: "3" });

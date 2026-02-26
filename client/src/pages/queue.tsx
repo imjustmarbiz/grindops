@@ -76,8 +76,8 @@ function SuggestionCard({ s, i, customerPrice }: { s: SuggestionResult; i: numbe
 }
 
 export default function Queue() {
-  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
-  const { data: fullQueue, isLoading: fullLoading } = useQuery<FullQueueItem[]>({ queryKey: ["/api/queue/full"], refetchInterval: 30000 });
+  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 15000 });
+  const { data: fullQueue, isLoading: fullLoading } = useQuery<FullQueueItem[]>({ queryKey: ["/api/queue/full"], refetchInterval: 15000 });
   const { data: services } = useQuery<{ id: string; name: string }[]>({ queryKey: ["/api/services"] });
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
