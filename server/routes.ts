@@ -10,6 +10,12 @@ import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { or, eq, sql } from "drizzle-orm";
 import multer from "multer";
+
+function getActorName(req: any): string {
+  const user = req.user;
+  if (!user) return "system";
+  return user.discordUsername || user.firstName || user.email || user.id || "system";
+}
 import path from "path";
 import fs from "fs";
 import { messages as messagesTable, normalizePlatform } from "@shared/schema";
@@ -313,7 +319,7 @@ export async function registerRoutes(
         entityType: "grinder",
         entityId: req.params.id,
         action: "updated",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify(req.body),
       });
       res.json(result);
@@ -481,7 +487,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: result.id,
         action: "created",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify({ customerPrice: result.customerPrice, serviceId: result.serviceId }),
       });
       createSystemNotification({
@@ -562,7 +568,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: req.params.id,
         action: `status_changed_to_${status}`,
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify({ newStatus: status, previousStatus: order.status, previousGrinderId: order.assignedGrinderId }),
       });
       res.json(result);
@@ -583,7 +589,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: req.params.id,
         action: "deleted",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify({ orderId: req.params.id }),
       });
       res.json({ success: true });
@@ -812,7 +818,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: req.params.id,
         action: "price_updated",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify({ newPrice: customerPrice }),
       });
       res.json(result);
@@ -846,7 +852,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: req.params.id,
         action: "fields_updated",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify(input),
       });
       res.json(result);
@@ -874,7 +880,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: req.params.id,
         action: "ticket_linked",
-        actor: (req as any).user?.username || "staff",
+        actor: getActorName(req),
         details: JSON.stringify({ discordTicketChannelId: input.discordTicketChannelId }),
       });
       res.json(result);
@@ -894,7 +900,7 @@ export async function registerRoutes(
         entityType: "order",
         entityId: req.params.id,
         action: "ticket_unlinked",
-        actor: (req as any).user?.username || "staff",
+        actor: getActorName(req),
         details: JSON.stringify({ orderId: req.params.id }),
       });
       res.json(result);
@@ -1283,7 +1289,7 @@ export async function registerRoutes(
         entityType: "assignment",
         entityId: result.id,
         action: "created",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify({ grinderId: result.grinderId, orderId: result.orderId }),
       });
       res.status(201).json(result);
@@ -1322,7 +1328,7 @@ export async function registerRoutes(
         entityType: "assignment",
         entityId: req.params.id,
         action: "grinder_replaced",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify({
           orderId: assignment.orderId,
           originalGrinderId,
@@ -2994,7 +3000,7 @@ export async function registerRoutes(
         entityType: "grinder",
         entityId: req.params.grinderId,
         action: "fine_paid",
-        actor: (req as any).userId || "staff",
+        actor: getActorName(req),
         details: JSON.stringify({ amountPaid: currentFine }),
       });
 
@@ -3086,7 +3092,7 @@ export async function registerRoutes(
         entityType: "config",
         entityId: "default",
         action: "updated",
-        actor: "admin",
+        actor: getActorName(req),
         details: JSON.stringify(req.body),
       });
       res.json(config);
@@ -3270,13 +3276,12 @@ export async function registerRoutes(
       } as any);
       if (!updated) return res.status(404).json({ message: "Checkpoint not found" });
 
-      const user = (req as any).user;
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
         entityType: "checkpoint",
         entityId: req.params.id,
         action: "checkpoint_time_edited",
-        actor: user?.username || "staff",
+        actor: getActorName(req),
         details: JSON.stringify({ newTime: createdAt }),
       });
 
@@ -4600,7 +4605,7 @@ export async function registerRoutes(
         entityType: "review_access",
         entityId: id,
         action: "access_code_generated",
-        actor: user.displayName || user.username || grinder.name,
+        actor: getActorName(req),
         details: JSON.stringify({ orderId, grinderId, expiresAt: expiresAt.toISOString() }),
       });
 
@@ -4643,7 +4648,7 @@ export async function registerRoutes(
         status: "approved",
         sessionToken,
         approvedBy: user.id,
-        approvedByName: user.displayName || user.username,
+        approvedByName: user.discordUsername || user.firstName || user.id,
         approvedAt: new Date(),
       });
 
@@ -4652,7 +4657,7 @@ export async function registerRoutes(
         entityType: "review_access",
         entityId: req.params.id,
         action: "access_approved",
-        actor: user.displayName || user.username,
+        actor: getActorName(req),
         details: JSON.stringify({ customerName: code.customerName, grinderId: code.grinderId }),
       });
 
