@@ -1401,7 +1401,6 @@ export async function registerRoutes(
 
     const grinderRoles = (myGrinder as any).roles as string[] | null;
     const isElite = myGrinder.discordRoleId === "1466370965016412316" || myGrinder.tier === "Elite" || myGrinder.category === "Elite Grinder" || (grinderRoles && grinderRoles.includes("Elite Grinder"));
-    const ELITE_PRIORITY_MINUTES = 5;
     const now = new Date();
 
     const updates: any = {};
@@ -1443,17 +1442,12 @@ export async function registerRoutes(
         return closedAgo < BIDDING_CLOSED_GRACE_MS;
       }
       if (o.status !== "Open") return false;
-      if (isElite) return true;
-      if (o.isManual) return true;
-      const orderAge = (now.getTime() - new Date(o.createdAt).getTime()) / (1000 * 60);
-      return orderAge >= ELITE_PRIORITY_MINUTES;
+      return true;
     });
 
     const availableOrders = openOrders.map((o: any) => {
       const orderBids = allBids.filter((b: any) => b.orderId === o.id);
       const myBidOnOrder = myBids.find((b: any) => b.orderId === o.id);
-      const orderAge = (now.getTime() - new Date(o.createdAt).getTime()) / (1000 * 60);
-      const isElitePriority = orderAge < ELITE_PRIORITY_MINUTES;
       return {
         id: o.id,
         mgtOrderNumber: o.mgtOrderNumber,
@@ -1476,7 +1470,6 @@ export async function registerRoutes(
         myBidId: myBidOnOrder?.id || null,
         myBidStatus: myBidOnOrder?.status || null,
         myBidAmount: myBidOnOrder?.bidAmount || null,
-        elitePriority: isElitePriority,
       };
     });
 

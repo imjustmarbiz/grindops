@@ -802,7 +802,7 @@ export default function GrinderProfile() {
                             {order.mgtOrderNumber ? `Order #${order.mgtOrderNumber}` : order.id}
                           </span>
                           <InlineCountdown biddingClosesAt={order.biddingClosesAt} />
-                          {order.elitePriority && isElite && <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30"><Sparkles className="w-3 h-3 mr-0.5" />Elite Early Access</Badge>}
+
                           {order.isManual && <Badge className="bg-amber-500/20 text-amber-400">Dashboard</Badge>}
                           {order.isEmergency && <Badge className="bg-red-500/20 text-red-400">EMERGENCY</Badge>}
                           {order.isRush && <Badge className="bg-orange-500/20 text-orange-400">RUSH</Badge>}
