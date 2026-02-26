@@ -29,7 +29,7 @@ const features = [
   {
     icon: Wallet,
     title: "Payouts",
-    description: "Process grinder payouts with multi-step approval workflows. Handle disputes, view complete payment history, and manage payout schedules efficiently.",
+    description: "Process grinder payouts with multi-step approval workflows. Filter by status, grinder name, or date range. Grinders are automatically notified on status changes. Handle disputes and upload payment proof.",
     url: "/payouts",
   },
   {
@@ -59,7 +59,7 @@ const features = [
   {
     icon: Gavel,
     title: "Bids",
-    description: "Review incoming bids from grinders. Accept, deny, or send counter-offers. View complete bid history and manage the bidding process for open orders.",
+    description: "Review incoming bids from grinders. Accept, deny, or send counter-offers. Accepted bids prompt grinders to link a Discord ticket channel. Grinders are notified of bid decisions instantly.",
     url: "/bids",
   },
   {
@@ -131,7 +131,7 @@ const features = [
   {
     icon: ScrollText,
     title: "Operations Guide",
-    description: "A comprehensive slide-deck walkthrough of every staff and owner page. Step-by-step instructions, key features, and pro tips for managing the entire platform.",
+    description: "A comprehensive slide-deck walkthrough of every staff and owner page. Step-by-step instructions, key features, and pro tips. Updated with latest notification, date filter, and ticket linking features.",
     url: "/staff/ops-guide",
   },
   {

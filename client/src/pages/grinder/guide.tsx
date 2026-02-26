@@ -36,13 +36,13 @@ const featureItems = [
   {
     icon: Gavel,
     title: "My Bids",
-    desc: "View your complete bid history including pending, accepted, and denied bids. Edit active bids before the countdown expires to stay competitive.",
+    desc: "View your complete bid history including pending, accepted, and denied bids. Edit active bids before the countdown expires. When accepted, link the Discord ticket channel directly from the prompt.",
     url: "/grinder/bids",
   },
   {
     icon: Banknote,
     title: "Payouts",
-    desc: "Request payouts for completed work, view your full payment history, manage payout methods, and dispute or approve amounts if something doesn't look right.",
+    desc: "Request payouts for completed work, view your full payment history, manage payout methods, and dispute or approve amounts. Receive real-time notifications when your payout status changes.",
     url: "/grinder/payouts",
   },
   {
@@ -67,7 +67,7 @@ const featureItems = [
   {
     icon: Bell,
     title: "Notifications",
-    desc: "View alerts and messages from staff. Unread notifications are highlighted and the sidebar shows a badge count so you never miss important updates.",
+    desc: "View alerts and messages from staff. Clickable notifications navigate directly to the relevant page. Get notified on payout changes, bid results, and system alerts with per-user read tracking.",
     url: "/grinder/notifications",
   },
   {
@@ -115,7 +115,7 @@ const featureItems = [
   {
     icon: ScrollText,
     title: "Operations Guide",
-    desc: "A comprehensive slide-deck walkthrough of every grinder dashboard page. Step-by-step instructions, key features, pro tips, and an ideal daily workflow routine.",
+    desc: "A comprehensive slide-deck walkthrough of every grinder dashboard page. Step-by-step instructions, key features, pro tips, and an ideal daily workflow routine. Updated with latest notification and ticket linking features.",
     url: "/grinder/ops-guide",
   },
 ];
@@ -129,6 +129,7 @@ const quickTips = [
   { icon: ArrowUpCircle, tip: "Keep your availability status updated so you get considered for direct assignments." },
   { icon: Crown, tip: "Elite grinders get a higher order limit (5 vs 3), priority queue boosts, and a special theme." },
   { icon: Brain, tip: "Your queue position is influenced by 9 factors. Focus on reliability and quality to climb the ranks." },
+    { icon: Bell, tip: "Notifications are clickable! Click any notification to jump directly to the related page (payouts, bids, orders)." },
 ];
 
 export default function GrinderGuide() {
