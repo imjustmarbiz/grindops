@@ -5,7 +5,7 @@ import type { Bid, InsertBid } from "@shared/schema";
 export function useBids() {
   return useQuery<Bid[]>({
     queryKey: ["/api/bids"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 }
 

@@ -7,7 +7,7 @@ import { eq, and, isNotNull, sql } from "drizzle-orm";
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
 const GRINDERS_ROLE_ID = "1466369179648004224";
 
-const CHECK_INTERVAL_MS = 15_000;
+const CHECK_INTERVAL_MS = 60_000;
 
 type NotificationStage = "open" | "first_bid" | "5min" | "2min" | "1min" | "closed";
 

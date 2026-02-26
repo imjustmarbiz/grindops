@@ -60,7 +60,7 @@ export function LowerThirdNotifications() {
 
   const { data: allNotifs = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 8000,
+    refetchInterval: 30000,
     enabled: !!user,
   });
 

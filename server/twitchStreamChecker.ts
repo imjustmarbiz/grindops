@@ -2,7 +2,7 @@ import { storage } from "./storage";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
-const CHECK_INTERVAL_MS = 60_000;
+const CHECK_INTERVAL_MS = 5 * 60_000;
 
 let accessToken: string | null = null;
 let tokenExpiresAt = 0;

@@ -35,9 +35,9 @@ export default function StaffReports() {
 
   const [activeTab, setActiveTab] = useState<"reports" | "checkpoints" | "updates">("reports");
 
-  const reports = useQuery<any[]>({ queryKey: ["/api/staff/performance-reports"], refetchInterval: 10000 });
-  const checkpoints = useQuery<any[]>({ queryKey: ["/api/staff/checkpoints"], refetchInterval: 10000 });
-  const orderUpdates = useQuery<any[]>({ queryKey: ["/api/staff/order-updates"], refetchInterval: 10000 });
+  const reports = useQuery<any[]>({ queryKey: ["/api/staff/performance-reports"], refetchInterval: 30000 });
+  const checkpoints = useQuery<any[]>({ queryKey: ["/api/staff/checkpoints"], refetchInterval: 30000 });
+  const orderUpdates = useQuery<any[]>({ queryKey: ["/api/staff/order-updates"], refetchInterval: 30000 });
 
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generateAssignmentId, setGenerateAssignmentId] = useState("");

@@ -10,7 +10,7 @@ import {
 
 export default function GrinderEvents() {
   const { user } = useAuth();
-  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"], refetchInterval: 10000 });
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"], refetchInterval: 30000 });
   const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
   const { data: events = [], isLoading } = useQuery<Event[]>({ queryKey: ["/api/events"], refetchInterval: 30000 });
 

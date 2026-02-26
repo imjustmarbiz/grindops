@@ -10,12 +10,18 @@ process.on("unhandledRejection", (reason) => {
   console.error("[CRASH] Unhandled Rejection:", reason);
 });
 process.on("SIGTERM", () => {
-  console.error("[SIGNAL] SIGTERM received — process being killed");
+  console.error("[SIGNAL] SIGTERM received — process being terminated");
   process.exit(0);
 });
 process.on("SIGINT", () => {
   console.error("[SIGNAL] SIGINT received");
   process.exit(0);
+});
+process.on("SIGHUP", () => {
+  console.error("[SIGNAL] SIGHUP received");
+});
+process.on("exit", (code) => {
+  console.error(`[EXIT] Process exiting with code ${code}`);
 });
 
 const app = express();
@@ -51,23 +57,11 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 
@@ -111,7 +105,19 @@ app.use((req, res, next) => {
   );
 })();
 
+function logMemory(label: string) {
+  const mem = process.memoryUsage();
+  const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
+  log(`[memory] ${label}: RSS=${mb(mem.rss)}MB Heap=${mb(mem.heapUsed)}/${mb(mem.heapTotal)}MB`, "system");
+}
+
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function initializeBackgroundServices() {
+  logMemory("before background services");
+
   try {
     const { seedDatabase } = await import("./routes");
     await seedDatabase();
@@ -120,38 +126,65 @@ async function initializeBackgroundServices() {
     console.error("Failed to seed database:", error);
   }
 
-  try {
-    const { startBiddingTimerScheduler } = await import("./discord/biddingTimer");
-    startBiddingTimerScheduler();
-  } catch (error) {
-    console.error("Failed to start bidding timer scheduler:", error);
+  logMemory("after database seed");
+
+  const isDev = process.env.NODE_ENV !== "production";
+  const skipDiscord = isDev && process.env.SKIP_DISCORD_BOT === "true";
+
+  if (skipDiscord) {
+    log("Dev mode: skipping Discord bot, bidding timer, Twitch checker (SKIP_DISCORD_BOT=true)");
+  } else {
+    await delay(2000);
+
+    try {
+      const { startBiddingTimerScheduler } = await import("./discord/biddingTimer");
+      startBiddingTimerScheduler();
+    } catch (error) {
+      console.error("Failed to start bidding timer scheduler:", error);
+    }
+
+    try {
+      const { startDailyUpdateChecker } = await import("./dailyUpdateChecker");
+      startDailyUpdateChecker();
+    } catch (error) {
+      console.error("Failed to start daily update checker:", error);
+    }
+
+    await delay(2000);
+
+    try {
+      const { startTwitchStreamChecker } = await import("./twitchStreamChecker");
+      startTwitchStreamChecker();
+    } catch (error) {
+      console.error("Failed to start Twitch stream checker:", error);
+    }
+
+    logMemory("before Discord bot");
+    await delay(3000);
+
+    try {
+      const { startDiscordBot } = await import("./discord/bot");
+      await startDiscordBot();
+    } catch (error) {
+      console.error("Failed to start Discord bot:", error);
+    }
+    logMemory("after Discord bot");
   }
 
-  try {
-    const { startDailyUpdateChecker } = await import("./dailyUpdateChecker");
-    startDailyUpdateChecker();
-  } catch (error) {
-    console.error("Failed to start daily update checker:", error);
+  if (!skipDiscord) {
+    await delay(2000);
+
+    try {
+      const { repairMissingAssignments } = await import("./repairSync");
+      await repairMissingAssignments();
+    } catch (error) {
+      console.error("Failed to repair missing assignments:", error);
+    }
+  } else {
+    log("Dev mode: skipping repair-sync (SKIP_DISCORD_BOT=true)");
   }
 
-  try {
-    const { startTwitchStreamChecker } = await import("./twitchStreamChecker");
-    startTwitchStreamChecker();
-  } catch (error) {
-    console.error("Failed to start Twitch stream checker:", error);
-  }
+  logMemory("all services initialized");
 
-  try {
-    const { startDiscordBot } = await import("./discord/bot");
-    await startDiscordBot();
-  } catch (error) {
-    console.error("Failed to start Discord bot:", error);
-  }
-
-  try {
-    const { repairMissingAssignments } = await import("./repairSync");
-    await repairMissingAssignments();
-  } catch (error) {
-    console.error("Failed to repair missing assignments:", error);
-  }
+  setInterval(() => logMemory("periodic"), 5 * 60 * 1000);
 }

@@ -4,6 +4,6 @@ import type { Grinder } from "@shared/schema";
 export function useGrinders() {
   return useQuery<Grinder[]>({
     queryKey: ["/api/grinders"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 }

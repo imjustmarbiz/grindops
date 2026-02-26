@@ -1145,7 +1145,24 @@ export async function registerRoutes(
 
   app.post(api.bids.create.path, requireStaff, async (req, res) => {
     try {
-      const input = api.bids.create.input.parse(req.body);
+      const body = req.body;
+      const input = {
+        id: body.id || `BID-${Date.now().toString(36)}`,
+        orderId: body.orderId,
+        grinderId: body.grinderId,
+        bidAmount: String(body.bidAmount),
+        bidTime: body.bidTime ? new Date(body.bidTime) : new Date(),
+        estDeliveryDate: body.estDeliveryDate ? new Date(body.estDeliveryDate) : new Date(Date.now() + 48 * 3600000),
+        timeline: body.timeline || null,
+        canStart: body.canStart || null,
+        notes: body.notes || null,
+        status: body.status || "Pending",
+        margin: body.margin ? String(body.margin) : null,
+        marginPct: body.marginPct ? String(body.marginPct) : null,
+      };
+      if (!input.orderId || !input.grinderId) {
+        return res.status(400).json({ message: "orderId and grinderId are required" });
+      }
       const result = await storage.createBid(input);
       const userId = (req as any).userId;
       const dbUser = userId ? await authStorage.getUser(userId) : null;

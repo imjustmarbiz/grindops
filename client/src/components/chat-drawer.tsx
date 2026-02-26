@@ -136,14 +136,14 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
 
   const { data: threads = [] } = useQuery<ThreadWithParticipants[]>({
     queryKey: ["/api/chat/threads"],
-    refetchInterval: 5000,
+    refetchInterval: 15000,
     enabled: open,
   });
 
   const { data: activeMessages = [] } = useQuery<Message[]>({
     queryKey: ["/api/chat/threads", activeThreadId, "messages"],
     enabled: !!activeThreadId && open,
-    refetchInterval: 3000,
+    refetchInterval: 10000,
   });
 
   const { data: members = [] } = useQuery<ChatMember[]>({

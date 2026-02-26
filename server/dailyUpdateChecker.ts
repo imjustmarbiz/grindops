@@ -1,7 +1,7 @@
 import { storage } from "./storage";
 import { recalcGrinderStats } from "./recalcStats";
 
-const CHECK_INTERVAL_MS = 60 * 1000;
+const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let checkerInterval: ReturnType<typeof setInterval> | null = null;
 
 function getETComponents(): { hours: number; minutes: number; year: number; month: number; day: number } {

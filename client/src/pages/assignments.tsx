@@ -27,9 +27,9 @@ function formatCurrency(val: number) {
 
 export default function Assignments() {
   const queryClient = useQueryClient();
-  const { data: assignments, isLoading } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 10000 });
-  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
-  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
+  const { data: assignments, isLoading } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 30000 });
+  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
+  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 30000 });
   const { toast } = useToast();
 
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);

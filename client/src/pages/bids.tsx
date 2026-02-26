@@ -27,9 +27,9 @@ export default function Bids() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
-  const { data: bids, isLoading } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 10000 });
-  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
-  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
+  const { data: bids, isLoading } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 30000 });
+  const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
+  const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 30000 });
 
   const [filterOrderId, setFilterOrderId] = useState<string>("all");
   const [editingBid, setEditingBid] = useState<Bid | null>(null);

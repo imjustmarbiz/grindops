@@ -59,7 +59,7 @@ export default function GrinderReviews() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"], refetchInterval: 10000 });
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"], refetchInterval: 30000 });
   const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
 
   const { data: reviews = [], isLoading } = useQuery<CustomerReview[]>({

@@ -5,7 +5,7 @@ import type { Order, InsertOrder } from "@shared/schema";
 export function useOrders() {
   return useQuery<Order[]>({
     queryKey: ["/api/orders"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 }
 

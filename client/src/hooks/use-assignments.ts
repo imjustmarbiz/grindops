@@ -5,7 +5,7 @@ import type { Assignment, InsertAssignment } from "@shared/schema";
 export function useAssignments() {
   return useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 }
 

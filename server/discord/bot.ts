@@ -539,6 +539,11 @@ export async function startDiscordBot() {
       GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Message, Partials.Channel],
+    sweepers: {
+      messages: { interval: 300, lifetime: 600 },
+      users: { interval: 600, filter: () => (u: any) => u.bot && u.id !== client?.user?.id },
+    },
+    rest: { timeout: 15_000 },
   });
 
   client.once("ready", async () => {

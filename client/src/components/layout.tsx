@@ -226,12 +226,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const { data: threads = [] } = useQuery<(MessageThread & { participants: ThreadParticipant[] })[]>({
     queryKey: ["/api/chat/threads"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const { data: notifs = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const totalUnread = threads.reduce((sum, t) => {

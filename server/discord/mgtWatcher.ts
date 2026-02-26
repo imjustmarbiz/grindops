@@ -740,7 +740,7 @@ export async function handleMessageUpdate(oldMessage: Message | PartialMessage, 
   }
 }
 
-const PROPOSAL_POLL_INTERVAL_MS = 30 * 1000;
+const PROPOSAL_POLL_INTERVAL_MS = 2 * 60 * 1000;
 let proposalPollTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startProposalBidSync(discordClient: Client): void {

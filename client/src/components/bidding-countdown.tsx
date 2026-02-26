@@ -84,7 +84,7 @@ function SingleTimer({ timer }: { timer: TimerData }) {
 export function BiddingCountdownPanel({ variant = "full" }: { variant?: "full" | "compact" }) {
   const { data } = useQuery<BiddingTimersResponse>({
     queryKey: ["/api/bidding-timers"],
-    refetchInterval: 10_000,
+    refetchInterval: 30_000,
   });
 
   const activeTimers = data?.activeTimers || [];

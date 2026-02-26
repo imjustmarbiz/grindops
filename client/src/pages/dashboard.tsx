@@ -100,19 +100,19 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
-  const { data: analytics, isLoading, dataUpdatedAt } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 10000 });
-  const { data: grindersList, dataUpdatedAt: grindersUpdatedAt } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 10000 });
-  const { data: auditLogs, dataUpdatedAt: logsUpdatedAt } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 10000 });
-  const { data: assignmentsList, dataUpdatedAt: assignmentsUpdatedAt } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 10000 });
-  const { data: ordersList, dataUpdatedAt: ordersUpdatedAt } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 10000 });
-  const { data: bidsList, dataUpdatedAt: bidsUpdatedAt } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 10000 });
-  const { data: servicesList } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 10000 });
-  const { data: grinderUpdates } = useQuery<any[]>({ queryKey: ["/api/staff/order-updates"], refetchInterval: 10000 });
-  const { data: payoutReqs } = useQuery<any[]>({ queryKey: ["/api/staff/payout-requests"], refetchInterval: 10000 });
-  const { data: eliteVsGrinderMetrics } = useQuery<any>({ queryKey: ["/api/staff/elite-vs-grinder-metrics"], refetchInterval: 10000 });
-  const { data: eliteRequestsList } = useQuery<any[]>({ queryKey: ["/api/staff/elite-requests"], refetchInterval: 10000 });
-  const { data: staffAlertsList } = useQuery<any[]>({ queryKey: ["/api/staff/alerts"], refetchInterval: 10000 });
-  const { data: strikeLogsList } = useQuery<any[]>({ queryKey: ["/api/staff/strike-logs"], refetchInterval: 10000 });
+  const { data: analytics, isLoading, dataUpdatedAt } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 30000 });
+  const { data: grindersList, dataUpdatedAt: grindersUpdatedAt } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 30000 });
+  const { data: auditLogs, dataUpdatedAt: logsUpdatedAt } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 30000 });
+  const { data: assignmentsList, dataUpdatedAt: assignmentsUpdatedAt } = useQuery<Assignment[]>({ queryKey: ["/api/assignments"], refetchInterval: 30000 });
+  const { data: ordersList, dataUpdatedAt: ordersUpdatedAt } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
+  const { data: bidsList, dataUpdatedAt: bidsUpdatedAt } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 30000 });
+  const { data: servicesList } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 60000 });
+  const { data: grinderUpdates } = useQuery<any[]>({ queryKey: ["/api/staff/order-updates"], refetchInterval: 30000 });
+  const { data: payoutReqs } = useQuery<any[]>({ queryKey: ["/api/staff/payout-requests"], refetchInterval: 30000 });
+  const { data: eliteVsGrinderMetrics } = useQuery<any>({ queryKey: ["/api/staff/elite-vs-grinder-metrics"], refetchInterval: 60000 });
+  const { data: eliteRequestsList } = useQuery<any[]>({ queryKey: ["/api/staff/elite-requests"], refetchInterval: 30000 });
+  const { data: staffAlertsList } = useQuery<any[]>({ queryKey: ["/api/staff/alerts"], refetchInterval: 30000 });
+  const { data: strikeLogsList } = useQuery<any[]>({ queryKey: ["/api/staff/strike-logs"], refetchInterval: 30000 });
 
   const payoutMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {

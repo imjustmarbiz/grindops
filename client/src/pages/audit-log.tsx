@@ -15,7 +15,7 @@ export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const { data: logs, isLoading } = useQuery<AuditLog[]>({
     queryKey: ["/api/audit-logs?limit=200"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const entityTypes = ["all", "order", "bid", "assignment", "grinder", "report", "checkpoint", "payout", "payout_request", "order_update", "elite_request", "staff_alert", "config"];
