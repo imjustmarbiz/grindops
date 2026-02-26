@@ -4893,7 +4893,7 @@ export async function registerRoutes(
       if (!code) return res.status(404).json({ error: "Access request not found" });
 
       if (user.role === "grinder") {
-        const myGrinder = await storage.getGrinderByDiscordUserId(user.id);
+        const myGrinder = await storage.getGrinderByDiscordId(user.id);
         if (!myGrinder || code.grinderId !== myGrinder.id) {
           return res.status(403).json({ error: "Not your access request" });
         }
@@ -4932,7 +4932,7 @@ export async function registerRoutes(
       if (!code) return res.status(404).json({ error: "Access request not found" });
 
       if (user.role === "grinder") {
-        const myGrinder = await storage.getGrinderByDiscordUserId(user.id);
+        const myGrinder = await storage.getGrinderByDiscordId(user.id);
         if (!myGrinder || code.grinderId !== myGrinder.id) {
           return res.status(403).json({ error: "Not your access request" });
         }
