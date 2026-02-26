@@ -242,7 +242,7 @@ export default function GrinderOverview() {
                   Elite Grinder
                 </Badge>
               ) : (
-                <Badge className="bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/30 gap-1" data-testid="badge-primary-role">
+                <Badge className="bg-[#1a1a3e] text-[#8b9aff] border-[#5865F2]/40 gap-1" data-testid="badge-primary-role">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Grinder
                 </Badge>
