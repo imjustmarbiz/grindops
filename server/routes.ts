@@ -484,6 +484,9 @@ export async function registerRoutes(
       }
       const input = api.orders.create.input.parse(req.body);
       if (input.platform) input.platform = normalizePlatform(input.platform);
+      if (!input.discordMessageId && !input.discordBidLink && input.isManual === undefined) {
+        (input as any).isManual = true;
+      }
       const result = await storage.createOrder(input);
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,

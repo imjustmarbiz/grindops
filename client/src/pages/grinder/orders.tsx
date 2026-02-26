@@ -161,7 +161,7 @@ export default function GrinderOrders() {
                   <Lock className="w-4 h-4" />
                   Bidding Closed
                 </Button>
-              ) : order.isManual ? (
+              ) : (order.isManual || (!order.discordMessageId && !order.discordBidLink)) ? (
                 <Button
                   size="sm"
                   className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
@@ -574,7 +574,7 @@ export default function GrinderOrders() {
               </div>
 
               <div className="flex gap-2">
-                {!viewDetailsOrder.hasBid && !viewDetailsOrder.isManual && (
+                {!viewDetailsOrder.hasBid && !viewDetailsOrder.isManual && viewDetailsOrder.discordMessageId && (
                   <Button
                     className={`flex-1 gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 text-white" : ""}`}
                     data-testid={`button-bid-from-details-${viewDetailsOrder.id}`}
@@ -592,7 +592,7 @@ export default function GrinderOrders() {
                     <ExternalLink className="w-3 h-3" />
                   </Button>
                 )}
-                {!viewDetailsOrder.hasBid && viewDetailsOrder.isManual && (
+                {!viewDetailsOrder.hasBid && (viewDetailsOrder.isManual || (!viewDetailsOrder.discordMessageId && !viewDetailsOrder.discordBidLink)) && (
                   <Button
                     className={`flex-1 gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 text-white" : ""}`}
                     data-testid={`button-bid-manual-from-details-${viewDetailsOrder.id}`}
