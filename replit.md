@@ -14,7 +14,7 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - Visual lifecycle management for orders with distinct status indicators.
 - A multi-step confirmation process for payouts, including approval, dispute resolution, and staff review.
 - Integrated group chat and DM functionality with file attachments and @mentions.
-- Lower-third popups with distinct sounds for various event types, supporting clickable navigation.
+- Lower-third popups with distinct sounds for various event types, supporting clickable navigation, with a volume slider control (0–100%) persisted in localStorage.
 - Reusable component for tracking activities and contextual `HelpTip` components on grinder pages.
 - Professional dark mode theme with role-based styling (e.g., owner theme with gold accents).
 

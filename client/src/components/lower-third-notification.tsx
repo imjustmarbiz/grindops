@@ -4,9 +4,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX, CircleHelp, Play } from "lucide-react";
+import { X, Package, AlertTriangle, Bell, DollarSign, Gavel, Info, CheckCircle, Zap, Volume2, VolumeX, CircleHelp, Play, Volume1 } from "lucide-react";
 import type { Notification } from "@shared/schema";
-import { playNotificationSound, unlockMobileAudio } from "@/lib/notification-sounds";
+import { playNotificationSound, unlockMobileAudio, getVolume, setVolume } from "@/lib/notification-sounds";
 
 const iconMap: Record<string, any> = {
   package: Package,
@@ -56,6 +56,7 @@ export function LowerThirdNotifications() {
     const stored = localStorage.getItem("notif-sound-enabled");
     return stored !== "false";
   });
+  const [volume, setVolumeState] = useState(getVolume);
   const hasInitialized = useRef(false);
 
   const { data: allNotifs = [] } = useQuery<Notification[]>({
@@ -122,6 +123,12 @@ export function LowerThirdNotifications() {
     });
   }, []);
 
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    setVolumeState(val);
+  }, []);
+
   const testSound = useCallback(() => {
     unlockMobileAudio();
     setTimeout(() => {
@@ -143,6 +150,9 @@ export function LowerThirdNotifications() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showSoundInfo]);
 
+  const volumePct = Math.round(volume * 100);
+  const VolumeIcon = !soundEnabled ? VolumeX : volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
       <div className="pointer-events-auto self-end mb-1 flex items-center gap-1.5 relative" ref={soundInfoRef}>
@@ -162,12 +172,12 @@ export function LowerThirdNotifications() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 4, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="absolute bottom-full right-0 mb-2 w-56 rounded-lg border border-white/10 bg-black/80 backdrop-blur-md p-3 shadow-xl"
+                className="absolute bottom-full right-0 mb-2 w-60 rounded-lg border border-white/10 bg-black/80 backdrop-blur-md p-3 shadow-xl"
                 data-testid="popup-sound-info"
               >
                 <p className="text-xs font-medium text-foreground mb-1.5">Sound Alerts</p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Get audio alerts for new orders, strikes, payouts, messages, and other important updates. Each event has a unique sound so you can tell what happened without looking.
+                  Audio alerts for new orders, strikes, payouts, messages, and other updates. Each event type has a unique tone.
                 </p>
                 <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-1">
                   <p>🔔 New Order — rising ding</p>
@@ -180,11 +190,31 @@ export function LowerThirdNotifications() {
                   <p className="text-[11px] font-medium text-foreground">Controls</p>
                   <p>▶ Play — preview the notification sound</p>
                   <p>🔊 Speaker — toggle sounds on/off</p>
+                  <p>🎚️ Slider — adjust alert volume (0–100%)</p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {soundEnabled && (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10" data-testid="volume-slider-container">
+            <Volume1 className="w-3 h-3 text-muted-foreground shrink-0" />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-16 h-1 appearance-none bg-white/20 rounded-full cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+              title={`Volume: ${volumePct}%`}
+              data-testid="input-volume-slider"
+            />
+            <span className="text-[9px] text-muted-foreground w-6 text-right tabular-nums" data-testid="text-volume-level">{volumePct}%</span>
+          </div>
+        )}
+
         <button
           onClick={testSound}
           disabled={!soundEnabled}
@@ -208,7 +238,7 @@ export function LowerThirdNotifications() {
           title={soundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
           data-testid="button-toggle-notif-sound"
         >
-          {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+          <VolumeIcon className="w-3.5 h-3.5" />
         </button>
       </div>
       <AnimatePresence mode="popLayout">

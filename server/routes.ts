@@ -5052,7 +5052,9 @@ export async function registerRoutes(
               assignUpdate.grinderEarnings = String(newGrinderPay);
               const orderPriceNum = updatedOrder?.customerPrice ? parseFloat(updatedOrder.customerPrice) : 0;
               const grinderPayNum = parseFloat(newGrinderPay) || 0;
-              const profit = orderPriceNum - grinderPayNum;
+              const priorOrigPay = Number(assignment.originalGrinderPay || 0);
+              const totalGrinderCost = priorOrigPay + grinderPayNum;
+              const profit = orderPriceNum - totalGrinderCost;
               assignUpdate.companyProfit = String(profit.toFixed(2));
               assignUpdate.margin = String(profit.toFixed(2));
               assignUpdate.marginPct = orderPriceNum > 0 ? String(((profit / orderPriceNum) * 100).toFixed(1)) : "0";
@@ -5131,9 +5133,12 @@ export async function registerRoutes(
           const grinderPay = claim.grinderAmount || "0";
           const orderPriceNum = order?.customerPrice ? parseFloat(order.customerPrice) : 0;
           const grinderPayNum = parseFloat(grinderPay) || 0;
-          const profit = orderPriceNum - grinderPayNum;
-          const marginPct = orderPriceNum > 0 ? (profit / orderPriceNum) * 100 : 0;
           const isCompleted = isAddCompleted || !!claim.completedDateTime;
+
+          const existingOrigPay = existingAssignments.length > 0 ? Number(existingAssignments[0].originalGrinderPay || 0) : 0;
+          const totalGrinderCost = existingOrigPay + grinderPayNum;
+          const profit = orderPriceNum - totalGrinderCost;
+          const marginPct = orderPriceNum > 0 ? (profit / orderPriceNum) * 100 : 0;
 
           if (existingAssignments.length === 0) {
             const newAssignmentId = `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;

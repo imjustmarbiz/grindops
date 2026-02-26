@@ -2,6 +2,21 @@ const SAMPLE_RATE = 22050;
 
 let audioPool: HTMLAudioElement[] = [];
 let isUnlocked = false;
+let globalVolume = parseFloat(typeof window !== "undefined" ? (localStorage.getItem("notif-sound-volume") || "0.7") : "0.7");
+
+export function getVolume(): number {
+  return globalVolume;
+}
+
+export function setVolume(vol: number): void {
+  globalVolume = Math.max(0, Math.min(1, vol));
+  if (typeof window !== "undefined") {
+    localStorage.setItem("notif-sound-volume", String(globalVolume));
+  }
+  for (const audio of audioPool) {
+    audio.volume = globalVolume;
+  }
+}
 
 function generateWav(frequencies: number[], durations: number[], delays: number[], volume: number = 0.4): string {
   let totalLength = 0;
@@ -79,7 +94,7 @@ function getWavUrl(type: string): string {
 
 function createPooledAudio(): HTMLAudioElement {
   const audio = new Audio();
-  audio.volume = 1.0;
+  audio.volume = globalVolume;
   audio.src = silentWav();
   return audio;
 }
@@ -143,6 +158,7 @@ export function playNotificationSound(type: string) {
 
   try {
     const audio = getAvailableAudio();
+    audio.volume = globalVolume;
     audio.src = wavUrl;
     audio.currentTime = 0;
     const p = audio.play();
@@ -159,7 +175,7 @@ export function playNotificationSound(type: string) {
 function tryFreshAudio(wavUrl: string) {
   try {
     const fresh = new Audio(wavUrl);
-    fresh.volume = 1.0;
+    fresh.volume = globalVolume;
     const p = fresh.play();
     if (p) p.catch(() => {});
   } catch {}
