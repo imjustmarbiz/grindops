@@ -37,7 +37,6 @@ function daysAgo(date: string | Date | null | undefined): { label: string; days:
 }
 
 const ROLE_OPTIONS = ["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"];
-const TIER_OPTIONS = ["New", "Bronze", "Silver", "Gold", "Diamond", "Elite"];
 
 const roleStyle = (r: string) =>
   r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
@@ -52,6 +51,64 @@ const tierStyle = (t: string) =>
   t === "Silver" ? "border-slate-400/30 text-slate-300 bg-slate-400/10" :
   t === "Bronze" ? "border-orange-500/30 text-orange-400 bg-orange-500/10" :
   "border-white/10 text-muted-foreground bg-white/[0.04]";
+
+const TIER_REQUIREMENTS = [
+  { tier: "Bronze",  minCompleted: 3,  minQuality: 50, minWinRate: 20, minOnTime: 50, minEarnings: 50 },
+  { tier: "Silver",  minCompleted: 10, minQuality: 65, minWinRate: 35, minOnTime: 65, minEarnings: 300 },
+  { tier: "Gold",    minCompleted: 25, minQuality: 75, minWinRate: 45, minOnTime: 75, minEarnings: 1000 },
+  { tier: "Diamond", minCompleted: 50, minQuality: 85, minWinRate: 55, minOnTime: 85, minEarnings: 2500 },
+  { tier: "Elite",   minCompleted: 75, minQuality: 90, minWinRate: 65, minOnTime: 90, minEarnings: 5000 },
+];
+
+const TIER_ORDER = ["New", "Bronze", "Silver", "Gold", "Diamond", "Elite"];
+
+function TierProgressBar({ currentTier, grinder }: { currentTier: string; grinder: Grinder }) {
+  const currentIdx = TIER_ORDER.indexOf(currentTier);
+  const nextIdx = currentIdx + 1;
+  if (nextIdx >= TIER_ORDER.length) {
+    return <p className="text-[10px] text-amber-400 ml-16">Max tier reached</p>;
+  }
+
+  const nextReqs = TIER_REQUIREMENTS[nextIdx - 1];
+  if (!nextReqs) return null;
+
+  const completed = grinder.completedOrders || 0;
+  const quality = Number(grinder.avgQualityRating) || 0;
+  const winRate = Number(grinder.winRate) || 0;
+  const onTime = Number(grinder.onTimeRate) || 0;
+  const earnings = Number(grinder.totalEarnings) || 0;
+
+  const metrics = [
+    { label: "Orders", current: completed, required: nextReqs.minCompleted, fmt: (v: number) => String(v) },
+    { label: "Quality", current: quality, required: nextReqs.minQuality, fmt: (v: number) => `${v.toFixed(0)}%` },
+    { label: "Win Rate", current: winRate, required: nextReqs.minWinRate, fmt: (v: number) => `${v.toFixed(0)}%` },
+    { label: "On-Time", current: onTime, required: nextReqs.minOnTime, fmt: (v: number) => `${v.toFixed(0)}%` },
+    { label: "Earnings", current: earnings, required: nextReqs.minEarnings, fmt: (v: number) => `$${v.toFixed(0)}` },
+  ];
+
+  return (
+    <div className="ml-16 space-y-1">
+      <p className="text-[10px] text-muted-foreground">Next: <span className={tierStyle(nextReqs.tier).split(" ").find(c => c.startsWith("text-")) || "text-muted-foreground"}>{nextReqs.tier}</span></p>
+      <div className="grid grid-cols-5 gap-1">
+        {metrics.map(m => {
+          const pct = Math.min(100, (m.current / m.required) * 100);
+          const met = m.current >= m.required;
+          return (
+            <div key={m.label} className="text-center" data-testid={`tier-progress-${m.label.toLowerCase().replace(/\s/g, "-")}`}>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${met ? "bg-emerald-500" : "bg-primary/60"}`} style={{ width: `${pct}%` }} />
+              </div>
+              <p className={`text-[9px] mt-0.5 ${met ? "text-emerald-400" : "text-muted-foreground"}`}>
+                {m.fmt(m.current)}/{m.fmt(m.required)}
+              </p>
+              <p className="text-[8px] text-muted-foreground/60">{m.label}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: Grinder; handleStrikeChange: (g: Grinder, delta: number) => void; onUpdate: (id: string, data: any) => void }) {
   const { data: scorecardData, isLoading: scorecardLoading } = useQuery<any>({
@@ -70,7 +127,6 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState(grinder.name);
   const [editRoles, setEditRoles] = useState<string[]>(currentRoles.length > 0 ? currentRoles : [grinder.category || "Grinder"]);
-  const [editTier, setEditTier] = useState(grinder.tier || "New");
   const [editCapacity, setEditCapacity] = useState(String(grinder.capacity));
   const [editNotes, setEditNotes] = useState(grinder.notes || "");
   const [editTwitch, setEditTwitch] = useState(grinder.twitchUsername || "");
@@ -91,7 +147,6 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
       name: editName.trim() || grinder.name,
       roles: editRoles,
       category: editRoles[0],
-      tier: editTier,
       capacity: parseInt(editCapacity) || grinder.capacity,
       notes: editNotes.trim() || null,
       twitchUsername: editTwitch.trim() || null,
@@ -154,17 +209,11 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Tier</Label>
-                <Select value={editTier} onValueChange={setEditTier}>
-                  <SelectTrigger className="bg-white/[0.03] border-white/10 h-9" data-testid="select-edit-tier">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIER_OPTIONS.map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs text-muted-foreground">Tier (auto-calculated)</Label>
+                <div className="h-9 flex items-center px-3 rounded-md bg-white/[0.03] border border-white/10">
+                  <Badge variant="outline" className={`text-xs ${tierStyle(grinder.tier || "New")}`}>{grinder.tier || "New"}</Badge>
+                  <span className="text-[10px] text-muted-foreground ml-2">Based on performance</span>
+                </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Order Capacity</Label>
@@ -222,11 +271,15 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-16 shrink-0">Tier</span>
-              <Badge variant="outline" className={`text-xs ${tierStyle(grinder.tier || "New")}`} data-testid="badge-tier">
-                {grinder.tier || "New"}
-              </Badge>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-16 shrink-0">Tier</span>
+                <Badge variant="outline" className={`text-xs ${tierStyle(grinder.tier || "New")}`} data-testid="badge-tier">
+                  {grinder.tier || "New"}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">Auto-calculated</span>
+              </div>
+              <TierProgressBar currentTier={grinder.tier || "New"} grinder={grinder} />
             </div>
             {grinder.twitchUsername && (
               <div className="flex items-center gap-2">

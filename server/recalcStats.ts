@@ -1,5 +1,34 @@
 import { storage } from "./storage";
 
+const TIER_THRESHOLDS = [
+  { tier: "Elite",   minCompleted: 75, minQuality: 90, minWinRate: 65, minOnTime: 90, minEarnings: 5000 },
+  { tier: "Diamond", minCompleted: 50, minQuality: 85, minWinRate: 55, minOnTime: 85, minEarnings: 2500 },
+  { tier: "Gold",    minCompleted: 25, minQuality: 75, minWinRate: 45, minOnTime: 75, minEarnings: 1000 },
+  { tier: "Silver",  minCompleted: 10, minQuality: 65, minWinRate: 35, minOnTime: 65, minEarnings: 300 },
+  { tier: "Bronze",  minCompleted: 3,  minQuality: 50, minWinRate: 20, minOnTime: 50, minEarnings: 50 },
+];
+
+function calculateTier(
+  completedOrders: number,
+  qualityScore: number,
+  winRate: number,
+  onTimeRate: number,
+  totalEarnings: number
+): string {
+  for (const t of TIER_THRESHOLDS) {
+    if (
+      completedOrders >= t.minCompleted &&
+      qualityScore >= t.minQuality &&
+      winRate >= t.minWinRate &&
+      onTimeRate >= t.minOnTime &&
+      totalEarnings >= t.minEarnings
+    ) {
+      return t.tier;
+    }
+  }
+  return "New";
+}
+
 export async function recalcGrinderStats(grinderId: string) {
   const allAssignments = await storage.getAssignments();
   const myAssignments = allAssignments.filter((a: any) => a.grinderId === grinderId);
@@ -112,6 +141,8 @@ export async function recalcGrinderStats(grinderId: string) {
     ? ((active.length / grinder.capacity) * 100).toFixed(0)
     : "0";
 
+  const autoTier = calculateTier(completedCount, qualityScore, winRate, onTimeRate, totalEarnings);
+
   const updates: any = {
     completedOrders: completedCount,
     activeOrders: active.length,
@@ -123,6 +154,7 @@ export async function recalcGrinderStats(grinderId: string) {
     totalEarnings: totalEarnings.toFixed(2),
     ordersAssignedL7D,
     utilization,
+    tier: autoTier,
     ...(avgTurnaroundDays ? { avgTurnaroundDays } : {}),
     ...(lastAssigned ? { lastAssigned } : {}),
   };
