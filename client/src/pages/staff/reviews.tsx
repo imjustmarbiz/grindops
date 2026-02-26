@@ -159,10 +159,10 @@ export default function StaffReviews() {
     },
   });
 
-  const { data: grinders = [] } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
-  const { data: orders = [] } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
-  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
-  const { data: accessCodes = [] } = useQuery<ReviewAccessCode[]>({ queryKey: ["/api/review-access/codes"] });
+  const { data: grinders = [] } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 15000 });
+  const { data: orders = [] } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 15000 });
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 30000 });
+  const { data: accessCodes = [] } = useQuery<ReviewAccessCode[]>({ queryKey: ["/api/review-access/codes"], refetchInterval: 15000 });
 
   const pendingAccessRequests = useMemo(() => accessCodes.filter(c => c.status === "pending_approval"), [accessCodes]);
 

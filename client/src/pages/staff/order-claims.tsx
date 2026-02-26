@@ -126,7 +126,7 @@ export default function StaffOrderClaims() {
   const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
   const [staffFields, setStaffFields] = useState<Record<string, StaffFields>>({});
 
-  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 30000 });
 
   const queryUrl = filter === "all" ? "/api/order-claims" : `/api/order-claims?status=${filter}`;
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
@@ -136,6 +136,7 @@ export default function StaffOrderClaims() {
       if (!res.ok) throw new Error("Failed to fetch claims");
       return res.json();
     },
+    refetchInterval: 15000,
   });
 
   const getStaffField = (claimId: string): StaffFields => staffFields[claimId] || { customerPrice: "", platform: "", gamertag: "", serviceId: "" };

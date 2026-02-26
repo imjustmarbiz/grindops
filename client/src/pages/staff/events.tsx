@@ -144,7 +144,7 @@ function EventForm({ event, onClose, onSaved }: { event?: Event | null; onClose:
 export default function StaffEvents() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: events = [], isLoading } = useQuery<Event[]>({ queryKey: ["/api/events"] });
+  const { data: events = [], isLoading } = useQuery<Event[]>({ queryKey: ["/api/events"], refetchInterval: 30000 });
   const [createOpen, setCreateOpen] = useState(false);
   const [editEvent, setEditEvent] = useState<Event | null>(null);
 

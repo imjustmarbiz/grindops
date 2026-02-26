@@ -17,7 +17,7 @@ import {
 export default function StaffPatchNotes() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: patchNotes = [], isLoading } = useQuery<PatchNote[]>({ queryKey: ["/api/patch-notes"] });
+  const { data: patchNotes = [], isLoading } = useQuery<PatchNote[]>({ queryKey: ["/api/patch-notes"], refetchInterval: 30000 });
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newRawText, setNewRawText] = useState("");

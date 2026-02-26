@@ -103,7 +103,7 @@ export default function BusinessPerformance() {
     payoutReqs,
   } = useStaffData();
 
-  const { data: allPayouts } = useQuery<any[]>({ queryKey: ["/api/staff/payout-requests"], refetchInterval: 15000 });
+  const { data: allPayouts } = useQuery<any[]>({ queryKey: ["/api/staff/payout-requests"], refetchInterval: 10000 });
 
   const range = useMemo(() => getDateRange(dateRange), [dateRange]);
 

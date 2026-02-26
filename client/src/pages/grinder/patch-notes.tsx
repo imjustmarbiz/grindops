@@ -34,9 +34,9 @@ function renderPolishedText(text: string) {
 
 export default function GrinderPatchNotes() {
   const { user } = useAuth();
-  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"] });
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"], refetchInterval: 10000 });
   const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
-  const { data: notes = [], isLoading } = useQuery<PatchNote[]>({ queryKey: ["/api/patch-notes"] });
+  const { data: notes = [], isLoading } = useQuery<PatchNote[]>({ queryKey: ["/api/patch-notes"], refetchInterval: 30000 });
 
   const accentColor = isElite ? "cyan" : "amber";
 

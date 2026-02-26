@@ -23,11 +23,12 @@ export function useGrinderData() {
 
   const { data: profile, isLoading } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
-    refetchInterval: 15000,
+    refetchInterval: 10000,
   });
 
   const { data: services } = useQuery<any[]>({
     queryKey: ["/api/services"],
+    refetchInterval: 30000,
   });
 
   const serviceName = (serviceId: string) => services?.find((s: any) => s.id === serviceId)?.name || serviceId;

@@ -27,7 +27,7 @@ export default function GrinderOrderClaims() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"] });
+  const { data: grinderProfile } = useQuery<any>({ queryKey: ["/api/grinder/me"], refetchInterval: 10000 });
   const isElite = grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316");
 
   const [orderId, setOrderId] = useState("");
@@ -42,9 +42,10 @@ export default function GrinderOrderClaims() {
   const [payoutDetails, setPayoutDetails] = useState("");
   const [serviceId, setServiceId] = useState("");
 
-  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 30000 });
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
     queryKey: ["/api/order-claims"],
+    refetchInterval: 15000,
   });
 
   const submitMutation = useMutation({
