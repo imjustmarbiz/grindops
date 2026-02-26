@@ -15,9 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
-  ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Link2, X, Hash,
+  ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -29,7 +28,6 @@ export default function StaffAdmin() {
   const isOwner = user?.role === "owner";
   const {
     allGrindersIncludingRemoved: allGrinders,
-    grinders: activeGrinders,
     assignments: allAssignments,
     orders: allOrders,
     eliteRequests: eliteRequestsList,
@@ -57,8 +55,6 @@ export default function StaffAdmin() {
   const [taskDescription, setTaskDescription] = useState("");
   const [taskPriority, setTaskPriority] = useState("normal");
   const [taskOrderId, setTaskOrderId] = useState("");
-  const [ticketInputOrderId, setTicketInputOrderId] = useState<string | null>(null);
-  const [ticketInputValue, setTicketInputValue] = useState("");
 
   const { data: checkupConfig } = useQuery<{ enabled: boolean; skippedOrders: string[] }>({
     queryKey: ["/api/daily-checkups/config"],
@@ -87,45 +83,6 @@ export default function StaffAdmin() {
       toast({ title: skip ? "Daily checkups disabled for this order" : "Daily checkups enabled for this order" });
     },
     onError: () => toast({ title: "Failed to update order", variant: "destructive" }),
-  });
-
-  const assignGrinderMutation = useMutation({
-    mutationFn: async ({ orderId, grinderId }: { orderId: string; grinderId: string | null }) => {
-      const res = await apiRequest("PATCH", `/api/orders/${orderId}`, { assignedGrinderId: grinderId });
-      return res.json();
-    },
-    onSuccess: (_, { grinderId }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
-      toast({ title: grinderId ? "Grinder assigned to order" : "Grinder unassigned from order" });
-    },
-    onError: () => toast({ title: "Failed to assign grinder", variant: "destructive" }),
-  });
-
-  const linkTicketMutation = useMutation({
-    mutationFn: async ({ orderId, ticketId }: { orderId: string; ticketId: string }) => {
-      const res = await apiRequest("PATCH", `/api/orders/${orderId}/ticket`, { discordTicketChannelId: ticketId });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      toast({ title: "Discord ticket linked" });
-      setTicketInputOrderId(null);
-      setTicketInputValue("");
-    },
-    onError: () => toast({ title: "Failed to link ticket", variant: "destructive" }),
-  });
-
-  const unlinkTicketMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const res = await apiRequest("DELETE", `/api/orders/${orderId}/ticket`);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      toast({ title: "Discord ticket unlinked" });
-    },
-    onError: () => toast({ title: "Failed to unlink ticket", variant: "destructive" }),
   });
 
   const eliteReqMutation = useMutation({
@@ -346,7 +303,7 @@ export default function StaffAdmin() {
                     data-testid="input-checkup-order-search"
                   />
                 </div>
-                <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {(() => {
                     const activeOrders = (allOrders || []).filter((o: any) =>
                       o.status === "In Progress" || o.status === "Open" || o.status === "Bidding Open" || o.status === "Bidding Closed" || o.status === "Need Replacement"
@@ -361,114 +318,35 @@ export default function StaffAdmin() {
                     return filtered.slice(0, 20).map((order: any) => {
                       const isSkipped = checkupConfig?.skippedOrders?.includes(order.id);
                       const assignedGrinder = order.assignedGrinderId ? allGrinders.find((g: any) => g.id === order.assignedGrinderId) : null;
-                      const hasTicket = !!order.discordTicketChannelId;
                       return (
-                        <div key={order.id} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs space-y-1.5" data-testid={`row-checkup-order-${order.id}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-primary font-medium">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
-                              <Badge className="text-[10px] px-1.5 py-0 bg-white/5 text-muted-foreground border border-white/10">{order.status}</Badge>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] ${isSkipped ? "text-red-400" : "text-emerald-400"}`}>
-                                {isSkipped ? "Skipped" : "Active"}
+                        <div key={order.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs" data-testid={`row-checkup-order-${order.id}`}>
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <span className="text-primary font-medium">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                            <Badge className="text-[10px] px-1.5 py-0 bg-white/5 text-muted-foreground border border-white/10">{order.status}</Badge>
+                            {assignedGrinder && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-cyan-400">
+                                <UserPlus className="w-2.5 h-2.5" />
+                                {assignedGrinder.name}
                               </span>
-                              <Switch
-                                checked={!isSkipped}
-                                onCheckedChange={(checked) => toggleOrderCheckupMutation.mutate({ orderId: order.id, skip: !checked })}
-                                disabled={toggleOrderCheckupMutation.isPending}
-                                className="scale-75"
-                                data-testid={`switch-checkup-${order.id}`}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="sm" className={`h-6 text-[10px] px-1.5 gap-1 ${assignedGrinder ? "text-cyan-400 hover:text-cyan-300" : "text-muted-foreground hover:text-foreground"}`} data-testid={`button-assign-grinder-${order.id}`}>
-                                  <UserPlus className="w-3 h-3" />
-                                  {assignedGrinder ? assignedGrinder.name : "Assign Grinder"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-52 p-2" align="start">
-                                <p className="text-[10px] font-medium text-muted-foreground mb-1.5 px-1">Assign Grinder</p>
-                                <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                                  {assignedGrinder && (
-                                    <button
-                                      className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-white/10 text-red-400 flex items-center gap-1.5"
-                                      onClick={() => assignGrinderMutation.mutate({ orderId: order.id, grinderId: null })}
-                                      data-testid={`button-unassign-${order.id}`}
-                                    >
-                                      <X className="w-3 h-3" /> Unassign
-                                    </button>
-                                  )}
-                                  {(activeGrinders || []).map((g: any) => (
-                                    <button
-                                      key={g.id}
-                                      className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-white/10 flex items-center gap-1.5 ${g.id === order.assignedGrinderId ? "text-cyan-400 bg-cyan-500/10" : "text-foreground"}`}
-                                      onClick={() => assignGrinderMutation.mutate({ orderId: order.id, grinderId: g.id })}
-                                      data-testid={`button-pick-grinder-${order.id}-${g.id}`}
-                                    >
-                                      <Users className="w-3 h-3 text-muted-foreground" />
-                                      {g.name}
-                                      <span className="text-muted-foreground ml-auto">{g.activeOrders}/{g.capacity}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            {ticketInputOrderId === order.id ? (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  value={ticketInputValue}
-                                  onChange={(e) => setTicketInputValue(e.target.value)}
-                                  placeholder="Channel ID..."
-                                  className="h-6 text-[10px] w-28 px-1.5"
-                                  data-testid={`input-ticket-${order.id}`}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && ticketInputValue.trim()) {
-                                      linkTicketMutation.mutate({ orderId: order.id, ticketId: ticketInputValue.trim() });
-                                    }
-                                    if (e.key === "Escape") { setTicketInputOrderId(null); setTicketInputValue(""); }
-                                  }}
-                                  autoFocus
-                                />
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-400 hover:text-emerald-300" onClick={() => { if (ticketInputValue.trim()) linkTicketMutation.mutate({ orderId: order.id, ticketId: ticketInputValue.trim() }); }} disabled={!ticketInputValue.trim() || linkTicketMutation.isPending} data-testid={`button-confirm-ticket-${order.id}`}>
-                                  <CheckCircle className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => { setTicketInputOrderId(null); setTicketInputValue(""); }} data-testid={`button-cancel-ticket-${order.id}`}>
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`h-6 text-[10px] px-1.5 gap-1 ${hasTicket ? "text-purple-400 hover:text-purple-300" : "text-muted-foreground hover:text-foreground"}`}
-                                onClick={() => {
-                                  if (hasTicket) {
-                                    unlinkTicketMutation.mutate(order.id);
-                                  } else {
-                                    setTicketInputOrderId(order.id);
-                                    setTicketInputValue("");
-                                  }
-                                }}
-                                data-testid={`button-ticket-${order.id}`}
-                              >
-                                {hasTicket ? (
-                                  <>
-                                    <Hash className="w-3 h-3" />
-                                    {order.discordTicketChannelId.length > 10 ? `${order.discordTicketChannelId.slice(0, 10)}…` : order.discordTicketChannelId}
-                                    <X className="w-2.5 h-2.5 ml-0.5 opacity-60" />
-                                  </>
-                                ) : (
-                                  <>
-                                    <Link2 className="w-3 h-3" />
-                                    Link Ticket
-                                  </>
-                                )}
-                              </Button>
                             )}
+                            {order.discordTicketChannelId && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-purple-400">
+                                <Hash className="w-2.5 h-2.5" />
+                                Ticket
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className={`text-[10px] ${isSkipped ? "text-red-400" : "text-emerald-400"}`}>
+                              {isSkipped ? "Skipped" : "Active"}
+                            </span>
+                            <Switch
+                              checked={!isSkipped}
+                              onCheckedChange={(checked) => toggleOrderCheckupMutation.mutate({ orderId: order.id, skip: !checked })}
+                              disabled={toggleOrderCheckupMutation.isPending}
+                              className="scale-75"
+                              data-testid={`switch-checkup-${order.id}`}
+                            />
                           </div>
                         </div>
                       );
