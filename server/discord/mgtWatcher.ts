@@ -93,6 +93,18 @@ function detectGrinderRole(member: GuildMember | null): { roleId: string; catego
     primaryRoleId = GRINDER_ROLES.EVENT;
     primaryCategory = "Event Grinder";
     primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.EVENT] || 3;
+  } else if (memberRoleIds.includes(GRINDER_ROLES.INTERNATIONAL)) {
+    primaryRoleId = GRINDER_ROLES.INTERNATIONAL;
+    primaryCategory = "International Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.INTERNATIONAL] || 3;
+  } else if (memberRoleIds.includes(GRINDER_ROLES.XBOX)) {
+    primaryRoleId = GRINDER_ROLES.XBOX;
+    primaryCategory = "Xbox Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.XBOX] || 3;
+  } else if (memberRoleIds.includes(GRINDER_ROLES.PS5)) {
+    primaryRoleId = GRINDER_ROLES.PS5;
+    primaryCategory = "PS5 Grinder";
+    primaryCapacity = ROLE_CAPACITY[GRINDER_ROLES.PS5] || 3;
   } else if (memberRoleIds.includes(GRINDER_ROLES.GRINDER)) {
     primaryRoleId = GRINDER_ROLES.GRINDER;
     primaryCategory = "Grinder";

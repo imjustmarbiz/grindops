@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Crown, Coins, Landmark, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare, Award, X, Settings, Wrench } from "lucide-react";
+import { Users, Crown, Coins, Landmark, AlertTriangle, Trophy, DollarSign, Target, Minus, Plus, Calendar, UserPlus, Loader2, FileText, BarChart3, ScrollText, Send, CheckSquare, MessageSquare, Award, X, Settings, Wrench, Globe } from "lucide-react";
+import { FaXbox } from "react-icons/fa6";
+import { SiPlaystation5 } from "react-icons/si";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -36,12 +38,15 @@ function daysAgo(date: string | Date | null | undefined): { label: string; days:
   return { label: `${diffDays}d ago`, days: diffDays };
 }
 
-const ROLE_OPTIONS = ["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"];
+const ROLE_OPTIONS = ["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder", "International Grinder", "Xbox Grinder", "PS5 Grinder"];
 
 const roleStyle = (r: string) =>
   r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
   r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
   r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+  r === "International Grinder" ? "border-pink-500/30 text-pink-400 bg-pink-500/10" :
+  r === "Xbox Grinder" ? "border-green-500/30 text-green-400 bg-green-500/10" :
+  r === "PS5 Grinder" ? "border-blue-600/30 text-blue-400 bg-blue-600/10" :
   "border-purple-500/30 text-purple-400 bg-purple-500/10";
 
 const tierStyle = (t: string) =>
@@ -693,12 +698,15 @@ export default function Grinders() {
     if (roles && roles.length > 0) return roles.includes(role);
     return (g.category || "Grinder") === role;
   };
-  const categories = ["All", "Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"];
+  const categories = ["All", "Grinder", "Elite Grinder", "VC Grinder", "Event Grinder", "International Grinder", "Xbox Grinder", "PS5 Grinder"];
 
   const categoryIcon = (cat: string) => {
     if (cat === "Elite Grinder") return <Crown className="w-4 h-4 text-cyan-400" />;
     if (cat === "VC Grinder") return <Coins className="w-4 h-4 text-yellow-400" />;
     if (cat === "Event Grinder") return <Landmark className="w-4 h-4 text-blue-400" />;
+    if (cat === "International Grinder") return <Globe className="w-4 h-4 text-pink-400" />;
+    if (cat === "Xbox Grinder") return <FaXbox className="w-4 h-4 text-green-400" />;
+    if (cat === "PS5 Grinder") return <SiPlaystation5 className="w-4 h-4 text-blue-400" />;
     return <Users className="w-4 h-4 text-purple-400" />;
   };
 
@@ -854,12 +862,15 @@ export default function Grinders() {
       </FadeInUp>
 
       <FadeInUp>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
           { label: "Grinder", count: filterGrinders("Grinder").length, icon: Users, gradient: "from-purple-500/[0.08] via-background to-purple-900/[0.04]", iconBg: "bg-purple-500/15", color: "text-purple-400" },
           { label: "Elite", count: filterGrinders("Elite Grinder").length, icon: Crown, gradient: "from-cyan-500/[0.08] via-background to-cyan-900/[0.04]", iconBg: "bg-cyan-500/15", color: "text-cyan-400" },
           { label: "VC", count: filterGrinders("VC Grinder").length, icon: Coins, gradient: "from-yellow-500/[0.08] via-background to-yellow-900/[0.04]", iconBg: "bg-yellow-500/15", color: "text-yellow-400" },
           { label: "Event", count: filterGrinders("Event Grinder").length, icon: Landmark, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
+          { label: "International", count: filterGrinders("International Grinder").length, icon: Globe, gradient: "from-pink-500/[0.08] via-background to-pink-900/[0.04]", iconBg: "bg-pink-500/15", color: "text-pink-400" },
+          { label: "Xbox", count: filterGrinders("Xbox Grinder").length, icon: FaXbox, gradient: "from-green-500/[0.08] via-background to-green-900/[0.04]", iconBg: "bg-green-500/15", color: "text-green-400" },
+          { label: "PS5", count: filterGrinders("PS5 Grinder").length, icon: SiPlaystation5, gradient: "from-blue-600/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-600/15", color: "text-blue-400" },
         ].map(s => (
           <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
             <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />

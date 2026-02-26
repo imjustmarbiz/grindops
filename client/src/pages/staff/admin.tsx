@@ -709,6 +709,9 @@ export default function StaffAdmin() {
                         r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
                         r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
                         r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                        r === "International Grinder" ? "border-pink-500/30 text-pink-400 bg-pink-500/10" :
+                        r === "Xbox Grinder" ? "border-green-500/30 text-green-400 bg-green-500/10" :
+                        r === "PS5 Grinder" ? "border-blue-600/30 text-blue-400 bg-blue-600/10" :
                         "border-purple-500/30 text-purple-400 bg-purple-500/10"
                       }`}>{r}</Badge>
                     )) : (
@@ -803,6 +806,9 @@ export default function StaffAdmin() {
                           r === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
                           r === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
                           r === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                          r === "International Grinder" ? "border-pink-500/30 text-pink-400 bg-pink-500/10" :
+                          r === "Xbox Grinder" ? "border-green-500/30 text-green-400 bg-green-500/10" :
+                          r === "PS5 Grinder" ? "border-blue-600/30 text-blue-400 bg-blue-600/10" :
                           "border-purple-500/30 text-purple-400 bg-purple-500/10"
                         }`}>{r}</Badge>
                       )) : (
@@ -887,7 +893,7 @@ export default function StaffAdmin() {
             <div>
               <label className="text-sm font-medium mb-1.5 block">Roles (select multiple)</label>
               <div className="flex flex-wrap gap-2">
-                {["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder"].map(role => (
+                {["Grinder", "Elite Grinder", "VC Grinder", "Event Grinder", "International Grinder", "Xbox Grinder", "PS5 Grinder"].map(role => (
                   <button
                     key={role}
                     type="button"
@@ -897,6 +903,9 @@ export default function StaffAdmin() {
                         ? (role === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
                            role === "VC Grinder" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" :
                            role === "Event Grinder" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                           role === "International Grinder" ? "border-pink-500/30 text-pink-400 bg-pink-500/10" :
+                           role === "Xbox Grinder" ? "border-green-500/30 text-green-400 bg-green-500/10" :
+                           role === "PS5 Grinder" ? "border-blue-600/30 text-blue-400 bg-blue-600/10" :
                            "border-purple-500/30 text-purple-400 bg-purple-500/10") + " ring-1 ring-white/20"
                         : "border-white/[0.06] text-muted-foreground bg-white/[0.02] hover:bg-white/[0.05]"
                     }`}

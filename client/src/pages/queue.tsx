@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, DollarSign, ChevronDown, ChevronRight, Package } from "lucide-react";
+import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, DollarSign, ChevronDown, ChevronRight, Package, Globe } from "lucide-react";
+import { FaXbox } from "react-icons/fa6";
+import { SiPlaystation5 } from "react-icons/si";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Order, SuggestionResult } from "@shared/schema";
 
@@ -33,6 +35,9 @@ function categoryIcon(cat: string) {
   if (cat === "Elite Grinder") return <Crown className="w-4 h-4 text-yellow-500" />;
   if (cat === "VC Grinder") return <Zap className="w-4 h-4 text-cyan-400" />;
   if (cat === "Event Grinder") return <Shield className="w-4 h-4 text-purple-400" />;
+  if (cat === "International Grinder") return <Globe className="w-4 h-4 text-pink-400" />;
+  if (cat === "Xbox Grinder") return <FaXbox className="w-4 h-4 text-green-400" />;
+  if (cat === "PS5 Grinder") return <SiPlaystation5 className="w-4 h-4 text-blue-400" />;
   return <Users className="w-4 h-4 text-muted-foreground" />;
 }
 
