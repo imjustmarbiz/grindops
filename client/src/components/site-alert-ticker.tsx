@@ -4,18 +4,7 @@ import { AlertTriangle, X } from "lucide-react";
 import { useState, useCallback, useRef, useLayoutEffect } from "react";
 import type { SiteAlert } from "@shared/schema";
 
-const DISMISSED_KEY = "dismissed-site-alerts";
-
-function getDismissed(): Set<string> {
-  try {
-    const raw = sessionStorage.getItem(DISMISSED_KEY);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch { return new Set(); }
-}
-
-function persistDismissed(ids: Set<string>) {
-  sessionStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]));
-}
+const dismissedIds = new Set<string>();
 
 function setAlertBarHeight(h: number) {
   document.documentElement.style.setProperty("--alert-bar-h", `${h}px`);
@@ -23,7 +12,7 @@ function setAlertBarHeight(h: number) {
 
 export function SiteAlertTicker() {
   const { isAuthenticated } = useAuth();
-  const [dismissed, setDismissed] = useState<Set<string>>(getDismissed);
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set(dismissedIds));
   const barRef = useRef<HTMLDivElement>(null);
 
   const { data: alerts = [] } = useQuery<SiteAlert[]>({
@@ -33,10 +22,9 @@ export function SiteAlertTicker() {
   });
 
   const dismissAll = useCallback(() => {
-    const next = new Set([...dismissed, ...alerts.map(a => a.id)]);
-    setDismissed(next);
-    persistDismissed(next);
-  }, [dismissed, alerts]);
+    alerts.forEach(a => dismissedIds.add(a.id));
+    setDismissed(new Set(dismissedIds));
+  }, [alerts]);
 
   const visibleAlerts = alerts.filter(a => !dismissed.has(a.id));
   const hasAlerts = visibleAlerts.length > 0;
