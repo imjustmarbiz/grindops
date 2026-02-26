@@ -483,7 +483,7 @@ export default function StaffOrderClaims() {
                           </div>
                         )}
 
-                        {claim.status === "pending" && rt !== "fix_order" && (
+                        {claim.status === "pending" && rt !== "fix_order" && !claim.ticketName.startsWith("staff-") && (
                           <TicketSearch ticketName={claim.ticketName} />
                         )}
 
