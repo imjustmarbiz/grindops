@@ -153,20 +153,32 @@ export default function GrinderOverview() {
     const daysSinceJoin = grinder.joinedAt ? Math.floor((Date.now() - new Date(grinder.joinedAt).getTime()) / 86400000) : 0;
 
     if (isElite) ids.add("elite");
-    if (tier === "Veteran" || completed >= 20) ids.add("veteran");
     if (completed >= 1) ids.add("first-order");
     if (completed >= 5) ids.add("grind-5");
     if (completed >= 10) ids.add("grind-10");
+    if (completed >= 25) ids.add("veteran");
     if (completed >= 50) ids.add("grind-50");
+    if (completed >= 100) ids.add("grind-100");
+    if (completed >= 250) ids.add("grind-250");
+    if (completed >= 500) ids.add("grind-500");
     if (quality >= 95 && completed >= 3) ids.add("quality");
     if (winRate >= 80 && totalOrders >= 3) ids.add("sharp");
-    if (onTime >= 100 && completed >= 3) ids.add("punctual");
-    if (completion >= 100 && completed >= 3) ids.add("reliable");
+    if (onTime >= 100 && completed >= 5) ids.add("punctual");
+    if (completion >= 100 && completed >= 5) ids.add("reliable");
     if (strikes === 0 && completed >= 5) ids.add("clean");
     if (earned >= 500) ids.add("earn-500");
     if (earned >= 2000) ids.add("earn-2k");
+    if (earned >= 5000) ids.add("earn-5k");
+    if (earned >= 10000) ids.add("earn-10k");
+    if (earned >= 25000) ids.add("earn-25k");
+    if (earned >= 50000) ids.add("earn-50k");
+    if (earned >= 100000) ids.add("earn-100k");
     if (daysSinceJoin <= 7) ids.add("newbie");
     if (daysSinceJoin >= 90) ids.add("loyal");
+    if (daysSinceJoin >= 180) ids.add("loyal-6m");
+    if (daysSinceJoin >= 365) ids.add("loyal-1y");
+    if (daysSinceJoin >= 730) ids.add("loyal-2y");
+    if (daysSinceJoin >= 1825) ids.add("loyal-5y");
     if (grinder.twitchUsername) ids.add("streamer");
 
     const roles = grinder.roles as string[] | null;

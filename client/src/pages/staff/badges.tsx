@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Award, Loader2, Plus, Trash2, Sparkles, Star } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { BADGE_COMPONENTS, BADGE_META, ALL_BADGE_IDS, MANUAL_BADGE_IDS, AUTO_BADGE_IDS, type BadgeId } from "@/components/achievement-badges";
+import { BADGE_COMPONENTS, BADGE_META, ALL_BADGE_IDS, MANUAL_BADGE_IDS, AUTO_BADGE_IDS, TIER_LABELS, TIER_COLORS, type BadgeId, type BadgeTier } from "@/components/achievement-badges";
 import type { Grinder, GrinderBadge } from "@shared/schema";
 
 export default function StaffBadges() {
@@ -249,23 +249,32 @@ export default function StaffBadges() {
                     <Star className="w-4 h-4" />
                     Staff-Awarded Badges ({MANUAL_BADGE_IDS.length})
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {MANUAL_BADGE_IDS.map(id => {
-                      const BadgeComp = BADGE_COMPONENTS[id];
-                      const meta = BADGE_META[id];
-                      return (
-                        <div key={id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`catalogue-badge-${id}`}>
-                          <div className="shrink-0">
-                            <BadgeComp />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{meta.label}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
-                          </div>
+                  {(["short", "mid", "long"] as BadgeTier[]).map(tier => {
+                    const tierBadges = MANUAL_BADGE_IDS.filter(id => BADGE_META[id].tier === tier);
+                    if (tierBadges.length === 0) return null;
+                    return (
+                      <div key={tier} className="mb-4">
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${TIER_COLORS[tier]}`}>{TIER_LABELS[tier]}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {tierBadges.map(id => {
+                            const BadgeComp = BADGE_COMPONENTS[id];
+                            const meta = BADGE_META[id];
+                            return (
+                              <div key={id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`catalogue-badge-${id}`}>
+                                <div className="shrink-0">
+                                  <BadgeComp />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium">{meta.label}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div>
@@ -273,23 +282,32 @@ export default function StaffBadges() {
                     <Sparkles className="w-4 h-4" />
                     Auto-Earned Badges ({AUTO_BADGE_IDS.length})
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {AUTO_BADGE_IDS.map(id => {
-                      const BadgeComp = BADGE_COMPONENTS[id];
-                      const meta = BADGE_META[id];
-                      return (
-                        <div key={id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`catalogue-badge-${id}`}>
-                          <div className="shrink-0">
-                            <BadgeComp />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{meta.label}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
-                          </div>
+                  {(["short", "mid", "long"] as BadgeTier[]).map(tier => {
+                    const tierBadges = AUTO_BADGE_IDS.filter(id => BADGE_META[id].tier === tier);
+                    if (tierBadges.length === 0) return null;
+                    return (
+                      <div key={tier} className="mb-4">
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${TIER_COLORS[tier]}`}>{TIER_LABELS[tier]}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {tierBadges.map(id => {
+                            const BadgeComp = BADGE_COMPONENTS[id];
+                            const meta = BADGE_META[id];
+                            return (
+                              <div key={id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`catalogue-badge-${id}`}>
+                                <div className="shrink-0">
+                                  <BadgeComp />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium">{meta.label}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
