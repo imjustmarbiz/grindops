@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { AlertTriangle, X } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useLayoutEffect } from "react";
 import type { SiteAlert } from "@shared/schema";
 
 const DISMISSED_KEY = "dismissed-site-alerts";
@@ -15,6 +15,10 @@ function getDismissed(): Set<string> {
 
 function persistDismissed(ids: Set<string>) {
   sessionStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]));
+}
+
+function setAlertBarHeight(h: number) {
+  document.documentElement.style.setProperty("--alert-bar-h", `${h}px`);
 }
 
 export function SiteAlertTicker() {
@@ -35,23 +39,29 @@ export function SiteAlertTicker() {
   }, [dismissed, alerts]);
 
   const visibleAlerts = alerts.filter(a => !dismissed.has(a.id));
+  const hasAlerts = visibleAlerts.length > 0;
 
-  useEffect(() => {
-    const el = barRef.current;
-    if (!el || visibleAlerts.length === 0) {
-      document.documentElement.style.setProperty("--alert-bar-h", "0px");
+  useLayoutEffect(() => {
+    if (!hasAlerts) {
+      setAlertBarHeight(0);
       return;
     }
-    const sync = () => {
-      document.documentElement.style.setProperty("--alert-bar-h", `${el.offsetHeight}px`);
-    };
+    const el = barRef.current;
+    if (!el) {
+      setAlertBarHeight(0);
+      return;
+    }
+    const sync = () => setAlertBarHeight(el.offsetHeight);
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
-    return () => { ro.disconnect(); document.documentElement.style.setProperty("--alert-bar-h", "0px"); };
-  }, [visibleAlerts.length]);
+    return () => {
+      ro.disconnect();
+      setAlertBarHeight(0);
+    };
+  });
 
-  if (visibleAlerts.length === 0) return null;
+  if (!hasAlerts) return null;
 
   const combinedMessage = visibleAlerts.map(a => a.message).join("   •   ");
 

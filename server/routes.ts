@@ -2087,6 +2087,15 @@ export async function registerRoutes(
       } else {
         improvementTips.push("Start by submitting bids on open orders. Competitive pricing will improve your margin score and boost your rank.");
       }
+    } else if (rankedIn === 0) {
+      if (openOrders.length === 0) {
+        improvementTips.push("No open orders right now — you'll be ranked when new orders are posted.");
+      } else {
+        improvementTips.push("You're not ranked in any current orders. Submit bids on open orders to appear in the queue.");
+      }
+      if (myBids.length === 0 && myAssignments.length === 0) {
+        improvementTips.push("Get started by bidding on available orders. Competitive pricing helps you rank higher in the queue.");
+      }
     } else if (isTopPerformer) {
       improvementTips.push("You're ranked near the top — great work. Stay consistent with quality and on-time delivery to hold your position.");
       if (avgFactors.margin < 0.5) improvementTips.push("Your margin score is your weakest area. Keep bid amounts competitive to protect your ranking.");
@@ -2107,7 +2116,7 @@ export async function registerRoutes(
       if (avgFactors.reliability < 0.6 && myAssignments.length > 0) improvementTips.push("Reliability is holding you back. Focus on delivering on time and completing all orders without reassignments.");
       if (avgFactors.quality < 0.5 && myAssignments.length > 0) improvementTips.push("Quality is a weak spot. Prioritize on-time delivery, faster turnaround, daily updates, and avoiding strikes.");
       if (avgFactors.risk > 0 && avgFactors.risk < 0.5) improvementTips.push("Your risk score is low due to strikes or cancellations. A clean record going forward will help a lot.");
-      if (avgFactors.tier < 0.5) improvementTips.push("Higher tier grinders rank better. Work toward Elite status for a significant queue advantage.");
+      if (avgFactors.tier < 0.5 && myAssignments.length > 0) improvementTips.push("Higher tier grinders rank better. Work toward Elite status for a significant queue advantage.");
       if (avgFactors.newGrinder === 1) improvementTips.push("You're getting a new grinder boost — bid on orders now to take advantage of it.");
       if (improvementTips.length === 0) improvementTips.push("You're performing well across all factors. Keep it up to maintain your position!");
     }
