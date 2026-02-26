@@ -42,7 +42,7 @@ function factorBarColor(score: number): string {
 
 export default function GrinderOrders() {
   const {
-    grinder, isElite, availableOrders, serviceName, placeBidMutation,
+    grinder, isElite, availableOrders, bids, serviceName, placeBidMutation, editBidMutation,
     eliteAccent, eliteGradient, eliteBorder,
   } = useGrinderData();
 
@@ -50,6 +50,11 @@ export default function GrinderOrders() {
   const [placeBidAmount, setPlaceBidAmount] = useState("");
   const [placeBidTimeline, setPlaceBidTimeline] = useState("");
   const [placeBidCanStart, setPlaceBidCanStart] = useState("");
+
+  const [editBidDialog, setEditBidDialog] = useState<any>(null);
+  const [editBidAmount, setEditBidAmount] = useState("");
+  const [editBidTimeline, setEditBidTimeline] = useState("");
+  const [editBidCanStart, setEditBidCanStart] = useState("");
   const [viewDetailsOrder, setViewDetailsOrder] = useState<any>(null);
   const [showQueueStanding, setShowQueueStanding] = useState(false);
   const [filterService, setFilterService] = useState("all");
@@ -147,7 +152,26 @@ export default function GrinderOrders() {
                     Bid: ${order.myBidAmount}
                   </Badge>
                   {order.myBidStatus === "Pending" && (
-                    <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
+                    <>
+                      <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Pending</Badge>
+                      {!biddingExpired && (order.isManual || (!order.discordMessageId && !order.discordBidLink)) && order.myBidId && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 text-xs h-7 text-blue-400 hover:bg-blue-500/10"
+                          data-testid={`button-edit-bid-${order.id}`}
+                          onClick={() => {
+                            const myBid = (bids as any[]).find((b: any) => b.id === order.myBidId);
+                            setEditBidDialog({ ...order, myBidId: order.myBidId });
+                            setEditBidAmount(myBid?.bidAmount || order.myBidAmount || "");
+                            setEditBidTimeline(myBid?.timeline || "");
+                            setEditBidCanStart(myBid?.canStart || "");
+                          }}
+                        >
+                          <Gavel className="w-3 h-3" /> Edit
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               ) : biddingExpired ? (
@@ -675,6 +699,75 @@ export default function GrinderOrders() {
             >
               {placeBidMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Gavel className="w-4 h-4 mr-2" />}
               Submit Bid
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editBidDialog} onOpenChange={(open) => !open && setEditBidDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gavel className="w-5 h-5 text-blue-400" />
+              Edit Bid - {editBidDialog?.mgtOrderNumber ? `Order #${editBidDialog.mgtOrderNumber}` : editBidDialog?.id}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Service:</span>
+                <span className="font-medium">{serviceName(editBidDialog?.serviceId)}</span>
+              </div>
+              {editBidDialog?.platform && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Platform:</span>
+                  <span>{editBidDialog.platform}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Due:</span>
+                <span>{editBidDialog?.orderDueDate ? new Date(editBidDialog.orderDueDate).toLocaleDateString() : "N/A"}</span>
+              </div>
+              {editBidDialog?.biddingClosesAt && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Bidding closes:</span>
+                  <InlineCountdown closesAt={editBidDialog.biddingClosesAt} />
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Bid Amount ($)</label>
+              <Input type="number" step="0.01" min="0" value={editBidAmount} onChange={(e) => setEditBidAmount(e.target.value)} placeholder="Enter your price" data-testid="input-edit-bid-amount" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Timeline</label>
+              <Input value={editBidTimeline} onChange={(e) => setEditBidTimeline(e.target.value)} placeholder="e.g., 2 hours, 1 day" data-testid="input-edit-bid-timeline" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Can Start</label>
+              <Input value={editBidCanStart} onChange={(e) => setEditBidCanStart(e.target.value)} placeholder="e.g., Immediately, 3:00 PM" data-testid="input-edit-bid-can-start" />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!editBidAmount || editBidMutation.isPending}
+              data-testid="button-save-edit-bid"
+              onClick={() => {
+                if (!editBidDialog?.myBidId) return;
+                if (editBidDialog.biddingClosesAt && new Date(editBidDialog.biddingClosesAt) <= new Date()) {
+                  setEditBidDialog(null);
+                  return;
+                }
+                const data: any = {};
+                if (editBidAmount) data.bidAmount = editBidAmount;
+                if (editBidTimeline) data.timeline = editBidTimeline;
+                if (editBidCanStart) data.canStart = editBidCanStart;
+                editBidMutation.mutate({ bidId: editBidDialog.myBidId, data }, {
+                  onSuccess: () => setEditBidDialog(null),
+                });
+              }}
+            >
+              {editBidMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Gavel className="w-4 h-4 mr-2" />}
+              Update Bid
             </Button>
           </div>
         </DialogContent>
