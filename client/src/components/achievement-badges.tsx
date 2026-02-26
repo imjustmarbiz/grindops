@@ -628,10 +628,127 @@ export function ZeroComplaintsBadge() {
   );
 }
 
+export function VCGrinderBadge() {
+  return (
+    <BadgeShell glow="rgba(234,179,8,0.5)" id="vc-grinder">
+      <defs>
+        <linearGradient id="vcg-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fef9c3" />
+          <stop offset="40%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#713f12" />
+        </linearGradient>
+        <radialGradient id="vcg-coin" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#fef9c3" />
+          <stop offset="100%" stopColor="#ca8a04" />
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="28" fill="url(#vcg-g)" stroke="#fef9c3" strokeWidth="1" />
+      <circle cx="32" cy="32" r="20" fill="url(#vcg-coin)" stroke="#713f12" strokeWidth="1.5" />
+      <circle cx="32" cy="32" r="16" fill="none" stroke="#713f12" strokeWidth="0.8" strokeDasharray="3 2" />
+      <text x="32" y="38" textAnchor="middle" fill="#713f12" fontSize="18" fontWeight="bold" fontFamily="serif">V</text>
+      <path d="M18,50 L32,58 L46,50" fill="none" stroke="#ca8a04" strokeWidth="1.5" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
+export function EventGrinderBadge() {
+  return (
+    <BadgeShell glow="rgba(59,130,246,0.5)" id="event-grinder">
+      <defs>
+        <linearGradient id="evg-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#bfdbfe" />
+          <stop offset="50%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1e3a5f" />
+        </linearGradient>
+      </defs>
+      <path d="M32,4 L54,16 L54,36 Q54,52 32,60 Q10,52 10,36 L10,16 Z" fill="url(#evg-g)" stroke="#93c5fd" strokeWidth="1" />
+      <path d="M32,12 L46,20 L46,34 Q46,46 32,52 Q18,46 18,34 L18,20 Z" fill="#1e3a5f" stroke="#3b82f6" strokeWidth="0.8" />
+      <rect x="24" y="20" width="16" height="18" rx="2" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
+      <line x1="24" y1="26" x2="40" y2="26" stroke="#93c5fd" strokeWidth="1" />
+      <line x1="30" y1="20" x2="30" y2="24" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="34" y1="20" x2="34" y2="24" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round" />
+      <polygon points="29,30 32,28 35,30 34,34 30,34" fill="#60a5fa" />
+    </BadgeShell>
+  );
+}
+
+export function InternationalGrinderBadge() {
+  return (
+    <BadgeShell glow="rgba(236,72,153,0.5)" id="international-grinder">
+      <defs>
+        <linearGradient id="intg-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fbcfe8" />
+          <stop offset="50%" stopColor="#ec4899" />
+          <stop offset="100%" stopColor="#831843" />
+        </linearGradient>
+        <linearGradient id="intg-globe" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fce7f3" />
+          <stop offset="100%" stopColor="#db2777" />
+        </linearGradient>
+      </defs>
+      <polygon points="32,2 42,10 52,4 50,16 62,20 54,30 58,42 46,42 40,54 32,46 24,54 18,42 6,42 10,30 2,20 14,16 12,4 22,10" fill="url(#intg-g)" stroke="#fbcfe8" strokeWidth="0.8" />
+      <circle cx="32" cy="28" r="14" fill="url(#intg-globe)" stroke="#831843" strokeWidth="1" />
+      <ellipse cx="32" cy="28" rx="6" ry="14" fill="none" stroke="#831843" strokeWidth="0.8" />
+      <line x1="18" y1="28" x2="46" y2="28" stroke="#831843" strokeWidth="0.8" />
+      <line x1="20" y1="22" x2="44" y2="22" stroke="#831843" strokeWidth="0.5" />
+      <line x1="20" y1="34" x2="44" y2="34" stroke="#831843" strokeWidth="0.5" />
+      <path d="M22,48 L32,56 L42,48" fill="none" stroke="#ec4899" strokeWidth="1.5" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
+export function XboxGrinderBadge() {
+  return (
+    <BadgeShell glow="rgba(34,197,94,0.5)" id="xbox-grinder">
+      <defs>
+        <linearGradient id="xbg-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#bbf7d0" />
+          <stop offset="50%" stopColor="#22c55e" />
+          <stop offset="100%" stopColor="#14532d" />
+        </linearGradient>
+        <radialGradient id="xbg-inner" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#dcfce7" />
+          <stop offset="100%" stopColor="#16a34a" />
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="28" fill="url(#xbg-g)" stroke="#bbf7d0" strokeWidth="1" />
+      <circle cx="32" cy="32" r="20" fill="url(#xbg-inner)" stroke="#14532d" strokeWidth="1.5" />
+      <path d="M22,22 L32,32 L42,22" fill="none" stroke="#14532d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M22,42 L32,32 L42,42" fill="none" stroke="#14532d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18,50 L32,58 L46,50" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
+export function PS5GrinderBadge() {
+  return (
+    <BadgeShell glow="rgba(59,130,246,0.6)" id="ps5-grinder">
+      <defs>
+        <linearGradient id="psg-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#bfdbfe" />
+          <stop offset="40%" stopColor="#2563eb" />
+          <stop offset="100%" stopColor="#1e3a5f" />
+        </linearGradient>
+        <radialGradient id="psg-inner" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#dbeafe" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="28" fill="url(#psg-g)" stroke="#93c5fd" strokeWidth="1" />
+      <circle cx="32" cy="32" r="20" fill="url(#psg-inner)" stroke="#1e3a5f" strokeWidth="1.5" />
+      <path d="M24,20 L24,44" stroke="#dbeafe" strokeWidth="3" strokeLinecap="round" />
+      <path d="M24,20 L36,20 Q40,20 40,24 Q40,28 36,28 L24,28" fill="none" stroke="#dbeafe" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M28,36 L36,36 Q40,36 40,40 Q40,44 36,44 L28,44" fill="none" stroke="#dbeafe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18,50 L32,58 L46,50" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
 export type BadgeId =
   | "elite" | "veteran" | "first-order" | "grind-5" | "grind-10" | "grind-50"
   | "quality" | "sharp" | "punctual" | "reliable" | "clean"
   | "earn-500" | "earn-2k" | "newbie" | "loyal" | "streamer"
+  | "vc-grinder" | "event-grinder" | "international-grinder" | "xbox-grinder" | "ps5-grinder"
   | "rush-hero" | "clutch" | "multi-tasker" | "communicator" | "team-player"
   | "night-owl" | "speed-demon" | "customer-fav" | "mentor" | "diamond-hands"
   | "high-roller" | "console-king" | "zero-complaints";
@@ -653,6 +770,11 @@ export const BADGE_COMPONENTS: Record<BadgeId, () => JSX.Element> = {
   "newbie": FreshRecruitBadge,
   "loyal": LoyalBadge,
   "streamer": StreamerBadge,
+  "vc-grinder": VCGrinderBadge,
+  "event-grinder": EventGrinderBadge,
+  "international-grinder": InternationalGrinderBadge,
+  "xbox-grinder": XboxGrinderBadge,
+  "ps5-grinder": PS5GrinderBadge,
   "rush-hero": RushHeroBadge,
   "clutch": ClutchPlayerBadge,
   "multi-tasker": MultiTaskerBadge,
@@ -687,6 +809,11 @@ export const BADGE_META: Record<BadgeId, { label: string; tooltip: string; categ
   "newbie": { label: "Fresh Recruit", tooltip: "Joined within the last 7 days", category: "auto" },
   "loyal": { label: "Loyal", tooltip: "Active for 90+ days", category: "auto" },
   "streamer": { label: "Streamer", tooltip: "Twitch account linked", category: "auto" },
+  "vc-grinder": { label: "VC Grinder", tooltip: "Certified VC Grinder — virtual currency specialist", category: "auto" },
+  "event-grinder": { label: "Event Grinder", tooltip: "Certified Event Grinder — event specialist", category: "auto" },
+  "international-grinder": { label: "International", tooltip: "International Grinder — global operations specialist", category: "auto" },
+  "xbox-grinder": { label: "Xbox Grinder", tooltip: "Certified Xbox Grinder — Xbox platform specialist", category: "auto" },
+  "ps5-grinder": { label: "PS5 Grinder", tooltip: "Certified PS5 Grinder — PlayStation platform specialist", category: "auto" },
   "rush-hero": { label: "Rush Hero", tooltip: "Completed a rush/emergency order with no issues", category: "manual" },
   "clutch": { label: "Clutch Player", tooltip: "Saved a difficult order from failing", category: "manual" },
   "multi-tasker": { label: "Multi-Tasker", tooltip: "Successfully handled 3+ active orders at once", category: "manual" },

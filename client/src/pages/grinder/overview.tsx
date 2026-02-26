@@ -12,8 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
-  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight
+  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight, Coins, Landmark, Globe
 } from "lucide-react";
+import { FaXbox } from "react-icons/fa6";
+import { SiPlaystation } from "react-icons/si";
 import { Link } from "wouter";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -167,6 +169,15 @@ export default function GrinderOverview() {
     if (daysSinceJoin >= 90) ids.add("loyal");
     if (grinder.twitchUsername) ids.add("streamer");
 
+    const roles = grinder.roles as string[] | null;
+    if (roles) {
+      if (roles.includes("VC Grinder")) ids.add("vc-grinder");
+      if (roles.includes("Event Grinder")) ids.add("event-grinder");
+      if (roles.includes("International Grinder")) ids.add("international-grinder");
+      if (roles.includes("Xbox Grinder")) ids.add("xbox-grinder");
+      if (roles.includes("PS5 Grinder")) ids.add("ps5-grinder");
+    }
+
     if (manualBadges) {
       manualBadges.forEach(b => {
         if (BADGE_META[b.badgeId as BadgeId]) ids.add(b.badgeId as BadgeId);
@@ -201,21 +212,34 @@ export default function GrinderOverview() {
                 )}
               </h1>
               {isElite ? (
-                <Badge className="bg-gradient-to-r from-cyan-500/20 to-teal-500/20 text-cyan-300 border-cyan-500/30 gap-1">
+                <Badge className="bg-gradient-to-r from-cyan-500/20 to-teal-500/20 text-cyan-300 border-cyan-500/30 gap-1" data-testid="badge-primary-role">
                   <Crown className="w-3.5 h-3.5" />
                   Elite Grinder
                 </Badge>
               ) : (
-                <Badge className="bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/30 gap-1">
+                <Badge className="bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/30 gap-1" data-testid="badge-primary-role">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Grinder
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-              {grinder.roles && grinder.roles.length > 0 && grinder.roles.map((r: string, i: number) => (
-                <Badge key={i} variant="outline" className="text-xs">{r}</Badge>
-              ))}
+            <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
+              {grinder.roles && grinder.roles.length > 0 && grinder.roles.filter((r: string) => r !== "Grinder" && r !== "Elite Grinder").map((r: string, i: number) => {
+                const roleStyles: Record<string, { bg: string; text: string; border: string; icon: React.ReactNode }> = {
+                  "VC Grinder": { bg: "bg-yellow-500/15", text: "text-yellow-300", border: "border-yellow-500/30", icon: <Coins className="w-3 h-3" /> },
+                  "Event Grinder": { bg: "bg-blue-500/15", text: "text-blue-300", border: "border-blue-500/30", icon: <Landmark className="w-3 h-3" /> },
+                  "International Grinder": { bg: "bg-pink-500/15", text: "text-pink-300", border: "border-pink-500/30", icon: <Globe className="w-3 h-3" /> },
+                  "Xbox Grinder": { bg: "bg-green-500/15", text: "text-green-300", border: "border-green-500/30", icon: <FaXbox className="w-3 h-3" /> },
+                  "PS5 Grinder": { bg: "bg-blue-600/15", text: "text-blue-300", border: "border-blue-600/30", icon: <SiPlaystation className="w-3 h-3" /> },
+                };
+                const style = roleStyles[r] || { bg: "bg-primary/10", text: "text-primary", border: "border-primary/30", icon: <ShieldCheck className="w-3 h-3" /> };
+                return (
+                  <Badge key={i} className={`${style.bg} ${style.text} ${style.border} gap-1 text-xs`} data-testid={`badge-role-${i}`}>
+                    {style.icon}
+                    {r}
+                  </Badge>
+                );
+              })}
               <span>Joined {grinder.joinedAt ? new Date(grinder.joinedAt).toLocaleDateString() : grinder.createdAt ? new Date(grinder.createdAt).toLocaleDateString() : "N/A"}</span>
               {isElite && grinder.eliteSince && (
                 <span className="text-cyan-400/70">Elite since {new Date(grinder.eliteSince).toLocaleDateString()}</span>
