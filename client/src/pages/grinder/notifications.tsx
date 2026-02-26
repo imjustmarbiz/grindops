@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Eye, ExternalLink, Loader2, CheckCheck } from "lucide-react";
+import { Bell, Eye, ExternalLink, Loader2, CheckCheck, Filter } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { useLocation } from "wouter";
 
@@ -20,12 +21,20 @@ function inferLinkUrl(title: string, body: string): string | null {
   return null;
 }
 
+type ReadFilter = "all" | "unread" | "read";
+type SeverityFilter = "all" | "info" | "warning" | "success" | "danger";
+type KindFilter = "all" | "alert" | "notification";
+
 export default function GrinderNotifications() {
   const {
     alerts, systemNotifications, unreadAlertCount, isLoading, isElite,
-    markAlertReadMutation, markNotifReadMutation, toast, invalidate,
+    markAlertReadMutation, markNotifReadMutation, toast,
   } = useGrinderData();
   const [, navigate] = useLocation();
+
+  const [readFilter, setReadFilter] = useState<ReadFilter>("all");
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
 
   if (isLoading) {
     return (
@@ -57,6 +66,14 @@ export default function GrinderNotifications() {
       createdAt: n.createdAt,
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const filteredItems = allItems.filter(item => {
+    if (readFilter === "unread" && item.isRead) return false;
+    if (readFilter === "read" && !item.isRead) return false;
+    if (severityFilter !== "all" && item.severity !== severityFilter) return false;
+    if (kindFilter !== "all" && item.kind !== kindFilter) return false;
+    return true;
+  });
 
   const unreadItems = allItems.filter(i => !i.isRead);
 
@@ -95,6 +112,13 @@ export default function GrinderNotifications() {
     danger: "text-red-400 bg-red-500/[0.06] border-red-500/20",
   };
 
+  const filterBtn = (active: boolean) =>
+    active
+      ? `${isElite ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" : "bg-blue-500/20 text-blue-300 border-blue-500/40"}`
+      : "bg-transparent text-muted-foreground border-white/10 hover:border-white/20 hover:text-foreground";
+
+  const hasActiveFilters = readFilter !== "all" || severityFilter !== "all" || kindFilter !== "all";
+
   return (
     <AnimatedPage>
       <div className="space-y-6">
@@ -119,6 +143,52 @@ export default function GrinderNotifications() {
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 Mark All Read
+              </Button>
+            )}
+          </div>
+        </FadeInUp>
+
+        <FadeInUp delay={0.03}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["all", "unread", "read"] as ReadFilter[]).map(v => (
+                <Button key={v} variant="outline" size="sm" className={`text-xs h-7 px-2.5 rounded-full border ${filterBtn(readFilter === v)}`} onClick={() => setReadFilter(v)} data-testid={`filter-read-${v}`}>
+                  {v === "all" ? "All" : v === "unread" ? `Unread${unreadItems.length > 0 ? ` (${unreadItems.length})` : ""}` : "Read"}
+                </Button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 mt-2">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Severity</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["all", "info", "warning", "success", "danger"] as SeverityFilter[]).map(v => (
+                <Button key={v} variant="outline" size="sm" className={`text-xs h-7 px-2.5 rounded-full border ${filterBtn(severityFilter === v)}`} onClick={() => setSeverityFilter(v)} data-testid={`filter-severity-${v}`}>
+                  {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
+                </Button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 mt-2">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["all", "alert", "notification"] as KindFilter[]).map(v => (
+                <Button key={v} variant="outline" size="sm" className={`text-xs h-7 px-2.5 rounded-full border ${filterBtn(kindFilter === v)}`} onClick={() => setKindFilter(v)} data-testid={`filter-kind-${v}`}>
+                  {v === "all" ? "All" : v === "alert" ? "Staff Alerts" : "System"}
+                </Button>
+              ))}
+            </div>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-7 px-2" onClick={() => { setReadFilter("all"); setSeverityFilter("all"); setKindFilter("all"); }} data-testid="button-clear-filters">
+                Clear filters
               </Button>
             )}
           </div>
@@ -149,9 +219,17 @@ export default function GrinderNotifications() {
                   <p className="text-white/40 text-sm">No alerts yet</p>
                   <p className="text-white/25 text-xs mt-1">Staff notifications will appear here</p>
                 </div>
+              ) : filteredItems.length === 0 ? (
+                <div className="text-center py-10">
+                  <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">
+                    <Filter className="w-7 h-7 text-white/20" />
+                  </div>
+                  <p className="text-white/40 text-sm">No matching notifications</p>
+                  <p className="text-white/25 text-xs mt-1">Try adjusting your filters</p>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  {allItems.map((item) => {
+                  {filteredItems.map((item) => {
                     const colors = severityColors[item.severity] || severityColors.info;
                     return (
                       <div
