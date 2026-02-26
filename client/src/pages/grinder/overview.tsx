@@ -192,7 +192,7 @@ export default function GrinderOverview() {
       if (roles.length >= 3) ids.add("versatile");
     }
 
-    if (grinder.category === "Elite Grinder" || grinder.tier === "Diamond" || grinder.tier === "Elite") {
+    if (grinder.tier === "Diamond" || grinder.tier === "Elite") {
       ids.add("top-tier");
     }
 
