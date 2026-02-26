@@ -285,7 +285,14 @@ export async function registerRoutes(
   });
 
   app.get(api.grinders.list.path, requireStaff, async (req, res) => {
-    const results = await storage.getGrinders();
+    const allGrinders = await storage.getGrinders();
+    const allUsers = await db.select().from(users);
+    const ownerStaffIds = new Set(
+      allUsers
+        .filter(u => u.role === "owner" || u.role === "staff")
+        .map(u => u.id)
+    );
+    const results = allGrinders.filter(g => !ownerStaffIds.has(g.discordUserId));
     res.json(results);
   });
 

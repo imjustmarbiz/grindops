@@ -265,7 +265,7 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground w-16 shrink-0">Roles</span>
               <div className="flex flex-wrap gap-1.5">
@@ -298,79 +298,101 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
                 <span className="text-sm">@{grinder.discordUsername}</span>
               </div>
             )}
+            <div className="flex items-start gap-2 pt-1 border-t border-white/[0.06]">
+              <span className="text-xs text-muted-foreground w-16 shrink-0 mt-0.5">Notes</span>
+              {grinder.notes ? (
+                <p className="text-sm text-amber-300/90 italic" data-testid="text-grinder-notes">{grinder.notes}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic">No internal notes</p>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {[
           { icon: DollarSign, value: formatCurrency(Number(grinder.totalEarnings)), label: "Total Earned", color: "text-emerald-400", bg: "bg-emerald-500/15" },
           { icon: Target, value: `${grinder.completedOrders}/${grinder.totalOrders}`, label: "Completed", color: "text-blue-400", bg: "bg-blue-500/15" },
           { icon: Trophy, value: grinder.winRate ? Number(grinder.winRate).toFixed(0) + "%" : "N/A", label: "Win Rate", color: "text-yellow-400", bg: "bg-yellow-500/15" },
         ].map(s => (
-          <Card key={s.label} className="border-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01]">
-            <CardContent className="p-3 text-center">
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-1`}>
-                <s.icon className={`w-4 h-4 ${s.color}`} />
-              </div>
-              <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-            </CardContent>
-          </Card>
+          <div key={s.label} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}>
+              <s.icon className={`w-4 h-4 ${s.color}`} />
+            </div>
+            <div>
+              <p className={`text-sm font-bold ${s.color} leading-tight`}>{s.value}</p>
+              <p className="text-[10px] text-muted-foreground">{s.label}</p>
+            </div>
+          </div>
         ))}
       </div>
 
-      <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Performance Metrics</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { label: "Capacity", value: `${grinder.activeOrders}/${grinder.capacity}` },
-            { label: "Utilization", value: grinder.utilization ? `${Number(grinder.utilization).toFixed(0)}%` : "0%" },
-            { label: "Orders (Last 7d)", value: String(grinder.ordersAssignedL7D) },
-            { label: "Total Reviews", value: String(grinder.totalReviews) },
-            { label: "On-Time Rate", value: grinder.onTimeRate ? `${Number(grinder.onTimeRate).toFixed(0)}%` : "N/A" },
-            { label: "Completion Rate", value: grinder.completionRate ? `${Number(grinder.completionRate).toFixed(0)}%` : "N/A" },
-            { label: "Quality Rating", value: grinder.avgQualityRating ? `${(Number(grinder.avgQualityRating) / 20).toFixed(1)}/5` : "N/A" },
-            { label: "Avg Turnaround", value: grinder.avgTurnaroundDays ? `${Number(grinder.avgTurnaroundDays).toFixed(1)} days` : "N/A" },
-            { label: "Last Order", value: (() => { const info = daysAgo(grinder.lastAssigned); return grinder.lastAssigned ? `${new Date(grinder.lastAssigned).toLocaleDateString()} (${info.label})` : "Never"; })() },
-            { label: "Reassignments", value: String(grinder.reassignmentCount) },
-            { label: "Cancel Rate", value: grinder.cancelRate ? `${Number(grinder.cancelRate).toFixed(0)}%` : "N/A" },
-          ].map(m => (
-            <div key={m.label} className="flex justify-between p-2 rounded-lg bg-white/[0.03]">
-              <span className="text-xs text-muted-foreground">{m.label}</span>
-              <span className="text-sm font-medium">{m.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-        <div>
-          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Strikes</h3>
-          <p className="text-xs text-muted-foreground mt-1">More strikes = lower AI suggestion score</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(grinder, -1)} disabled={grinder.strikes <= 0}>
-            <Minus className="w-4 h-4" />
-          </Button>
-          <div className="flex gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className={`w-5 h-5 rounded-full ${i < grinder.strikes ? "bg-red-500" : "bg-white/10"}`} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-blue-400" />
+            Performance
+          </h3>
+          <div className="space-y-1.5">
+            {[
+              { label: "Capacity", value: `${grinder.activeOrders}/${grinder.capacity}`, color: grinder.activeOrders >= grinder.capacity ? "text-red-400" : "" },
+              { label: "Utilization", value: grinder.utilization ? `${Number(grinder.utilization).toFixed(0)}%` : "0%" },
+              { label: "On-Time Rate", value: grinder.onTimeRate ? `${Number(grinder.onTimeRate).toFixed(0)}%` : "N/A" },
+              { label: "Completion Rate", value: grinder.completionRate ? `${Number(grinder.completionRate).toFixed(0)}%` : "N/A" },
+              { label: "Quality Rating", value: grinder.avgQualityRating ? `${(Number(grinder.avgQualityRating) / 20).toFixed(1)}/5` : "N/A" },
+              { label: "Avg Turnaround", value: grinder.avgTurnaroundDays ? `${Number(grinder.avgTurnaroundDays).toFixed(1)} days` : "N/A" },
+            ].map(m => (
+              <div key={m.label} className="flex justify-between py-1.5 px-2 rounded bg-white/[0.02]">
+                <span className="text-xs text-muted-foreground">{m.label}</span>
+                <span className={`text-xs font-medium ${(m as any).color || ""}`}>{m.value}</span>
+              </div>
             ))}
           </div>
-          <span className="text-lg font-bold ml-2">{grinder.strikes}/3</span>
-          <Button variant="outline" size="icon" className="h-8 w-8 border-white/10" onClick={() => handleStrikeChange(grinder, 1)} disabled={grinder.strikes >= 3}>
-            <Plus className="w-4 h-4" />
-          </Button>
+        </div>
+
+        <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-violet-400" />
+            Activity
+          </h3>
+          <div className="space-y-1.5">
+            {[
+              { label: "Orders (Last 7d)", value: String(grinder.ordersAssignedL7D) },
+              { label: "Total Reviews", value: String(grinder.totalReviews) },
+              { label: "Last Order", value: (() => { const info = daysAgo(grinder.lastAssigned); return grinder.lastAssigned ? `${info.label}` : "Never"; })() },
+              { label: "Reassignments", value: String(grinder.reassignmentCount) },
+              { label: "Cancel Rate", value: grinder.cancelRate ? `${Number(grinder.cancelRate).toFixed(0)}%` : "N/A" },
+            ].map(m => (
+              <div key={m.label} className="flex justify-between py-1.5 px-2 rounded bg-white/[0.02]">
+                <span className="text-xs text-muted-foreground">{m.label}</span>
+                <span className="text-xs font-medium">{m.value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="pt-2 border-t border-white/[0.06]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs text-muted-foreground uppercase tracking-wider">Strikes</h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-7 w-7 border-white/10" onClick={() => handleStrikeChange(grinder, -1)} disabled={grinder.strikes <= 0}>
+                  <Minus className="w-3.5 h-3.5" />
+                </Button>
+                <div className="flex gap-1.5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className={`w-4 h-4 rounded-full ${i < grinder.strikes ? "bg-red-500" : "bg-white/10"}`} />
+                  ))}
+                </div>
+                <span className="text-sm font-bold">{grinder.strikes}/3</span>
+                <Button variant="outline" size="icon" className="h-7 w-7 border-white/10" onClick={() => handleStrikeChange(grinder, 1)} disabled={grinder.strikes >= 3}>
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {grinder.notes && !editMode && (
-        <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-1">Notes</h3>
-          <p className="text-sm">{grinder.notes}</p>
-        </div>
-      )}
 
       <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
         <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
