@@ -98,6 +98,8 @@ export default function StaffWallets() {
   const { data: orders = [] } = useQuery<any[]>({ queryKey: ["/api/orders"] });
   const { data: paymentLinks = [] } = useQuery<any[]>({ queryKey: ["/api/order-payment-links"] });
   const { data: walletConfig } = useQuery<any>({ queryKey: ["/api/wallet-config"] });
+  const recipientRoleParam = payoutForm.recipientRole;
+  const { data: payoutRecipients = [] } = useQuery<any[]>({ queryKey: [`/api/wallet/payout-recipients?role=${encodeURIComponent(recipientRoleParam || "")}`], enabled: !!recipientRoleParam && isOwner });
 
   const customRoles: string[] = walletConfig?.customRoles || [];
   const customCategories: string[] = walletConfig?.customCategories || [];
@@ -116,6 +118,12 @@ export default function StaffWallets() {
     }
     return paymentLinks.filter((l: any) => l.transferStatus === "pending_transfer").length;
   }, [paymentLinks, myWallets, isOwner]);
+
+  const walletsWithPendingLinks = useMemo(() => {
+    const set = new Set<string>();
+    paymentLinks.filter((l: any) => l.transferStatus === "pending_transfer").forEach((l: any) => set.add(l.receivedByWalletId));
+    return set;
+  }, [paymentLinks]);
 
   const filteredOrders = useMemo(() => {
     if (!orderSearch) return orders.slice(0, 20);
@@ -338,7 +346,7 @@ export default function StaffWallets() {
               {(isOwner ? personalWallets : myWallets).map((w: any) => {
                 const stats = summary?.perWalletStats?.find((s: any) => s.walletId === w.id);
                 return (
-                  <Card key={w.id} className={`border-0 bg-white/[0.03] ${!isOwner ? "" : (Number(w.balance || 0) > 0 ? "ring-1 ring-amber-500/30" : "")}`} data-testid={`card-wallet-${w.id}`}>
+                  <Card key={w.id} className={`border-0 bg-white/[0.03] ${!isOwner ? "" : (walletsWithPendingLinks.has(w.id) ? "ring-1 ring-amber-500/30" : "")}`} data-testid={`card-wallet-${w.id}`}>
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
@@ -350,14 +358,14 @@ export default function StaffWallets() {
                         </div>
                         <Badge variant="outline" className="shrink-0">{w.type}</Badge>
                       </div>
-                      <p className={`text-xl font-bold ${Number(w.balance || 0) > 0 ? "text-amber-400" : "text-emerald-400"}`} data-testid={`text-wallet-balance-${w.id}`}>
+                      <p className={`text-xl font-bold ${walletsWithPendingLinks.has(w.id) ? "text-amber-400" : "text-emerald-400"}`} data-testid={`text-wallet-balance-${w.id}`}>
                         {formatCurrency(Number(w.balance || 0))}
                       </p>
-                      {Number(w.balance || 0) > 0 && !isOwner && (
-                        <p className="text-[10px] text-amber-400/80">Funds owed to business — transfer required</p>
+                      {walletsWithPendingLinks.has(w.id) && !isOwner && (
+                        <p className="text-[10px] text-amber-400/80">Pending order payments — transfer to company required</p>
                       )}
-                      {isOwner && Number(w.balance || 0) > 0 && (
-                        <p className="text-[10px] text-amber-400/80">Holding business funds — {w.ownerName || "staff"}</p>
+                      {isOwner && walletsWithPendingLinks.has(w.id) && (
+                        <p className="text-[10px] text-amber-400/80">Pending order payments — {w.ownerName || "staff"}</p>
                       )}
                       {stats && (
                         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.06]">
@@ -366,12 +374,12 @@ export default function StaffWallets() {
                           <div><p className="text-[10px] text-muted-foreground">Txns</p><p className="text-xs font-medium">{stats.txCount}</p></div>
                         </div>
                       )}
-                      {!isOwner && Number(w.balance || 0) > 0 && (
+                      {!isOwner && walletsWithPendingLinks.has(w.id) && (
                         <Button size="sm" variant="outline" className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: companyWallets[0]?.id || "", amount: String(Number(w.balance || 0)), description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid={`button-transfer-to-company-${w.id}`}>
                           <ArrowLeftRight className="w-3 h-3 mr-1" />Transfer to Company
                         </Button>
                       )}
-                      {isOwner && Number(w.balance || 0) > 0 && (
+                      {isOwner && walletsWithPendingLinks.has(w.id) && (
                         <Button size="sm" variant="outline" className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: companyWallets[0]?.id || "", amount: String(Number(w.balance || 0)), description: `Transfer from ${w.ownerName || "staff"}`, relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid={`button-request-transfer-${w.id}`}>
                           <Send className="w-3 h-3 mr-1" />Request Transfer
                         </Button>
@@ -820,21 +828,13 @@ export default function StaffWallets() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Proof (Optional)</label>
-              <div className="flex items-center gap-2">
-                <Input type="file" accept="image/*,.pdf" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { const url = await uploadProofFile(f); setTransferForm(prev => ({ ...prev, proofUrl: url })); toast({ title: "Proof uploaded" }); } catch { toast({ title: "Upload failed", variant: "destructive" }); } } }} data-testid="input-transfer-proof" />
-                {uploadingProof && <Loader2 className="w-4 h-4 animate-spin" />}
-              </div>
-              {transferForm.proofUrl && <p className="text-xs text-emerald-400">Uploaded</p>}
-            </div>
-            <div className="space-y-1.5">
               <label className="text-sm font-medium">Description</label>
               <Input value={transferForm.description} onChange={e => setTransferForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" data-testid="input-transfer-description" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTransferOpen(false)} data-testid="button-cancel-transfer">Cancel</Button>
-            <Button onClick={() => transferMut.mutate(transferForm)} disabled={!transferForm.fromWalletId || !transferForm.toWalletId || !transferForm.amount || transferMut.isPending || uploadingProof} data-testid="button-submit-transfer">
+            <Button onClick={() => transferMut.mutate(transferForm)} disabled={!transferForm.fromWalletId || !transferForm.toWalletId || !transferForm.amount || transferMut.isPending} data-testid="button-submit-transfer">
               {transferMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}Transfer
             </Button>
           </DialogFooter>
@@ -845,14 +845,10 @@ export default function StaffWallets() {
         <DialogContent>
           <DialogHeader><DialogTitle>Create Business Payout</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Recipient Name</label>
-              <Input value={payoutForm.recipientName} onChange={e => setPayoutForm(f => ({ ...f, recipientName: e.target.value }))} placeholder="Name" data-testid="input-payout-recipient" />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Role</label>
-                <Select value={payoutForm.recipientRole || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientRole: v === "none" ? "" : v }))}>
+                <Select value={payoutForm.recipientRole || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientRole: v === "none" ? "" : v, recipientName: "" }))}>
                   <SelectTrigger data-testid="select-payout-role-input"><SelectValue placeholder="Select Role" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Select Role</SelectItem>
@@ -870,6 +866,20 @@ export default function StaffWallets() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Recipient</label>
+              {payoutRecipients.length > 0 ? (
+                <Select value={payoutForm.recipientName || "none"} onValueChange={v => setPayoutForm(f => ({ ...f, recipientName: v === "none" ? "" : v }))}>
+                  <SelectTrigger data-testid="select-payout-recipient"><SelectValue placeholder="Select Recipient" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select Recipient</SelectItem>
+                    {payoutRecipients.map((r: any, i: number) => <SelectItem key={`${r.name}-${i}`} value={r.name}>{r.name}{r.discordId ? ` (Discord)` : ""}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={payoutForm.recipientName} onChange={e => setPayoutForm(f => ({ ...f, recipientName: e.target.value }))} placeholder={payoutForm.recipientRole ? "Enter name" : "Select a role first"} data-testid="input-payout-recipient" />
+              )}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Amount</label>
