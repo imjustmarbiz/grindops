@@ -22,7 +22,7 @@ import {
   Search, X, CreditCard, Wallet, Plus, ToggleLeft, ToggleRight, Globe,
 } from "lucide-react";
 import { FaXbox } from "react-icons/fa6";
-import { SiPlaystation5 } from "react-icons/si";
+import { SiPlaystation } from "react-icons/si";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 import { pluralize, formatLabel } from "@/lib/staff-utils";
 import spLogo from "@assets/image_1771930905137.png";
@@ -364,7 +364,7 @@ export default function Dashboard() {
     if (cat === "Event Grinder") return <Shield className="w-3 h-3 text-purple-400" />;
     if (cat === "International Grinder") return <Globe className="w-3 h-3 text-pink-400" />;
     if (cat === "Xbox Grinder") return <FaXbox className="w-3 h-3 text-green-400" />;
-    if (cat === "PS5 Grinder") return <SiPlaystation5 className="w-3 h-3 text-blue-400" />;
+    if (cat === "PS5 Grinder") return <SiPlaystation className="w-3 h-3 text-blue-400" />;
     return <Users className="w-3 h-3 text-primary" />;
   };
 

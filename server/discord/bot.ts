@@ -1,11 +1,81 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials } from "discord.js";
 import { storage } from "../storage";
 import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance, backfillMissedMessages } from "./mgtWatcher";
+import { GRINDER_ROLES, ROLE_LABELS } from "@shared/schema";
 
 let client: Client | null = null;
 
 export function getDiscordBotClient(): Client | null {
   return client;
+}
+
+const ROLE_LABEL_TO_ID: Record<string, string> = {};
+for (const [id, label] of Object.entries(ROLE_LABELS)) {
+  if (!ROLE_LABEL_TO_ID[label]) {
+    ROLE_LABEL_TO_ID[label] = id;
+  }
+}
+
+const ALL_SYNCABLE_ROLE_IDS = new Set(Object.values(GRINDER_ROLES));
+
+export async function syncDiscordRoles(discordUserId: string, newRoles: string[]): Promise<boolean> {
+  if (!client) {
+    console.log("[discord-sync] Bot not available, skipping role sync");
+    return false;
+  }
+
+  try {
+    const guilds = client.guilds.cache;
+    for (const [, guild] of guilds) {
+      const member = await guild.members.fetch(discordUserId).catch(() => null);
+      if (!member) continue;
+
+      const currentRoleIds = Array.from(member.roles.cache.keys());
+      const desiredRoleIds = new Set<string>();
+      for (const roleName of newRoles) {
+        const roleId = ROLE_LABEL_TO_ID[roleName];
+        if (roleId) desiredRoleIds.add(roleId);
+        if (roleName === "VC Grinder" && GRINDER_ROLES.VC_2) {
+          desiredRoleIds.add(GRINDER_ROLES.VC_2);
+        }
+      }
+
+      const rolesToAdd: string[] = [];
+      const rolesToRemove: string[] = [];
+
+      for (const roleId of desiredRoleIds) {
+        if (!currentRoleIds.includes(roleId)) {
+          rolesToAdd.push(roleId);
+        }
+      }
+
+      for (const roleId of currentRoleIds) {
+        if (ALL_SYNCABLE_ROLE_IDS.has(roleId) && !desiredRoleIds.has(roleId)) {
+          rolesToRemove.push(roleId);
+        }
+      }
+
+      if (rolesToAdd.length === 0 && rolesToRemove.length === 0) {
+        console.log(`[discord-sync] No role changes needed for ${discordUserId}`);
+        return true;
+      }
+
+      for (const roleId of rolesToAdd) {
+        await member.roles.add(roleId).catch((e: any) => console.error(`[discord-sync] Failed to add role ${roleId}:`, e.message));
+      }
+      for (const roleId of rolesToRemove) {
+        await member.roles.remove(roleId).catch((e: any) => console.error(`[discord-sync] Failed to remove role ${roleId}:`, e.message));
+      }
+
+      console.log(`[discord-sync] Synced roles for ${discordUserId}: +[${rolesToAdd.join(",")}] -[${rolesToRemove.join(",")}]`);
+      return true;
+    }
+    console.log(`[discord-sync] Member ${discordUserId} not found in any guild`);
+    return false;
+  } catch (err: any) {
+    console.error(`[discord-sync] Error syncing roles for ${discordUserId}:`, err.message);
+    return false;
+  }
 }
 
 const commands = [

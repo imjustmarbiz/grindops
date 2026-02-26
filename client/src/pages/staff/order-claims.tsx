@@ -365,13 +365,18 @@ export default function StaffOrderClaims() {
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground mb-0.5 block">Platform</label>
-                              <Input
-                                placeholder="Xbox, PS5..."
-                                value={getStaffField(claim.id).platform}
-                                onChange={(e) => setStaffField(claim.id, "platform", e.target.value)}
-                                className="bg-white/[0.03] border-white/10 text-xs h-8"
-                                data-testid={`input-staff-platform-${claim.id}`}
-                              />
+                              <Select value={getStaffField(claim.id).platform} onValueChange={(val) => setStaffField(claim.id, "platform", val)}>
+                                <SelectTrigger className="bg-white/[0.03] border-white/10 text-xs h-8" data-testid={`select-staff-platform-${claim.id}`}>
+                                  <SelectValue placeholder="Select platform" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Xbox">Xbox</SelectItem>
+                                  <SelectItem value="PS5">PS5</SelectItem>
+                                  <SelectItem value="PS4">PS4</SelectItem>
+                                  <SelectItem value="PC">PC</SelectItem>
+                                  <SelectItem value="Switch">Switch</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
                           <div>

@@ -17,13 +17,13 @@ import {
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 import { FaXbox } from "react-icons/fa6";
-import { SiPlaystation5, SiSteam, SiNintendoswitch } from "react-icons/si";
+import { SiPlaystation, SiSteam, SiNintendoswitch } from "react-icons/si";
 
 function PlatformIcon({ platform, className }: { platform: string | null; className?: string }) {
   if (!platform) return <LogIn className={className} />;
   const p = platform.toLowerCase();
   if (p.includes("xbox") || p.includes("xb")) return <FaXbox className={className} />;
-  if (p.includes("ps") || p.includes("playstation")) return <SiPlaystation5 className={className} />;
+  if (p.includes("ps") || p.includes("playstation")) return <SiPlaystation className={className} />;
   if (p.includes("pc") || p.includes("steam") || p.includes("epic")) return <SiSteam className={className} />;
   if (p.includes("switch") || p.includes("nintendo")) return <SiNintendoswitch className={className} />;
   return <LogIn className={className} />;

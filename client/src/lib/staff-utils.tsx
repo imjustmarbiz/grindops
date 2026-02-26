@@ -1,6 +1,6 @@
 import { Crown, Zap, Shield, Users, ArrowRight, Clock, Target, Timer, CheckCircle, AlertTriangle, Globe } from "lucide-react";
 import { FaXbox } from "react-icons/fa6";
-import { SiPlaystation5 } from "react-icons/si";
+import { SiPlaystation } from "react-icons/si";
 
 export function pluralize(count: number, singular: string, plural?: string): string {
   return count === 1 ? `${count} ${singular}` : `${count} ${plural || singular + 's'}`;
@@ -127,6 +127,6 @@ export function categoryIcon(cat: string) {
   if (cat === "Event Grinder") return <Shield className="w-3 h-3 text-purple-400" />;
   if (cat === "International Grinder") return <Globe className="w-3 h-3 text-pink-400" />;
   if (cat === "Xbox Grinder") return <FaXbox className="w-3 h-3 text-green-400" />;
-  if (cat === "PS5 Grinder") return <SiPlaystation5 className="w-3 h-3 text-blue-400" />;
+  if (cat === "PS5 Grinder") return <SiPlaystation className="w-3 h-3 text-blue-400" />;
   return <Users className="w-3 h-3 text-primary" />;
 }

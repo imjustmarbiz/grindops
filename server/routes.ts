@@ -322,6 +322,14 @@ export async function registerRoutes(
         actor: getActorName(req),
         details: JSON.stringify(req.body),
       });
+
+      if (req.body.roles && Array.isArray(req.body.roles) && result.discordUserId) {
+        const { syncDiscordRoles } = await import("./discord/bot");
+        syncDiscordRoles(result.discordUserId, req.body.roles).catch((e: any) =>
+          console.error("[routes] Discord role sync failed:", e.message)
+        );
+      }
+
       res.json(result);
     } catch (err) {
       res.status(400).json({ message: String(err) });

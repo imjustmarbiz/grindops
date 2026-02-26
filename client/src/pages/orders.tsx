@@ -668,7 +668,18 @@ export default function Orders() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <InlineTextEdit value={order.platform} orderId={order.id} field="platform" placeholder="Platform" onSave={saveField} />
+                    <Select value={order.platform || ""} onValueChange={(val) => saveField(order.id, { platform: val || null })}>
+                      <SelectTrigger className="h-7 text-xs bg-background/50 border-white/10 w-24" data-testid={`select-platform-${order.id}`}>
+                        <SelectValue placeholder="Platform" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Xbox">Xbox</SelectItem>
+                        <SelectItem value="PS5">PS5</SelectItem>
+                        <SelectItem value="PS4">PS4</SelectItem>
+                        <SelectItem value="PC">PC</SelectItem>
+                        <SelectItem value="Switch">Switch</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <InlineTextEdit value={order.gamertag} orderId={order.id} field="gamertag" placeholder="Gamertag" onSave={saveField} />
