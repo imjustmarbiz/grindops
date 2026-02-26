@@ -179,7 +179,7 @@ function Router() {
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
-      <Route path="/wallets" component={() => <ProtectedRoute component={StaffWallets} staffOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
+      <Route path="/wallets" component={() => <ProtectedRoute component={StaffWallets} staffOnly />} />
       <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
       <Route path="/features" component={() => <ProtectedRoute component={StaffFeatures} staffOnly />} />
       <Route path="/staff/ops-guide" component={() => <ProtectedRoute component={StaffOpsGuide} staffOnly />} />

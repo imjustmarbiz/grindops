@@ -102,7 +102,7 @@ function AppSidebar() {
   const navItems = isStaff
     ? staffNavItems.filter(item => {
         if (item.url === "/business") return canSeeBusiness;
-        if (item.url === "/wallets") return !BUSINESS_BLOCKED_IDS.includes(userId);
+        if (item.url === "/wallets") return true;
         if (item.url === "/staff-overview") return isOwner;
         return true;
       })

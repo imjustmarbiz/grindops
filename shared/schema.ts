@@ -825,6 +825,7 @@ export const walletTransfers = pgTable("wallet_transfers", {
   fromWalletId: varchar("from_wallet_id").references(() => businessWallets.id).notNull(),
   toWalletId: varchar("to_wallet_id").references(() => businessWallets.id).notNull(),
   amount: numeric("amount").notNull(),
+  transferFee: numeric("transfer_fee").default("0"),
   description: text("description"),
   relatedOrderId: varchar("related_order_id"),
   proofUrl: text("proof_url"),

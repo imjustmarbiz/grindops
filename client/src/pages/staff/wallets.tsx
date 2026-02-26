@@ -66,10 +66,11 @@ export default function StaffWallets() {
 
   const [walletForm, setWalletForm] = useState({ name: "", type: "PayPal", accountIdentifier: "", startingBalance: "0", notes: "", scope: isOwner ? "company" : "personal" });
   const [adjustForm, setAdjustForm] = useState({ amount: "", type: "deposit", description: "", category: "misc" });
-  const [transferForm, setTransferForm] = useState({ fromWalletId: "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "" });
+  const [transferForm, setTransferForm] = useState({ fromWalletId: "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" });
   const [payoutForm, setPayoutForm] = useState({ recipientName: "", recipientRole: "", category: "", amount: "", description: "", walletId: "", orderId: "", proofUrl: "" });
   const [markPaidWalletId, setMarkPaidWalletId] = useState("");
   const [linkForm, setLinkForm] = useState({ orderId: "", receivedByWalletId: "", amount: "", proofUrl: "", notes: "" });
+  const [uploadingProof, setUploadingProof] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
 
   const [txFilters, setTxFilters] = useState({ walletId: "", category: "", type: "", startDate: "", endDate: "" });
@@ -141,9 +142,23 @@ export default function StaffWallets() {
 
   const transferMut = useMutation({
     mutationFn: async (data: any) => { const r = await apiRequest("POST", "/api/wallets/transfer", data); return r.json(); },
-    onSuccess: () => { invalidateAll(); setTransferOpen(false); setTransferForm({ fromWalletId: "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "" }); toast({ title: "Transfer submitted" }); },
+    onSuccess: () => { invalidateAll(); setTransferOpen(false); setTransferForm({ fromWalletId: "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); toast({ title: "Transfer submitted" }); },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
+
+  async function uploadProofFile(file: File): Promise<string> {
+    setUploadingProof(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/staff/upload-payment-proof", { method: "POST", body: formData, credentials: "include" });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      return data.url;
+    } finally {
+      setUploadingProof(false);
+    }
+  }
 
   const createPayoutMut = useMutation({
     mutationFn: async (data: any) => { const r = await apiRequest("POST", "/api/business-payouts", data); return r.json(); },
@@ -184,7 +199,8 @@ export default function StaffWallets() {
 
   const walletsMap = new Map(wallets.map((w: any) => [w.id, w]));
   const staffTransferFromWallets = isOwner ? wallets : myWallets;
-  const staffTransferToWallets = isOwner ? wallets.filter((w: any) => w.id !== transferForm.fromWalletId) : companyWallets;
+  const staffTransferToWallets = isOwner ? wallets.filter((w: any) => w.id !== transferForm.fromWalletId) : [...myWallets, ...companyWallets].filter((w: any) => w.id !== transferForm.fromWalletId);
+  const linkableWallets = isOwner ? wallets : myWallets;
 
   return (
     <AnimatedPage className="space-y-5" data-testid="page-wallets">
@@ -202,8 +218,8 @@ export default function StaffWallets() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => { setTransferForm({ fromWalletId: myWallets[0]?.id || "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "" }); setTransferOpen(true); }} data-testid="button-open-transfer"><ArrowLeftRight className="w-4 h-4 mr-1.5" />Transfer</Button>
-            <Button variant="outline" onClick={() => setPayoutOpen(true)} data-testid="button-open-payout"><Send className="w-4 h-4 mr-1.5" />Create Payout</Button>
+            <Button variant="outline" onClick={() => { setTransferForm({ fromWalletId: myWallets[0]?.id || "", toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid="button-open-transfer"><ArrowLeftRight className="w-4 h-4 mr-1.5" />Transfer</Button>
+            {isOwner && <Button variant="outline" onClick={() => setPayoutOpen(true)} data-testid="button-open-payout"><Send className="w-4 h-4 mr-1.5" />Create Payout</Button>}
             <Button variant="outline" onClick={() => setLinkOrderOpen(true)} data-testid="button-link-order"><LinkIcon className="w-4 h-4 mr-1.5" />Link Order Payment</Button>
             <Button onClick={() => { setWalletForm({ name: "", type: "PayPal", accountIdentifier: "", startingBalance: "0", notes: "", scope: isOwner ? "company" : "personal" }); setCreateWalletOpen(true); }} data-testid="button-add-wallet"><Plus className="w-4 h-4 mr-1.5" />Add Wallet</Button>
           </div>
@@ -220,7 +236,7 @@ export default function StaffWallets() {
               { label: "Pending Payouts", value: formatCurrency(Number(summary.pendingPayouts || 0)), icon: Clock, color: "text-amber-400", bg: "bg-amber-500/15", testId: "text-pending-payouts" },
               ...(isOwner ? [
                 { label: "Staff Holding", value: formatCurrency(Number(summary.staffHolding || 0)), icon: User, color: "text-blue-400", bg: "bg-blue-500/15", testId: "text-staff-holding" },
-                { label: "Pending Transfers", value: formatCurrency(Number(summary.pendingTransfers || 0)), icon: ArrowLeftRight, color: "text-purple-400", bg: "bg-purple-500/15", testId: "text-pending-transfers" },
+                { label: "Pending", value: formatCurrency(Number(summary.pendingTransfers || 0)), icon: ArrowLeftRight, color: "text-purple-400", bg: "bg-purple-500/15", testId: "text-pending-transfers" },
               ] : []),
             ].map(s => (
               <Card key={s.label} className="border-0 bg-white/[0.03]">
@@ -296,7 +312,7 @@ export default function StaffWallets() {
                         <Button size="sm" variant="outline" onClick={() => { setAdjustOpen(w); setAdjustForm({ amount: "", type: "withdrawal", description: "", category: "misc" }); }} data-testid={`button-remove-money-${w.id}`}>
                           <ArrowDownRight className="w-3 h-3 mr-1" />Remove
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "" }); setTransferOpen(true); }} data-testid={`button-transfer-${w.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: "", amount: "", description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid={`button-transfer-${w.id}`}>
                           <ArrowLeftRight className="w-3 h-3 mr-1" />Transfer
                         </Button>
                       </div>
@@ -351,11 +367,16 @@ export default function StaffWallets() {
                         </div>
                       )}
                       {!isOwner && Number(w.balance || 0) > 0 && (
-                        <Button size="sm" variant="outline" className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: companyWallets[0]?.id || "", amount: String(Number(w.balance || 0)), description: "", relatedOrderId: "", proofUrl: "" }); setTransferOpen(true); }} data-testid={`button-transfer-to-company-${w.id}`}>
+                        <Button size="sm" variant="outline" className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: companyWallets[0]?.id || "", amount: String(Number(w.balance || 0)), description: "", relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid={`button-transfer-to-company-${w.id}`}>
                           <ArrowLeftRight className="w-3 h-3 mr-1" />Transfer to Company
                         </Button>
                       )}
-                      {isOwner && (
+                      {isOwner && Number(w.balance || 0) > 0 && (
+                        <Button size="sm" variant="outline" className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={() => { setTransferForm({ fromWalletId: w.id, toWalletId: companyWallets[0]?.id || "", amount: String(Number(w.balance || 0)), description: `Transfer from ${w.ownerName || "staff"}`, relatedOrderId: "", proofUrl: "", transferFee: "" }); setTransferOpen(true); }} data-testid={`button-request-transfer-${w.id}`}>
+                          <Send className="w-3 h-3 mr-1" />Request Transfer
+                        </Button>
+                      )}
+                      {!isOwner && (
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" onClick={() => { setAdjustOpen(w); setAdjustForm({ amount: "", type: "deposit", description: "", category: "misc" }); }} data-testid={`button-add-money-${w.id}`}>
                             <ArrowUpRight className="w-3 h-3 mr-1" />Add
@@ -596,6 +617,7 @@ export default function StaffWallets() {
                     <TableHead>From Wallet</TableHead>
                     <TableHead>To Wallet</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Fee</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Order</TableHead>
                     <TableHead>Proof</TableHead>
@@ -605,13 +627,14 @@ export default function StaffWallets() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transfers.length === 0 && <TableRow><TableCell colSpan={isOwner ? 10 : 9} className="text-center text-muted-foreground py-8">No transfers found</TableCell></TableRow>}
+                  {transfers.length === 0 && <TableRow><TableCell colSpan={isOwner ? 11 : 10} className="text-center text-muted-foreground py-8">No transfers found</TableCell></TableRow>}
                   {transfers.map((t: any) => (
                     <TableRow key={t.id} data-testid={`row-transfer-${t.id}`}>
                       <TableCell className="text-sm whitespace-nowrap">{fmtDate(t.createdAt)}</TableCell>
                       <TableCell className="text-sm">{walletsMap.get(t.fromWalletId)?.name || t.fromWalletId}</TableCell>
                       <TableCell className="text-sm">{walletsMap.get(t.toWalletId)?.name || t.toWalletId}</TableCell>
                       <TableCell className="text-right font-medium text-blue-400" data-testid={`text-transfer-amount-${t.id}`}>{formatCurrency(Number(t.amount || 0))}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{Number(t.transferFee || 0) > 0 ? formatCurrency(Number(t.transferFee)) : "—"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{t.description || "—"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{t.relatedOrderId || "—"}</TableCell>
                       <TableCell>{t.proofUrl ? <a href={t.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs"><Eye className="w-3 h-3 inline mr-1" />View</a> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
@@ -759,7 +782,7 @@ export default function StaffWallets() {
 
       <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{isOwner ? "Transfer Between Wallets" : "Transfer to Company Wallet"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{isOwner ? "Transfer Between Wallets" : "Transfer Funds"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">From Wallet</label>
@@ -775,9 +798,15 @@ export default function StaffWallets() {
                 <SelectContent>{staffTransferToWallets.filter((w: any) => w.id !== transferForm.fromWalletId).map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name}{w.scope === "company" ? " (Company)" : ""}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Amount</label>
-              <Input type="number" value={transferForm.amount} onChange={e => setTransferForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" data-testid="input-transfer-amount" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Amount</label>
+                <Input type="number" value={transferForm.amount} onChange={e => setTransferForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" data-testid="input-transfer-amount" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Transfer Fee</label>
+                <Input type="number" value={transferForm.transferFee} onChange={e => setTransferForm(f => ({ ...f, transferFee: e.target.value }))} placeholder="0.00" data-testid="input-transfer-fee" />
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Linked Order (Optional)</label>
@@ -791,8 +820,12 @@ export default function StaffWallets() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Proof URL (Optional)</label>
-              <Input value={transferForm.proofUrl} onChange={e => setTransferForm(f => ({ ...f, proofUrl: e.target.value }))} placeholder="Screenshot or receipt URL" data-testid="input-transfer-proof" />
+              <label className="text-sm font-medium">Proof (Optional)</label>
+              <div className="flex items-center gap-2">
+                <Input type="file" accept="image/*,.pdf" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { const url = await uploadProofFile(f); setTransferForm(prev => ({ ...prev, proofUrl: url })); toast({ title: "Proof uploaded" }); } catch { toast({ title: "Upload failed", variant: "destructive" }); } } }} data-testid="input-transfer-proof" />
+                {uploadingProof && <Loader2 className="w-4 h-4 animate-spin" />}
+              </div>
+              {transferForm.proofUrl && <p className="text-xs text-emerald-400">Uploaded</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Description</label>
@@ -801,7 +834,7 @@ export default function StaffWallets() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTransferOpen(false)} data-testid="button-cancel-transfer">Cancel</Button>
-            <Button onClick={() => transferMut.mutate(transferForm)} disabled={!transferForm.fromWalletId || !transferForm.toWalletId || !transferForm.amount || transferMut.isPending} data-testid="button-submit-transfer">
+            <Button onClick={() => transferMut.mutate(transferForm)} disabled={!transferForm.fromWalletId || !transferForm.toWalletId || !transferForm.amount || transferMut.isPending || uploadingProof} data-testid="button-submit-transfer">
               {transferMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}Transfer
             </Button>
           </DialogFooter>
@@ -870,8 +903,12 @@ export default function StaffWallets() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Proof URL (Optional)</label>
-              <Input value={payoutForm.proofUrl} onChange={e => setPayoutForm(f => ({ ...f, proofUrl: e.target.value }))} placeholder="Receipt or screenshot URL" data-testid="input-payout-proof" />
+              <label className="text-sm font-medium">Proof (Optional)</label>
+              <div className="flex items-center gap-2">
+                <Input type="file" accept="image/*,.pdf" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { const url = await uploadProofFile(f); setPayoutForm(prev => ({ ...prev, proofUrl: url })); toast({ title: "Proof uploaded" }); } catch { toast({ title: "Upload failed", variant: "destructive" }); } } }} data-testid="input-payout-proof" />
+                {uploadingProof && <Loader2 className="w-4 h-4 animate-spin" />}
+              </div>
+              {payoutForm.proofUrl && <p className="text-xs text-emerald-400">Uploaded</p>}
             </div>
           </div>
           <DialogFooter>
@@ -928,7 +965,7 @@ export default function StaffWallets() {
                 <SelectTrigger data-testid="select-link-wallet"><SelectValue placeholder="Which wallet received the payment?" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Select Wallet</SelectItem>
-                  {wallets.map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name} {w.scope === "personal" ? `(${w.ownerName || "Personal"})` : "(Company)"}</SelectItem>)}
+                  {linkableWallets.map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name} {w.scope === "personal" ? `(${w.ownerName || "Personal"})` : "(Company)"}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -937,8 +974,12 @@ export default function StaffWallets() {
               <Input type="number" value={linkForm.amount} onChange={e => setLinkForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" data-testid="input-link-amount" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Proof URL (Optional)</label>
-              <Input value={linkForm.proofUrl} onChange={e => setLinkForm(f => ({ ...f, proofUrl: e.target.value }))} placeholder="Payment screenshot or receipt URL" data-testid="input-link-proof" />
+              <label className="text-sm font-medium">Proof (Optional)</label>
+              <div className="flex items-center gap-2">
+                <Input type="file" accept="image/*,.pdf" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { const url = await uploadProofFile(f); setLinkForm(prev => ({ ...prev, proofUrl: url })); toast({ title: "Proof uploaded" }); } catch { toast({ title: "Upload failed", variant: "destructive" }); } } }} data-testid="input-link-proof" />
+                {uploadingProof && <Loader2 className="w-4 h-4 animate-spin" />}
+              </div>
+              {linkForm.proofUrl && <p className="text-xs text-emerald-400">Uploaded</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Notes (Optional)</label>
