@@ -4970,6 +4970,10 @@ export async function registerRoutes(
         return res.json({ status: "approved", sessionToken: code.sessionToken, message: "Access already approved" });
       }
 
+      if (code.status === "pending_approval") {
+        return res.json({ status: "pending_approval", accessId: code.id, message: "Your access code has been verified. Please wait for approval before submitting your review." });
+      }
+
       if (code.status === "used") {
         return res.status(410).json({ error: "This access code has already been used to submit a review" });
       }
@@ -4985,7 +4989,7 @@ export async function registerRoutes(
       await storage.createNotification({
         id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: "Customer Review Access Request",
-        message: `${customerName.trim()} entered a review access code and is waiting for approval.`,
+        body: `${customerName.trim()} entered a review access code and is waiting for approval.`,
         type: "info",
         roleScope: "staff",
         userId: null,
