@@ -358,8 +358,13 @@ export default function Bids() {
               const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
               const order = (orders || []).find((o: Order) => o.id === bid.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
+              const rowStyle =
+                bid.status === "Accepted" ? "bg-emerald-500/[0.06] border-emerald-500/15 hover:bg-emerald-500/[0.1]" :
+                bid.status === "Denied" || bid.status === "Rejected" ? "opacity-45 hover:opacity-70 border-white/[0.03]" :
+                bid.status === "Order Assigned" ? "opacity-50 hover:opacity-75 border-white/[0.03]" :
+                "hover:bg-white/[0.03] border-white/[0.04]";
               return (
-                <TableRow key={bid.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-bid-${bid.id}`}>
+                <TableRow key={bid.id} className={`${rowStyle} transition-all`} data-testid={`row-bid-${bid.id}`}>
                   <TableCell className="font-mono text-sm">{bid.mgtProposalId ? `P${bid.mgtProposalId}` : bid.id}</TableCell>
                   <TableCell className="font-medium text-primary">{orderRef}</TableCell>
                   <TableCell>
