@@ -1624,13 +1624,14 @@ export async function registerRoutes(
 
     const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder" || (g.roles && g.roles.includes("Elite Grinder")));
     let eliteCoaching: any = null;
-    if (!isElite && eliteGrinders.length > 0) {
-      const eliteAvgWinRate = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.winRate) || 0), 0) / eliteGrinders.length;
-      const eliteAvgQuality = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.avgQualityRating) || 0), 0) / eliteGrinders.length;
-      const eliteAvgOnTime = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.onTimeRate) || 0), 0) / eliteGrinders.length;
-      const eliteAvgCompletion = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.completionRate) || 0), 0) / eliteGrinders.length;
-      const eliteAvgTurnaround = eliteGrinders.reduce((s: number, g: any) => s + (Number(g.avgTurnaroundDays) || 0), 0) / eliteGrinders.length;
-      const eliteAvgCompleted = eliteGrinders.reduce((s: number, g: any) => s + (g.completedOrders || 0), 0) / eliteGrinders.length;
+    if (!isElite) {
+      const hasElites = eliteGrinders.length > 0;
+      const eliteAvgWinRate = hasElites ? eliteGrinders.reduce((s: number, g: any) => s + (Number(g.winRate) || 0), 0) / eliteGrinders.length : 70;
+      const eliteAvgQuality = hasElites ? eliteGrinders.reduce((s: number, g: any) => s + (Number(g.avgQualityRating) || 0), 0) / eliteGrinders.length : 80;
+      const eliteAvgOnTime = hasElites ? eliteGrinders.reduce((s: number, g: any) => s + (Number(g.onTimeRate) || 0), 0) / eliteGrinders.length : 90;
+      const eliteAvgCompletion = hasElites ? eliteGrinders.reduce((s: number, g: any) => s + (Number(g.completionRate) || 0), 0) / eliteGrinders.length : 90;
+      const eliteAvgTurnaround = hasElites ? eliteGrinders.reduce((s: number, g: any) => s + (Number(g.avgTurnaroundDays) || 0), 0) / eliteGrinders.length : 2;
+      const eliteAvgCompleted = hasElites ? eliteGrinders.reduce((s: number, g: any) => s + (g.completedOrders || 0), 0) / eliteGrinders.length : 10;
 
       const myWinRate = Number(myGrinder.winRate) || 0;
       const myQuality = Number(myGrinder.avgQualityRating) || 0;
@@ -1669,6 +1670,7 @@ export async function registerRoutes(
         eliteAverages: { winRate: eliteAvgWinRate, quality: eliteAvgQuality, onTime: eliteAvgOnTime, completion: eliteAvgCompletion, turnaround: eliteAvgTurnaround, completed: Math.round(eliteAvgCompleted) },
         tips,
         readiness: tips.length <= 1 && myGrinder.strikes === 0 ? "ready" : tips.length <= 3 ? "close" : "developing",
+        hasEliteData: hasElites,
       };
     }
 

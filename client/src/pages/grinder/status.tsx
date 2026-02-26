@@ -84,7 +84,7 @@ export default function GrinderStatus() {
                           <tr className="border-b border-border/50">
                             <th className="text-left py-2 text-muted-foreground font-medium">Metric</th>
                             <th className="text-right py-2 text-muted-foreground font-medium">Yours</th>
-                            <th className="text-right py-2 text-muted-foreground font-medium">Elite Avg</th>
+                            <th className="text-right py-2 text-muted-foreground font-medium">{eliteCoaching.hasEliteData ? "Elite Avg" : "Elite Target"}</th>
                           </tr>
                         </thead>
                         <tbody>
