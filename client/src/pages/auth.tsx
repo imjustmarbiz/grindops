@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Shield, Zap, Target } from "lucide-react";
+import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2 } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 import spLogo from "@assets/image_1771930905137.png";
+
+const isDev = import.meta.env.DEV;
 
 export default function AuthPage() {
   const handleLogin = () => {
@@ -118,6 +120,40 @@ export default function AuthPage() {
               Your Discord roles determine your access level. Staff get full access, Grinders see their personal dashboard.
             </p>
           </div>
+
+          {isDev && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="space-y-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dev Profiles</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { role: "owner", label: "Owner", icon: Crown, color: "from-amber-500/20 to-amber-600/10 hover:from-amber-500/30 hover:to-amber-600/20 border-amber-500/30 text-amber-400" },
+                  { role: "staff", label: "Staff", icon: Wrench, color: "from-blue-500/20 to-blue-600/10 hover:from-blue-500/30 hover:to-blue-600/20 border-blue-500/30 text-blue-400" },
+                  { role: "grinder", label: "Grinder", icon: Gamepad2, color: "from-[#5865F2]/20 to-[#5865F2]/10 hover:from-[#5865F2]/30 hover:to-[#5865F2]/20 border-[#5865F2]/30 text-[#5865F2]" },
+                  { role: "elite", label: "Elite Grinder", icon: Shield, color: "from-cyan-500/20 to-teal-500/10 hover:from-cyan-500/30 hover:to-teal-500/20 border-cyan-500/30 text-cyan-400" },
+                ].map((dev) => (
+                  <a
+                    key={dev.role}
+                    href={`/api/auth/dev/login?role=${dev.role}`}
+                    className={`flex items-center gap-2 p-3 rounded-xl bg-gradient-to-br ${dev.color} border transition-all duration-200 hover:-translate-y-0.5`}
+                    data-testid={`link-dev-login-${dev.role}`}
+                  >
+                    <dev.icon className="w-4 h-4 shrink-0" />
+                    <span className="text-sm font-medium">{dev.label}</span>
+                  </a>
+                ))}
+              </div>
+              <p className="text-center text-[10px] text-muted-foreground/50">Development only — not visible in production</p>
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </div>

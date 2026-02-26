@@ -1533,7 +1533,7 @@ export async function registerRoutes(
     const myStrikeLogs = await storage.getStrikeLogs(myGrinder.id);
     const myStrikeAppeals = await storage.getStrikeAppeals(myGrinder.id);
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
-    const mySystemNotifications = await storage.getNotificationsForUser(user.id, "grinder");
+    const mySystemNotifications = await storage.getNotificationsForUser(userId, "grinder");
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
     const grinderRoles = (myGrinder as any).roles as string[] | null;
@@ -1823,9 +1823,9 @@ export async function registerRoutes(
       eliteCoaching,
       systemNotifications: mySystemNotifications.map((n: any) => ({
         ...n,
-        isRead: Array.isArray(n.readBy) && n.readBy.includes(user.id),
+        isRead: Array.isArray(n.readBy) && n.readBy.includes(userId),
       })),
-      unreadAlertCount: unreadAlerts.length + mySystemNotifications.filter((n: any) => !Array.isArray(n.readBy) || !n.readBy.includes(user.id)).length,
+      unreadAlertCount: unreadAlerts.length + mySystemNotifications.filter((n: any) => !Array.isArray(n.readBy) || !n.readBy.includes(userId)).length,
       unackedStrikeCount: unackedStrikes.length,
       stats: {
         totalAssignments: myAssignments.length,
