@@ -479,6 +479,9 @@ export async function registerRoutes(
 
   app.post(api.orders.create.path, requireStaff, async (req, res) => {
     try {
+      if (typeof req.body.orderDueDate === "string") {
+        req.body.orderDueDate = new Date(req.body.orderDueDate);
+      }
       const input = api.orders.create.input.parse(req.body);
       if (input.platform) input.platform = normalizePlatform(input.platform);
       const result = await storage.createOrder(input);
