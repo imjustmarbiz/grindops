@@ -984,6 +984,137 @@ export function PS5GrinderBadge() {
   );
 }
 
+export function VersatileBadge() {
+  return (
+    <BadgeShell glow="rgba(244,114,182,0.5)" id="versatile">
+      <defs>
+        <linearGradient id="vers-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fbcfe8" />
+          <stop offset="40%" stopColor="#ec4899" />
+          <stop offset="100%" stopColor="#831843" />
+        </linearGradient>
+      </defs>
+      <polygon points="32,2 44,10 56,6 52,20 62,30 52,38 56,52 44,48 32,58 20,48 8,52 12,38 2,30 12,20 8,6 20,10" fill="url(#vers-g)" stroke="#fbcfe8" strokeWidth="0.8" />
+      <circle cx="22" cy="24" r="6" fill="#831843" stroke="#f9a8d4" strokeWidth="1" />
+      <circle cx="42" cy="24" r="6" fill="#831843" stroke="#f9a8d4" strokeWidth="1" />
+      <circle cx="32" cy="38" r="6" fill="#831843" stroke="#f9a8d4" strokeWidth="1" />
+      <path d="M22,24 L42,24" stroke="#f472b6" strokeWidth="1" strokeDasharray="2 1" />
+      <path d="M22,24 L32,38" stroke="#f472b6" strokeWidth="1" strokeDasharray="2 1" />
+      <path d="M42,24 L32,38" stroke="#f472b6" strokeWidth="1" strokeDasharray="2 1" />
+      <polygon points="22,20 24,18 26,20 24,22" fill="#f9a8d4" />
+      <polygon points="42,20 44,18 46,20 44,22" fill="#f9a8d4" />
+      <polygon points="32,34 34,32 36,34 34,36" fill="#f9a8d4" />
+    </BadgeShell>
+  );
+}
+
+export function TopTierBadge() {
+  return (
+    <BadgeShell glow="rgba(251,191,36,0.6)" id="top-tier">
+      <defs>
+        <linearGradient id="tt-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fef3c7" />
+          <stop offset="30%" stopColor="#fbbf24" />
+          <stop offset="70%" stopColor="#d97706" />
+          <stop offset="100%" stopColor="#78350f" />
+        </linearGradient>
+        <linearGradient id="tt-crown" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fef9c3" />
+          <stop offset="100%" stopColor="#eab308" />
+        </linearGradient>
+      </defs>
+      <path d="M32,4 L54,16 L54,36 Q54,52 32,60 Q10,52 10,36 L10,16 Z" fill="url(#tt-g)" stroke="#fef3c7" strokeWidth="1" />
+      <path d="M32,12 L46,20 L46,34 Q46,46 32,52 Q18,46 18,34 L18,20 Z" fill="#78350f" stroke="#d97706" strokeWidth="0.8" />
+      <path d="M22,26 L18,18 L26,24 L32,16 L38,24 L46,18 L42,26 Z" fill="url(#tt-crown)" />
+      <circle cx="18" cy="18" r="2" fill="#fef9c3" />
+      <circle cx="32" cy="16" r="2" fill="#fef9c3" />
+      <circle cx="46" cy="18" r="2" fill="#fef9c3" />
+      <polygon points="28,32 32,28 36,32 34,38 30,38" fill="#fbbf24" stroke="#78350f" strokeWidth="0.5" />
+    </BadgeShell>
+  );
+}
+
+export function ProblemSolverBadge() {
+  return (
+    <BadgeShell glow="rgba(34,211,238,0.5)" id="problem-solver">
+      <defs>
+        <linearGradient id="ps-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#a5f3fc" />
+          <stop offset="50%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#164e63" />
+        </linearGradient>
+        <radialGradient id="ps-bulb" cx="50%" cy="40%">
+          <stop offset="0%" stopColor="#fef9c3" />
+          <stop offset="100%" stopColor="#fbbf24" />
+        </radialGradient>
+      </defs>
+      <polygon points="32,2 42,10 52,4 50,16 62,20 54,30 58,42 46,42 40,54 32,46 24,54 18,42 6,42 10,30 2,20 14,16 12,4 22,10" fill="url(#ps-g)" stroke="#a5f3fc" strokeWidth="0.8" />
+      <path d="M26,34 Q26,16 32,16 Q38,16 38,34" fill="url(#ps-bulb)" stroke="#164e63" strokeWidth="1" />
+      <rect x="27" y="34" width="10" height="4" rx="1" fill="#164e63" />
+      <rect x="28" y="38" width="8" height="2" rx="1" fill="#164e63" />
+      <path d="M32,10 L32,6" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M42,14 L44,10" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" />
+      <path d="M22,14 L20,10" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" />
+      <path d="M46,22 L50,20" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" />
+      <path d="M18,22 L14,20" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
+export function AboveBeyondBadge() {
+  return (
+    <BadgeShell glow="rgba(168,85,247,0.6)" id="above-beyond">
+      <defs>
+        <linearGradient id="ab-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e9d5ff" />
+          <stop offset="30%" stopColor="#a855f7" />
+          <stop offset="70%" stopColor="#7c3aed" />
+          <stop offset="100%" stopColor="#4c1d95" />
+        </linearGradient>
+        <linearGradient id="ab-rocket" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f5f3ff" />
+          <stop offset="100%" stopColor="#c084fc" />
+        </linearGradient>
+      </defs>
+      <polygon points="32,1 40,12 52,4 50,18 63,22 54,32 60,46 46,44 40,58 32,48 24,58 18,44 4,46 10,32 1,22 14,18 12,4 24,12" fill="url(#ab-g)" stroke="#e9d5ff" strokeWidth="1" />
+      <path d="M32,14 L28,30 L24,30 L32,42 L40,30 L36,30 Z" fill="url(#ab-rocket)" stroke="#4c1d95" strokeWidth="0.8" />
+      <circle cx="32" cy="20" r="3" fill="#4c1d95" />
+      <circle cx="32" cy="20" r="1.5" fill="#e9d5ff" />
+      <path d="M28,36 L26,42" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M32,38 L32,44" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M36,36 L38,42" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
+export function ComebackKingBadge() {
+  return (
+    <BadgeShell glow="rgba(249,115,22,0.6)" id="comeback-king">
+      <defs>
+        <linearGradient id="cbk-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fed7aa" />
+          <stop offset="30%" stopColor="#f97316" />
+          <stop offset="70%" stopColor="#ea580c" />
+          <stop offset="100%" stopColor="#7c2d12" />
+        </linearGradient>
+        <linearGradient id="cbk-phoenix" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fef3c7" />
+          <stop offset="50%" stopColor="#f97316" />
+          <stop offset="100%" stopColor="#dc2626" />
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="32" r="28" fill="url(#cbk-g)" stroke="#fed7aa" strokeWidth="1" />
+      <circle cx="32" cy="32" r="22" fill="#7c2d12" stroke="#ea580c" strokeWidth="1" />
+      <path d="M32,16 Q20,20 20,30 Q20,40 32,48 Q44,40 44,30 Q44,20 32,16 Z" fill="url(#cbk-phoenix)" opacity="0.8" />
+      <path d="M24,36 Q28,26 32,22 Q36,26 40,36" fill="none" stroke="#fef3c7" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M28,40 Q30,34 32,30 Q34,34 36,40" fill="none" stroke="#fef3c7" strokeWidth="1" strokeLinecap="round" />
+      <path d="M20,24 L16,18" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M44,24 L48,18" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M32,16 L32,10" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" />
+    </BadgeShell>
+  );
+}
+
 export type BadgeTier = "short" | "mid" | "long";
 
 export type BadgeId =
@@ -991,11 +1122,11 @@ export type BadgeId =
   | "quality" | "sharp" | "punctual" | "reliable" | "clean"
   | "earn-500" | "earn-2k" | "earn-5k" | "earn-10k" | "earn-25k" | "earn-50k" | "earn-100k"
   | "newbie" | "loyal" | "loyal-6m" | "loyal-1y" | "loyal-2y" | "loyal-5y"
-  | "streamer"
+  | "streamer" | "versatile" | "top-tier"
   | "vc-grinder" | "event-grinder" | "international-grinder" | "xbox-grinder" | "ps5-grinder"
   | "rush-hero" | "clutch" | "multi-tasker" | "communicator" | "team-player"
   | "night-owl" | "speed-demon" | "customer-fav" | "mentor" | "diamond-hands"
-  | "console-king" | "zero-complaints";
+  | "console-king" | "zero-complaints" | "problem-solver" | "above-beyond" | "comeback-king";
 
 export const BADGE_COMPONENTS: Record<BadgeId, () => JSX.Element> = {
   "elite": EliteBadge,
@@ -1031,6 +1162,8 @@ export const BADGE_COMPONENTS: Record<BadgeId, () => JSX.Element> = {
   "international-grinder": InternationalGrinderBadge,
   "xbox-grinder": XboxGrinderBadge,
   "ps5-grinder": PS5GrinderBadge,
+  "versatile": VersatileBadge,
+  "top-tier": TopTierBadge,
   "rush-hero": RushHeroBadge,
   "clutch": ClutchPlayerBadge,
   "multi-tasker": MultiTaskerBadge,
@@ -1043,6 +1176,9 @@ export const BADGE_COMPONENTS: Record<BadgeId, () => JSX.Element> = {
   "diamond-hands": DiamondHandsBadge,
   "console-king": ConsoleKingBadge,
   "zero-complaints": ZeroComplaintsBadge,
+  "problem-solver": ProblemSolverBadge,
+  "above-beyond": AboveBeyondBadge,
+  "comeback-king": ComebackKingBadge,
 };
 
 export type BadgeCategory = "auto" | "manual" | "both";
@@ -1081,6 +1217,8 @@ export const BADGE_META: Record<BadgeId, { label: string; tooltip: string; categ
   "international-grinder": { label: "International", tooltip: "International Grinder — global operations specialist", category: "auto", tier: "short" },
   "xbox-grinder": { label: "Xbox Grinder", tooltip: "Certified Xbox Grinder — Xbox platform specialist", category: "auto", tier: "short" },
   "ps5-grinder": { label: "PS5 Grinder", tooltip: "Certified PS5 Grinder — PlayStation platform specialist", category: "auto", tier: "short" },
+  "versatile": { label: "Versatile", tooltip: "Multi-role specialist — 3+ roles assigned", category: "auto", tier: "mid" },
+  "top-tier": { label: "Top Tier", tooltip: "Reached Diamond or Elite tier level", category: "auto", tier: "long" },
   "rush-hero": { label: "Rush Hero", tooltip: "Completed a rush/emergency order with no issues", category: "manual", tier: "short" },
   "clutch": { label: "Clutch Player", tooltip: "Saved a difficult order from failing", category: "manual", tier: "mid" },
   "multi-tasker": { label: "Multi-Tasker", tooltip: "Successfully handled 3+ active orders at once", category: "manual", tier: "mid" },
@@ -1093,6 +1231,9 @@ export const BADGE_META: Record<BadgeId, { label: string; tooltip: string; categ
   "diamond-hands": { label: "Diamond Hands", tooltip: "Stuck with a tough order and delivered quality", category: "manual", tier: "mid" },
   "console-king": { label: "Console King", tooltip: "Multi-platform specialist — handles any console", category: "manual", tier: "long" },
   "zero-complaints": { label: "Zero Complaints", tooltip: "Spotless track record — no disputes or issues", category: "manual", tier: "long" },
+  "problem-solver": { label: "Problem Solver", tooltip: "Resolved a complex order issue creatively", category: "manual", tier: "mid" },
+  "above-beyond": { label: "Above & Beyond", tooltip: "Exceeded order requirements or expectations", category: "manual", tier: "long" },
+  "comeback-king": { label: "Comeback King", tooltip: "Recovered from a rough patch and improved significantly", category: "manual", tier: "long" },
 };
 
 export const ALL_BADGE_IDS = Object.keys(BADGE_META) as BadgeId[];

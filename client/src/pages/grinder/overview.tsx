@@ -188,6 +188,11 @@ export default function GrinderOverview() {
       if (roles.includes("International Grinder")) ids.add("international-grinder");
       if (roles.includes("Xbox Grinder")) ids.add("xbox-grinder");
       if (roles.includes("PS5 Grinder")) ids.add("ps5-grinder");
+      if (roles.length >= 3) ids.add("versatile");
+    }
+
+    if (grinder.category === "Elite Grinder" || grinder.tier === "Diamond" || grinder.tier === "Elite") {
+      ids.add("top-tier");
     }
 
     if (manualBadges) {
