@@ -127,11 +127,11 @@ export default function GrinderNotifications() {
       <div className="space-y-4">
         <FadeInUp delay={0}>
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Bell className={`w-6 h-6 shrink-0 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+            <div className="flex items-center gap-3 min-w-0">
+              <Bell className={`w-7 h-7 shrink-0 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
               <div className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-bold font-display tracking-tight">Notifications</h1>
-                <p className="text-muted-foreground text-xs sm:text-sm mt-0.5">Alerts and messages from staff</p>
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Notifications</h1>
+                <p className="text-muted-foreground text-sm mt-1">Alerts and messages from staff</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
