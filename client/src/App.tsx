@@ -7,7 +7,8 @@ import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import { useEffect } from "react";
-import { Construction } from "lucide-react";
+import { Construction, ShieldAlert } from "lucide-react";
+import { GRINDER_ROLES } from "@shared/schema";
 
 import AuthPage from "@/pages/auth";
 import StaffOverview from "@/pages/staff/overview";
@@ -74,9 +75,30 @@ function MaintenancePage() {
   );
 }
 
+function EarlyAccessDeniedPage() {
+  return (
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6 text-center" data-testid="page-early-access-denied">
+      <ShieldAlert className="w-16 h-16 text-amber-500" />
+      <h1 className="text-2xl font-bold">Early Access Only</h1>
+      <p className="text-muted-foreground max-w-md">
+        The dashboard is currently in early access mode and only available to Elite Grinders, Staff, and Owners.
+      </p>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        If you believe you should have access, please contact staff in the Discord server.
+      </p>
+      <a href="/api/logout" className="text-primary underline text-sm mt-2">Sign out</a>
+    </div>
+  );
+}
+
+function hasEliteRole(user: any): boolean {
+  const discordRoles: string[] = (user as any)?.discordRoles || [];
+  return discordRoles.includes(GRINDER_ROLES.ELITE);
+}
+
 function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; blockedDiscordIds?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null }>({
+  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
     queryKey: ["/api/config/maintenance"],
     enabled: isAuthenticated,
     refetchInterval: 30000,
@@ -99,6 +121,11 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
   const canBypassMaintenance = actorUsername === "imjustmar" || actorUsername === "demoowner" || actorDiscordId === "172526626888876032";
   if (maintenanceData?.maintenanceMode && !canBypassMaintenance) {
     return <MaintenancePage />;
+  }
+
+  const isStaffOrOwner = user?.role === "staff" || user?.role === "owner";
+  if (maintenanceData?.earlyAccessMode && !isStaffOrOwner && !hasEliteRole(user)) {
+    return <EarlyAccessDeniedPage />;
   }
 
   if (blockedDiscordIds) {
@@ -136,6 +163,11 @@ function AccessDeniedPage() {
 
 function HomeRedirect() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
+    queryKey: ["/api/config/maintenance"],
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
 
   if (isLoading) {
     return (
@@ -157,7 +189,12 @@ function HomeRedirect() {
     );
   }
 
-  if (user?.role === "staff" || user?.role === "owner") {
+  const isStaffOrOwner = user?.role === "staff" || user?.role === "owner";
+  if (maintenanceData?.earlyAccessMode && !isStaffOrOwner && !hasEliteRole(user)) {
+    return <EarlyAccessDeniedPage />;
+  }
+
+  if (isStaffOrOwner) {
     return (
       <AppLayout>
         <StaffOverview />

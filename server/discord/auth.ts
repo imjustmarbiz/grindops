@@ -4,6 +4,7 @@ import connectPg from "connect-pg-simple";
 import crypto from "crypto";
 import { authStorage } from "../replit_integrations/auth/storage";
 import { getDiscordBotClient } from "./bot";
+import { GRINDER_ROLES } from "@shared/schema";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const OWNER_ROLE = "1466369177043599514";
@@ -278,11 +279,11 @@ export function setupDiscordAuth(app: Express) {
   });
 
   if (process.env.NODE_ENV === "development") {
-    const DEV_ROLES: Record<string, { userId: string; email: string; firstName: string; lastName: string; discordId: string; discordUsername: string; sessionRole: string }> = {
+    const DEV_ROLES: Record<string, { userId: string; email: string; firstName: string; lastName: string; discordId: string; discordUsername: string; sessionRole: string; discordRoleIds?: string[] }> = {
       owner: { userId: "dev-owner-user", email: "dev-owner@test.local", firstName: "DemoOwner", lastName: "", discordId: "dev-owner-discord", discordUsername: "DemoOwner", sessionRole: "owner" },
       staff: { userId: "dev-staff-user", email: "dev-staff@test.local", firstName: "DemoStaff", lastName: "", discordId: "dev-staff-discord", discordUsername: "DemoStaff", sessionRole: "staff" },
       grinder: { userId: "dev-grinder-user", email: "dev-grinder@test.local", firstName: "DemoGrinder", lastName: "", discordId: "dev-grinder-discord", discordUsername: "DemoGrinder", sessionRole: "grinder" },
-      elite: { userId: "dev-elite-user", email: "dev-elite@test.local", firstName: "DemoElite", lastName: "", discordId: "dev-elite-discord", discordUsername: "DemoElite", sessionRole: "grinder" },
+      elite: { userId: "dev-elite-user", email: "dev-elite@test.local", firstName: "DemoElite", lastName: "", discordId: "dev-elite-discord", discordUsername: "DemoElite", sessionRole: "grinder", discordRoleIds: [GRINDER_ROLES.ELITE] },
     };
 
     app.get("/api/auth/dev/login", async (req, res) => {
@@ -302,7 +303,7 @@ export function setupDiscordAuth(app: Express) {
           discordUsername: config.discordUsername,
           discordAvatar: null,
           role: config.sessionRole,
-          discordRoles: [],
+          discordRoles: config.discordRoleIds || [],
         });
         (req.session as any).userId = user.id;
         (req.session as any).userRole = config.sessionRole;

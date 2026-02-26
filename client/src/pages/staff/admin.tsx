@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -259,7 +259,7 @@ export default function StaffAdmin() {
     enabled: isOwner,
   });
 
-  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null }>({
+  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
     queryKey: ["/api/config/maintenance"],
   });
 
@@ -285,6 +285,18 @@ export default function StaffAdmin() {
       toast({ title: enabled ? "Maintenance mode enabled" : "Maintenance mode disabled" });
     },
     onError: (e: any) => toast({ title: "Failed to update", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleEarlyAccessMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", "/api/config/early-access", { enabled });
+      return res.json();
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
+      toast({ title: enabled ? "Early access mode enabled — only Elite Grinders can access" : "Early access mode disabled — all grinders can access" });
+    },
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
   });
 
   const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
@@ -368,6 +380,20 @@ export default function StaffAdmin() {
               <div>
                 <p className="text-sm font-medium text-amber-400">Maintenance Mode Active</p>
                 <p className="text-xs text-muted-foreground">Site access is restricted. Only imjustmar can access the dashboard.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      )}
+
+      {maintenanceConfig?.earlyAccessMode && !maintenanceConfig?.maintenanceMode && (
+        <FadeInUp>
+          <Card className="border border-cyan-500/30 bg-cyan-500/10">
+            <CardContent className="p-4 flex items-center gap-3">
+              <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-cyan-400">Early Access Mode Active</p>
+                <p className="text-xs text-muted-foreground">Only Elite Grinders can access the dashboard. Regular grinders are denied.</p>
               </div>
             </CardContent>
           </Card>
@@ -1652,6 +1678,42 @@ export default function StaffAdmin() {
                       ? "Bot is actively syncing order data from the MGT Discord server."
                       : "Bot sync is disabled. Only manually created orders will appear in the dashboard."}
                   </p>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-early-access">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    Early Access Mode
+                    <Badge className={`ml-auto text-xs ${maintenanceConfig?.earlyAccessMode ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"}`}>
+                      {maintenanceConfig?.earlyAccessMode ? "Active" : "Off"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div>
+                      <p className="text-sm font-medium">Elite Grinders Only</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">When enabled, only Elite Grinders, Staff, and Owners can access the dashboard. Regular grinders and other roles are denied.</p>
+                    </div>
+                    <Switch
+                      checked={maintenanceConfig?.earlyAccessMode || false}
+                      onCheckedChange={(checked) => toggleEarlyAccessMutation.mutate(checked)}
+                      disabled={toggleEarlyAccessMutation.isPending}
+                      data-testid="switch-early-access"
+                    />
+                  </div>
+                  {maintenanceConfig?.earlyAccessMode && (
+                    <p className="text-[10px] text-cyan-400 px-1">
+                      Early access is ON. Only grinders with the Elite Grinder Discord role can log in. Staff and owners bypass this restriction.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </FadeInUp>

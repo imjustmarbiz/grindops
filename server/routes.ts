@@ -8,7 +8,7 @@ import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats } from "./recalcStats";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
-import { siteAlerts } from "@shared/schema";
+import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
 import { or, eq, sql, desc, and } from "drizzle-orm";
 import multer from "multer";
 
@@ -181,7 +181,23 @@ export async function registerRoutes(
     if (req.path.startsWith('/auth') || req.path === '/logout' || req.path.startsWith('/public/')) {
       return next();
     }
-    return isAuthenticated(req, res, next);
+    return isAuthenticated(req, res, async () => {
+      const userRole = (req as any).userRole;
+      if (userRole === "grinder") {
+        if (req.path === '/config/maintenance') return next();
+        try {
+          const config = await storage.getQueueConfig();
+          if (config?.earlyAccessMode) {
+            const discordRoles: string[] = ((req as any).user?.discordRoles as string[]) || [];
+            const hasElite = discordRoles.includes(GRINDER_ROLES.ELITE);
+            if (!hasElite) {
+              return res.status(403).json({ message: "Early access mode is active. Only Elite Grinders can access the dashboard." });
+            }
+          }
+        } catch {}
+      }
+      next();
+    });
   });
 
   app.get(api.services.list.path, async (req, res) => {
@@ -5778,6 +5794,7 @@ export async function registerRoutes(
       res.json({
         maintenanceMode: config?.maintenanceMode || false,
         maintenanceModeSetBy: config?.maintenanceModeSetBy || null,
+        earlyAccessMode: config?.earlyAccessMode || false,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch maintenance config" });
@@ -5813,6 +5830,29 @@ export async function registerRoutes(
       res.json({ success: true, enabled });
     } catch (error) {
       res.status(500).json({ error: "Failed to update maintenance config" });
+    }
+  });
+
+  app.patch("/api/config/early-access", requireOwner, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled must be a boolean" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, earlyAccessMode: enabled });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: enabled ? "early_access_enabled" : "early_access_disabled",
+        entityType: "config",
+        entityId: "early_access",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: `Early access mode ${enabled ? "enabled" : "disabled"} by ${actorName}`,
+      });
+      res.json({ success: true, enabled });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update early access config" });
     }
   });
 

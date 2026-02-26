@@ -188,6 +188,7 @@ export const queueConfig = pgTable("queue_config", {
   mgtBotEnabled: boolean("mgt_bot_enabled").notNull().default(true),
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
   maintenanceModeSetBy: varchar("maintenance_mode_set_by"),
+  earlyAccessMode: boolean("early_access_mode").notNull().default(false),
   customPayoutRoles: jsonb("custom_payout_roles"),
   customPayoutCategories: jsonb("custom_payout_categories"),
 });
