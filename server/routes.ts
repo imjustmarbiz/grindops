@@ -1472,9 +1472,10 @@ export async function registerRoutes(
     if (!myGrinder) return res.json(null);
     if (myGrinder.isRemoved) return res.status(403).json({ message: "Your access has been revoked. Contact staff for more information." });
 
-    if (authUser && myGrinder.name === "Unknown") {
+    if (authUser) {
       const displayName = authUser.firstName || authUser.discordUsername || "Unknown";
-      if (displayName !== "Unknown") {
+      const shouldSyncName = displayName !== "Unknown" && (myGrinder.name === "Unknown" || (userId.startsWith("dev-") && displayName !== myGrinder.name));
+      if (shouldSyncName) {
         await storage.updateGrinder(myGrinder.id, { name: displayName, discordUsername: authUser.discordUsername || myGrinder.discordUsername });
         myGrinder = { ...myGrinder, name: displayName, discordUsername: authUser.discordUsername || myGrinder.discordUsername };
       }

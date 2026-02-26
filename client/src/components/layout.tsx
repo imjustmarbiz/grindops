@@ -96,8 +96,14 @@ function AppSidebar() {
     return !readBy.includes(userId);
   }).length;
   const isElite = !isStaff && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
+  const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
+  const canSeeBusiness = isOwner && !BUSINESS_BLOCKED_IDS.includes(userId);
   const navItems = isStaff
-    ? staffNavItems.filter(item => (item.url !== "/business" && item.url !== "/staff-overview") || isOwner)
+    ? staffNavItems.filter(item => {
+        if (item.url === "/business") return canSeeBusiness;
+        if (item.url === "/staff-overview") return isOwner;
+        return true;
+      })
     : grinderNavItems;
   const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
   const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || undefined;

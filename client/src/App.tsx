@@ -58,7 +58,9 @@ import StaffBadges from "@/pages/staff/badges";
 import StaffOverviewPage from "@/pages/staff/staff-overview";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean }) {
+const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
+
+function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; blockedDiscordIds?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
@@ -71,6 +73,13 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
 
   if (!isAuthenticated) {
     return <Redirect to="/login" />;
+  }
+
+  if (blockedDiscordIds) {
+    const discordId = (user as any)?.discordId || "";
+    if (blockedDiscordIds.includes(discordId)) {
+      return <Redirect to="/" />;
+    }
   }
 
   if (ownerOnly && user?.role !== "owner") {
@@ -168,7 +177,7 @@ function Router() {
       <Route path="/order-claims" component={() => <ProtectedRoute component={StaffOrderClaims} staffOnly />} />
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
-      <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly />} />
+      <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
       <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
       <Route path="/features" component={() => <ProtectedRoute component={StaffFeatures} staffOnly />} />
       <Route path="/staff/ops-guide" component={() => <ProtectedRoute component={StaffOpsGuide} staffOnly />} />
