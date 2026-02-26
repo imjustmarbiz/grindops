@@ -1826,11 +1826,14 @@ export async function registerRoutes(
       })),
       eliteRequests: myEliteRequests,
       eliteCoaching,
-      systemNotifications: mySystemNotifications.map((n: any) => ({
-        ...n,
-        isRead: Array.isArray(n.readBy) && n.readBy.includes(userId),
-      })),
-      unreadAlertCount: unreadAlerts.length + mySystemNotifications.filter((n: any) => !Array.isArray(n.readBy) || !n.readBy.includes(userId)).length,
+      systemNotifications: mySystemNotifications.map((n: any) => {
+        const rb = Array.isArray(n.readBy) ? n.readBy : [];
+        return { ...n, isRead: rb.includes(userId) || rb.includes(myGrinder.discordUserId) };
+      }),
+      unreadAlertCount: unreadAlerts.length + mySystemNotifications.filter((n: any) => {
+        const rb = Array.isArray(n.readBy) ? n.readBy : [];
+        return !rb.includes(userId) && !rb.includes(myGrinder.discordUserId);
+      }).length,
       unackedStrikeCount: unackedStrikes.length,
       stats: {
         totalAssignments: myAssignments.length,

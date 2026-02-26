@@ -970,7 +970,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markAlertRead(alertId: string, grinderId: string): Promise<void> {
-    await db.execute(sql`UPDATE staff_alerts SET read_by = read_by || ${JSON.stringify([grinderId])}::jsonb WHERE id = ${alertId} AND NOT read_by @> ${JSON.stringify([grinderId])}::jsonb`);
+    const existing = await db.select().from(staffAlerts).where(eq(staffAlerts.id, alertId));
+    if (existing.length > 0) {
+      const currentReadBy = (existing[0].readBy as string[]) || [];
+      if (!currentReadBy.includes(grinderId)) {
+        await db.update(staffAlerts).set({
+          readBy: [...currentReadBy, grinderId],
+        }).where(eq(staffAlerts.id, alertId));
+      }
+    }
   }
 
   async deleteStaffAlert(id: string): Promise<boolean> {
