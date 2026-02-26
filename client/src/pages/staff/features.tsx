@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 
 import { 
-  BookOpen, LayoutDashboard, Wrench, BarChart3, Wallet, Settings, Brain, 
+  BookOpen, LayoutDashboard, BarChart3, Wallet, Settings, Brain, 
   ListOrdered, Users, Gavel, FileCheck, FileBarChart, Tv, ScrollText, 
   Calendar, Newspaper, Star, LinkIcon, CalendarDays, Package, DollarSign, ChevronRight
 } from "lucide-react";
@@ -15,10 +15,10 @@ const features = [
     url: "/",
   },
   {
-    icon: Wrench,
-    title: "Operations",
-    description: "Day-to-day order management hub. Quickly assign orders, change statuses, manage grinder workflows, and handle urgent operational tasks all from one place.",
-    url: "/operations",
+    icon: Settings,
+    title: "Admin",
+    description: "Unified command center combining Operations and System settings. Manage orders, assign grinders, handle alerts, review elite requests, manage strikes, toggle bot tracking, and control maintenance mode — all organized into Operations, Management, and System tabs.",
+    url: "/admin",
   },
   {
     icon: BarChart3,
@@ -28,15 +28,15 @@ const features = [
   },
   {
     icon: Wallet,
-    title: "Payouts",
-    description: "Process grinder payouts with multi-step approval workflows. Filter by status, grinder name, or date range. Grinders are automatically notified on status changes. Handle disputes and upload payment proof.",
-    url: "/payouts",
+    title: "Business Wallet",
+    description: "Full wallet management system with personal and company wallets. Transfer funds between wallets, request payouts, track transaction history, and manage staff-to-staff transfers with owner approval workflows.",
+    url: "/wallets",
   },
   {
-    icon: Settings,
-    title: "Admin",
-    description: "System configuration center. Adjust AI queue weights, manage daily checkup controls, toggle global settings, and fine-tune how the platform operates.",
-    url: "/admin",
+    icon: DollarSign,
+    title: "Grinder Payouts",
+    description: "Process grinder payouts with multi-step approval workflows. Filter by status, grinder name, or date range. Grinders are automatically notified on status changes. Handle disputes and upload payment proof.",
+    url: "/payouts",
   },
   {
     icon: Brain,
@@ -105,7 +105,7 @@ const features = [
     url: "/reviews",
   },
   {
-    icon: Wrench,
+    icon: LinkIcon,
     title: "Order Repair",
     description: "Review and approve grinder repair requests: fix existing orders, claim missing in-progress orders, or add completed orders to their profiles.",
     url: "/order-claims",
@@ -131,7 +131,7 @@ const features = [
   {
     icon: ScrollText,
     title: "Operations Guide",
-    description: "A comprehensive slide-deck walkthrough of every staff and owner page. Step-by-step instructions, key features, and pro tips. Updated with latest notification, date filter, and ticket linking features.",
+    description: "A comprehensive slide-deck walkthrough of every staff and owner page. Step-by-step instructions, key features, and pro tips for the entire dashboard.",
     url: "/staff/ops-guide",
   },
   {

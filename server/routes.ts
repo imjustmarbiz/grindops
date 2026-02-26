@@ -5739,6 +5739,72 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/config/mgt-bot", requireOwner, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled must be a boolean" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, mgtBotEnabled: enabled });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: enabled ? "mgt_bot_enabled" : "mgt_bot_disabled",
+        entityType: "config",
+        entityId: "mgt-bot",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: `MGT Bot data tracking ${enabled ? "enabled" : "disabled"} by ${actorName}`,
+      });
+      res.json({ success: true, enabled });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update MGT bot config" });
+    }
+  });
+
+  app.get("/api/config/maintenance", isAuthenticated, async (req, res) => {
+    try {
+      const config = await storage.getQueueConfig();
+      res.json({
+        maintenanceMode: config?.maintenanceMode || false,
+        maintenanceModeSetBy: config?.maintenanceModeSetBy || null,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch maintenance config" });
+    }
+  });
+
+  app.patch("/api/config/maintenance", requireOwner, async (req, res) => {
+    try {
+      const actorUsername = (req.user as any)?.discordUsername || (req.user as any)?.firstName || "";
+      if (actorUsername.toLowerCase() !== "imjustmar") {
+        return res.status(403).json({ error: "Only imjustmar can toggle maintenance mode" });
+      }
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled must be a boolean" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({
+        ...config,
+        maintenanceMode: enabled,
+        maintenanceModeSetBy: enabled ? actorUsername : null,
+      });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: enabled ? "maintenance_enabled" : "maintenance_disabled",
+        entityType: "config",
+        entityId: "maintenance",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: `Maintenance mode ${enabled ? "enabled" : "disabled"} by ${actorName}`,
+      });
+      res.json({ success: true, enabled });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update maintenance config" });
+    }
+  });
+
   app.get("/api/staff/tasks", requireStaff, async (req, res) => {
     try {
       const discordId = (req.user as any)?.discordId || (req.user as any)?.id || "";
@@ -5815,9 +5881,10 @@ export async function registerRoutes(
       const isOwner = (req.user as any)?.role === "owner";
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       if (isOwner) return res.json(wallets);
-      const visible = wallets.filter(w => w.scope === "company" || w.ownerDiscordId === actorId);
+      const visible = wallets.filter(w => w.scope === "company" || w.ownerDiscordId === actorId || w.scope === "personal");
       const sanitized = visible.map(w => {
         if (w.scope === "company") return { ...w, accountIdentifier: null };
+        if (w.scope === "personal" && w.ownerDiscordId !== actorId) return { ...w, accountIdentifier: null, balance: undefined };
         return w;
       });
       res.json(sanitized);
@@ -5960,7 +6027,8 @@ export async function registerRoutes(
         if (fromWallet.ownerDiscordId !== actorId) return res.status(403).json({ message: "You can only transfer from your own wallet" });
         const toIsOwn = toWallet.ownerDiscordId === actorId;
         const toIsCompany = toWallet.scope === "company";
-        if (!toIsOwn && !toIsCompany) return res.status(403).json({ message: "Staff can only transfer to their own wallets or company wallets" });
+        const toIsStaffPersonal = toWallet.scope === "personal" && toWallet.ownerDiscordId && toWallet.ownerDiscordId !== actorId;
+        if (!toIsOwn && !toIsCompany && !toIsStaffPersonal) return res.status(403).json({ message: "Staff can only transfer to own wallets, company wallets, or other staff wallets" });
       }
       const transferId = `TRF-${Date.now().toString(36)}`;
       const status = isOwner ? "completed" : "pending";

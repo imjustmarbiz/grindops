@@ -13,12 +13,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
+  Bot, Construction, Wrench,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { OperationsContent, ServiceManagement, DeletionRequestsPanel, ClearDataPanel } from "./operations";
 
 
 export default function StaffAdmin() {
@@ -32,6 +35,7 @@ export default function StaffAdmin() {
     orders: allOrders,
     eliteRequests: eliteRequestsList,
     strikeLogs: strikeLogsList,
+    services: allServices,
   } = useStaffData();
 
   const [strikeGrinderId, setStrikeGrinderId] = useState("");
@@ -249,20 +253,72 @@ export default function StaffAdmin() {
   const replacementRate = allAssignments.length > 0 ? (replacedAssignments.length / allAssignments.length) * 100 : 0;
   const grindersReplacedOff = Array.from(new Set(replacedAssignments.map(a => a.originalGrinderId).filter(Boolean)));
 
+  const { data: queueConfig } = useQuery<any>({
+    queryKey: ["/api/config"],
+    enabled: isOwner,
+  });
+
+  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null }>({
+    queryKey: ["/api/config/maintenance"],
+  });
+
+  const toggleBotMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", "/api/config/mgt-bot", { enabled });
+      return res.json();
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: enabled ? "MGT Bot data tracking enabled" : "MGT Bot data tracking disabled" });
+    },
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
+  const toggleMaintenanceMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", "/api/config/maintenance", { enabled });
+      return res.json();
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
+      toast({ title: enabled ? "Maintenance mode enabled" : "Maintenance mode disabled" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update", description: e.message, variant: "destructive" }),
+  });
+
+  const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
+  const isImjustmar = actorUsername === "imjustmar" || actorUsername === "demoowner";
+
+  const [activeTab, setActiveTab] = useState("operations");
+
   return (
     <AnimatedPage className="space-y-5 sm:space-y-6" data-testid="page-staff-admin">
+      {maintenanceConfig?.maintenanceMode && (
+        <FadeInUp>
+          <Card className="border border-amber-500/30 bg-amber-500/10">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Construction className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-400">Maintenance Mode Active</p>
+                <p className="text-xs text-muted-foreground">Site access is restricted. Only imjustmar can access the dashboard.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      )}
+
       <FadeInUp>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Settings className="w-7 h-7 text-primary" />
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-admin-title">
-                Admin Management
+                Admin
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">Elite requests, strikes, limits, and profiles</p>
+              <p className="text-sm text-muted-foreground mt-1">Operations, management, and system settings</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
               <Crown className="w-3 h-3" />
               {(eliteRequestsList || []).filter((r: any) => r.status === "Pending").length} elite pending
@@ -278,6 +334,32 @@ export default function StaffAdmin() {
       <FadeInUp>
         <BiddingCountdownPanel variant="compact" />
       </FadeInUp>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="w-full justify-start overflow-x-auto" data-testid="admin-tabs">
+          <TabsTrigger value="operations" className="gap-1.5" data-testid="tab-operations">
+            <Wrench className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Operations</span>
+            <span className="sm:hidden">Ops</span>
+          </TabsTrigger>
+          <TabsTrigger value="management" className="gap-1.5" data-testid="tab-management">
+            <Users className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Management</span>
+            <span className="sm:hidden">Mgmt</span>
+          </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="system" className="gap-1.5" data-testid="tab-system">
+              <Settings className="w-3.5 h-3.5" />
+              System
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="operations" className="mt-5">
+          <OperationsContent embedded />
+        </TabsContent>
+
+        <TabsContent value="management" className="mt-5 space-y-5 sm:space-y-6">
 
       {isOwner && (
         <FadeInUp>
@@ -1432,6 +1514,97 @@ export default function StaffAdmin() {
         </Card>
         </FadeInUp>
       )}
+
+        </TabsContent>
+
+        {isOwner && (
+          <TabsContent value="system" className="mt-5 space-y-5 sm:space-y-6">
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-violet-500/[0.08] via-background to-violet-900/[0.04] overflow-hidden relative" data-testid="card-bot-toggle">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-violet-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-violet-400" />
+                    </div>
+                    MGT Bot Data Tracking
+                    <Badge className={`ml-auto text-xs ${queueConfig?.mgtBotEnabled !== false ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
+                      {queueConfig?.mgtBotEnabled !== false ? "Active" : "Disabled"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div>
+                      <p className="text-sm font-medium">Linked Bot Data Tracking</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">When enabled, the MGT Discord bot automatically imports orders, assignments, and financials. When disabled, only manual orders are tracked.</p>
+                    </div>
+                    <Switch
+                      checked={queueConfig?.mgtBotEnabled !== false}
+                      onCheckedChange={(checked) => toggleBotMutation.mutate(checked)}
+                      disabled={toggleBotMutation.isPending}
+                      data-testid="switch-mgt-bot"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground px-1">
+                    {queueConfig?.mgtBotEnabled !== false
+                      ? "Bot is actively syncing order data from the MGT Discord server."
+                      : "Bot sync is disabled. Only manually created orders will appear in the dashboard."}
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            {isImjustmar && (
+              <FadeInUp>
+                <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-maintenance-mode">
+                  <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                        <Construction className="w-4 h-4 text-amber-400" />
+                      </div>
+                      Maintenance Mode
+                      <Badge className={`ml-auto text-xs ${maintenanceConfig?.maintenanceMode ? "bg-amber-500/15 text-amber-400 border border-amber-500/20" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"}`}>
+                        {maintenanceConfig?.maintenanceMode ? "On" : "Off"}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="relative space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <div>
+                        <p className="text-sm font-medium">Site Maintenance Mode</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">When enabled, all users except you (imjustmar) will see a maintenance page instead of the dashboard.</p>
+                      </div>
+                      <Switch
+                        checked={maintenanceConfig?.maintenanceMode || false}
+                        onCheckedChange={(checked) => toggleMaintenanceMutation.mutate(checked)}
+                        disabled={toggleMaintenanceMutation.isPending}
+                        data-testid="switch-maintenance-mode"
+                      />
+                    </div>
+                    {maintenanceConfig?.maintenanceMode && (
+                      <p className="text-[10px] text-amber-400 px-1">
+                        Maintenance mode is ON. All other users are blocked from accessing the site.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </FadeInUp>
+            )}
+
+            <FadeInUp>
+              <ServiceManagement services={allServices} />
+            </FadeInUp>
+            <FadeInUp>
+              <DeletionRequestsPanel />
+            </FadeInUp>
+            <FadeInUp>
+              <ClearDataPanel />
+            </FadeInUp>
+          </TabsContent>
+        )}
+      </Tabs>
     </AnimatedPage>
   );
 }

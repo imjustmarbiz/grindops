@@ -1,16 +1,16 @@
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import { useEffect } from "react";
+import { Construction } from "lucide-react";
 
 import AuthPage from "@/pages/auth";
 import StaffOverview from "@/pages/staff/overview";
-import StaffOperations from "@/pages/staff/operations";
 import StaffAnalytics from "@/pages/staff/analytics";
 import StaffPayouts from "@/pages/staff/payouts";
 import StaffAdmin from "@/pages/staff/admin";
@@ -61,8 +61,26 @@ import { Loader2 } from "lucide-react";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 
+function MaintenancePage() {
+  return (
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6 text-center" data-testid="page-maintenance">
+      <Construction className="w-16 h-16 text-yellow-500" />
+      <h1 className="text-2xl font-bold">Maintenance Mode Active</h1>
+      <p className="text-muted-foreground max-w-md">
+        The dashboard is currently undergoing maintenance. Please check back shortly.
+      </p>
+      <a href="/api/logout" className="text-primary underline text-sm mt-2">Sign out</a>
+    </div>
+  );
+}
+
 function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; blockedDiscordIds?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null }>({
+    queryKey: ["/api/config/maintenance"],
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
 
   if (isLoading) {
     return (
@@ -74,6 +92,11 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
 
   if (!isAuthenticated) {
     return <Redirect to="/login" />;
+  }
+
+  const actorUsername = ((user as any)?.discordUsername || "").toLowerCase();
+  if (maintenanceData?.maintenanceMode && actorUsername !== "imjustmar" && actorUsername !== "demoowner") {
+    return <MaintenancePage />;
   }
 
   if (blockedDiscordIds) {
@@ -160,7 +183,7 @@ function Router() {
       <Route path="/notifications" component={() => <ProtectedRoute component={StaffNotifications} staffOnly />} />
       <Route path="/todo" component={() => <ProtectedRoute component={StaffTodo} staffOnly />} />
       <Route path="/staff-overview" component={() => <ProtectedRoute component={StaffOverviewPage} ownerOnly />} />
-      <Route path="/operations" component={() => <ProtectedRoute component={StaffOperations} staffOnly />} />
+      <Route path="/operations" component={() => <Redirect to="/admin" />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={StaffAnalytics} staffOnly />} />
       <Route path="/payouts" component={() => <ProtectedRoute component={StaffPayouts} staffOnly />} />
       <Route path="/admin" component={() => <ProtectedRoute component={StaffAdmin} staffOnly />} />

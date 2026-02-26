@@ -28,7 +28,6 @@ const staffNavItems = [
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "To-Do List", url: "/todo", icon: ClipboardList },
   { title: "Staff Overview", url: "/staff-overview", icon: UserCheck },
-  { title: "Operations", url: "/operations", icon: Wrench },
   { title: "Admin", url: "/admin", icon: Settings },
   { title: "Business Wallet", url: "/wallets", icon: Wallet },
   { title: "Business Performance", url: "/business", icon: DollarSign },

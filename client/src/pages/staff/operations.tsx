@@ -503,7 +503,7 @@ function ServiceManagement({ services }: { services: Service[] }) {
   );
 }
 
-export default function StaffOperations() {
+export function OperationsContent({ embedded = false }: { embedded?: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -650,35 +650,39 @@ export default function StaffOperations() {
   const orderBids = allBids.filter(b => b.orderId === assignOrderId);
   const selectedGrinder = allGrinders.find(g => g.id === assignGrinderId);
 
-  return (
-    <AnimatedPage className="space-y-5 sm:space-y-6">
-      <FadeInUp>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Wrench className="w-7 h-7 text-primary" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
-                Operations
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+  const content = (
+    <div className="space-y-5 sm:space-y-6">
+      {!embedded && (
+        <FadeInUp>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Wrench className="w-7 h-7 text-primary" />
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
+                  Operations
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
+                <Package className="w-3 h-3" />
+                {pluralize(allOrders.length, 'order')}
+              </Badge>
+              <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
+                <Target className="w-3 h-3" />
+                {assignableOrders.length} assignable
+              </Badge>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 gap-1">
-              <Package className="w-3 h-3" />
-              {pluralize(allOrders.length, 'order')}
-            </Badge>
-            <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 gap-1">
-              <Target className="w-3 h-3" />
-              {assignableOrders.length} assignable
-            </Badge>
-          </div>
-        </div>
-      </FadeInUp>
+        </FadeInUp>
+      )}
 
-      <FadeInUp>
-        <BiddingCountdownPanel />
-      </FadeInUp>
+      {!embedded && (
+        <FadeInUp>
+          <BiddingCountdownPanel />
+        </FadeInUp>
+      )}
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-create-manual-order">
@@ -1210,7 +1214,7 @@ export default function StaffOperations() {
       </Card>
       </FadeInUp>
 
-      {isOwner && (
+      {isOwner && !embedded && (
         <>
           <FadeInUp>
             <ServiceManagement services={allServices} />
@@ -1223,6 +1227,15 @@ export default function StaffOperations() {
           </FadeInUp>
         </>
       )}
-    </AnimatedPage>
+    </div>
   );
+
+  if (embedded) return content;
+  return <AnimatedPage>{content}</AnimatedPage>;
+}
+
+export { ServiceManagement, DeletionRequestsPanel, ClearDataPanel };
+
+export default function StaffOperations() {
+  return <OperationsContent />;
 }

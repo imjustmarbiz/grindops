@@ -184,6 +184,9 @@ export const queueConfig = pgTable("queue_config", {
   largeOrderThreshold: numeric("large_order_threshold").notNull().default("500"),
   largeOrderEliteBoost: numeric("large_order_elite_boost").notNull().default("0.15"),
   dailyCheckupsEnabled: boolean("daily_checkups_enabled").notNull().default(true),
+  mgtBotEnabled: boolean("mgt_bot_enabled").notNull().default(true),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  maintenanceModeSetBy: varchar("maintenance_mode_set_by"),
   customPayoutRoles: jsonb("custom_payout_roles"),
   customPayoutCategories: jsonb("custom_payout_categories"),
 });

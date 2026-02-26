@@ -48,6 +48,7 @@ const slides: Slide[] = [
           "Daily checkups may be required for active orders",
           "Elite grinders get priority access and special perks",
           "All data auto-refreshes every 10\u201330 seconds \u2014 no manual reloading needed",
+          "Maintenance Mode: if active, the site may be temporarily restricted while staff performs updates",
         ],
       },
     ],

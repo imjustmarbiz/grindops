@@ -207,7 +207,7 @@ export default function StaffWallets() {
 
   const walletsMap = new Map(wallets.map((w: any) => [w.id, w]));
   const staffTransferFromWallets = isOwner ? wallets : myWallets;
-  const staffTransferToWallets = isOwner ? wallets.filter((w: any) => w.id !== transferForm.fromWalletId) : [...myWallets, ...companyWallets].filter((w: any) => w.id !== transferForm.fromWalletId);
+  const staffTransferToWallets = isOwner ? wallets.filter((w: any) => w.id !== transferForm.fromWalletId) : wallets.filter((w: any) => w.id !== transferForm.fromWalletId);
   const linkableWallets = isOwner ? wallets : myWallets;
 
   return (
