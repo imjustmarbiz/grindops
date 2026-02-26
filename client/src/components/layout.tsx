@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
@@ -205,6 +205,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   });
   const isEliteGrinder = !isStaffOrOwner && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : isEliteGrinder ? "theme-elite" : "theme-grinder";
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("theme-owner", "theme-staff", "theme-grinder", "theme-elite");
+    root.classList.add(themeClass);
+    return () => root.classList.remove(themeClass);
+  }, [themeClass]);
+
   const sidebarStyle = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",
@@ -232,7 +240,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider style={sidebarStyle}>
-      <div className={`flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30 ${themeClass}`}>
+      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30">
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full relative">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
