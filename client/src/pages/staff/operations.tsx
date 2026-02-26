@@ -1187,11 +1187,11 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                       "bg-blue-400"
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate">{a.title}</span>
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <span className="text-sm font-medium break-words">{a.title}</span>
                         <Badge variant="outline" className="text-[9px] shrink-0">{a.severity}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.message}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 break-words">{a.message}</p>
                       <p className="text-[10px] text-muted-foreground mt-1">
                         {a.targetType === "all" ? "All grinders" : "Individual"} · {new Date(a.createdAt).toLocaleDateString()}
                       </p>

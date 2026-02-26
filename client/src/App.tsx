@@ -95,7 +95,9 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
   }
 
   const actorUsername = ((user as any)?.discordUsername || "").toLowerCase();
-  if (maintenanceData?.maintenanceMode && actorUsername !== "imjustmar" && actorUsername !== "demoowner") {
+  const actorDiscordId = (user as any)?.discordId || (user as any)?.id || "";
+  const canBypassMaintenance = actorUsername === "imjustmar" || actorUsername === "demoowner" || actorDiscordId === "172526626888876032";
+  if (maintenanceData?.maintenanceMode && !canBypassMaintenance) {
     return <MaintenancePage />;
   }
 

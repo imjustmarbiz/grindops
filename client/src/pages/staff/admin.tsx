@@ -287,7 +287,8 @@ export default function StaffAdmin() {
   });
 
   const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
-  const isImjustmar = actorUsername === "imjustmar" || actorUsername === "demoowner";
+  const actorDiscordId = (user as any)?.discordId || (user as any)?.id || "";
+  const isImjustmar = actorUsername === "imjustmar" || actorUsername === "demoowner" || actorDiscordId === "172526626888876032";
 
   const [activeTab, setActiveTab] = useState("operations");
 

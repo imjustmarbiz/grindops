@@ -5777,7 +5777,8 @@ export async function registerRoutes(
   app.patch("/api/config/maintenance", requireOwner, async (req, res) => {
     try {
       const actorUsername = (req.user as any)?.discordUsername || (req.user as any)?.firstName || "";
-      if (actorUsername.toLowerCase() !== "imjustmar") {
+      const actorDiscordId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      if (actorUsername.toLowerCase() !== "imjustmar" && actorDiscordId !== "172526626888876032") {
         return res.status(403).json({ error: "Only imjustmar can toggle maintenance mode" });
       }
       const { enabled } = req.body;
