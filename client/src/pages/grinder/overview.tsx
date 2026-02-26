@@ -126,7 +126,7 @@ function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
 
 export default function GrinderOverview() {
   const {
-    user, grinder, isElite, assignments, lostBids, aiTips, stats,
+    user, grinder, isElite, isLoading, assignments, lostBids, aiTips, stats,
     eliteAccent, eliteGradient, eliteBorder, eliteGlow,
     availabilityMutation, toast, queryClient,
   } = useGrinderData();
@@ -187,7 +187,32 @@ export default function GrinderOverview() {
     return Array.from(ids);
   }, [grinder, stats, isElite, manualBadges]);
 
-  if (!grinder) return null;
+  if (isLoading) {
+    return (
+      <div className="space-y-6" data-testid="overview-loading">
+        <div className="h-48 rounded-2xl bg-white/[0.03] animate-pulse" />
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-24 rounded-xl bg-white/[0.03] animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!grinder) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center" data-testid="overview-no-profile">
+        <div className="w-16 h-16 rounded-full bg-white/[0.05] flex items-center justify-center mb-4">
+          <Target className="w-8 h-8 text-white/20" />
+        </div>
+        <h2 className="text-lg font-semibold">Profile Not Found</h2>
+        <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+          Your grinder profile couldn't be loaded. Please try refreshing the page or contact staff if the issue persists.
+        </p>
+      </div>
+    );
+  }
 
   const avatarUrl = grinder.discordAvatarUrl || user?.profileImageUrl || undefined;
 
