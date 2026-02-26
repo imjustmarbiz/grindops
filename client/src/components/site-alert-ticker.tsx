@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { AlertTriangle, X } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { SiteAlert } from "@shared/schema";
 
 const DISMISSED_KEY = "dismissed-site-alerts";
@@ -20,6 +20,7 @@ function persistDismissed(ids: Set<string>) {
 export function SiteAlertTicker() {
   const { isAuthenticated } = useAuth();
   const [dismissed, setDismissed] = useState<Set<string>>(getDismissed);
+  const barRef = useRef<HTMLDivElement>(null);
 
   const { data: alerts = [] } = useQuery<SiteAlert[]>({
     queryKey: ["/api/site-alerts"],
@@ -35,12 +36,27 @@ export function SiteAlertTicker() {
 
   const visibleAlerts = alerts.filter(a => !dismissed.has(a.id));
 
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || visibleAlerts.length === 0) {
+      document.documentElement.style.setProperty("--alert-bar-h", "0px");
+      return;
+    }
+    const sync = () => {
+      document.documentElement.style.setProperty("--alert-bar-h", `${el.offsetHeight}px`);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => { ro.disconnect(); document.documentElement.style.setProperty("--alert-bar-h", "0px"); };
+  }, [visibleAlerts.length]);
+
   if (visibleAlerts.length === 0) return null;
 
   const combinedMessage = visibleAlerts.map(a => a.message).join("   •   ");
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-auto" data-testid="site-alert-ticker">
+    <div ref={barRef} className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-auto" data-testid="site-alert-ticker">
       <div className="relative border-t border-primary/30 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.4)] bg-[hsl(var(--background)/0.95)]">
         <div className="absolute inset-0 bg-primary/[0.06] pointer-events-none" />
 
