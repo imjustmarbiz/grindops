@@ -145,11 +145,11 @@ export default function GrinderAssignments() {
   });
 
   const filters = [
-    { key: "all", label: "All", color: "bg-white/[0.06] text-white/60" },
-    { key: "active", label: "In Progress", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
-    { key: "completed", label: "Needs Payout", color: "bg-amber-500/15 text-amber-400 border-amber-500/20" },
-    { key: "awaiting_payout", label: "Payout Pending", color: "bg-violet-500/15 text-violet-400 border-violet-500/20" },
-    { key: "paid", label: "Paid Out", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
+    { key: "all", label: "All", mobileLabel: "All", color: "bg-white/[0.06] text-white/60" },
+    { key: "active", label: "In Progress", mobileLabel: "Active", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
+    { key: "completed", label: "Needs Payout", mobileLabel: "Payout", color: "bg-amber-500/15 text-amber-400 border-amber-500/20" },
+    { key: "awaiting_payout", label: "Payout Pending", mobileLabel: "Pending", color: "bg-violet-500/15 text-violet-400 border-violet-500/20" },
+    { key: "paid", label: "Paid Out", mobileLabel: "Paid", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
   ];
 
   return (
@@ -182,7 +182,8 @@ export default function GrinderAssignments() {
                   onClick={() => setStatusFilter(f.key)}
                   data-testid={`button-filter-${f.key}`}
                 >
-                  {f.label}
+                  <span className="hidden sm:inline">{f.label}</span>
+                  <span className="sm:hidden">{f.mobileLabel}</span>
                   {count > 0 && (
                     <span className={`text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center ${
                       isActive ? "bg-white/10" : "bg-white/[0.06]"
@@ -224,25 +225,27 @@ export default function GrinderAssignments() {
           {filteredAssignments.map((a: any) => (
             <Card key={a.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-work-assignment-${a.id}`}>
               <CardContent className="p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
-                  <div>
-                    <span className="font-bold text-lg">Order {a.orderId}</span>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-white/40 flex-wrap">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-base sm:text-lg">Order {a.orderId}</span>
+                      <Badge className={`shrink-0 ${a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}`}>
+                        {a.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-white/40 flex-wrap">
                       <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
                       <span>Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</span>
-                      {a.deliveredDateTime && <span>Completed: {new Date(a.deliveredDateTime).toLocaleDateString()}</span>}
-                      {a.grinderEarnings && <span className="text-emerald-400 font-medium">Grinder Payout: ${Number(a.grinderEarnings).toFixed(2)}</span>}
+                      {a.deliveredDateTime && <span>Done: {new Date(a.deliveredDateTime).toLocaleDateString()}</span>}
+                      {a.grinderEarnings && <span className="text-emerald-400 font-medium">${Number(a.grinderEarnings).toFixed(2)}</span>}
                     </div>
                   </div>
-                  <Badge className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
-                    {a.status}
-                  </Badge>
                 </div>
                 {a.status === "Active" && (
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 sm:flex-wrap">
                     {a.hasTicket && (
                       <Button size="sm" variant="outline"
-                        className="gap-1 text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                        className="gap-1 text-[11px] sm:text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 h-8"
                         data-testid={`button-join-ticket-${a.id}`}
                         disabled={joiningTicket === a.orderId}
                         onClick={async () => {
@@ -268,21 +271,21 @@ export default function GrinderAssignments() {
                     )}
                     {a.orderBrief && (
                       <Button size="sm" variant="outline"
-                        className="gap-1 text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20"
+                        className="gap-1 text-[11px] sm:text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 h-8"
                         data-testid={`button-view-brief-${a.id}`}
                         onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
                         <ClipboardList className="w-3 h-3" /> View Brief
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" data-testid={`button-update-${a.id}`}
+                    <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-update-${a.id}`}
                       onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); }}>
-                      <MessageSquare className="w-3 h-3" /> Submit Update
+                      <MessageSquare className="w-3 h-3" /> Update
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" data-testid={`button-deadline-${a.id}`}
+                    <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-deadline-${a.id}`}
                       onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(""); }}>
-                      <CalendarClock className="w-3 h-3" /> Update Deadline
+                      <CalendarClock className="w-3 h-3" /> Deadline
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20" data-testid={`button-complete-${a.id}`}
+                    <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 col-span-2 sm:col-span-1 h-8" data-testid={`button-complete-${a.id}`}
                       onClick={() => {
                         setCompleteDialog(a);
                         const defaultMethod = payoutMethods?.find((m: any) => m.isDefault) || payoutMethods?.[0];
@@ -299,53 +302,53 @@ export default function GrinderAssignments() {
                       <p className="text-[10px] uppercase tracking-wider text-white/30 font-medium">Activity Checkpoints</p>
                       <StreamStatusBadge twitchUsername={grinder?.twitchUsername} isStreaming={grinder?.isStreaming} />
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="grid grid-cols-3 sm:flex sm:items-center gap-1 sm:gap-1.5 sm:flex-wrap">
                       {!a.hasTicketAck && (
                         <>
-                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
                             disabled={checkpointMutation.isPending}
                             onClick={() => setTicketConfirm({ assignmentId: a.id, orderId: a.orderId, action: "accept" })}>
-                            <TicketCheck className="w-3 h-3" /> Accept Ticket
+                            <TicketCheck className="w-3 h-3" /> <span className="hidden sm:inline">Accept</span><span className="sm:hidden">Accept</span>
                           </Button>
-                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
                             disabled={checkpointMutation.isPending}
                             onClick={() => setTicketConfirm({ assignmentId: a.id, orderId: a.orderId, action: "decline" })}>
-                            <TicketCheck className="w-3 h-3" /> Decline Ticket
+                            <TicketCheck className="w-3 h-3" /> <span className="hidden sm:inline">Decline</span><span className="sm:hidden">Decline</span>
                           </Button>
                         </>
                       )}
                       {a.hasTicketAck && (
                         <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3 mr-1" /> Ticket Responded
+                          <CheckCircle className="w-3 h-3 mr-1" /> Responded
                         </Badge>
                       )}
                       {!a.hasStarted ? (
-                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
                           disabled={checkpointMutation.isPending || !a.isLoggedIn}
                           onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
-                          <Play className="w-3 h-3" /> Start Order
+                          <Play className="w-3 h-3" /> Start
                         </Button>
                       ) : (
                         <Badge className="text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
-                          <Play className="w-3 h-3 mr-1" /> Order Started
+                          <Play className="w-3 h-3 mr-1" /> Started
                         </Badge>
                       )}
-                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
+                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-1.5 sm:px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
                         disabled={checkpointMutation.isPending || a.isLoggedIn}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
                         disabled={checkpointMutation.isPending || !a.isLoggedIn}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> <span className="hidden sm:inline">Log</span> Off
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
                         disabled={checkpointMutation.isPending}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
                         <AlertTriangle className="w-3 h-3" /> Issue
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-2" data-testid={`button-view-checkpoints-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2" data-testid={`button-view-checkpoints-${a.id}`}
                         onClick={() => setExpandedCheckpoints(expandedCheckpoints === a.id ? null : a.id)}>
                         <FileText className="w-3 h-3" /> History
                       </Button>
@@ -354,19 +357,19 @@ export default function GrinderAssignments() {
                   </div>
                 )}
                 {a.status === "Completed" && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {a.isOnTime !== null && (
-                      <Badge className={a.isOnTime ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                      <Badge className={`text-[11px] ${a.isOnTime ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                         {a.isOnTime ? "On Time" : "Late"}
                       </Badge>
                     )}
                     {a.qualityRating && (
-                      <Badge variant="outline" className="gap-1">
+                      <Badge variant="outline" className="gap-1 text-[11px]">
                         <Star className="w-3 h-3" /> {a.qualityRating}/5
                       </Badge>
                     )}
                     {!payoutRequests?.find((p: any) => p.assignmentId === a.id) && (
-                      <Button size="sm" variant="outline" className="gap-1 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 ml-auto" data-testid={`button-payout-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 ml-auto" data-testid={`button-payout-${a.id}`}
                         onClick={() => {
                           setPayoutDialog(a);
                           setPayoutAmount(String(Number(a.grinderEarnings || a.bidAmount || 0).toFixed(2)));

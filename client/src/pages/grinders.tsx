@@ -15,6 +15,7 @@ import { Users, Crown, Coins, Landmark, AlertTriangle, Trophy, DollarSign, Targe
 import { FaXbox } from "react-icons/fa6";
 import { SiPlaystation } from "react-icons/si";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
+import { categoryIcon as sharedCategoryIcon } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -139,10 +140,14 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
   const [editTwitch, setEditTwitch] = useState(grinder.twitchUsername || "");
   const { toast } = useToast();
 
+  const [editDisplayRole, setEditDisplayRole] = useState(grinder.displayRole || "");
+
   const toggleRole = (role: string) => {
-    setEditRoles(prev =>
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-    );
+    setEditRoles(prev => {
+      const next = prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role];
+      if (!next.includes(editDisplayRole)) setEditDisplayRole("");
+      return next;
+    });
   };
 
   const handleSave = () => {
@@ -150,10 +155,12 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
       toast({ title: "At least one role required", variant: "destructive" });
       return;
     }
+    const selectedDisplay = editRoles.length > 1 ? (editDisplayRole || editRoles[0]) : null;
     onUpdate(grinder.id, {
       name: editName.trim() || grinder.name,
       roles: editRoles,
       category: editRoles[0],
+      displayRole: selectedDisplay,
       capacity: parseInt(editCapacity) || grinder.capacity,
       notes: editNotes.trim() || null,
       twitchUsername: editTwitch.trim() || null,
@@ -213,6 +220,31 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
                 ))}
               </div>
             </div>
+
+            {editRoles.length > 1 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Display Icon</Label>
+                <div className="flex flex-wrap gap-2">
+                  {editRoles.map(role => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setEditDisplayRole(role)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                        (editDisplayRole || editRoles[0]) === role
+                          ? "border-primary/50 text-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-white/[0.06] text-muted-foreground bg-white/[0.02] hover:bg-white/[0.05]"
+                      }`}
+                      data-testid={`toggle-display-icon-${role.toLowerCase().replace(/\s/g, "-")}`}
+                    >
+                      {sharedCategoryIcon(role)}
+                      {role}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Choose which role icon appears on the grinder list</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -801,120 +833,190 @@ export default function Grinders() {
     const { sortedItems, sortKey: currentSortKey, sortDir: currentSortDir, toggleSort } = useTableSort<Grinder>(filteredGrinders);
     const sortProps = { currentSortKey, currentSortDir, onToggle: toggleSort };
 
+    if (isLoading) {
+      return (
+        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01]">
+          <CardContent className="p-8 text-center">Loading...</CardContent>
+        </Card>
+      );
+    }
+
+    if (sortedItems.length === 0) {
+      return (
+        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01]">
+          <CardContent className="p-8 text-center text-muted-foreground">
+            <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
+            No grinders in this category
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
-      <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-x-auto">
-        <Table className="min-w-[900px]">
-          <TableHeader className="bg-white/[0.03]">
-            <TableRow className="border-white/[0.06]">
-              <SortableHeader label="Grinder" sortKey="name" {...sortProps} />
-              <SortableHeader label="Tier" sortKey="category" {...sortProps} />
-              <SortableHeader label="Capacity" sortKey="activeOrders" className="text-center" {...sortProps} />
-              <SortableHeader label="Orders" sortKey="totalOrders" className="text-center" {...sortProps} />
-              <SortableHeader label="Earnings" sortKey="totalEarnings" className="text-right" {...sortProps} />
-              <SortableHeader label="Win Rate" sortKey="winRate" className="text-center" {...sortProps} />
-              <SortableHeader label="Last Order" sortKey="lastAssigned" className="text-center" {...sortProps} />
-              <SortableHeader label="Strikes" sortKey="strikes" className="text-center" {...sortProps} />
-              <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={10} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : sortedItems.length > 0 ? sortedItems.map(g => {
-              const winRateNum = g.winRate ? Number(g.winRate) : null;
-              return (
-                <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+      <>
+        <div className="sm:hidden space-y-2">
+          {sortedItems.map(g => {
+            const winRateNum = g.winRate ? Number(g.winRate) : null;
+            const lastInfo = daysAgo(g.lastAssigned);
+            const lastColor = lastInfo.days === null ? "text-muted-foreground" : lastInfo.days <= 3 ? "text-green-400" : lastInfo.days <= 7 ? "text-yellow-400" : "text-red-400";
+            return (
+              <Card key={g.id} className="border-0 bg-white/[0.03] active:bg-white/[0.06] transition-colors cursor-pointer" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       {categoryIcon(g.displayRole || g.category || "Grinder")}
-                      <div>
-                        <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
-                        {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm block truncate" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
+                        {g.discordUsername && <p className="text-[10px] text-muted-foreground truncate">@{g.discordUsername}</p>}
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {((g as any).roles as string[] | null)?.length ? ((g as any).roles as string[]).map((r: string) => (
-                        <Badge key={r} variant="outline" className={`text-xs ${roleStyle(r)}`}>{r}</Badge>
-                      )) : (
-                        <Badge variant="outline" className={`text-xs ${roleStyle(g.category || "Grinder")}`}>{g.category || "Grinder"}</Badge>
-                      )}
-                      {g.tier && g.tier !== "New" && (
-                        <Badge variant="outline" className={`text-[10px] ${tierStyle(g.tier)}`}>{g.tier}</Badge>
-                      )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < g.strikes ? "bg-red-500" : "bg-white/10"}`} />
+                      ))}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span className={g.activeOrders >= g.capacity ? "text-red-400 font-bold" : "text-muted-foreground"}>
-                      {g.activeOrders}/{g.capacity}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(g.roles as string[] | null)?.length ? (g.roles as string[]).map((r: string) => (
+                      <Badge key={r} variant="outline" className={`text-[10px] px-1.5 py-0 ${roleStyle(r)}`}>{r}</Badge>
+                    )) : (
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${roleStyle(g.category || "Grinder")}`}>{g.category || "Grinder"}</Badge>
+                    )}
+                    {g.tier && g.tier !== "New" && (
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${tierStyle(g.tier)}`}>{g.tier}</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
                     <div>
-                      <span className="font-medium">{g.totalOrders}</span>
-                      <span className="text-xs text-muted-foreground ml-1">({g.completedOrders} done)</span>
+                      <p className={`text-xs font-bold ${g.activeOrders >= g.capacity ? "text-red-400" : ""}`}>{g.activeOrders}/{g.capacity}</p>
+                      <p className="text-[9px] text-muted-foreground">Capacity</p>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">
-                    {formatCurrency(Number(g.totalEarnings))}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {winRateNum !== null ? (
-                      <span className={`font-medium ${winRateNum >= 70 ? "text-green-400" : winRateNum >= 40 ? "text-yellow-400" : "text-red-400"}`}>
-                        {winRateNum.toFixed(0)}%
-                      </span>
-                    ) : <span className="text-muted-foreground">N/A</span>}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {(() => {
-                      const info = daysAgo(g.lastAssigned);
-                      const colorClass = info.days === null ? "text-muted-foreground" : info.days <= 3 ? "text-green-400" : info.days <= 7 ? "text-yellow-400" : "text-red-400";
-                      return (
-                        <div className="flex flex-col items-center">
-                          <span className={`text-sm font-medium ${colorClass}`}>{info.label}</span>
-                          {g.lastAssigned && (
-                            <span className="text-[10px] text-muted-foreground">{new Date(g.lastAssigned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, -1)} disabled={g.strikes <= 0} data-testid={`button-strike-minus-${g.id}`}>
-                        <Minus className="w-3 h-3" />
-                      </Button>
-                      <div className="flex gap-1">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className={`w-3 h-3 rounded-full ${i < g.strikes ? "bg-red-500" : "bg-white/10"}`} />
-                        ))}
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, 1)} disabled={g.strikes >= 3} data-testid={`button-strike-plus-${g.id}`}>
-                        <Plus className="w-3 h-3" />
-                      </Button>
+                    <div>
+                      <p className="text-xs font-bold text-emerald-400">{formatCurrency(Number(g.totalEarnings))}</p>
+                      <p className="text-[9px] text-muted-foreground">Earned</p>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button variant="outline" size="sm" className="text-xs bg-white/[0.03] border-white/10 hover:bg-white/10 hover:text-primary" onClick={(e) => { e.stopPropagation(); setSelectedGrinder(g); }} data-testid={`button-scorecard-${g.id}`}>
-                      Scorecard
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            }) : (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
-                  <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                  No grinders in this category
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    <div>
+                      <p className={`text-xs font-bold ${winRateNum !== null ? (winRateNum >= 70 ? "text-green-400" : winRateNum >= 40 ? "text-yellow-400" : "text-red-400") : "text-muted-foreground"}`}>
+                        {winRateNum !== null ? `${winRateNum.toFixed(0)}%` : "N/A"}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground">Win Rate</p>
+                    </div>
+                    <div>
+                      <p className={`text-xs font-bold ${lastColor}`}>{lastInfo.label}</p>
+                      <p className="text-[9px] text-muted-foreground">Last Order</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      </Card>
+
+        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden hidden sm:block">
+          <div className="overflow-x-auto">
+          <Table className="min-w-[900px]">
+            <TableHeader className="bg-white/[0.03]">
+              <TableRow className="border-white/[0.06]">
+                <SortableHeader label="Grinder" sortKey="name" {...sortProps} />
+                <SortableHeader label="Tier" sortKey="category" {...sortProps} />
+                <SortableHeader label="Capacity" sortKey="activeOrders" className="text-center" {...sortProps} />
+                <SortableHeader label="Orders" sortKey="totalOrders" className="text-center" {...sortProps} />
+                <SortableHeader label="Earnings" sortKey="totalEarnings" className="text-right" {...sortProps} />
+                <SortableHeader label="Win Rate" sortKey="winRate" className="text-center" {...sortProps} />
+                <SortableHeader label="Last Order" sortKey="lastAssigned" className="text-center" {...sortProps} />
+                <SortableHeader label="Strikes" sortKey="strikes" className="text-center" {...sortProps} />
+                <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedItems.map(g => {
+                const winRateNum = g.winRate ? Number(g.winRate) : null;
+                return (
+                  <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {categoryIcon(g.displayRole || g.category || "Grinder")}
+                        <div>
+                          <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
+                          {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(g.roles as string[] | null)?.length ? (g.roles as string[]).map((r: string) => (
+                          <Badge key={r} variant="outline" className={`text-xs ${roleStyle(r)}`}>{r}</Badge>
+                        )) : (
+                          <Badge variant="outline" className={`text-xs ${roleStyle(g.category || "Grinder")}`}>{g.category || "Grinder"}</Badge>
+                        )}
+                        {g.tier && g.tier !== "New" && (
+                          <Badge variant="outline" className={`text-[10px] ${tierStyle(g.tier)}`}>{g.tier}</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={g.activeOrders >= g.capacity ? "text-red-400 font-bold" : "text-muted-foreground"}>
+                        {g.activeOrders}/{g.capacity}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center whitespace-nowrap">
+                      <div>
+                        <span className="font-medium">{g.totalOrders}</span>
+                        <span className="text-xs text-muted-foreground ml-1">({g.completedOrders} done)</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">
+                      {formatCurrency(Number(g.totalEarnings))}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {winRateNum !== null ? (
+                        <span className={`font-medium ${winRateNum >= 70 ? "text-green-400" : winRateNum >= 40 ? "text-yellow-400" : "text-red-400"}`}>
+                          {winRateNum.toFixed(0)}%
+                        </span>
+                      ) : <span className="text-muted-foreground">N/A</span>}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(() => {
+                        const info = daysAgo(g.lastAssigned);
+                        const colorClass = info.days === null ? "text-muted-foreground" : info.days <= 3 ? "text-green-400" : info.days <= 7 ? "text-yellow-400" : "text-red-400";
+                        return (
+                          <div className="flex flex-col items-center">
+                            <span className={`text-sm font-medium ${colorClass}`}>{info.label}</span>
+                            {g.lastAssigned && (
+                              <span className="text-[10px] text-muted-foreground">{new Date(g.lastAssigned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, -1)} disabled={g.strikes <= 0} data-testid={`button-strike-minus-${g.id}`}>
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        <div className="flex gap-1">
+                          {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className={`w-3 h-3 rounded-full ${i < g.strikes ? "bg-red-500" : "bg-white/10"}`} />
+                          ))}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStrikeChange(g, 1)} disabled={g.strikes >= 3} data-testid={`button-strike-plus-${g.id}`}>
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="outline" size="sm" className="text-xs bg-white/[0.03] border-white/10 hover:bg-white/10 hover:text-primary" onClick={(e) => { e.stopPropagation(); setSelectedGrinder(g); }} data-testid={`button-scorecard-${g.id}`}>
+                        Scorecard
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          </div>
+        </Card>
+      </>
     );
   }
 
@@ -943,25 +1045,25 @@ export default function Grinders() {
       </FadeInUp>
 
       <FadeInUp>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 sm:gap-3">
         {[
           { label: "Elite", count: filterGrinders("Elite Grinder").length, icon: Crown, gradient: "from-cyan-500/[0.08] via-background to-cyan-900/[0.04]", iconBg: "bg-cyan-500/15", color: "text-cyan-400" },
           { label: "Grinder", count: filterGrinders("Grinder").length, icon: Users, gradient: "from-purple-500/[0.08] via-background to-purple-900/[0.04]", iconBg: "bg-purple-500/15", color: "text-purple-400" },
           { label: "VC", count: filterGrinders("VC Grinder").length, icon: Coins, gradient: "from-yellow-500/[0.08] via-background to-yellow-900/[0.04]", iconBg: "bg-yellow-500/15", color: "text-yellow-400" },
           { label: "Event", count: filterGrinders("Event Grinder").length, icon: Landmark, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
-          { label: "International", count: filterGrinders("International Grinder").length, icon: Globe, gradient: "from-pink-500/[0.08] via-background to-pink-900/[0.04]", iconBg: "bg-pink-500/15", color: "text-pink-400" },
+          { label: "Int'l", count: filterGrinders("International Grinder").length, icon: Globe, gradient: "from-pink-500/[0.08] via-background to-pink-900/[0.04]", iconBg: "bg-pink-500/15", color: "text-pink-400" },
           { label: "Xbox", count: filterGrinders("Xbox Grinder").length, icon: FaXbox, gradient: "from-green-500/[0.08] via-background to-green-900/[0.04]", iconBg: "bg-green-500/15", color: "text-green-400" },
           { label: "PS5", count: filterGrinders("PS5 Grinder").length, icon: SiPlaystation, gradient: "from-blue-600/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-600/15", color: "text-blue-400" },
         ].map(s => (
           <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
             <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />
-            <CardContent className="p-4 flex items-center gap-3 relative">
-              <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
-                <s.icon className={`w-5 h-5 ${s.color}`} />
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 relative">
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+                <s.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${s.color}`} />
               </div>
               <div>
-                <p className={`text-xl font-bold ${s.color}`}>{s.count}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className={`text-lg sm:text-xl font-bold ${s.color}`}>{s.count}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</p>
               </div>
             </CardContent>
           </Card>
