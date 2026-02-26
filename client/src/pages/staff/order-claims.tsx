@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { OrderClaimRequest, Service } from "@shared/schema";
+import type { OrderClaimRequest, Service, Grinder } from "@shared/schema";
+import { Label } from "@/components/ui/label";
 import {
-  Wrench, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle, DollarSign, Wallet, Gamepad2, LinkIcon, PlusCircle, AlertTriangle
+  Wrench, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle, DollarSign, Wallet, Gamepad2, LinkIcon, PlusCircle, AlertTriangle, ChevronDown, ChevronUp, UserPlus
 } from "lucide-react";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -126,6 +127,181 @@ type StaffFields = {
   serviceId: string;
 };
 
+function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[]; grinders: Grinder[]; onSuccess: () => void }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [repairType, setRepairType] = useState<string>("add_completed");
+  const [grinderId, setGrinderId] = useState("");
+  const [serviceId, setServiceId] = useState("");
+  const [ticketName, setTicketName] = useState("");
+  const [grinderAmount, setGrinderAmount] = useState("");
+  const [customerPrice, setCustomerPrice] = useState("");
+  const [platform, setPlatform] = useState("");
+  const [gamertag, setGamertag] = useState("");
+  const [completedDateTime, setCompletedDateTime] = useState("");
+  const [startDateTime, setStartDateTime] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [proofNotes, setProofNotes] = useState("");
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/order-claims/staff", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Repair request created" });
+      setGrinderId(""); setServiceId(""); setTicketName(""); setGrinderAmount("");
+      setCustomerPrice(""); setPlatform(""); setGamertag(""); setCompletedDateTime("");
+      setStartDateTime(""); setDueDate(""); setProofNotes("");
+      onSuccess();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!grinderId) return toast({ title: "Select a grinder", variant: "destructive" });
+    if (repairType === "add_completed" && !completedDateTime) return toast({ title: "Completed date is required", variant: "destructive" });
+    createMutation.mutate({
+      repairType,
+      grinderId,
+      serviceId: serviceId || undefined,
+      ticketName: ticketName || undefined,
+      grinderAmount: grinderAmount || undefined,
+      customerPrice: customerPrice || undefined,
+      platform: platform || undefined,
+      gamertag: gamertag || undefined,
+      completedDateTime: completedDateTime || undefined,
+      startDateTime: startDateTime || undefined,
+      dueDate: dueDate || undefined,
+      proofNotes: proofNotes || undefined,
+    });
+  };
+
+  return (
+    <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.06] to-emerald-500/[0.02]">
+      <CardContent className="p-0">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
+          data-testid="button-toggle-staff-repair-form"
+        >
+          <div className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-emerald-400" />
+            <span className="font-bold text-sm">Create Repair Request</span>
+            <Badge className="bg-emerald-500/20 text-emerald-400 border-0 text-[10px]">Staff</Badge>
+          </div>
+          {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {open && (
+          <div className="px-4 pb-4 space-y-4 border-t border-white/[0.06]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Repair Type</Label>
+                <Select value={repairType} onValueChange={setRepairType}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-xs" data-testid="select-staff-repair-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add_completed">Add Completed Order</SelectItem>
+                    <SelectItem value="claim_missing">Claim Missing Order</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Grinder</Label>
+                <Select value={grinderId} onValueChange={setGrinderId}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-xs" data-testid="select-staff-repair-grinder">
+                    <SelectValue placeholder="Select grinder..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {grinders.filter(g => !g.isRemoved).map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name} {g.discordUsername ? `(@${g.discordUsername})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Service</Label>
+                <Select value={serviceId} onValueChange={setServiceId}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-xs" data-testid="select-staff-repair-service">
+                    <SelectValue placeholder="Select service..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Grinder Earnings ($)</Label>
+                <Input type="number" step="0.01" min="0" placeholder="0.00" value={grinderAmount} onChange={e => setGrinderAmount(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-amount" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Customer Price ($)</Label>
+                <Input type="number" step="0.01" min="0" placeholder="0.00" value={customerPrice} onChange={e => setCustomerPrice(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-customer-price" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Platform</Label>
+                <Select value={platform} onValueChange={setPlatform}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 text-xs" data-testid="select-staff-repair-platform">
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Xbox">Xbox</SelectItem>
+                    <SelectItem value="PS5">PS5</SelectItem>
+                    <SelectItem value="PS4">PS4</SelectItem>
+                    <SelectItem value="PC">PC</SelectItem>
+                    <SelectItem value="Switch">Switch</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Gamertag</Label>
+                <Input placeholder="Customer gamertag" value={gamertag} onChange={e => setGamertag(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-gamertag" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Ticket Name</Label>
+                <Input placeholder="Discord ticket name" value={ticketName} onChange={e => setTicketName(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-ticket" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {repairType === "add_completed" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Completed Date *</Label>
+                  <Input type="datetime-local" value={completedDateTime} onChange={e => setCompletedDateTime(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-completed" />
+                </div>
+              )}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Start Date</Label>
+                <Input type="datetime-local" value={startDateTime} onChange={e => setStartDateTime(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-start" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Due Date</Label>
+                <Input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-due" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Notes</Label>
+              <Textarea placeholder="Additional details..." value={proofNotes} onChange={e => setProofNotes(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs min-h-[60px]" data-testid="input-staff-repair-notes" />
+            </div>
+            <Button onClick={handleSubmit} disabled={createMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700 gap-2" data-testid="button-submit-staff-repair">
+              <PlusCircle className="w-4 h-4" />
+              {createMutation.isPending ? "Creating..." : "Create Repair Request"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function StaffOrderClaims() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -134,6 +310,7 @@ export default function StaffOrderClaims() {
   const [staffFields, setStaffFields] = useState<Record<string, StaffFields>>({});
 
   const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 30000 });
+  const { data: grinders = [] } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"] });
 
   const queryUrl = filter === "all" ? "/api/order-claims" : `/api/order-claims?status=${filter}`;
   const { data: claims = [], isLoading } = useQuery<OrderClaimRequest[]>({
@@ -200,6 +377,10 @@ export default function StaffOrderClaims() {
             <p className="text-sm text-muted-foreground">Review and approve grinder repair requests</p>
           </div>
         </div>
+      </FadeInUp>
+
+      <FadeInUp>
+        <StaffRepairForm services={services} grinders={grinders} onSuccess={() => qc.invalidateQueries({ queryKey: ["/api/order-claims"] })} />
       </FadeInUp>
 
       <FadeInUp>

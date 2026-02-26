@@ -5047,6 +5047,54 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/order-claims/staff', requireStaff, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { repairType, grinderId, ticketName, serviceId, proofNotes, completedDateTime, startDateTime, dueDate, grinderAmount, customerPrice, platform, gamertag } = req.body;
+      const validTypes = ["claim_missing", "add_completed"];
+      if (!repairType || !validTypes.includes(repairType)) return res.status(400).json({ error: "Invalid repair type" });
+      if (!grinderId) return res.status(400).json({ error: "Grinder is required" });
+      const grinder = await storage.getGrinder(grinderId);
+      if (!grinder) return res.status(404).json({ error: "Grinder not found" });
+      if (repairType === "add_completed" && !completedDateTime) return res.status(400).json({ error: "Completed date is required" });
+
+      const id = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const claim = await storage.createOrderClaimRequest({
+        id,
+        grinderId,
+        repairType,
+        orderId: null,
+        ticketName: (ticketName || "").trim() || `staff-${repairType}-${Date.now()}`,
+        serviceId: serviceId || null,
+        proofLinks: [],
+        proofNotes: proofNotes || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        startDateTime: startDateTime ? new Date(startDateTime) : null,
+        completedDateTime: completedDateTime ? new Date(completedDateTime) : null,
+        grinderAmount: grinderAmount || null,
+        payoutPlatform: null,
+        payoutDetails: null,
+        fixFields: JSON.stringify({ customerPrice, platform, gamertag }),
+        status: "pending",
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        userId: user.id,
+        userName: user.displayName || user.discordUsername || "Staff",
+        action: "staff_repair_request",
+        entityType: "order_claim",
+        entityId: id,
+        details: `Staff created ${repairType} repair for grinder ${grinder.name}`,
+      });
+
+      res.json(claim);
+    } catch (error) {
+      console.error("Error creating staff repair:", error);
+      res.status(500).json({ error: "Failed to create repair request" });
+    }
+  });
+
   app.patch('/api/order-claims/:id', requireStaff, async (req, res) => {
     try {
       const user = (req as any).user;
