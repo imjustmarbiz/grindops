@@ -327,7 +327,7 @@ export default function StaffOverview() {
                 <p className="text-[10px] text-muted-foreground">Team & settings</p>
               </div>
             </div>
-            <div onClick={() => navigate("/grinders")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-badges">
+            <div onClick={() => navigate("/badges")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-badges">
               <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Crown className="w-4 h-4 text-purple-400" />
               </div>
