@@ -970,10 +970,9 @@ export default function Grinders() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Grinder">Grinder</SelectItem>
-                    <SelectItem value="Elite Grinder">Elite Grinder</SelectItem>
-                    <SelectItem value="VC Grinder">VC Grinder</SelectItem>
-                    <SelectItem value="Event Grinder">Event Grinder</SelectItem>
+                    {ROLE_OPTIONS.map(role => (
+                      <SelectItem key={role} value={role}>{role}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
