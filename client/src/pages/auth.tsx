@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2 } from "lucide-react";
+import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2, BarChart3, ClipboardList, Bell } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 import spLogo from "@assets/image_1771930905137.png";
@@ -42,19 +42,20 @@ export default function AuthPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <h1 className="font-display text-5xl font-bold leading-tight mb-6">
-              The ultimate command center for <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Elite Grinders</span>.
+              Your complete <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">operations hub</span>.
             </h1>
             <p className="text-xl text-muted-foreground max-w-md leading-relaxed">
-              Manage your MMO service queue, optimize assignments, and track performance with surgical precision.
+              Role-based dashboards for owners, staff, and grinders. Manage orders, bids, assignments, payouts, and performance -- all in one place.
             </p>
           </motion.div>
         </div>
 
         <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-8 mt-12">
           {[
-            { icon: Target, title: "Smart Priority", desc: "Algorithmic queue scoring" },
-            { icon: Zap, title: "Fast Dispatch", desc: "Instant assignment routing" },
-            { icon: Shield, title: "Fair Play", desc: "Balanced utilization tracking" }
+            { icon: ClipboardList, title: "Order Management", desc: "Bidding, assignments & live tracking" },
+            { icon: BarChart3, title: "Performance Tracking", desc: "Scorecards, tiers & quality metrics" },
+            { icon: Bell, title: "Real-Time Updates", desc: "Discord sync & instant notifications" },
+            { icon: Shield, title: "Role-Based Access", desc: "Owner, Staff, Grinder & Elite dashboards" },
           ].map((feature, i) => (
             <motion.div 
               key={i}
@@ -117,7 +118,7 @@ export default function AuthPage() {
             </Button>
             
             <p className="text-center text-xs text-muted-foreground">
-              Your Discord roles determine your access level. Staff get full access, Grinders see their personal dashboard.
+              Your Discord roles determine your dashboard. Owners and staff manage operations, grinders track orders and performance.
             </p>
           </div>
 
