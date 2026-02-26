@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PAYOUT_PLATFORMS } from "@shared/schema";
 import {
   Loader2, Banknote, DollarSign, CheckCircle, AlertCircle, X,
-  TrendingUp, Clock, Wallet, ArrowUpRight
+  TrendingUp, Clock, Wallet, ArrowUpRight, ArrowDown, Receipt, ExternalLink
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -231,11 +231,44 @@ export default function GrinderPayouts() {
                     <p className="font-medium">Order {p.orderId}</p>
                     <p className="text-sm text-white/50">
                       Amount: <span className="text-emerald-400 font-medium">${Number(p.amount).toFixed(2)}</span>
+                      {p.originalAmount && Number(p.originalAmount) > Number(p.amount) && (
+                        <span className="ml-1 text-white/30 line-through text-xs">${Number(p.originalAmount).toFixed(2)}</span>
+                      )}
                       {p.payoutPlatform && <span className="ml-2">via {p.payoutPlatform}</span>}
                     </p>
                     {p.payoutDetails && <p className="text-xs text-white/40">Details: {p.payoutDetails}</p>}
-                    {p.notes && <p className="text-xs text-white/40">{p.notes}</p>}
-                    <p className="text-xs text-white/30">{new Date(p.createdAt).toLocaleString()}</p>
+                    {p.originalAmount && Number(p.originalAmount) > Number(p.amount) && (
+                      <div className="mt-1.5 p-2 rounded-md bg-red-500/10 border border-red-500/15" data-testid={`payout-reduction-${p.id}`}>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <ArrowDown className="w-3 h-3 text-red-400" />
+                          <span className="text-xs font-medium text-red-400">
+                            Reduced by ${(Number(p.originalAmount) - Number(p.amount)).toFixed(2)}
+                          </span>
+                        </div>
+                        {p.reductionReason && (
+                          <p className="text-xs text-white/50" data-testid={`text-reduction-reason-${p.id}`}>
+                            Reason: {p.reductionReason}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {p.notes && <p className="text-xs text-white/40 mt-1">{p.notes}</p>}
+                    {(p.status === "Paid" || p.status === "Completed") && p.paymentProofUrl && (
+                      <div className="mt-1.5" data-testid={`payout-receipt-${p.id}`}>
+                        <a
+                          href={p.paymentProofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                          data-testid={`link-receipt-${p.id}`}
+                        >
+                          <Receipt className="w-3 h-3" />
+                          View Payment Receipt
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                    <p className="text-xs text-white/30 mt-1">{new Date(p.createdAt).toLocaleString()}</p>
                   </div>
                   <Badge className={`border-0 ${
                     p.status === "Paid" ? "bg-emerald-500/20 text-emerald-400" :
