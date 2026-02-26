@@ -4647,12 +4647,17 @@ export async function registerRoutes(
       const user = (req as any).user;
       const { orderId } = req.body;
 
-      let grinderId: string;
-      if (user.role === "grinder") {
-        grinderId = user.grinderId;
-      } else if (req.body.grinderId) {
+      let grinderId: string | undefined;
+      if (req.body.grinderId) {
         grinderId = req.body.grinderId;
       } else {
+        const userId = (req as any).userId;
+        const allGrinders = await storage.getGrinders();
+        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        if (myGrinder) grinderId = myGrinder.id;
+      }
+
+      if (!grinderId) {
         return res.status(400).json({ error: "Grinder ID is required" });
       }
 
@@ -4699,11 +4704,13 @@ export async function registerRoutes(
   app.get('/api/review-access/codes', isAuthenticated, async (req, res) => {
     try {
       const user = (req as any).user;
-      if (user.role === "grinder") {
-        const codes = await storage.getReviewAccessCodes(user.grinderId);
-        return res.json(codes);
+      let grinderId = req.query.grinderId as string | undefined;
+      if (!grinderId && (user.role === "grinder" || !grinderId)) {
+        const userId = (req as any).userId;
+        const allGrinders = await storage.getGrinders();
+        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        if (myGrinder) grinderId = myGrinder.id;
       }
-      const grinderId = req.query.grinderId as string | undefined;
       const codes = await storage.getReviewAccessCodes(grinderId);
       res.json(codes);
     } catch (error) {
