@@ -157,6 +157,15 @@ export default function StaffAnalytics() {
                     </div>
                     <span className="text-sm font-bold text-purple-400">{formatCompact(profit)}</span>
                   </div>
+                  {(analytics?.fineRevenue || 0) > 0 && (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                        <span className="text-xs text-muted-foreground">Fine Revenue</span>
+                      </div>
+                      <span className="text-sm font-bold text-amber-400">{formatCompact(analytics?.fineRevenue || 0)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />

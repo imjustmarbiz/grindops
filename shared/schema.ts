@@ -553,6 +553,20 @@ export const assignmentsRelations = relations(assignments, ({ one }) => ({
   }),
 }));
 
+export const finePayments = pgTable("fine_payments", {
+  id: varchar("id").primaryKey(),
+  grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
+  amount: numeric("amount").notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  proofUrl: text("proof_url").notNull(),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: text("reviewed_by"),
+  reviewedByName: text("reviewed_by_name"),
+  reviewNote: text("review_note"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertServiceSchema = createInsertSchema(services);
 export const insertGrinderSchema = createInsertSchema(grinders);
 export const insertOrderSchema = createInsertSchema(orders).omit({ createdAt: true });
@@ -579,6 +593,7 @@ export const insertCustomerReviewSchema = createInsertSchema(customerReviews).om
 export const insertOrderClaimRequestSchema = createInsertSchema(orderClaimRequests).omit({ requestedAt: true, decidedAt: true, decidedBy: true, decidedByName: true, decisionNote: true });
 export const insertReviewAccessCodeSchema = createInsertSchema(reviewAccessCodes).omit({ createdAt: true, approvedBy: true, approvedByName: true, approvedAt: true, deniedBy: true, deniedByName: true, deniedAt: true, usedAt: true });
 export const insertGrinderTaskSchema = createInsertSchema(grinderTasks).omit({ createdAt: true, completedAt: true });
+export const insertFinePaymentSchema = createInsertSchema(finePayments).omit({ createdAt: true, reviewedAt: true, reviewedBy: true, reviewedByName: true, reviewNote: true });
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -690,6 +705,7 @@ export type AnalyticsSummary = {
   acceptedBids: number;
   activeAssignments: number;
   completedAssignments: number;
+  fineRevenue: number;
 };
 
 export type DashboardStats = {
@@ -716,6 +732,9 @@ export const staffTasks = pgTable("staff_tasks", {
 export const insertStaffTaskSchema = createInsertSchema(staffTasks).omit({ completedAt: true, createdAt: true });
 export type InsertStaffTask = z.infer<typeof insertStaffTaskSchema>;
 export type StaffTask = typeof staffTasks.$inferSelect;
+
+export type FinePayment = typeof finePayments.$inferSelect;
+export type InsertFinePayment = z.infer<typeof insertFinePaymentSchema>;
 
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";

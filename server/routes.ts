@@ -36,6 +36,11 @@ if (!fs.existsSync(paymentProofsDir)) {
   fs.mkdirSync(paymentProofsDir, { recursive: true });
 }
 
+const fineProofsDir = path.join(process.cwd(), "uploads", "fine-proofs");
+if (!fs.existsSync(fineProofsDir)) {
+  fs.mkdirSync(fineProofsDir, { recursive: true });
+}
+
 const proofUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, proofsDir),
@@ -59,6 +64,26 @@ const proofUpload = multer({
 const paymentProofUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, paymentProofsDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const ext = path.extname(file.originalname);
+      cb(null, `${uniqueSuffix}${ext}`);
+    },
+  }),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp|pdf)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image and PDF files are allowed (jpg, png, gif, webp, pdf)"));
+    }
+  },
+});
+
+const fineProofUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, fineProofsDir),
     filename: (_req, file, cb) => {
       const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const ext = path.extname(file.originalname);
@@ -2942,6 +2967,72 @@ export async function registerRoutes(
     res.status(201).json(appeal);
   });
 
+  app.get("/api/grinder/me/fine-payments", async (req, res) => {
+    const userId = (req as any).userId;
+    const allGrinders = await storage.getGrinders();
+    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+    const payments = await storage.getFinePayments(myGrinder.id);
+    res.json(payments);
+  });
+
+  app.post("/api/grinder/me/fine-payments", fineProofUpload.single('proof'), async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+
+      const currentFine = parseFloat(myGrinder.outstandingFine?.toString() || "0");
+      if (currentFine <= 0) return res.status(400).json({ message: "No outstanding fines to pay" });
+
+      if (!req.file) return res.status(400).json({ message: "Screenshot proof is required" });
+
+      const { paymentMethod } = req.body;
+      if (!paymentMethod) return res.status(400).json({ message: "Payment method is required" });
+      const allowedMethods = ["Zelle", "PayPal", "Apple Pay", "Cash App", "Venmo"];
+      if (!allowedMethods.includes(paymentMethod)) return res.status(400).json({ message: "Invalid payment method" });
+
+      const existingPayments = await storage.getFinePayments(myGrinder.id);
+      const hasPending = existingPayments.some((p: any) => p.status === "pending");
+      if (hasPending) return res.status(400).json({ message: "You already have a pending fine payment submission. Please wait for staff review." });
+
+      const proofUrl = `/uploads/fine-proofs/${req.file.filename}`;
+
+      const payment = await storage.createFinePayment({
+        id: `FP-${Date.now().toString(36)}`,
+        grinderId: myGrinder.id,
+        amount: currentFine.toString(),
+        paymentMethod,
+        proofUrl,
+        status: "pending",
+      });
+
+      await storage.createStaffAlert({
+        id: `SA-${Date.now().toString(36)}fp`,
+        targetType: "staff",
+        title: "Fine Payment Submitted",
+        message: `${myGrinder.name} has submitted a fine payment of $${currentFine.toFixed(2)} via ${paymentMethod} and uploaded proof. Please review.`,
+        severity: "warning",
+        createdBy: "system",
+        readBy: [],
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: myGrinder.id,
+        action: "fine_payment_submitted",
+        actor: myGrinder.name || myGrinder.id,
+        details: JSON.stringify({ amount: currentFine, paymentMethod, paymentId: payment.id }),
+      });
+
+      res.status(201).json(payment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch("/api/grinder/me/availability", async (req, res) => {
     const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
@@ -3307,6 +3398,98 @@ export async function registerRoutes(
       });
 
       res.json({ success: true, amountPaid: currentFine });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/staff/fine-payments", requireStaff, async (req, res) => {
+    const payments = await storage.getFinePayments();
+    res.json(payments);
+  });
+
+  app.patch("/api/staff/fine-payments/:id/review", requireStaff, async (req, res) => {
+    try {
+      const { status, reviewNote } = req.body;
+      if (!status || !["approved", "denied"].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'denied'" });
+      }
+
+      const allPayments = await storage.getFinePayments();
+      const payment = allPayments.find((p: any) => p.id === req.params.id);
+      if (!payment) return res.status(404).json({ message: "Fine payment not found" });
+      if (payment.status !== "pending") return res.status(400).json({ message: "This payment has already been reviewed" });
+
+      const reviewerName = getActorName(req);
+
+      await storage.updateFinePayment(req.params.id, {
+        status,
+        reviewedBy: (req as any).userId || "staff",
+        reviewedByName: reviewerName,
+        reviewNote: reviewNote || null,
+        reviewedAt: new Date(),
+      });
+
+      if (status === "approved") {
+        const grinder = await storage.getGrinder(payment.grinderId);
+        if (grinder) {
+          const currentFine = parseFloat(grinder.outstandingFine?.toString() || "0");
+          const paidAmount = parseFloat(payment.amount?.toString() || "0");
+          const newFine = Math.max(0, currentFine - paidAmount);
+
+          await storage.updateGrinder(payment.grinderId, {
+            outstandingFine: newFine.toString(),
+            suspended: newFine > 0 ? true : false,
+          });
+
+          const logs = await storage.getStrikeLogs();
+          const unpaidLogs = logs
+            .filter((l: any) => l.grinderId === payment.grinderId && !l.finePaid && parseFloat(l.fineAmount?.toString() || "0") > 0)
+            .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          let remaining = paidAmount;
+          for (const log of unpaidLogs) {
+            if (remaining <= 0) break;
+            const logFine = parseFloat(log.fineAmount?.toString() || "0");
+            if (logFine <= remaining) {
+              await storage.updateStrikeLog(log.id, { finePaid: true, finePaidAt: new Date() });
+              remaining -= logFine;
+            }
+          }
+
+          await storage.createStaffAlert({
+            id: `SA-${Date.now().toString(36)}fpa`,
+            targetType: "grinder",
+            grinderId: payment.grinderId,
+            title: "Fine Payment Approved",
+            message: `Your fine payment of $${paidAmount.toFixed(2)} via ${payment.paymentMethod} has been approved. ${newFine <= 0 ? "Your suspension has been lifted and you can now take orders again." : `Remaining fine balance: $${newFine.toFixed(2)}.`}`,
+            severity: "success",
+            createdBy: (req as any).userId || "staff",
+            readBy: [],
+          });
+        }
+      } else {
+        await storage.createStaffAlert({
+          id: `SA-${Date.now().toString(36)}fpd`,
+          targetType: "grinder",
+          grinderId: payment.grinderId,
+          title: "Fine Payment Denied",
+          message: `Your fine payment submission was denied.${reviewNote ? ` Reason: ${reviewNote}` : ""} Please resubmit with valid proof.`,
+          severity: "danger",
+          createdBy: (req as any).userId || "staff",
+          readBy: [],
+        });
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "grinder",
+        entityId: payment.grinderId,
+        action: `fine_payment_${status}`,
+        actor: reviewerName,
+        details: JSON.stringify({ paymentId: req.params.id, amount: payment.amount, reviewNote }),
+      });
+
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

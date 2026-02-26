@@ -128,6 +128,28 @@ export default function StaffAdmin() {
     },
   });
 
+  const { data: finePayments = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/fine-payments"],
+  });
+  const [fineReviewId, setFineReviewId] = useState<string | null>(null);
+  const [fineReviewNote, setFineReviewNote] = useState("");
+  const [viewFineProofUrl, setViewFineProofUrl] = useState<string | null>(null);
+
+  const fineReviewMutation = useMutation({
+    mutationFn: async (data: { id: string; status: string; reviewNote: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/fine-payments/${data.id}/review`, { status: data.status, reviewNote: data.reviewNote });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/fine-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/strike-logs"] });
+      setFineReviewId(null);
+      setFineReviewNote("");
+      toast({ title: "Fine payment reviewed" });
+    },
+  });
+
   const { data: strikeAppeals = [] } = useQuery<any[]>({
     queryKey: ["/api/staff/strike-appeals"],
   });
@@ -695,6 +717,168 @@ export default function StaffAdmin() {
           </Card>
         </FadeInUp>
       )}
+
+      {finePayments.length > 0 && (
+        <FadeInUp>
+          <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-fine-payments-review">
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                </div>
+                Fine Payment Submissions
+                {finePayments.filter((fp: any) => fp.status === "pending").length > 0 && (
+                  <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 ml-auto text-xs animate-pulse">
+                    {finePayments.filter((fp: any) => fp.status === "pending").length} pending
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {finePayments.map((fp: any) => {
+                  const grinder = allGrinders.find((g: any) => g.id === fp.grinderId);
+                  const isReviewing = fineReviewId === fp.id;
+                  return (
+                    <div
+                      key={fp.id}
+                      className={`p-3 rounded-xl border ${
+                        fp.status === "pending" ? "bg-emerald-500/[0.04] border-emerald-500/15" :
+                        fp.status === "approved" ? "bg-emerald-500/[0.04] border-emerald-500/15 opacity-60" :
+                        "bg-red-500/[0.04] border-red-500/15 opacity-60"
+                      }`}
+                      data-testid={`card-fine-payment-review-${fp.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold">{grinder?.name || fp.grinderId}</span>
+                            <Badge className={`text-[10px] ${
+                              fp.status === "pending" ? "bg-amber-500/20 text-amber-400 border-amber-500/20" :
+                              fp.status === "approved" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" :
+                              "bg-red-500/20 text-red-400 border-red-500/20"
+                            }`}>
+                              {fp.status === "pending" ? "Pending" : fp.status === "approved" ? "Approved" : "Denied"}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] border-white/10">
+                              {fp.paymentMethod}
+                            </Badge>
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-3">
+                            <p className="text-sm font-bold text-emerald-400">${parseFloat(fp.amount).toFixed(2)}</p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs h-6 px-2 text-blue-400 hover:text-blue-300 gap-1"
+                              onClick={() => setViewFineProofUrl(fp.proofUrl)}
+                              data-testid={`button-view-fine-proof-${fp.id}`}
+                            >
+                              <Search className="w-3 h-3" />
+                              View Proof
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Submitted {new Date(fp.createdAt).toLocaleString()}
+                          </p>
+                          {fp.reviewNote && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              <span className="font-medium">Staff note:</span> {fp.reviewNote} — {fp.reviewedByName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {fp.status === "pending" && (
+                        <div className="mt-3 space-y-2">
+                          {isReviewing ? (
+                            <>
+                              <Textarea
+                                value={fineReviewNote}
+                                onChange={(e) => setFineReviewNote(e.target.value)}
+                                placeholder="Review note (optional)"
+                                className="bg-background/50 border-white/10 min-h-[60px] resize-none text-xs"
+                                data-testid={`textarea-fine-review-note-${fp.id}`}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  className="text-xs bg-gradient-to-r from-emerald-600 to-emerald-500 text-white gap-1"
+                                  disabled={fineReviewMutation.isPending}
+                                  onClick={() => fineReviewMutation.mutate({ id: fp.id, status: "approved", reviewNote: fineReviewNote })}
+                                  data-testid={`button-approve-fine-payment-${fp.id}`}
+                                >
+                                  {fineReviewMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                  Approve & Clear Fine
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="text-xs bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 gap-1"
+                                  disabled={fineReviewMutation.isPending}
+                                  onClick={() => fineReviewMutation.mutate({ id: fp.id, status: "denied", reviewNote: fineReviewNote })}
+                                  data-testid={`button-deny-fine-payment-${fp.id}`}
+                                >
+                                  {fineReviewMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+                                  Deny
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-xs text-muted-foreground"
+                                  onClick={() => { setFineReviewId(null); setFineReviewNote(""); }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 gap-1"
+                              onClick={() => { setFineReviewId(fp.id); setFineReviewNote(""); }}
+                              data-testid={`button-review-fine-payment-${fp.id}`}
+                            >
+                              <Gavel className="w-3 h-3" />
+                              Review Payment
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeInUp>
+      )}
+
+      <Dialog open={!!viewFineProofUrl} onOpenChange={(open) => { if (!open) setViewFineProofUrl(null); }}>
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                <Search className="w-4 h-4 text-blue-400" />
+              </div>
+              Fine Payment Proof
+            </DialogTitle>
+          </DialogHeader>
+          {viewFineProofUrl && (
+            <div className="mt-2 rounded-lg overflow-hidden border border-white/10">
+              {viewFineProofUrl.endsWith(".pdf") ? (
+                <div className="p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">PDF document</p>
+                  <a href={viewFineProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm">
+                    Open PDF in new tab
+                  </a>
+                </div>
+              ) : (
+                <img src={viewFineProofUrl} alt="Payment proof" className="w-full max-h-[70vh] object-contain bg-black/20" />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-order-limits">

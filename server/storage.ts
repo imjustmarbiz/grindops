@@ -4,7 +4,7 @@ import {
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
   patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks,
-  deletionRequests,
+  deletionRequests, finePayments,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -35,6 +35,7 @@ import {
   type GrinderBadge, type InsertGrinderBadge,
   type StaffTask, type InsertStaffTask,
   type DeletionRequest, type InsertDeletionRequest,
+  type FinePayment, type InsertFinePayment,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -191,6 +192,10 @@ export interface IStorage {
   getDeletionRequests(status?: string): Promise<DeletionRequest[]>;
   createDeletionRequest(request: InsertDeletionRequest): Promise<DeletionRequest>;
   updateDeletionRequest(id: string, data: Partial<DeletionRequest>): Promise<DeletionRequest | undefined>;
+
+  getFinePayments(grinderId?: string): Promise<FinePayment[]>;
+  createFinePayment(payment: InsertFinePayment): Promise<FinePayment>;
+  updateFinePayment(id: string, data: Partial<FinePayment>): Promise<FinePayment | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -687,6 +692,7 @@ export class DatabaseStorage implements IStorage {
     const allAssignments = await db.select().from(assignments);
     const allGrinders = await db.select().from(grinders);
     const allBids = await db.select().from(bids);
+    const allFinePayments = await db.select().from(finePayments);
 
     const completedAssignments = allAssignments.filter(a => a.status === "Completed");
     const activeAssignments = allAssignments.filter(a => a.status === "Active");
@@ -707,6 +713,13 @@ export class DatabaseStorage implements IStorage {
       totalCompanyProfit += Number(a.companyProfit) || (orderPrice - grinderEarnings);
     }
 
+    const fineRevenue = allFinePayments
+      .filter(fp => fp.status === "approved")
+      .reduce((sum, fp) => sum + (Number(fp.amount) || 0), 0);
+
+    totalCompanyProfit += fineRevenue;
+    totalRevenue += fineRevenue;
+
     const avgMargin = totalRevenue > 0 ? (totalCompanyProfit / totalRevenue) * 100 : 0;
 
     return {
@@ -724,6 +737,7 @@ export class DatabaseStorage implements IStorage {
       acceptedBids: allBids.filter(b => b.status === "Accepted").length,
       activeAssignments: activeAssignments.length,
       completedAssignments: completedAssignments.length,
+      fineRevenue,
     };
   }
 
@@ -1441,6 +1455,23 @@ export class DatabaseStorage implements IStorage {
 
   async updateDeletionRequest(id: string, data: Partial<DeletionRequest>): Promise<DeletionRequest | undefined> {
     const [updated] = await db.update(deletionRequests).set(data).where(eq(deletionRequests.id, id)).returning();
+    return updated;
+  }
+
+  async getFinePayments(grinderId?: string): Promise<FinePayment[]> {
+    if (grinderId) {
+      return await db.select().from(finePayments).where(eq(finePayments.grinderId, grinderId)).orderBy(desc(finePayments.createdAt));
+    }
+    return await db.select().from(finePayments).orderBy(desc(finePayments.createdAt));
+  }
+
+  async createFinePayment(payment: InsertFinePayment): Promise<FinePayment> {
+    const [created] = await db.insert(finePayments).values(payment).returning();
+    return created;
+  }
+
+  async updateFinePayment(id: string, data: Partial<FinePayment>): Promise<FinePayment | undefined> {
+    const [updated] = await db.update(finePayments).set(data).where(eq(finePayments.id, id)).returning();
     return updated;
   }
 }

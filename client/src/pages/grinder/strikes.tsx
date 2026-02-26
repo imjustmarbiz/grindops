@@ -1,18 +1,22 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertOctagon, Shield, Crown, DollarSign, Ban, CheckCircle2,
-  AlertTriangle, Loader2, Clock, Info, Scale, Send, XCircle, TrendingUp
+  AlertTriangle, Loader2, Clock, Info, Scale, Send, XCircle, TrendingUp,
+  Upload, CreditCard, Image, Eye
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+const FINE_PAYMENT_METHODS = ["Zelle", "PayPal", "Apple Pay", "Cash App", "Venmo"] as const;
 
 export default function GrinderStrikes() {
   const {
@@ -24,6 +28,17 @@ export default function GrinderStrikes() {
   const [appealDialogOpen, setAppealDialogOpen] = useState(false);
   const [appealStrikeId, setAppealStrikeId] = useState<string | null>(null);
   const [appealReason, setAppealReason] = useState("");
+  const [payFineDialogOpen, setPayFineDialogOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [viewProofUrl, setViewProofUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: finePayments = [] } = useQuery<any[]>({
+    queryKey: ["/api/grinder/me/fine-payments"],
+    enabled: !!grinder,
+  });
 
   const ackMutation = useMutation({
     mutationFn: async (strikeId: string) => {
@@ -51,6 +66,49 @@ export default function GrinderStrikes() {
     onError: (e: any) => toast({ title: "Appeal failed", description: e.message, variant: "destructive" }),
   });
 
+  const finePaymentMutation = useMutation({
+    mutationFn: async () => {
+      if (!proofFile || !selectedPaymentMethod) throw new Error("Missing required fields");
+      const formData = new FormData();
+      formData.append("proof", proofFile);
+      formData.append("paymentMethod", selectedPaymentMethod);
+      const res = await fetch("/api/grinder/me/fine-payments", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to submit payment");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me/fine-payments"] });
+      setPayFineDialogOpen(false);
+      setSelectedPaymentMethod("");
+      setProofFile(null);
+      setProofPreview(null);
+      toast({ title: "Payment submitted", description: "Your payment proof has been submitted for staff review." });
+    },
+    onError: (e: any) => toast({ title: "Submission failed", description: e.message, variant: "destructive" }),
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProofFile(file);
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (ev) => setProofPreview(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      } else {
+        setProofPreview(null);
+      }
+    }
+  };
+
   const openAppealDialog = (strikeId: string) => {
     setAppealStrikeId(strikeId);
     setAppealReason("");
@@ -74,6 +132,7 @@ export default function GrinderStrikes() {
   const outstandingFine = parseFloat(grinder?.outstandingFine || "0");
   const isSuspended = grinder?.suspended || false;
   const unpaidLogs = strikeLogs.filter((l: any) => l.delta > 0 && !l.finePaid && parseFloat(l.fineAmount || "0") > 0);
+  const hasPendingPayment = finePayments.some((fp: any) => fp.status === "pending");
 
   const getAppealForStrike = (strikeLogId: string) => {
     return strikeAppeals.find((a: any) => a.strikeLogId === strikeLogId);
@@ -202,8 +261,106 @@ export default function GrinderStrikes() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-lg font-bold text-red-400">${parseFloat(log.fineAmount).toFixed(2)}</p>
-                      <p className="text-[10px] text-red-400/60">Contact staff to pay</p>
                     </div>
+                  </div>
+                ))}
+
+                {hasPendingPayment ? (
+                  <div className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3">
+                    <p className="text-xs text-amber-200/80 flex items-start gap-2">
+                      <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      Your fine payment is pending staff review. You'll be notified once it's processed.
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full mt-3 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400"
+                    onClick={() => setPayFineDialogOpen(true)}
+                    data-testid="button-pay-fine"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Submit Fine Payment
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        )}
+
+        {finePayments.length > 0 && (
+          <FadeInUp delay={0.085}>
+            <Card className="border-0 bg-gradient-to-br from-blue-500/[0.06] via-background to-blue-900/[0.03] overflow-hidden relative" data-testid="card-fine-payment-history">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-blue-400" />
+                  </div>
+                  Fine Payment Submissions
+                  <Badge className="bg-blue-500/15 text-blue-400 border border-blue-500/20 ml-auto text-xs">
+                    {finePayments.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {finePayments.map((fp: any) => (
+                  <div
+                    key={fp.id}
+                    className={`p-3 rounded-lg border ${
+                      fp.status === "pending" ? "bg-amber-500/[0.04] border-amber-500/15" :
+                      fp.status === "approved" ? "bg-emerald-500/[0.04] border-emerald-500/15" :
+                      "bg-red-500/[0.04] border-red-500/15"
+                    }`}
+                    data-testid={`card-fine-payment-${fp.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className={`text-[10px] ${
+                            fp.status === "pending" ? "bg-amber-500/20 text-amber-400 border-amber-500/20" :
+                            fp.status === "approved" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" :
+                            "bg-red-500/20 text-red-400 border-red-500/20"
+                          }`}>
+                            {fp.status === "pending" ? "Pending Review" : fp.status === "approved" ? "Approved" : "Denied"}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] border-white/10">
+                            {fp.paymentMethod}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <p className="text-sm font-bold">${parseFloat(fp.amount).toFixed(2)}</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-6 px-2 text-blue-400 hover:text-blue-300"
+                            onClick={() => setViewProofUrl(fp.proofUrl)}
+                            data-testid={`button-view-proof-${fp.id}`}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View Proof
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Submitted {new Date(fp.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        {fp.status === "pending" && <Clock className="w-4 h-4 text-amber-400" />}
+                        {fp.status === "approved" && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                        {fp.status === "denied" && <XCircle className="w-4 h-4 text-red-400" />}
+                      </div>
+                    </div>
+                    {fp.reviewNote && (
+                      <div className={`mt-2 p-2 rounded-md ${fp.status === "approved" ? "bg-emerald-500/[0.06]" : "bg-red-500/[0.06]"}`}>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">Staff response:</span> {fp.reviewNote}
+                        </p>
+                        {fp.reviewedByName && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            — {fp.reviewedByName}, {fp.reviewedAt ? new Date(fp.reviewedAt).toLocaleString() : ""}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -514,6 +671,130 @@ export default function GrinderStrikes() {
           </FadeInUp>
         )}
       </div>
+
+      <Dialog open={payFineDialogOpen} onOpenChange={(open) => {
+        setPayFineDialogOpen(open);
+        if (!open) { setSelectedPaymentMethod(""); setProofFile(null); setProofPreview(null); }
+      }}>
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+              </div>
+              Submit Fine Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="p-3 rounded-xl bg-red-500/[0.04] border border-red-500/15">
+              <p className="text-sm font-medium">Outstanding Fine</p>
+              <p className="text-2xl font-bold text-red-400 mt-1">${outstandingFine.toFixed(2)}</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-2">Payment Method</p>
+              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-payment-method">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FINE_PAYMENT_METHODS.map((method) => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-2">Screenshot Proof</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleFileChange}
+                className="hidden"
+                data-testid="input-fine-proof"
+              />
+              <Button
+                variant="outline"
+                className="w-full border-white/10 gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="button-upload-proof"
+              >
+                <Upload className="w-4 h-4" />
+                {proofFile ? proofFile.name : "Upload screenshot proof"}
+              </Button>
+              {proofPreview && (
+                <div className="mt-2 rounded-lg overflow-hidden border border-white/10">
+                  <img src={proofPreview} alt="Payment proof preview" className="w-full max-h-48 object-contain bg-black/20" />
+                </div>
+              )}
+              {proofFile && !proofPreview && (
+                <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                  <Image className="w-3 h-3" /> {proofFile.name} ({(proofFile.size / 1024).toFixed(0)} KB)
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3">
+              <p className="text-xs text-amber-200/80 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                Upload a screenshot of your payment confirmation. Staff will verify the payment and clear your fine. Accepted formats: JPG, PNG, GIF, WebP, PDF.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setPayFineDialogOpen(false)}
+              className="border-white/10"
+              data-testid="button-cancel-fine-payment"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => finePaymentMutation.mutate()}
+              disabled={!selectedPaymentMethod || !proofFile || finePaymentMutation.isPending}
+              className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400"
+              data-testid="button-submit-fine-payment"
+            >
+              {finePaymentMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Submit Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewProofUrl} onOpenChange={(open) => { if (!open) setViewProofUrl(null); }}>
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                <Eye className="w-4 h-4 text-blue-400" />
+              </div>
+              Payment Proof
+            </DialogTitle>
+          </DialogHeader>
+          {viewProofUrl && (
+            <div className="mt-2 rounded-lg overflow-hidden border border-white/10">
+              {viewProofUrl.endsWith(".pdf") ? (
+                <div className="p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">PDF document</p>
+                  <a href={viewProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm">
+                    Open PDF in new tab
+                  </a>
+                </div>
+              ) : (
+                <img src={viewProofUrl} alt="Payment proof" className="w-full max-h-[70vh] object-contain bg-black/20" />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={appealDialogOpen} onOpenChange={setAppealDialogOpen}>
         <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[480px]">
