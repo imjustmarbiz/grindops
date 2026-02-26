@@ -404,7 +404,6 @@ export class DatabaseStorage implements IStorage {
       setData.firstBidAt = null;
       setData.biddingClosesAt = null;
       setData.biddingNotifiedStages = [];
-      setData.status = "Open";
     }
     const [updated] = await db.update(orders).set(setData).where(eq(orders.id, id)).returning();
     return updated;

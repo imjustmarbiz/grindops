@@ -64,6 +64,7 @@ export default function GrinderScorecard() {
   const checkpointStats = scorecardData?.checkpointCompliance || scorecardData?.checkpointStats;
   const reports = performanceReports || [];
   const orderLogs: any[] = scorecardData?.orderLogs || [];
+  const strikeLogs: any[] = scorecardData?.strikeLogs || [];
 
   const qualityScore = freshGrinder.avgQualityRating != null ? Number(freshGrinder.avgQualityRating) : 0;
   const onTimeRate = freshGrinder.onTimeRate != null ? Number(freshGrinder.onTimeRate) : 0;
@@ -252,6 +253,51 @@ export default function GrinderScorecard() {
       </FadeInUp>
 
       <FadeInUp>
+      {strikeLogs.length > 0 && (
+        <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-strike-history">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-red-500/[0.02] -translate-y-8 translate-x-8" />
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              Strike & Fine History
+              <Badge variant="outline" className="text-xs ml-auto">{strikeLogs.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {strikeLogs.map((log: any) => (
+                <div key={log.id} className={`p-3 rounded-xl border ${log.action === "add" ? "bg-red-500/[0.04] border-red-500/10" : "bg-emerald-500/[0.04] border-emerald-500/10"}`} data-testid={`strike-log-${log.id}`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                    <div className="flex items-center gap-2">
+                      {log.action === "add" ? (
+                        <Badge className="border-0 text-[10px] bg-red-500/15 text-red-400">+Strike</Badge>
+                      ) : (
+                        <Badge className="border-0 text-[10px] bg-emerald-500/15 text-emerald-400">-Strike</Badge>
+                      )}
+                      <span className="text-xs text-white/50">{log.resultingStrikes}/3 strikes</span>
+                    </div>
+                    <span className="text-[10px] text-white/40">
+                      {log.createdAt ? new Date(log.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/60 mt-1">{log.reason}</p>
+                  {Number(log.fineAmount) > 0 && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-xs font-medium text-amber-400">${Number(log.fineAmount).toFixed(2)} fine</span>
+                      <Badge variant="outline" className={`text-[10px] ${log.finePaid ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-red-500/20 text-red-400 bg-red-500/10"}`}>
+                        {log.finePaid ? "Paid" : "Unpaid"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-order-logs">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
         <CardHeader className="pb-2">

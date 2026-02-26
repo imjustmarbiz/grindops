@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "wouter";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,7 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
 
   const reports: any[] = scorecardData?.reports || [];
   const orderLogs: any[] = scorecardData?.orderLogs || [];
+  const strikeLogs: any[] = scorecardData?.strikeLogs || [];
 
   const currentRoles: string[] = (grinder as any).roles || [];
   const [editMode, setEditMode] = useState(false);
@@ -392,6 +394,63 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-400" />
+          Strike & Fine History
+          <Badge variant="outline" className="text-[10px] ml-auto">{strikeLogs.length}</Badge>
+        </h3>
+        {scorecardLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : strikeLogs.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No strikes or fines on record.</p>
+        ) : (
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {strikeLogs.map((log: any) => (
+              <div key={log.id} className={`p-3 rounded-lg border ${log.action === "add" ? "bg-red-500/[0.04] border-red-500/10" : "bg-emerald-500/[0.04] border-emerald-500/10"}`} data-testid={`strike-log-${log.id}`}>
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                  <div className="flex items-center gap-2">
+                    {log.action === "add" ? (
+                      <Badge className="border-0 text-[10px] bg-red-500/15 text-red-400">+Strike</Badge>
+                    ) : (
+                      <Badge className="border-0 text-[10px] bg-emerald-500/15 text-emerald-400">-Strike</Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {log.resultingStrikes}/3 strikes after
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {log.createdAt ? format(new Date(log.createdAt), "MMM d, yyyy h:mm a") : ""}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{log.reason}</p>
+                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {Number(log.fineAmount) > 0 && (
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="w-3 h-3 text-amber-400" />
+                      <span className="text-xs font-medium text-amber-400">${Number(log.fineAmount).toFixed(2)} fine</span>
+                    </div>
+                  )}
+                  {Number(log.fineAmount) > 0 && (
+                    <Badge variant="outline" className={`text-[10px] ${log.finePaid ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-red-500/20 text-red-400 bg-red-500/10"}`}>
+                      {log.finePaid ? "Paid" : "Unpaid"}
+                    </Badge>
+                  )}
+                  {log.finePaid && log.finePaidAt && (
+                    <span className="text-[10px] text-muted-foreground">
+                      Paid {format(new Date(log.finePaidAt), "MMM d, yyyy")}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-muted-foreground ml-auto">by {log.createdBy}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">

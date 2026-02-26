@@ -1721,6 +1721,7 @@ export async function registerRoutes(
         const closedAgo = now.getTime() - new Date(o.biddingClosesAt).getTime();
         return closedAgo < BIDDING_CLOSED_GRACE_MS;
       }
+      if (o.status === "Need Replacement") return true;
       if (o.status !== "Open") return false;
       return true;
     });
@@ -3912,10 +3913,13 @@ export async function registerRoutes(
         updatesSubmitted: orderUpdateLogs.length,
       };
 
+      const strikeLogs = await storage.getStrikeLogs(grinderId);
+
       res.json({
         reports: sortedReports,
         orderLogs: enrichedLogs,
         checkpointCompliance,
+        strikeLogs,
       });
     } catch (err) {
       res.status(500).json({ message: String(err) });
@@ -4142,11 +4146,14 @@ export async function registerRoutes(
         };
       });
 
+      const strikeLogs = await storage.getStrikeLogs(myGrinder.id);
+
       res.json({
         grinder: myGrinder,
         recentReports: approvedReports,
         checkpointCompliance,
         orderLogs: enrichedLogs,
+        strikeLogs,
       });
     } catch (err) {
       res.status(500).json({ message: String(err) });
