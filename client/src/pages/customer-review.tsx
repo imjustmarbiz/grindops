@@ -115,6 +115,15 @@ export default function CustomerReviewPage() {
     }
   };
 
+  useEffect(() => {
+    if (step === "submitted") {
+      const timer = setTimeout(() => {
+        window.location.href = "https://discord.gg/2kservices";
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
   return (
     <div className="min-h-screen bg-[#07070b] text-foreground flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -313,9 +322,18 @@ export default function CustomerReviewPage() {
               <p className="text-sm text-muted-foreground">
                 Thank you for your feedback! Your review has been submitted and will be reviewed by the team before being published.
               </p>
-              <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                You can now close this page
-              </Badge>
+              <p className="text-sm text-muted-foreground">
+                Redirecting you to our Discord...
+              </p>
+              <a
+                href="https://discord.gg/2kservices"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-medium transition-colors"
+                data-testid="link-discord-redirect"
+              >
+                Join our Discord
+              </a>
             </CardContent>
           </Card>
         )}
