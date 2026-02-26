@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent } from "lucide-react";
+import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -38,6 +38,51 @@ export default function Assignments() {
   const [originalPay, setOriginalPay] = useState("");
   const [replacementPay, setReplacementPay] = useState("");
   const [reason, setReason] = useState("");
+
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [reassignAssignment, setReassignAssignment] = useState<Assignment | null>(null);
+  const [reassignGrinderId, setReassignGrinderId] = useState("");
+  const [reassignPayAmount, setReassignPayAmount] = useState("");
+  const [reassignNotes, setReassignNotes] = useState("");
+
+  const reassignMutation = useMutation({
+    mutationFn: async ({ orderId, data }: { orderId: string; data: any }) => {
+      const res = await apiRequest("POST", `/api/orders/${orderId}/assign`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      setReassignDialogOpen(false);
+      setReassignAssignment(null);
+      toast({ title: "Replacement grinder assigned successfully" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to assign replacement", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const openReassignDialog = (assignment: Assignment) => {
+    setReassignAssignment(assignment);
+    setReassignGrinderId("");
+    setReassignPayAmount("");
+    setReassignNotes("");
+    setReassignDialogOpen(true);
+  };
+
+  const handleReassign = () => {
+    if (!reassignAssignment || !reassignGrinderId || !reassignPayAmount) return;
+    reassignMutation.mutate({
+      orderId: reassignAssignment.orderId,
+      data: {
+        grinderId: reassignGrinderId,
+        bidAmount: reassignPayAmount,
+        notes: reassignNotes || "Replacement grinder assigned from assignments page",
+      },
+    });
+  };
 
   const replaceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -285,6 +330,11 @@ export default function Assignments() {
                           <Repeat className="w-2 h-2 mr-0.5" />Replaced
                         </Badge>
                       )}
+                      {a.status === "Cancelled" && (orders || []).find(o => o.id === a.orderId)?.status === "Need Replacement" && (
+                        <Badge variant="outline" className="text-[10px] border-orange-500/20 text-orange-400 bg-orange-500/10 w-fit">
+                          <RefreshCw className="w-2 h-2 mr-0.5" />Needs Replacement
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -302,6 +352,25 @@ export default function Assignments() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Replace grinder</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {a.status === "Cancelled" && (() => {
+                      const order = (orders || []).find(o => o.id === a.orderId);
+                      return order?.status === "Need Replacement";
+                    })() && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10"
+                            onClick={() => openReassignDialog(a)}
+                            data-testid={`button-reassign-grinder-${a.id}`}
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Assign replacement grinder</TooltipContent>
                       </Tooltip>
                     )}
                   </TableCell>
@@ -472,6 +541,110 @@ export default function Assignments() {
                 data-testid="button-confirm-replace"
               >
                 {replaceMutation.isPending ? "Replacing..." : "Confirm Replacement"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
+        <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                <RefreshCw className="w-4 h-4 text-emerald-400" />
+              </div>
+              Assign Replacement Grinder
+            </DialogTitle>
+          </DialogHeader>
+          {reassignAssignment && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Order</span>
+                  <span className="font-bold text-primary" data-testid="text-reassign-order-id">
+                    {(() => { const o = (orders || []).find(o => o.id === reassignAssignment.orderId); return o?.mgtOrderNumber ? `#${o.mgtOrderNumber}` : reassignAssignment.orderId; })()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Previous Grinder</span>
+                  <span className="font-medium text-red-400">
+                    {(grinders || []).find(g => g.id === reassignAssignment.grinderId)?.name || reassignAssignment.grinderId}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Order Price</span>
+                  <span className="font-bold text-emerald-400">
+                    {formatCurrency(Number((orders || []).find(o => o.id === reassignAssignment.orderId)?.customerPrice || 0))}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Replacement Grinder</Label>
+                <Select value={reassignGrinderId} onValueChange={setReassignGrinderId}>
+                  <SelectTrigger className="mt-1.5 bg-background/50 border-white/10" data-testid="select-reassign-grinder">
+                    <SelectValue placeholder="Select a grinder..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(grinders || []).filter(g => g.id !== reassignAssignment.grinderId && !g.suspended && !g.isRemoved && g.activeOrders < g.capacity).map(g => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{g.name}</span>
+                          <span className="text-xs text-muted-foreground">({g.category} · {g.activeOrders}/{g.capacity})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Grinder Pay Amount</Label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={reassignPayAmount}
+                    onChange={(e) => setReassignPayAmount(e.target.value)}
+                    className="pl-7 bg-background/50 border-white/10"
+                    data-testid="input-reassign-pay"
+                  />
+                </div>
+                {reassignPayAmount && Number(reassignPayAmount) > 0 && (
+                  <div className="mt-2 p-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order Price:</span>
+                      <span className="text-emerald-400">{formatCurrency(Number((orders || []).find(o => o.id === reassignAssignment.orderId)?.customerPrice || 0))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Grinder Pay:</span>
+                      <span className="text-blue-400">${reassignPayAmount}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground">Notes (optional)</Label>
+                <Textarea
+                  value={reassignNotes}
+                  onChange={(e) => setReassignNotes(e.target.value)}
+                  placeholder="Additional notes about the replacement..."
+                  className="mt-1 resize-none bg-background/50 border-white/10"
+                  data-testid="input-reassign-notes"
+                />
+              </div>
+
+              <Button
+                className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20"
+                disabled={!reassignGrinderId || !reassignPayAmount || reassignMutation.isPending}
+                onClick={handleReassign}
+                data-testid="button-confirm-reassign"
+              >
+                {reassignMutation.isPending ? "Assigning..." : "Confirm Replacement Assignment"}
               </Button>
             </div>
           )}
