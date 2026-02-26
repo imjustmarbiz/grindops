@@ -4640,6 +4640,141 @@ export async function registerRoutes(
     }
   });
 
+  // ===== DELETION REQUESTS =====
+
+  app.get('/api/deletion-requests', requireStaff, async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const requests = await storage.getDeletionRequests(status);
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch deletion requests" });
+    }
+  });
+
+  app.post('/api/deletion-requests', requireStaff, async (req, res) => {
+    try {
+      const { entityType, entityId, entityLabel, reason } = req.body;
+      if (!entityType || !entityId || !reason) {
+        return res.status(400).json({ error: "entityType, entityId, and reason are required" });
+      }
+
+      const existing = await storage.getDeletionRequests("Pending");
+      const duplicate = existing.find(r => r.entityType === entityType && r.entityId === entityId);
+      if (duplicate) {
+        return res.status(400).json({ error: "A pending deletion request already exists for this item" });
+      }
+
+      const id = `DR-${Date.now().toString(36)}`;
+      const request = await storage.createDeletionRequest({
+        id,
+        entityType,
+        entityId,
+        entityLabel: entityLabel || entityId,
+        reason,
+        requestedBy: (req as any).userId,
+        requestedByName: getActorName(req),
+        status: "Pending",
+        reviewedBy: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        denyReason: null,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "deletion_request",
+        entityId: id,
+        action: "deletion_requested",
+        actor: getActorName(req),
+        details: JSON.stringify({ entityType, entityId, entityLabel, reason }),
+      });
+
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating deletion request:", error);
+      res.status(500).json({ error: "Failed to create deletion request" });
+    }
+  });
+
+  app.patch('/api/deletion-requests/:id/approve', requireOwner, async (req, res) => {
+    try {
+      const request = (await storage.getDeletionRequests()).find(r => r.id === req.params.id);
+      if (!request) return res.status(404).json({ error: "Deletion request not found" });
+      if (request.status !== "Pending") return res.status(400).json({ error: "Request already processed" });
+
+      let deleted = false;
+      try {
+        if (request.entityType === "order") {
+          deleted = await storage.deleteOrder(request.entityId);
+        } else if (request.entityType === "bid") {
+          deleted = await storage.deleteBid(request.entityId);
+        } else if (request.entityType === "grinder") {
+          deleted = await storage.deleteGrinder(request.entityId);
+        } else if (request.entityType === "assignment") {
+          deleted = await storage.deleteAssignment(request.entityId);
+        }
+      } catch (err: any) {
+        return res.status(400).json({ error: `Failed to delete: ${err.message}` });
+      }
+
+      if (!deleted) {
+        return res.status(404).json({ error: "Entity not found or already deleted" });
+      }
+
+      const updated = await storage.updateDeletionRequest(req.params.id, {
+        status: "Approved",
+        reviewedBy: (req as any).userId,
+        reviewedByName: getActorName(req),
+        reviewedAt: new Date(),
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "deletion_request",
+        entityId: req.params.id,
+        action: "deletion_approved",
+        actor: getActorName(req),
+        details: JSON.stringify({ entityType: request.entityType, entityId: request.entityId, entityLabel: request.entityLabel }),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error approving deletion request:", error);
+      res.status(500).json({ error: "Failed to approve deletion request" });
+    }
+  });
+
+  app.patch('/api/deletion-requests/:id/deny', requireOwner, async (req, res) => {
+    try {
+      const request = (await storage.getDeletionRequests()).find(r => r.id === req.params.id);
+      if (!request) return res.status(404).json({ error: "Deletion request not found" });
+      if (request.status !== "Pending") return res.status(400).json({ error: "Request already processed" });
+
+      const updated = await storage.updateDeletionRequest(req.params.id, {
+        status: "Denied",
+        reviewedBy: (req as any).userId,
+        reviewedByName: getActorName(req),
+        reviewedAt: new Date(),
+        denyReason: req.body.reason || null,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "deletion_request",
+        entityId: req.params.id,
+        action: "deletion_denied",
+        actor: getActorName(req),
+        details: JSON.stringify({ entityType: request.entityType, entityId: request.entityId, denyReason: req.body.reason }),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error denying deletion request:", error);
+      res.status(500).json({ error: "Failed to deny deletion request" });
+    }
+  });
+
   // ===== REVIEW ACCESS CODES (Password-Protected Customer Reviews) =====
 
   app.post('/api/review-access/generate', isAuthenticated, async (req, res) => {

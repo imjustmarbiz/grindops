@@ -4,6 +4,7 @@ import {
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
   patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks,
+  deletionRequests,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -33,6 +34,7 @@ import {
   type GrinderTask, type InsertGrinderTask,
   type GrinderBadge, type InsertGrinderBadge,
   type StaffTask, type InsertStaffTask,
+  type DeletionRequest, type InsertDeletionRequest,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -69,10 +71,12 @@ export interface IStorage {
   createBid(bid: InsertBid): Promise<Bid>;
   upsertBidByProposalId(mgtProposalId: number, data: Partial<InsertBid>): Promise<Bid>;
   updateBidStatus(id: string, status: string, acceptedBy?: string): Promise<Bid | undefined>;
+  deleteBid(id: string): Promise<boolean>;
 
   getAssignments(): Promise<Assignment[]>;
   getAssignment(id: string): Promise<Assignment | undefined>;
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
+  deleteAssignment(id: string): Promise<boolean>;
   updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment | undefined>;
   replaceGrinder(assignmentId: string, data: { replacementGrinderId: string; originalGrinderPay: string; replacementGrinderPay: string; reason?: string }): Promise<Assignment | undefined>;
 
@@ -183,6 +187,10 @@ export interface IStorage {
   getStaffTasks(assignedTo?: string): Promise<StaffTask[]>;
   createStaffTask(task: InsertStaffTask): Promise<StaffTask>;
   updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined>;
+
+  getDeletionRequests(status?: string): Promise<DeletionRequest[]>;
+  createDeletionRequest(request: InsertDeletionRequest): Promise<DeletionRequest>;
+  updateDeletionRequest(id: string, data: Partial<DeletionRequest>): Promise<DeletionRequest | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -478,6 +486,11 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async deleteBid(id: string): Promise<boolean> {
+    const result = await db.delete(bids).where(eq(bids.id, id)).returning();
+    return result.length > 0;
+  }
+
   async getAssignments(): Promise<Assignment[]> {
     return await db.select().from(assignments).orderBy(desc(assignments.assignedDateTime));
   }
@@ -490,6 +503,15 @@ export class DatabaseStorage implements IStorage {
   async getAssignment(id: string): Promise<Assignment | undefined> {
     const [result] = await db.select().from(assignments).where(eq(assignments.id, id));
     return result;
+  }
+
+  async deleteAssignment(id: string): Promise<boolean> {
+    await db.delete(activityCheckpoints).where(eq(activityCheckpoints.assignmentId, id));
+    await db.delete(performanceReports).where(eq(performanceReports.assignmentId, id));
+    await db.delete(orderUpdates).where(eq(orderUpdates.assignmentId, id));
+    await db.delete(payoutRequests).where(eq(payoutRequests.assignmentId, id));
+    const result = await db.delete(assignments).where(eq(assignments.id, id)).returning();
+    return result.length > 0;
   }
 
   async updateAssignment(id: string, data: Partial<InsertAssignment>): Promise<Assignment | undefined> {
@@ -1393,6 +1415,23 @@ export class DatabaseStorage implements IStorage {
 
   async updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined> {
     const [updated] = await db.update(staffTasks).set(data).where(eq(staffTasks.id, id)).returning();
+    return updated;
+  }
+
+  async getDeletionRequests(status?: string): Promise<DeletionRequest[]> {
+    if (status) {
+      return await db.select().from(deletionRequests).where(eq(deletionRequests.status, status)).orderBy(desc(deletionRequests.createdAt));
+    }
+    return await db.select().from(deletionRequests).orderBy(desc(deletionRequests.createdAt));
+  }
+
+  async createDeletionRequest(request: InsertDeletionRequest): Promise<DeletionRequest> {
+    const [created] = await db.insert(deletionRequests).values(request).returning();
+    return created;
+  }
+
+  async updateDeletionRequest(id: string, data: Partial<DeletionRequest>): Promise<DeletionRequest | undefined> {
+    const [updated] = await db.update(deletionRequests).set(data).where(eq(deletionRequests.id, id)).returning();
     return updated;
   }
 }

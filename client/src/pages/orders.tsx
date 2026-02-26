@@ -250,6 +250,8 @@ export default function Orders() {
   const [reassignGrinderId, setReassignGrinderId] = useState("");
   const [reassignPayAmount, setReassignPayAmount] = useState("");
   const [reassignNotes, setReassignNotes] = useState("");
+  const [deleteRequestOrder, setDeleteRequestOrder] = useState<Order | null>(null);
+  const [deleteRequestReason, setDeleteRequestReason] = useState("");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -288,6 +290,26 @@ export default function Orders() {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to delete order", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteRequestMutation = useMutation({
+    mutationFn: async ({ entityId, entityLabel, reason }: { entityId: string; entityLabel: string; reason: string }) => {
+      const res = await apiRequest("POST", "/api/deletion-requests", {
+        entityType: "order",
+        entityId,
+        entityLabel,
+        reason,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Delete request submitted", description: "An owner will review your request." });
+      setDeleteRequestOrder(null);
+      setDeleteRequestReason("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to submit request", description: err.message, variant: "destructive" });
     },
   });
 
@@ -794,7 +816,7 @@ export default function Orders() {
                           <TooltipContent>Assign replacement grinder</TooltipContent>
                         </Tooltip>
                       )}
-                      {isOwner && (
+                      {isOwner ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -808,6 +830,21 @@ export default function Orders() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Delete order</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground hover:text-orange-400"
+                              onClick={() => setDeleteRequestOrder(order)}
+                              data-testid={`button-request-delete-order-${order.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Request deletion</TooltipContent>
                         </Tooltip>
                       )}
                     </div>
@@ -1001,6 +1038,49 @@ export default function Orders() {
             >
               {reassignMutation.isPending ? "Assigning..." : "Confirm Replacement Assignment"}
             </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    <Dialog open={!!deleteRequestOrder} onOpenChange={(open) => { if (!open) { setDeleteRequestOrder(null); setDeleteRequestReason(""); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-orange-400" />
+            Request Order Deletion
+          </DialogTitle>
+        </DialogHeader>
+        {deleteRequestOrder && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+              <p className="text-sm font-medium">{deleteRequestOrder.id}</p>
+              <p className="text-xs text-muted-foreground">
+                {services?.find(s => s.id === deleteRequestOrder.serviceId)?.name || deleteRequestOrder.serviceId}
+                {deleteRequestOrder.customerPrice && <span className="ml-2 text-emerald-400">${Number(deleteRequestOrder.customerPrice).toFixed(2)}</span>}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium mb-1 block">Reason for deletion *</Label>
+              <Textarea
+                value={deleteRequestReason}
+                onChange={(e) => setDeleteRequestReason(e.target.value)}
+                placeholder="Explain why this order should be deleted..."
+                data-testid="input-delete-request-reason"
+              />
+            </div>
+            <Button
+              className="w-full bg-orange-600 hover:bg-orange-700"
+              disabled={!deleteRequestReason.trim() || deleteRequestMutation.isPending}
+              onClick={() => deleteRequestMutation.mutate({
+                entityId: deleteRequestOrder.id,
+                entityLabel: `Order ${deleteRequestOrder.id}`,
+                reason: deleteRequestReason,
+              })}
+              data-testid="button-submit-delete-request"
+            >
+              {deleteRequestMutation.isPending ? "Submitting..." : "Submit Delete Request"}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">An owner must approve this request before the order is deleted.</p>
           </div>
         )}
       </DialogContent>

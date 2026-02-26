@@ -46,6 +46,119 @@ const DATA_TABLES = [
   { key: "grinder_badges", label: "Badges", desc: "Awarded grinder badges" },
 ];
 
+function DeletionRequestsPanel() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: requests = [] } = useQuery<any[]>({
+    queryKey: ["/api/deletion-requests"],
+    refetchInterval: 15000,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/deletion-requests/${id}/approve`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deletion-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
+      toast({ title: "Deletion approved" });
+    },
+    onError: (err: Error) => toast({ title: "Failed to approve", description: err.message, variant: "destructive" }),
+  });
+
+  const denyMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const res = await apiRequest("PATCH", `/api/deletion-requests/${id}/deny`, { reason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deletion-requests"] });
+      toast({ title: "Deletion denied" });
+    },
+    onError: (err: Error) => toast({ title: "Failed to deny", description: err.message, variant: "destructive" }),
+  });
+
+  const pending = requests.filter((r: any) => r.status === "Pending");
+  const resolved = requests.filter((r: any) => r.status !== "Pending").slice(0, 10);
+
+  return (
+    <Card className="border-0 bg-gradient-to-br from-orange-500/[0.08] via-background to-orange-900/[0.04] overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-orange-500/[0.04] -translate-y-12 translate-x-12" />
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+            <Trash2 className="w-4 h-4 text-orange-400" />
+          </div>
+          Deletion Requests
+          {pending.length > 0 && (
+            <Badge variant="destructive" className="ml-auto" data-testid="badge-pending-deletions">
+              {pending.length} pending
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {pending.length === 0 && resolved.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">No deletion requests</p>
+        )}
+        {pending.map((r: any) => (
+          <div key={r.id} className="p-3 rounded-lg bg-white/[0.04] border border-orange-500/20 space-y-2" data-testid={`deletion-request-${r.id}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">{r.entityLabel || r.entityId}</p>
+                <p className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="mr-1 text-[10px] px-1.5 py-0">{r.entityType}</Badge>
+                  by {r.requestedByName || "Staff"}
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/20">Pending</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground bg-white/[0.03] rounded p-2">{r.reason}</p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs"
+                disabled={approveMutation.isPending}
+                onClick={() => approveMutation.mutate(r.id)}
+                data-testid={`button-approve-deletion-${r.id}`}
+              >
+                <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve & Delete
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs"
+                disabled={denyMutation.isPending}
+                onClick={() => denyMutation.mutate({ id: r.id, reason: "Denied by owner" })}
+                data-testid={`button-deny-deletion-${r.id}`}
+              >
+                <X className="w-3.5 h-3.5 mr-1" /> Deny
+              </Button>
+            </div>
+          </div>
+        ))}
+        {resolved.length > 0 && (
+          <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Recent</p>
+            {resolved.map((r: any) => (
+              <div key={r.id} className="flex items-center justify-between text-xs p-2 rounded bg-white/[0.02]">
+                <span className="text-muted-foreground">{r.entityLabel || r.entityId}</span>
+                <Badge variant="outline" className={r.status === "Approved" ? "text-red-400 border-red-500/20" : "text-muted-foreground"}>
+                  {r.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ClearDataPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1025,6 +1138,9 @@ export default function StaffOperations() {
 
       {isOwner && (
         <>
+          <FadeInUp>
+            <DeletionRequestsPanel />
+          </FadeInUp>
           <FadeInUp>
             <ServiceManagement services={allServices} />
           </FadeInUp>

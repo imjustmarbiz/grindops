@@ -496,6 +496,26 @@ export const insertGrinderBadgeSchema = createInsertSchema(grinderBadges).omit({
 export type InsertGrinderBadge = z.infer<typeof insertGrinderBadgeSchema>;
 export type GrinderBadge = typeof grinderBadges.$inferSelect;
 
+export const deletionRequests = pgTable("deletion_requests", {
+  id: varchar("id").primaryKey(),
+  entityType: text("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  entityLabel: text("entity_label"),
+  reason: text("reason").notNull(),
+  requestedBy: text("requested_by").notNull(),
+  requestedByName: text("requested_by_name"),
+  status: text("status").notNull().default("Pending"),
+  reviewedBy: text("reviewed_by"),
+  reviewedByName: text("reviewed_by_name"),
+  reviewedAt: timestamp("reviewed_at"),
+  denyReason: text("deny_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDeletionRequestSchema = createInsertSchema(deletionRequests).omit({ createdAt: true });
+export type InsertDeletionRequest = z.infer<typeof insertDeletionRequestSchema>;
+export type DeletionRequest = typeof deletionRequests.$inferSelect;
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   service: one(services, {
     fields: [orders.serviceId],
