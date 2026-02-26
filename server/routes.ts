@@ -1612,7 +1612,7 @@ export async function registerRoutes(
     const authUser = await authStorage.getUser(userId);
 
     if (!myGrinder && authUser && (authUser.role === "grinder" || authUser.role === "owner" || authUser.role === "staff")) {
-      const { GRINDER_ROLES: GR, ROLE_LABELS: RL } = await import("@shared/schema");
+      const { GRINDER_ROLES: GR, ROLE_LABELS: RL, ROLE_CAPACITY: RC } = await import("@shared/schema");
       const displayName = authUser.firstName || authUser.discordUsername || authUser.username || "Unknown";
       const isDevElite = userId === "dev-elite-user";
       const discordRoles = (authUser as any).discordRoles as string[] | null;
@@ -1637,7 +1637,7 @@ export async function registerRoutes(
         category: hasElite ? "Elite Grinder" : rolesArr.find(r => r !== "Grinder") || "Grinder",
         tier: "New",
         roles: rolesArr,
-        capacity: 3,
+        capacity: hasElite ? (RC[GR.ELITE] || 5) : 3,
       });
     }
 
