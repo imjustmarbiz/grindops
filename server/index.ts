@@ -3,6 +3,21 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
+process.on("uncaughtException", (err) => {
+  console.error("[CRASH] Uncaught Exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[CRASH] Unhandled Rejection:", reason);
+});
+process.on("SIGTERM", () => {
+  console.error("[SIGNAL] SIGTERM received — process being killed");
+  process.exit(0);
+});
+process.on("SIGINT", () => {
+  console.error("[SIGNAL] SIGINT received");
+  process.exit(0);
+});
+
 const app = express();
 const httpServer = createServer(app);
 

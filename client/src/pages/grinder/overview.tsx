@@ -162,7 +162,8 @@ export default function GrinderOverview() {
     if (completed >= 250) ids.add("grind-250");
     if (completed >= 500) ids.add("grind-500");
     if (quality >= 95 && completed >= 3) ids.add("quality");
-    if (winRate >= 80 && totalOrders >= 3) ids.add("sharp");
+    const totalBids = stats?.totalBids || 0;
+    if (winRate >= 80 && totalBids >= 5) ids.add("sharp");
     if (onTime >= 100 && completed >= 5) ids.add("punctual");
     if (completion >= 100 && completed >= 5) ids.add("reliable");
     if (strikes === 0 && completed >= 5) ids.add("clean");
