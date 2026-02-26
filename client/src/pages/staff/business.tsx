@@ -713,7 +713,7 @@ export default function BusinessPerformance() {
                     <div key={platform} className="rounded-xl p-3 border border-border/20 bg-white/[0.02]" data-testid={`row-platform-${platform.toLowerCase()}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          {platform === "PlayStation" ? <Gamepad2 className="w-4 h-4 text-blue-400" /> :
+                          {platform === "PlayStation" ? <Monitor className="w-4 h-4 text-blue-400" /> :
                            platform === "Xbox" ? <Monitor className="w-4 h-4 text-green-400" /> :
                            <Package className="w-4 h-4 text-muted-foreground" />}
                           <span className="text-sm font-medium">{platform}</span>
