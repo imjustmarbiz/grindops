@@ -60,15 +60,21 @@ export default function GrinderScorecard() {
 
   if (!grinder) return null;
 
+  const freshGrinder = scorecardData?.grinder || grinder;
   const checkpointStats = scorecardData?.checkpointCompliance || scorecardData?.checkpointStats;
   const reports = performanceReports || [];
   const orderLogs: any[] = scorecardData?.orderLogs || [];
 
-  const qualityScore = grinder.avgQualityRating != null ? Number(grinder.avgQualityRating) : 0;
-  const onTimeRate = grinder.onTimeRate != null ? Number(grinder.onTimeRate) : 0;
-  const completionRate = grinder.completionRate != null ? Number(grinder.completionRate) : 0;
-  const winRate = grinder.winRate != null ? Number(grinder.winRate) : 0;
-  const dailyUpdateCompliance = grinder.dailyUpdateCompliance != null ? Number(grinder.dailyUpdateCompliance) : 0;
+  const qualityScore = freshGrinder.avgQualityRating != null ? Number(freshGrinder.avgQualityRating) : 0;
+  const onTimeRate = freshGrinder.onTimeRate != null ? Number(freshGrinder.onTimeRate) : 0;
+  const completionRate = freshGrinder.completionRate != null ? Number(freshGrinder.completionRate) : 0;
+  const winRate = freshGrinder.winRate != null ? Number(freshGrinder.winRate) : 0;
+  const dailyUpdateCompliance = freshGrinder.dailyUpdateCompliance != null ? Number(freshGrinder.dailyUpdateCompliance) : 0;
+  const utilization = freshGrinder.utilization != null ? Number(freshGrinder.utilization) : 0;
+  const activeOrders = freshGrinder.activeOrders || 0;
+  const capacity = freshGrinder.capacity || 0;
+  const totalEarnings = freshGrinder.totalEarnings != null ? Number(freshGrinder.totalEarnings) : 0;
+  const tier = freshGrinder.tier || "Bronze";
 
   const grade = getGradeLetter(qualityScore);
 
@@ -116,6 +122,25 @@ export default function GrinderScorecard() {
           </div>
         </CardContent>
       </Card>
+      </FadeInUp>
+
+      <FadeInUp>
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4">
+        {[
+          { label: "Active / Capacity", value: `${activeOrders} / ${capacity}`, sub: `${utilization.toFixed(0)}% utilization` },
+          { label: "Tier", value: tier, sub: freshGrinder.ordersAssignedL7D != null ? `${freshGrinder.ordersAssignedL7D} orders (7d)` : undefined },
+          { label: "Total Orders", value: String(freshGrinder.totalOrders || 0), sub: `${freshGrinder.completedOrders || 0} completed` },
+          { label: "Total Earnings", value: `$${totalEarnings.toFixed(2)}`, sub: undefined },
+        ].map((stat, i) => (
+          <Card key={i} className="border-0 bg-white/[0.03] border border-white/[0.06]" data-testid={`card-stat-${stat.label.toLowerCase().replace(/[\s\/]/g, '-')}`}>
+            <CardContent className="p-4">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-white/40">{stat.label}</p>
+              <p className="text-lg sm:text-xl font-bold mt-1">{stat.value}</p>
+              {stat.sub && <p className="text-[10px] text-white/30 mt-0.5">{stat.sub}</p>}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
       </FadeInUp>
 
       <FadeInUp>

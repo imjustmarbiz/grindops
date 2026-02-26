@@ -3795,7 +3795,11 @@ export async function registerRoutes(
     try {
       const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      await recalcGrinderStats(myGrinder.id);
+      myGrinder = await storage.getGrinder(myGrinder.id) as any;
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
 
       const reports = await storage.getPerformanceReports(myGrinder.id);

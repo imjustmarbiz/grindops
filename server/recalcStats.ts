@@ -152,6 +152,7 @@ export async function recalcGrinderStats(grinderId: string) {
     avgQualityRating: qualityScore.toString(),
     winRate: winRate.toFixed(1),
     totalEarnings: totalEarnings.toFixed(2),
+    dailyUpdateCompliance: updateComplianceRate.toFixed(1),
     ordersAssignedL7D,
     utilization,
     tier: autoTier,
