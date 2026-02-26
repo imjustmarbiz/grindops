@@ -45,6 +45,7 @@ export function useGrinderData() {
   const strikeLogs = profile?.strikeLogs || [];
   const strikeAppeals = profile?.strikeAppeals || [];
   const alerts = profile?.alerts || [];
+  const systemNotifications = profile?.systemNotifications || [];
   const eliteRequests = profile?.eliteRequests || [];
   const eliteCoaching = profile?.eliteCoaching;
   const unreadAlertCount = profile?.unreadAlertCount || 0;
@@ -151,6 +152,15 @@ export function useGrinderData() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const markNotifReadMutation = useMutation({
+    mutationFn: async (notifId: string) => {
+      const res = await apiRequest("POST", `/api/notifications/${notifId}/read`, {});
+      return res.json();
+    },
+    onSuccess: () => invalidate(),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const ackStrikeMutation = useMutation({
     mutationFn: async (strikeId: string) => {
       const res = await apiRequest("POST", `/api/grinder/me/strikes/${strikeId}/ack`, {});
@@ -208,6 +218,7 @@ export function useGrinderData() {
     strikeLogs,
     strikeAppeals,
     alerts,
+    systemNotifications,
     eliteRequests,
     eliteCoaching,
     unreadAlertCount,
@@ -226,6 +237,7 @@ export function useGrinderData() {
     markCompleteMutation,
     eliteRequestMutation,
     markAlertReadMutation,
+    markNotifReadMutation,
     ackStrikeMutation,
     placeBidMutation,
     availabilityMutation,

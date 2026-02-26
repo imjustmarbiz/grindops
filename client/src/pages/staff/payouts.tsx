@@ -66,6 +66,8 @@ export default function StaffPayouts() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterGrinder, setFilterGrinder] = useState("");
   const [filterMethod, setFilterMethod] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   const [reduceDialog, setReduceDialog] = useState<{ id: string; grinder: string; amount: number; orderId: string } | null>(null);
   const [reduceAmount, setReduceAmount] = useState("");
@@ -140,6 +142,16 @@ export default function StaffPayouts() {
       const grinder = allGrinders.find((g: any) => g.id === p.grinderId);
       const name = (grinder?.name || p.grinderId || "").toLowerCase();
       if (!name.includes(filterGrinder.trim().toLowerCase())) return false;
+    }
+    if (filterDateFrom) {
+      const from = new Date(filterDateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (new Date(p.createdAt) < from) return false;
+    }
+    if (filterDateTo) {
+      const to = new Date(filterDateTo);
+      to.setHours(23, 59, 59, 999);
+      if (new Date(p.createdAt) > to) return false;
     }
     return true;
   });
@@ -236,11 +248,28 @@ export default function StaffPayouts() {
             className="w-[200px] bg-background/50 border-white/10"
             data-testid="input-filter-grinder"
           />
-          {(filterStatus !== "all" || filterGrinder || filterMethod !== "all") && (
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="w-[150px] bg-background/50 border-white/10 text-sm"
+              data-testid="input-filter-date-from"
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="w-[150px] bg-background/50 border-white/10 text-sm"
+              data-testid="input-filter-date-to"
+            />
+          </div>
+          {(filterStatus !== "all" || filterGrinder || filterMethod !== "all" || filterDateFrom || filterDateTo) && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setFilterStatus("all"); setFilterGrinder(""); setFilterMethod("all"); }}
+              onClick={() => { setFilterStatus("all"); setFilterGrinder(""); setFilterMethod("all"); setFilterDateFrom(""); setFilterDateTo(""); }}
               className="text-xs text-muted-foreground gap-1"
               data-testid="button-clear-filters"
             >

@@ -1,14 +1,16 @@
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Eye, Loader2 } from "lucide-react";
+import { Bell, Eye, ExternalLink, Loader2 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { useLocation } from "wouter";
 
 export default function GrinderNotifications() {
   const {
-    alerts, unreadAlertCount, isLoading, isElite,
-    markAlertReadMutation,
+    alerts, systemNotifications, unreadAlertCount, isLoading, isElite,
+    markAlertReadMutation, markNotifReadMutation,
   } = useGrinderData();
+  const [, navigate] = useLocation();
 
   if (isLoading) {
     return (
@@ -17,6 +19,49 @@ export default function GrinderNotifications() {
       </div>
     );
   }
+
+  const allItems = [
+    ...alerts.map((a: any) => ({
+      id: a.id,
+      kind: "alert" as const,
+      title: a.title,
+      body: a.message,
+      severity: a.severity || "info",
+      isRead: a.isRead,
+      linkUrl: null as string | null,
+      createdAt: a.createdAt,
+    })),
+    ...systemNotifications.map((n: any) => ({
+      id: n.id,
+      kind: "notification" as const,
+      title: n.title,
+      body: n.body,
+      severity: n.severity || "info",
+      isRead: !!n.isRead,
+      linkUrl: n.linkUrl as string | null,
+      createdAt: n.createdAt,
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const handleClick = (item: typeof allItems[0]) => {
+    if (!item.isRead) {
+      if (item.kind === "alert") {
+        markAlertReadMutation.mutate(item.id);
+      } else {
+        markNotifReadMutation.mutate(item.id);
+      }
+    }
+    if (item.linkUrl) {
+      navigate(item.linkUrl);
+    }
+  };
+
+  const severityColors: Record<string, string> = {
+    info: "text-blue-400 bg-blue-500/[0.06] border-blue-500/20",
+    warning: "text-yellow-400 bg-yellow-500/[0.06] border-yellow-500/20",
+    success: "text-green-400 bg-green-500/[0.06] border-green-500/20",
+    danger: "text-red-400 bg-red-500/[0.06] border-red-500/20",
+  };
 
   return (
     <AnimatedPage>
@@ -50,7 +95,7 @@ export default function GrinderNotifications() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {alerts.length === 0 ? (
+              {allItems.length === 0 ? (
                 <div className="text-center py-10">
                   <div className="w-14 h-14 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">
                     <Bell className="w-7 h-7 text-white/20" />
@@ -60,30 +105,25 @@ export default function GrinderNotifications() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {alerts.map((alert: any) => {
-                    const severityColors: Record<string, string> = {
-                      info: "text-blue-400 bg-blue-500/[0.06] border-blue-500/20",
-                      warning: "text-yellow-400 bg-yellow-500/[0.06] border-yellow-500/20",
-                      success: "text-green-400 bg-green-500/[0.06] border-green-500/20",
-                      danger: "text-red-400 bg-red-500/[0.06] border-red-500/20",
-                    };
-                    const colors = severityColors[alert.severity] || severityColors.info;
+                  {allItems.map((item) => {
+                    const colors = severityColors[item.severity] || severityColors.info;
                     return (
                       <div
-                        key={alert.id}
-                        className={`flex items-start gap-3 p-3.5 rounded-lg border ${colors} cursor-pointer transition-all duration-200 ${alert.isRead ? "opacity-50 hover:opacity-70" : "hover:brightness-110"}`}
-                        onClick={() => { if (!alert.isRead) markAlertReadMutation.mutate(alert.id); }}
-                        data-testid={`card-alert-${alert.id}`}
+                        key={`${item.kind}-${item.id}`}
+                        className={`flex items-start gap-3 p-3.5 rounded-lg border ${colors} cursor-pointer transition-all duration-200 ${item.isRead ? "opacity-50 hover:opacity-70" : "hover:brightness-110"}`}
+                        onClick={() => handleClick(item)}
+                        data-testid={`card-${item.kind}-${item.id}`}
                       >
-                        {!alert.isRead && <span className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0 animate-pulse" />}
-                        {alert.isRead && <Eye className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />}
+                        {!item.isRead && <span className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0 animate-pulse" />}
+                        {item.isRead && <Eye className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm">{alert.title}</span>
-                            <Badge variant="outline" className={`text-[10px] ${colors}`}>{alert.severity}</Badge>
+                            <span className="font-medium text-sm">{item.title}</span>
+                            <Badge variant="outline" className={`text-[10px] ${colors}`}>{item.severity}</Badge>
+                            {item.linkUrl && <ExternalLink className="w-3 h-3 text-muted-foreground/60" />}
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
-                          <p className="text-xs text-muted-foreground/60 mt-1.5">{new Date(alert.createdAt).toLocaleString()}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{item.body}</p>
+                          <p className="text-xs text-muted-foreground/60 mt-1.5">{new Date(item.createdAt).toLocaleString()}</p>
                         </div>
                       </div>
                     );

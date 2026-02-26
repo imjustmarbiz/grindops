@@ -14,7 +14,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Order Flow:** Visual lifecycle management for orders with distinct status indicators.
 - **Payout Workflow:** A multi-step confirmation process for payouts including approval, dispute resolution, and staff review.
 - **Chat Messaging System:** Integrated group chat and DM functionality with file attachments and @mentions.
-- **Notifications:** Lower-third popups with distinct sounds for various event types.
+- **Notifications:** Lower-third popups with distinct sounds for various event types. System notifications support `linkUrl` for clickable navigation on both grinder and staff notification pages. Grinder notifications merge staff alerts and system notifications into a unified inbox.
 - **Activity Calendar:** Reusable component for tracking activities.
 - **Help Tooltips:** Contextual `HelpTip` components on grinder pages for on-demand explanations. Removed from staff/owner pages to reduce visual clutter.
 
@@ -46,7 +46,7 @@ The system employs a modern full-stack architecture. The frontend is built with 
 - **Strike Appeals System:** Grinders can appeal strikes, which staff can review, approve, or deny, with audit trails.
 - **Operations Guides:** Slide-deck-style presentation pages for both Grinders and Staff, providing step-by-step instructions and key feature descriptions.
 - **Payment Proof on Mark Paid:** Staff/owners can upload payment proof when marking a payout as paid.
-- **Payout Filters:** Staff payouts page includes status and grinder name filters applied before categorization, with a clear button.
+- **Payout Filters:** Staff payouts page includes status, grinder name, payment method, and date range filters applied before categorization, with a clear button.
 - **Badge Management Page:** Dedicated `/badges` page for staff/owners to search grinders and award/remove achievement badges. Both auto-earned and manual staff-awarded badge types. Schema: `grinder_badges` table.
 - **Owner Dashboard Upgrade:** Owner overview has a premium hero header with Crown icon and gold accents, plus quick-action cards for Business, Payouts, Admin, and Badges. Owner theme uses darker card backgrounds, red-tinted borders, and red accent color.
 - **Staff Overview Page:** Owner-only `/staff-overview` page showing team KPIs (total staff, actions today/7d/all-time, pending/completed tasks), individual member cards with activity bars, and a filtered staff activity audit log. Route: `GET /api/owner/staff-members` (requireOwner). Sidebar: after To-Do List, owner-only.

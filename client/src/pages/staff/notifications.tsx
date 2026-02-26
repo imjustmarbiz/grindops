@@ -6,12 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell, Eye, EyeOff, Loader2, CheckCheck, Filter, X } from "lucide-react";
+import { Bell, Eye, EyeOff, ExternalLink, Loader2, CheckCheck, Filter, X } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { useLocation } from "wouter";
 import type { Notification } from "@shared/schema";
 
 export default function StaffNotifications() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const userId = (user as any)?.discordId || user?.id || "";
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -171,7 +173,11 @@ export default function StaffNotifications() {
                     return (
                       <div
                         key={notif.id}
-                        className={`flex items-start gap-3 p-3.5 rounded-lg border ${colors} transition-all duration-200 ${read ? "opacity-50 hover:opacity-70" : "hover:brightness-110"}`}
+                        className={`flex items-start gap-3 p-3.5 rounded-lg border ${colors} cursor-pointer transition-all duration-200 ${read ? "opacity-50 hover:opacity-70" : "hover:brightness-110"}`}
+                        onClick={() => {
+                          if (!read) toggleRead(notif);
+                          if (notif.linkUrl) navigate(notif.linkUrl);
+                        }}
                         data-testid={`card-notification-${notif.id}`}
                       >
                         <div className="flex-1 min-w-0">
@@ -179,6 +185,7 @@ export default function StaffNotifications() {
                             {!read && <span className="w-2 h-2 rounded-full bg-primary shrink-0 animate-pulse" />}
                             <span className="font-medium text-sm" data-testid={`text-notification-title-${notif.id}`}>{notif.title}</span>
                             <Badge variant="outline" className={`text-[10px] ${colors}`} data-testid={`badge-severity-${notif.id}`}>{notif.severity}</Badge>
+                            {notif.linkUrl && <ExternalLink className="w-3 h-3 text-muted-foreground/60" />}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1" data-testid={`text-notification-body-${notif.id}`}>{notif.body}</p>
                           <p className="text-xs text-muted-foreground/60 mt-1.5">{new Date(notif.createdAt).toLocaleString()}</p>
@@ -188,7 +195,7 @@ export default function StaffNotifications() {
                             variant="ghost"
                             size="sm"
                             className="shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                            onClick={() => toggleRead(notif)}
+                            onClick={(e) => { e.stopPropagation(); toggleRead(notif); }}
                             disabled={markReadMutation.isPending}
                             data-testid={`button-mark-read-${notif.id}`}
                           >

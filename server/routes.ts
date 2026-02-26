@@ -526,6 +526,7 @@ export async function registerRoutes(
         type: "new_order",
         title: "New Order Available",
         body: `A new order (#${result.mgtOrderNumber || result.id}) is now open for bidding.`,
+        linkUrl: "/grinder/orders",
         icon: "package",
         severity: "info",
       });
@@ -1141,6 +1142,20 @@ export async function registerRoutes(
           }
 
           const orderLabel = order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
+
+          const winnerGrinder = await storage.getGrinder(bid.grinderId);
+          if (winnerGrinder) {
+            createSystemNotification({
+              userId: winnerGrinder.discordUserId,
+              type: "bid_accepted",
+              title: "Bid Accepted!",
+              body: `Your bid of $${bid.bidAmount} on order ${orderLabel} was accepted. You've been assigned!`,
+              linkUrl: "/grinder/orders",
+              icon: "check-circle",
+              severity: "success",
+            });
+          }
+
           const allBids = await storage.getBids();
           const otherBids = allBids.filter(b => b.orderId === bid.orderId && b.id !== bid.id && (b.status === "Pending" || b.status === "Countered"));
           for (const ob of otherBids) {
@@ -1154,6 +1169,18 @@ export async function registerRoutes(
               severity: "warning",
               createdBy: "system",
             });
+            const loserGrinder = await storage.getGrinder(ob.grinderId);
+            if (loserGrinder) {
+              createSystemNotification({
+                userId: loserGrinder.discordUserId,
+                type: "bid_denied",
+                title: "Bid Not Selected",
+                body: `Your bid of $${ob.bidAmount} on order ${orderLabel} was not selected.`,
+                linkUrl: "/grinder/orders",
+                icon: "x-circle",
+                severity: "warning",
+              });
+            }
           }
           if (otherBids.length > 0) {
             console.log(`[bids] Auto-denied ${otherBids.length} other bid(s) on order ${bid.orderId}`);
@@ -1506,6 +1533,7 @@ export async function registerRoutes(
     const myStrikeLogs = await storage.getStrikeLogs(myGrinder.id);
     const myStrikeAppeals = await storage.getStrikeAppeals(myGrinder.id);
     const myAlerts = await storage.getStaffAlerts(myGrinder.id);
+    const mySystemNotifications = await storage.getNotificationsForUser(user.id, "grinder");
     const myEliteRequests = await storage.getEliteRequests(myGrinder.id);
 
     const grinderRoles = (myGrinder as any).roles as string[] | null;
@@ -1792,7 +1820,11 @@ export async function registerRoutes(
       })),
       eliteRequests: myEliteRequests,
       eliteCoaching,
-      unreadAlertCount: unreadAlerts.length,
+      systemNotifications: mySystemNotifications.map((n: any) => ({
+        ...n,
+        isRead: Array.isArray(n.readBy) && n.readBy.includes(user.id),
+      })),
+      unreadAlertCount: unreadAlerts.length + mySystemNotifications.filter((n: any) => !Array.isArray(n.readBy) || !n.readBy.includes(user.id)).length,
       unackedStrikeCount: unackedStrikes.length,
       stats: {
         totalAssignments: myAssignments.length,
@@ -2420,6 +2452,30 @@ export async function registerRoutes(
       details: JSON.stringify({ status, grinderId: payoutReq.grinderId, amount: payoutReq.amount, orderId: payoutReq.orderId }),
     });
 
+    if (payoutReq.grinderId) {
+      const grinder = await storage.getGrinder(payoutReq.grinderId);
+      if (grinder) {
+        const notifMap: Record<string, { title: string; body: string; severity: string }> = {
+          "Approved": { title: "Payout Approved", body: `Your payout of $${payoutReq.amount} has been approved and is being processed.`, severity: "success" },
+          "Paid": { title: "Payout Sent", body: `Your payout of $${payoutReq.amount} has been sent${payoutReq.payoutPlatform ? ` via ${payoutReq.payoutPlatform}` : ""}.`, severity: "success" },
+          "Denied": { title: "Payout Denied", body: `Your payout request of $${payoutReq.amount} was denied. Contact staff for details.`, severity: "danger" },
+          "Pending Grinder Approval": { title: "Payout Pending Your Approval", body: `A payout of $${payoutReq.amount} is ready for your review.`, severity: "warning" },
+        };
+        const notif = notifMap[status];
+        if (notif) {
+          createSystemNotification({
+            userId: grinder.discordUserId,
+            type: status === "Paid" ? "payout_paid" : status === "Approved" ? "payout_approved" : status === "Denied" ? "payout_rejected" : "payout_pending",
+            title: notif.title,
+            body: notif.body,
+            linkUrl: "/grinder/payouts",
+            icon: "banknote",
+            severity: notif.severity,
+          });
+        }
+      }
+    }
+
     res.json(updated);
   });
 
@@ -2948,6 +3004,7 @@ export async function registerRoutes(
       type: "strike",
       title: action === "add" ? "Strike Received" : "Strike Removed",
       body: `${action === "add" ? "You received a strike" : "A strike was removed"}. Reason: ${reason}. Current strikes: ${newStrikes}.`,
+      linkUrl: "/grinder/status",
       icon: "alert-triangle",
       severity: action === "add" ? "danger" : "success",
     });
@@ -3035,6 +3092,7 @@ export async function registerRoutes(
             type: "strike",
             title: "Strike Appeal Approved",
             body: `Your appeal was approved. Strike removed. Current strikes: ${newStrikes}.`,
+            linkUrl: "/grinder/status",
             icon: "check-circle",
             severity: "success",
           });
@@ -3058,6 +3116,7 @@ export async function registerRoutes(
             type: "strike",
             title: "Strike Appeal Denied",
             body: `Your appeal was denied.${reviewNote ? ` Reason: ${reviewNote}` : ""}`,
+            linkUrl: "/grinder/status",
             icon: "x-circle",
             severity: "danger",
           });
