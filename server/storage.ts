@@ -257,12 +257,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteGrinder(id: string): Promise<boolean> {
+    await db.delete(activityCheckpoints).where(eq(activityCheckpoints.grinderId, id));
+    await db.delete(performanceReports).where(eq(performanceReports.grinderId, id));
+    await db.delete(orderUpdates).where(eq(orderUpdates.grinderId, id));
+    await db.delete(orderClaimRequests).where(eq(orderClaimRequests.grinderId, id));
+    await db.delete(reviewAccessCodes).where(eq(reviewAccessCodes.grinderId, id));
+    await db.delete(customerReviews).where(eq(customerReviews.grinderId, id));
+    await db.delete(grinderTasks).where(eq(grinderTasks.grinderId, id));
+    await db.delete(grinderBadges).where(eq(grinderBadges.grinderId, id));
+    await db.delete(payoutRequests).where(eq(payoutRequests.grinderId, id));
+    await db.delete(strikeAppeals).where(eq(strikeAppeals.grinderId, id));
+    await db.delete(strikeLogs).where(eq(strikeLogs.grinderId, id));
     await db.delete(bids).where(eq(bids.grinderId, id));
     await db.delete(assignments).where(eq(assignments.grinderId, id));
-    await db.delete(strikeLogs).where(eq(strikeLogs.grinderId, id));
     await db.delete(eliteRequests).where(eq(eliteRequests.grinderId, id));
-    await db.delete(orderUpdates).where(eq(orderUpdates.grinderId, id));
-    await db.delete(payoutRequests).where(eq(payoutRequests.grinderId, id));
     await db.delete(grinderPayoutMethods).where(eq(grinderPayoutMethods.grinderId, id));
     await db.delete(staffAlerts).where(eq(staffAlerts.grinderId, id));
     const [deleted] = await db.delete(grinders).where(eq(grinders.id, id)).returning();
