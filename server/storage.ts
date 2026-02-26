@@ -4,7 +4,7 @@ import {
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
   patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks,
-  deletionRequests, finePayments,
+  deletionRequests, finePayments, businessWallets, walletTransactions, businessPayouts, walletTransfers,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -36,6 +36,10 @@ import {
   type StaffTask, type InsertStaffTask,
   type DeletionRequest, type InsertDeletionRequest,
   type FinePayment, type InsertFinePayment,
+  type BusinessWallet, type InsertBusinessWallet,
+  type WalletTransaction, type InsertWalletTransaction,
+  type BusinessPayout, type InsertBusinessPayout,
+  type WalletTransfer, type InsertWalletTransfer,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -196,6 +200,22 @@ export interface IStorage {
   getFinePayments(grinderId?: string): Promise<FinePayment[]>;
   createFinePayment(payment: InsertFinePayment): Promise<FinePayment>;
   updateFinePayment(id: string, data: Partial<FinePayment>): Promise<FinePayment | undefined>;
+
+  getWallets(): Promise<BusinessWallet[]>;
+  getWallet(id: string): Promise<BusinessWallet | undefined>;
+  createWallet(data: InsertBusinessWallet): Promise<BusinessWallet>;
+  updateWallet(id: string, data: Partial<BusinessWallet>): Promise<BusinessWallet | undefined>;
+
+  getWalletTransactions(filters?: { walletId?: string; category?: string; type?: string; startDate?: Date; endDate?: Date; orderId?: string }): Promise<WalletTransaction[]>;
+  createWalletTransaction(data: InsertWalletTransaction): Promise<WalletTransaction>;
+
+  getBusinessPayouts(filters?: { status?: string; category?: string; recipientRole?: string; walletId?: string; startDate?: Date; endDate?: Date }): Promise<BusinessPayout[]>;
+  createBusinessPayout(data: InsertBusinessPayout): Promise<BusinessPayout>;
+  updateBusinessPayout(id: string, data: Partial<BusinessPayout>): Promise<BusinessPayout | undefined>;
+
+  getWalletTransfers(): Promise<WalletTransfer[]>;
+  createWalletTransfer(data: InsertWalletTransfer): Promise<WalletTransfer>;
+  updateWalletTransfer(id: string, data: Partial<WalletTransfer>): Promise<WalletTransfer | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1471,6 +1491,88 @@ export class DatabaseStorage implements IStorage {
 
   async updateFinePayment(id: string, data: Partial<FinePayment>): Promise<FinePayment | undefined> {
     const [updated] = await db.update(finePayments).set(data).where(eq(finePayments.id, id)).returning();
+    return updated;
+  }
+
+  async getWallets(): Promise<BusinessWallet[]> {
+    return await db.select().from(businessWallets).orderBy(desc(businessWallets.createdAt));
+  }
+
+  async getWallet(id: string): Promise<BusinessWallet | undefined> {
+    const [wallet] = await db.select().from(businessWallets).where(eq(businessWallets.id, id));
+    return wallet;
+  }
+
+  async createWallet(data: InsertBusinessWallet): Promise<BusinessWallet> {
+    const [created] = await db.insert(businessWallets).values(data).returning();
+    return created;
+  }
+
+  async updateWallet(id: string, data: Partial<BusinessWallet>): Promise<BusinessWallet | undefined> {
+    const [updated] = await db.update(businessWallets).set(data).where(eq(businessWallets.id, id)).returning();
+    return updated;
+  }
+
+  async getWalletTransactions(filters?: { walletId?: string; category?: string; type?: string; startDate?: Date; endDate?: Date; orderId?: string }): Promise<WalletTransaction[]> {
+    if (!filters) {
+      return await db.select().from(walletTransactions).orderBy(desc(walletTransactions.createdAt));
+    }
+    const conditions = [];
+    if (filters.walletId) conditions.push(eq(walletTransactions.walletId, filters.walletId));
+    if (filters.category) conditions.push(eq(walletTransactions.category, filters.category));
+    if (filters.type) conditions.push(eq(walletTransactions.type, filters.type));
+    if (filters.startDate) conditions.push(gte(walletTransactions.createdAt, filters.startDate));
+    if (filters.endDate) conditions.push(lte(walletTransactions.createdAt, filters.endDate));
+    if (filters.orderId) conditions.push(eq(walletTransactions.relatedOrderId, filters.orderId));
+    if (conditions.length === 0) {
+      return await db.select().from(walletTransactions).orderBy(desc(walletTransactions.createdAt));
+    }
+    return await db.select().from(walletTransactions).where(and(...conditions)).orderBy(desc(walletTransactions.createdAt));
+  }
+
+  async createWalletTransaction(data: InsertWalletTransaction): Promise<WalletTransaction> {
+    const [created] = await db.insert(walletTransactions).values(data).returning();
+    return created;
+  }
+
+  async getBusinessPayouts(filters?: { status?: string; category?: string; recipientRole?: string; walletId?: string; startDate?: Date; endDate?: Date }): Promise<BusinessPayout[]> {
+    if (!filters) {
+      return await db.select().from(businessPayouts).orderBy(desc(businessPayouts.createdAt));
+    }
+    const conditions = [];
+    if (filters.status) conditions.push(eq(businessPayouts.status, filters.status));
+    if (filters.category) conditions.push(eq(businessPayouts.category, filters.category));
+    if (filters.recipientRole) conditions.push(eq(businessPayouts.recipientRole, filters.recipientRole));
+    if (filters.walletId) conditions.push(eq(businessPayouts.walletId, filters.walletId));
+    if (filters.startDate) conditions.push(gte(businessPayouts.createdAt, filters.startDate));
+    if (filters.endDate) conditions.push(lte(businessPayouts.createdAt, filters.endDate));
+    if (conditions.length === 0) {
+      return await db.select().from(businessPayouts).orderBy(desc(businessPayouts.createdAt));
+    }
+    return await db.select().from(businessPayouts).where(and(...conditions)).orderBy(desc(businessPayouts.createdAt));
+  }
+
+  async createBusinessPayout(data: InsertBusinessPayout): Promise<BusinessPayout> {
+    const [created] = await db.insert(businessPayouts).values(data).returning();
+    return created;
+  }
+
+  async updateBusinessPayout(id: string, data: Partial<BusinessPayout>): Promise<BusinessPayout | undefined> {
+    const [updated] = await db.update(businessPayouts).set(data).where(eq(businessPayouts.id, id)).returning();
+    return updated;
+  }
+
+  async getWalletTransfers(): Promise<WalletTransfer[]> {
+    return await db.select().from(walletTransfers).orderBy(desc(walletTransfers.createdAt));
+  }
+
+  async createWalletTransfer(data: InsertWalletTransfer): Promise<WalletTransfer> {
+    const [created] = await db.insert(walletTransfers).values(data).returning();
+    return created;
+  }
+
+  async updateWalletTransfer(id: string, data: Partial<WalletTransfer>): Promise<WalletTransfer | undefined> {
+    const [updated] = await db.update(walletTransfers).set(data).where(eq(walletTransfers.id, id)).returning();
     return updated;
   }
 }

@@ -738,6 +738,100 @@ export type StaffTask = typeof staffTasks.$inferSelect;
 export type FinePayment = typeof finePayments.$inferSelect;
 export type InsertFinePayment = z.infer<typeof insertFinePaymentSchema>;
 
+export const WALLET_TYPES = ["PayPal", "Zelle", "Chase Bank", "Cash App", "Venmo", "Bank Account", "Crypto", "Other"] as const;
+export const TRANSACTION_TYPES = ["deposit", "withdrawal", "transfer_in", "transfer_out", "grinder_payout", "business_payout", "fine_received", "order_income", "adjustment"] as const;
+export const TRANSACTION_CATEGORIES = ["staff_pay", "owner_pay", "commission", "bot_maintenance", "grinder_payout", "fine", "order_income", "transfer", "subscription", "refund", "misc"] as const;
+export const BUSINESS_PAYOUT_CATEGORIES = ["staff_pay", "owner_pay", "commission", "bot_maintenance", "subscription", "misc"] as const;
+export const BUSINESS_PAYOUT_ROLES = ["staff", "owner", "creator", "vendor", "misc"] as const;
+
+export const businessWallets = pgTable("business_wallets", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  accountIdentifier: text("account_identifier"),
+  balance: numeric("balance").notNull().default("0"),
+  startingBalance: numeric("starting_balance").notNull().default("0"),
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBusinessWalletSchema = createInsertSchema(businessWallets).omit({ createdAt: true, updatedAt: true });
+export type InsertBusinessWallet = z.infer<typeof insertBusinessWalletSchema>;
+export type BusinessWallet = typeof businessWallets.$inferSelect;
+
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: varchar("id").primaryKey(),
+  walletId: varchar("wallet_id").references(() => businessWallets.id).notNull(),
+  type: text("type").notNull(),
+  amount: numeric("amount").notNull(),
+  balanceBefore: numeric("balance_before").notNull(),
+  balanceAfter: numeric("balance_after").notNull(),
+  category: text("category").notNull().default("misc"),
+  description: text("description"),
+  relatedOrderId: varchar("related_order_id"),
+  relatedPayoutId: varchar("related_payout_id"),
+  relatedGrinderId: varchar("related_grinder_id"),
+  relatedTransferId: varchar("related_transfer_id"),
+  performedBy: varchar("performed_by").notNull(),
+  performedByName: text("performed_by_name").notNull(),
+  performedByRole: text("performed_by_role"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({ createdAt: true });
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+
+export const businessPayouts = pgTable("business_payouts", {
+  id: varchar("id").primaryKey(),
+  walletId: varchar("wallet_id").references(() => businessWallets.id),
+  recipientName: text("recipient_name").notNull(),
+  recipientRole: text("recipient_role").notNull(),
+  category: text("category").notNull(),
+  amount: numeric("amount").notNull(),
+  description: text("description"),
+  orderId: varchar("order_id"),
+  status: text("status").notNull().default("pending"),
+  requestedBy: varchar("requested_by").notNull(),
+  requestedByName: text("requested_by_name").notNull(),
+  approvedBy: varchar("approved_by"),
+  approvedByName: text("approved_by_name"),
+  approvedAt: timestamp("approved_at"),
+  paidAt: timestamp("paid_at"),
+  rejectedBy: varchar("rejected_by"),
+  rejectedByName: text("rejected_by_name"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertBusinessPayoutSchema = createInsertSchema(businessPayouts).omit({ approvedBy: true, approvedByName: true, approvedAt: true, paidAt: true, rejectedBy: true, rejectedByName: true, rejectedAt: true, rejectionReason: true, createdAt: true });
+export type InsertBusinessPayout = z.infer<typeof insertBusinessPayoutSchema>;
+export type BusinessPayout = typeof businessPayouts.$inferSelect;
+
+export const walletTransfers = pgTable("wallet_transfers", {
+  id: varchar("id").primaryKey(),
+  fromWalletId: varchar("from_wallet_id").references(() => businessWallets.id).notNull(),
+  toWalletId: varchar("to_wallet_id").references(() => businessWallets.id).notNull(),
+  amount: numeric("amount").notNull(),
+  description: text("description"),
+  performedBy: varchar("performed_by").notNull(),
+  performedByName: text("performed_by_name").notNull(),
+  status: text("status").notNull().default("pending"),
+  approvedBy: varchar("approved_by"),
+  approvedByName: text("approved_by_name"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertWalletTransferSchema = createInsertSchema(walletTransfers).omit({ approvedBy: true, approvedByName: true, approvedAt: true, createdAt: true });
+export type InsertWalletTransfer = z.infer<typeof insertWalletTransferSchema>;
+export type WalletTransfer = typeof walletTransfers.$inferSelect;
+
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
   const lower = platform.toLowerCase().trim();

@@ -42,6 +42,7 @@ const staffNavItems = [
   { title: "Assignments", url: "/assignments", icon: FileCheck },
   { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
+  { title: "Wallets", url: "/wallets", icon: DollarSign },
   { title: "Payouts", url: "/payouts", icon: Wallet },
   { title: "Reviews", url: "/reviews", icon: Star },
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
@@ -101,6 +102,7 @@ function AppSidebar() {
   const navItems = isStaff
     ? staffNavItems.filter(item => {
         if (item.url === "/business") return canSeeBusiness;
+        if (item.url === "/wallets") return !BUSINESS_BLOCKED_IDS.includes(userId);
         if (item.url === "/staff-overview") return isOwner;
         return true;
       })

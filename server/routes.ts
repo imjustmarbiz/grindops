@@ -2572,7 +2572,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/staff/payout-requests/:id", requireStaff, async (req, res) => {
-    const { status, reviewedBy, paymentProofUrl } = req.body;
+    const { status, reviewedBy, paymentProofUrl, walletId } = req.body;
     const updateData: any = {
       status,
       reviewedBy: reviewedBy || "staff",
@@ -2595,6 +2595,37 @@ export async function registerRoutes(
       await recalcGrinderStats(payoutReq.grinderId);
       if (payoutReq.orderId) {
         await storage.updateOrderStatus(payoutReq.orderId, "Paid Out");
+      }
+      if (walletId) {
+        try {
+          const wallet = await storage.getWallet(walletId);
+          if (wallet) {
+            const payAmount = parseFloat(payoutReq.amount?.toString() || "0");
+            const currentBal = parseFloat(wallet.balance?.toString() || "0");
+            const newBal = currentBal - payAmount;
+            const actorName = reviewedBy || getActorName(req);
+            const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+            await storage.createWalletTransaction({
+              id: `WTX-${Date.now().toString(36)}-gpo`,
+              walletId: wallet.id,
+              type: "grinder_payout",
+              amount: payAmount.toFixed(2),
+              balanceBefore: currentBal.toFixed(2),
+              balanceAfter: newBal.toFixed(2),
+              category: "grinder_payout",
+              description: `Grinder payout to ${payoutReq.grinderId}${payoutReq.orderId ? ` for order ${payoutReq.orderId}` : ""}`,
+              relatedPayoutId: req.params.id,
+              relatedOrderId: payoutReq.orderId || null,
+              relatedGrinderId: payoutReq.grinderId,
+              performedBy: actorId,
+              performedByName: actorName,
+              performedByRole: (req.user as any)?.role || "staff",
+            });
+            await storage.updateWallet(wallet.id, { balance: newBal.toFixed(2), updatedAt: new Date() });
+          }
+        } catch (e: any) {
+          console.error("[wallet] Failed to create grinder payout transaction:", e.message);
+        }
       }
     }
 
@@ -3376,6 +3407,36 @@ export async function registerRoutes(
       const unpaidLogs = logs.filter((l: any) => l.grinderId === req.params.grinderId && !l.finePaid && parseFloat(l.fineAmount?.toString() || "0") > 0);
       for (const log of unpaidLogs) {
         await storage.updateStrikeLog(log.id, { finePaid: true, finePaidAt: new Date() });
+      }
+
+      const { walletId } = req.body;
+      if (walletId) {
+        try {
+          const wallet = await storage.getWallet(walletId);
+          if (wallet) {
+            const currentBal = parseFloat(wallet.balance?.toString() || "0");
+            const newBal = currentBal + currentFine;
+            const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+            const actorName = getActorName(req);
+            await storage.createWalletTransaction({
+              id: `WTX-${Date.now().toString(36)}-fine`,
+              walletId: wallet.id,
+              type: "fine_received",
+              amount: currentFine.toFixed(2),
+              balanceBefore: currentBal.toFixed(2),
+              balanceAfter: newBal.toFixed(2),
+              category: "fine",
+              description: `Fine payment received from grinder ${grinder.name || req.params.grinderId}`,
+              relatedGrinderId: req.params.grinderId,
+              performedBy: actorId,
+              performedByName: actorName,
+              performedByRole: (req.user as any)?.role || "staff",
+            });
+            await storage.updateWallet(wallet.id, { balance: newBal.toFixed(2), updatedAt: new Date() });
+          }
+        } catch (e: any) {
+          console.error("[wallet] Failed to create fine received transaction:", e.message);
+        }
       }
 
       await storage.createStaffAlert({
@@ -5718,6 +5779,416 @@ export async function registerRoutes(
       res.json(task);
     } catch (error) {
       res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  // ============================================
+  // WALLET SYSTEM ROUTES
+  // ============================================
+
+  app.get("/api/wallets", requireStaff, async (req, res) => {
+    try {
+      const wallets = await storage.getWallets();
+      const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner) {
+        const sanitized = wallets.map(w => ({ ...w, accountIdentifier: null }));
+        return res.json(sanitized);
+      }
+      res.json(wallets);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch wallets" });
+    }
+  });
+
+  app.post("/api/wallets", requireOwner, async (req, res) => {
+    try {
+      const { name, type, accountIdentifier, startingBalance, notes } = req.body;
+      if (!name || !type) return res.status(400).json({ message: "Name and type are required" });
+      const actorName = getActorName(req);
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const id = `WAL-${Date.now().toString(36)}`;
+      const balance = startingBalance || "0";
+      const wallet = await storage.createWallet({
+        id,
+        name,
+        type,
+        accountIdentifier: accountIdentifier || null,
+        balance,
+        startingBalance: balance,
+        notes: notes || null,
+        isActive: true,
+        createdBy: actorId,
+        createdByName: actorName,
+      });
+      if (parseFloat(balance) > 0) {
+        await storage.createWalletTransaction({
+          id: `WTX-${Date.now().toString(36)}-init`,
+          walletId: id,
+          type: "deposit",
+          amount: balance,
+          balanceBefore: "0",
+          balanceAfter: balance,
+          category: "misc",
+          description: "Starting balance",
+          performedBy: actorId,
+          performedByName: actorName,
+          performedByRole: "owner",
+        });
+      }
+      res.status(201).json(wallet);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create wallet" });
+    }
+  });
+
+  app.patch("/api/wallets/:id", requireOwner, async (req, res) => {
+    try {
+      const wallet = await storage.getWallet(req.params.id);
+      if (!wallet) return res.status(404).json({ message: "Wallet not found" });
+      const updates: any = { updatedAt: new Date() };
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.type !== undefined) updates.type = req.body.type;
+      if (req.body.accountIdentifier !== undefined) updates.accountIdentifier = req.body.accountIdentifier;
+      if (req.body.notes !== undefined) updates.notes = req.body.notes;
+      if (req.body.isActive !== undefined) updates.isActive = req.body.isActive;
+      if (req.body.startingBalance !== undefined) updates.startingBalance = req.body.startingBalance;
+      const updated = await storage.updateWallet(req.params.id, updates);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update wallet" });
+    }
+  });
+
+  app.post("/api/wallets/:id/adjust", requireOwner, async (req, res) => {
+    try {
+      const wallet = await storage.getWallet(req.params.id);
+      if (!wallet) return res.status(404).json({ message: "Wallet not found" });
+      const { amount, type, description, category, relatedOrderId } = req.body;
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ message: "Invalid amount" });
+      if (!type || !["deposit", "withdrawal"].includes(type)) return res.status(400).json({ message: "Type must be deposit or withdrawal" });
+      const currentBalance = parseFloat(wallet.balance?.toString() || "0");
+      const newBalance = type === "deposit" ? currentBalance + numAmount : currentBalance - numAmount;
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      const txId = `WTX-${Date.now().toString(36)}`;
+      await storage.createWalletTransaction({
+        id: txId,
+        walletId: wallet.id,
+        type: type === "deposit" ? "deposit" : "withdrawal",
+        amount: numAmount.toFixed(2),
+        balanceBefore: currentBalance.toFixed(2),
+        balanceAfter: newBalance.toFixed(2),
+        category: category || "misc",
+        description: description || (type === "deposit" ? "Manual deposit" : "Manual withdrawal"),
+        relatedOrderId: relatedOrderId || null,
+        performedBy: actorId,
+        performedByName: actorName,
+        performedByRole: "owner",
+      });
+      const updated = await storage.updateWallet(wallet.id, { balance: newBalance.toFixed(2), updatedAt: new Date() });
+      res.json({ wallet: updated, transaction: { id: txId } });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to adjust wallet" });
+    }
+  });
+
+  app.post("/api/wallets/transfer", requireStaff, async (req, res) => {
+    try {
+      const { fromWalletId, toWalletId, amount, description } = req.body;
+      if (!fromWalletId || !toWalletId || fromWalletId === toWalletId) return res.status(400).json({ message: "Invalid wallet selection" });
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ message: "Invalid amount" });
+      const fromWallet = await storage.getWallet(fromWalletId);
+      const toWallet = await storage.getWallet(toWalletId);
+      if (!fromWallet || !toWallet) return res.status(404).json({ message: "Wallet not found" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      const isOwner = (req.user as any)?.role === "owner";
+      const transferId = `TRF-${Date.now().toString(36)}`;
+      const status = isOwner ? "completed" : "pending";
+      await storage.createWalletTransfer({
+        id: transferId,
+        fromWalletId,
+        toWalletId,
+        amount: numAmount.toFixed(2),
+        description: description || null,
+        performedBy: actorId,
+        performedByName: actorName,
+        status,
+      });
+      if (isOwner) {
+        const fromBal = parseFloat(fromWallet.balance?.toString() || "0");
+        const toBal = parseFloat(toWallet.balance?.toString() || "0");
+        const newFromBal = fromBal - numAmount;
+        const newToBal = toBal + numAmount;
+        const ts = Date.now().toString(36);
+        await storage.createWalletTransaction({
+          id: `WTX-${ts}-out`,
+          walletId: fromWalletId,
+          type: "transfer_out",
+          amount: numAmount.toFixed(2),
+          balanceBefore: fromBal.toFixed(2),
+          balanceAfter: newFromBal.toFixed(2),
+          category: "transfer",
+          description: `Transfer to ${toWallet.name}${description ? ': ' + description : ''}`,
+          relatedTransferId: transferId,
+          performedBy: actorId,
+          performedByName: actorName,
+          performedByRole: "owner",
+        });
+        await storage.createWalletTransaction({
+          id: `WTX-${ts}-in`,
+          walletId: toWalletId,
+          type: "transfer_in",
+          amount: numAmount.toFixed(2),
+          balanceBefore: toBal.toFixed(2),
+          balanceAfter: newToBal.toFixed(2),
+          category: "transfer",
+          description: `Transfer from ${fromWallet.name}${description ? ': ' + description : ''}`,
+          relatedTransferId: transferId,
+          performedBy: actorId,
+          performedByName: actorName,
+          performedByRole: "owner",
+        });
+        await storage.updateWallet(fromWalletId, { balance: newFromBal.toFixed(2), updatedAt: new Date() });
+        await storage.updateWallet(toWalletId, { balance: newToBal.toFixed(2), updatedAt: new Date() });
+      }
+      res.status(201).json({ transferId, status });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create transfer" });
+    }
+  });
+
+  app.patch("/api/wallets/transfers/:id/approve", requireOwner, async (req, res) => {
+    try {
+      const transfer = (await storage.getWalletTransfers()).find(t => t.id === req.params.id);
+      if (!transfer) return res.status(404).json({ message: "Transfer not found" });
+      if (transfer.status !== "pending") return res.status(400).json({ message: "Transfer is not pending" });
+      const fromWallet = await storage.getWallet(transfer.fromWalletId);
+      const toWallet = await storage.getWallet(transfer.toWalletId);
+      if (!fromWallet || !toWallet) return res.status(404).json({ message: "Wallet not found" });
+      const numAmount = parseFloat(transfer.amount?.toString() || "0");
+      const fromBal = parseFloat(fromWallet.balance?.toString() || "0");
+      const toBal = parseFloat(toWallet.balance?.toString() || "0");
+      const newFromBal = fromBal - numAmount;
+      const newToBal = toBal + numAmount;
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      const ts = Date.now().toString(36);
+      await storage.createWalletTransaction({
+        id: `WTX-${ts}-out`,
+        walletId: transfer.fromWalletId,
+        type: "transfer_out",
+        amount: numAmount.toFixed(2),
+        balanceBefore: fromBal.toFixed(2),
+        balanceAfter: newFromBal.toFixed(2),
+        category: "transfer",
+        description: `Transfer to ${toWallet.name}${transfer.description ? ': ' + transfer.description : ''}`,
+        relatedTransferId: transfer.id,
+        performedBy: actorId,
+        performedByName: actorName,
+        performedByRole: "owner",
+      });
+      await storage.createWalletTransaction({
+        id: `WTX-${ts}-in`,
+        walletId: transfer.toWalletId,
+        type: "transfer_in",
+        amount: numAmount.toFixed(2),
+        balanceBefore: toBal.toFixed(2),
+        balanceAfter: newToBal.toFixed(2),
+        category: "transfer",
+        description: `Transfer from ${fromWallet.name}${transfer.description ? ': ' + transfer.description : ''}`,
+        relatedTransferId: transfer.id,
+        performedBy: actorId,
+        performedByName: actorName,
+        performedByRole: "owner",
+      });
+      await storage.updateWallet(transfer.fromWalletId, { balance: newFromBal.toFixed(2), updatedAt: new Date() });
+      await storage.updateWallet(transfer.toWalletId, { balance: newToBal.toFixed(2), updatedAt: new Date() });
+      await storage.updateWalletTransfer(transfer.id, { status: "completed", approvedBy: actorId, approvedByName: actorName, approvedAt: new Date() });
+      res.json({ message: "Transfer approved" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to approve transfer" });
+    }
+  });
+
+  app.get("/api/wallet-transactions", requireStaff, async (req, res) => {
+    try {
+      const filters: any = {};
+      if (req.query.walletId) filters.walletId = req.query.walletId;
+      if (req.query.category) filters.category = req.query.category;
+      if (req.query.type) filters.type = req.query.type;
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
+      if (req.query.orderId) filters.orderId = req.query.orderId;
+      const transactions = await storage.getWalletTransactions(filters);
+      res.json(transactions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+
+  app.get("/api/wallet-transfers", requireStaff, async (req, res) => {
+    try {
+      const transfers = await storage.getWalletTransfers();
+      res.json(transfers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch transfers" });
+    }
+  });
+
+  app.get("/api/business-payouts", requireStaff, async (req, res) => {
+    try {
+      const filters: any = {};
+      if (req.query.status) filters.status = req.query.status;
+      if (req.query.category) filters.category = req.query.category;
+      if (req.query.recipientRole) filters.recipientRole = req.query.recipientRole;
+      if (req.query.walletId) filters.walletId = req.query.walletId;
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
+      const payouts = await storage.getBusinessPayouts(filters);
+      res.json(payouts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch business payouts" });
+    }
+  });
+
+  app.post("/api/business-payouts", requireStaff, async (req, res) => {
+    try {
+      const { recipientName, recipientRole, category, amount, description, walletId, orderId } = req.body;
+      if (!recipientName || !recipientRole || !category || !amount) {
+        return res.status(400).json({ message: "Recipient name, role, category and amount are required" });
+      }
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ message: "Invalid amount" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      const isOwner = (req.user as any)?.role === "owner";
+      const id = `BPO-${Date.now().toString(36)}`;
+      const payout = await storage.createBusinessPayout({
+        id,
+        walletId: walletId || null,
+        recipientName,
+        recipientRole,
+        category,
+        amount: numAmount.toFixed(2),
+        description: description || null,
+        orderId: orderId || null,
+        status: isOwner ? "approved" : "pending",
+        requestedBy: actorId,
+        requestedByName: actorName,
+      });
+      res.status(201).json(payout);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create business payout" });
+    }
+  });
+
+  app.patch("/api/business-payouts/:id/approve", requireOwner, async (req, res) => {
+    try {
+      const payout = (await storage.getBusinessPayouts()).find(p => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Payout not found" });
+      if (payout.status !== "pending") return res.status(400).json({ message: "Payout is not pending" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      await storage.updateBusinessPayout(req.params.id, {
+        status: "approved",
+        approvedBy: actorId,
+        approvedByName: actorName,
+        approvedAt: new Date(),
+      });
+      res.json({ message: "Payout approved" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to approve payout" });
+    }
+  });
+
+  app.patch("/api/business-payouts/:id/reject", requireOwner, async (req, res) => {
+    try {
+      const payout = (await storage.getBusinessPayouts()).find(p => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Payout not found" });
+      if (payout.status !== "pending") return res.status(400).json({ message: "Payout is not pending" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      await storage.updateBusinessPayout(req.params.id, {
+        status: "rejected",
+        rejectedBy: actorId,
+        rejectedByName: actorName,
+        rejectedAt: new Date(),
+        rejectionReason: req.body.reason || null,
+      });
+      res.json({ message: "Payout rejected" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reject payout" });
+    }
+  });
+
+  app.patch("/api/business-payouts/:id/pay", requireOwner, async (req, res) => {
+    try {
+      const payout = (await storage.getBusinessPayouts()).find(p => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Payout not found" });
+      if (payout.status !== "approved") return res.status(400).json({ message: "Payout must be approved before paying" });
+      const numAmount = parseFloat(payout.amount?.toString() || "0");
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      const walletId = req.body.walletId || payout.walletId;
+      if (walletId) {
+        const wallet = await storage.getWallet(walletId);
+        if (wallet) {
+          const currentBal = parseFloat(wallet.balance?.toString() || "0");
+          const newBal = currentBal - numAmount;
+          await storage.createWalletTransaction({
+            id: `WTX-${Date.now().toString(36)}-bpo`,
+            walletId: wallet.id,
+            type: "business_payout",
+            amount: numAmount.toFixed(2),
+            balanceBefore: currentBal.toFixed(2),
+            balanceAfter: newBal.toFixed(2),
+            category: payout.category || "misc",
+            description: `Business payout to ${payout.recipientName}: ${payout.description || payout.category}`,
+            relatedPayoutId: payout.id,
+            relatedOrderId: payout.orderId || null,
+            performedBy: actorId,
+            performedByName: actorName,
+            performedByRole: "owner",
+          });
+          await storage.updateWallet(wallet.id, { balance: newBal.toFixed(2), updatedAt: new Date() });
+        }
+      }
+      await storage.updateBusinessPayout(req.params.id, {
+        status: "paid",
+        paidAt: new Date(),
+        walletId: walletId || payout.walletId,
+      });
+      res.json({ message: "Payout marked as paid" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark payout as paid" });
+    }
+  });
+
+  app.get("/api/wallet-summary", requireStaff, async (req, res) => {
+    try {
+      const wallets = await storage.getWallets();
+      const activeWallets = wallets.filter(w => w.isActive);
+      const totalBalance = activeWallets.reduce((sum, w) => sum + parseFloat(w.balance?.toString() || "0"), 0);
+      const transactions = await storage.getWalletTransactions();
+      const totalDeposits = transactions.filter(t => t.type === "deposit" || t.type === "transfer_in" || t.type === "fine_received" || t.type === "order_income").reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
+      const totalWithdrawals = transactions.filter(t => t.type === "withdrawal" || t.type === "transfer_out" || t.type === "grinder_payout" || t.type === "business_payout").reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
+      const payouts = await storage.getBusinessPayouts();
+      const pendingPayouts = payouts.filter(p => p.status === "pending").reduce((sum, p) => sum + parseFloat(p.amount?.toString() || "0"), 0);
+      const paidPayouts = payouts.filter(p => p.status === "paid").reduce((sum, p) => sum + parseFloat(p.amount?.toString() || "0"), 0);
+      res.json({
+        totalBalance,
+        walletCount: activeWallets.length,
+        totalDeposits,
+        totalWithdrawals,
+        pendingPayouts,
+        paidPayouts,
+        transactionCount: transactions.length,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch wallet summary" });
     }
   });
 

@@ -56,6 +56,7 @@ import StaffNotifications from "@/pages/staff/notifications";
 import StaffTodo from "@/pages/staff/todo";
 import StaffBadges from "@/pages/staff/badges";
 import StaffOverviewPage from "@/pages/staff/staff-overview";
+import StaffWallets from "@/pages/staff/wallets";
 import { Loader2 } from "lucide-react";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
@@ -178,6 +179,7 @@ function Router() {
       <Route path="/calendar" component={() => <ProtectedRoute component={StaffCalendar} staffOnly />} />
       <Route path="/services" component={() => <ProtectedRoute component={StaffServices} staffOnly />} />
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
+      <Route path="/wallets" component={() => <ProtectedRoute component={StaffWallets} staffOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
       <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
       <Route path="/features" component={() => <ProtectedRoute component={StaffFeatures} staffOnly />} />
       <Route path="/staff/ops-guide" component={() => <ProtectedRoute component={StaffOpsGuide} staffOnly />} />
