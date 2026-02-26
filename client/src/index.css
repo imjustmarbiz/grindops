@@ -89,12 +89,21 @@
   }
 
   .theme-grinder {
-    --primary: 196 60% 55%;
-    --ring: 196 60% 55%;
-    --sidebar-primary: 196 60% 55%;
-    --sidebar-ring: 196 60% 55%;
-    --sidebar-accent: 196 30% 12%;
-    --sidebar-accent-foreground: 196 60% 55%;
+    --primary: 262 83% 58%;
+    --ring: 262 83% 58%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-ring: 262 83% 58%;
+    --sidebar-accent: 262 40% 12%;
+    --sidebar-accent-foreground: 262 83% 58%;
+  }
+
+  .theme-elite {
+    --primary: 187 80% 55%;
+    --ring: 187 80% 55%;
+    --sidebar-primary: 187 80% 55%;
+    --sidebar-ring: 187 80% 55%;
+    --sidebar-accent: 187 35% 12%;
+    --sidebar-accent-foreground: 187 80% 55%;
   }
 
   body {

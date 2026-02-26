@@ -198,7 +198,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const userId = (user as any)?.discordId || user?.id || "";
-  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : "theme-grinder";
+  const isStaffOrOwner = user?.role === "owner" || user?.role === "staff";
+  const { data: grinderProfileForTheme } = useQuery<any>({
+    queryKey: ["/api/grinder/me"],
+    enabled: !isStaffOrOwner,
+  });
+  const isEliteGrinder = !isStaffOrOwner && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
+  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : isEliteGrinder ? "theme-elite" : "theme-grinder";
   const sidebarStyle = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "4rem",
