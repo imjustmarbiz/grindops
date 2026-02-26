@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus } from "lucide-react";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder } from "@shared/schema";
 
@@ -44,6 +44,9 @@ export default function Bids() {
     notes: "",
   });
 
+  const [ticketDialog, setTicketDialog] = useState<{ orderId: string; orderLabel: string } | null>(null);
+  const [ticketChannelId, setTicketChannelId] = useState("");
+
   const openEditDialog = (bid: Bid) => {
     setEditForm({
       bidAmount: bid.bidAmount?.toString() || "",
@@ -54,16 +57,45 @@ export default function Bids() {
     setEditingBid(bid);
   };
 
+  const linkTicketMutation = useMutation({
+    mutationFn: async (data: { orderId: string; discordTicketChannelId: string }) => {
+      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/ticket`, { discordTicketChannelId: data.discordTicketChannelId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setTicketDialog(null);
+      setTicketChannelId("");
+      toast({ title: "Ticket linked", description: "Discord ticket has been linked to the order." });
+    },
+    onError: (e: any) => toast({ title: "Failed to link ticket", description: e.message, variant: "destructive" }),
+  });
+
   const bidStatusMutation = useMutation({
     mutationFn: async ({ bidId, status }: { bidId: string; status: string }) => {
       const res = await apiRequest("PATCH", `/api/bids/${bidId}/status`, { status });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
       toast({ title: "Bid status updated" });
+
+      if (variables.status === "Accepted") {
+        const bid = bids?.find(b => b.id === variables.bidId);
+        if (bid) {
+          try {
+            const freshRes = await fetch(`/api/orders`);
+            const freshOrders = await freshRes.json();
+            const freshOrder = freshOrders.find((o: any) => o.id === bid.orderId);
+            const orderLabel = freshOrder?.mgtOrderNumber ? `#${freshOrder.mgtOrderNumber}` : bid.orderId;
+            if (freshOrder && !freshOrder.discordTicketChannelId) {
+              setTicketDialog({ orderId: bid.orderId, orderLabel });
+            }
+          } catch {}
+        }
+      }
     },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
@@ -73,11 +105,26 @@ export default function Bids() {
       const res = await apiRequest("PATCH", `/api/bids/${bidId}/override`, { status });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
       toast({ title: "Owner override applied" });
+
+      if (variables.status === "Accepted") {
+        const bid = bids?.find(b => b.id === variables.bidId);
+        if (bid) {
+          try {
+            const freshRes = await fetch(`/api/orders`);
+            const freshOrders = await freshRes.json();
+            const freshOrder = freshOrders.find((o: any) => o.id === bid.orderId);
+            const orderLabel = freshOrder?.mgtOrderNumber ? `#${freshOrder.mgtOrderNumber}` : bid.orderId;
+            if (freshOrder && !freshOrder.discordTicketChannelId) {
+              setTicketDialog({ orderId: bid.orderId, orderLabel });
+            }
+          } catch {}
+        }
+      }
     },
     onError: (e: any) => toast({ title: "Override failed", description: e.message, variant: "destructive" }),
   });
@@ -689,6 +736,65 @@ export default function Bids() {
             >
               {createBidMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Create Bid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!ticketDialog} onOpenChange={(open) => { if (!open) { setTicketDialog(null); setTicketChannelId(""); } }}>
+        <DialogContent className="max-w-md" data-testid="dialog-link-ticket">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-purple-400" />
+              Link Discord Ticket
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Order <span className="font-semibold text-foreground">{ticketDialog?.orderLabel}</span> has been assigned. Would you like to link a Discord ticket channel?
+            </p>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Discord Channel ID</Label>
+              <Input
+                placeholder="Paste the ticket channel ID from Discord"
+                value={ticketChannelId}
+                onChange={(e) => setTicketChannelId(e.target.value)}
+                className="bg-white/[0.03] border-white/[0.08] font-mono"
+                data-testid="input-ticket-channel-id"
+              />
+              <p className="text-xs text-muted-foreground/70">
+                Right-click the ticket channel in Discord → Copy Channel ID
+              </p>
+              {ticketChannelId.trim() && !/^\d{17,20}$/.test(ticketChannelId.trim()) && (
+                <p className="text-xs text-red-400">Channel ID must be a 17-20 digit number</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => { setTicketDialog(null); setTicketChannelId(""); }}
+              className="border-white/[0.08]"
+              data-testid="button-skip-ticket"
+            >
+              Skip for Now
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white gap-2"
+              disabled={!ticketChannelId.trim() || !/^\d{17,20}$/.test(ticketChannelId.trim()) || linkTicketMutation.isPending}
+              onClick={() => {
+                if (ticketDialog) {
+                  linkTicketMutation.mutate({
+                    orderId: ticketDialog.orderId,
+                    discordTicketChannelId: ticketChannelId.trim(),
+                  });
+                }
+              }}
+              data-testid="button-confirm-link-ticket"
+            >
+              {linkTicketMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Link2 className="w-4 h-4" />
+              Link Ticket
             </Button>
           </DialogFooter>
         </DialogContent>
