@@ -11,6 +11,13 @@ import { users } from "@shared/models/auth";
 import { or, eq, sql } from "drizzle-orm";
 import multer from "multer";
 
+const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
+
+function isBusinessBlocked(req: any): boolean {
+  const discordId = (req.user as any)?.discordId || "";
+  return BUSINESS_BLOCKED_IDS.includes(discordId);
+}
+
 function getActorName(req: any): string {
   const user = req.user;
   if (!user) return "system";
@@ -5793,30 +5800,41 @@ export async function registerRoutes(
 
   app.get("/api/wallets", requireStaff, async (req, res) => {
     try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallets = await storage.getWallets();
       const isOwner = (req.user as any)?.role === "owner";
-      if (!isOwner) {
-        const sanitized = wallets.map(w => ({ ...w, accountIdentifier: null }));
-        return res.json(sanitized);
-      }
-      res.json(wallets);
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      if (isOwner) return res.json(wallets);
+      const visible = wallets.filter(w => w.scope === "company" || w.ownerDiscordId === actorId);
+      const sanitized = visible.map(w => {
+        if (w.scope === "company") return { ...w, accountIdentifier: null };
+        return w;
+      });
+      res.json(sanitized);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch wallets" });
     }
   });
 
-  app.post("/api/wallets", requireOwner, async (req, res) => {
+  app.post("/api/wallets", requireStaff, async (req, res) => {
     try {
-      const { name, type, accountIdentifier, startingBalance, notes } = req.body;
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      const { name, type, accountIdentifier, startingBalance, notes, scope, ownerDiscordId, ownerName } = req.body;
       if (!name || !type) return res.status(400).json({ message: "Name and type are required" });
       const actorName = getActorName(req);
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const isOwner = (req.user as any)?.role === "owner";
+      const walletScope = scope || (isOwner ? "company" : "personal");
+      if (!isOwner && walletScope === "company") return res.status(403).json({ message: "Staff can only create personal wallets" });
       const id = `WAL-${Date.now().toString(36)}`;
       const balance = startingBalance || "0";
       const wallet = await storage.createWallet({
         id,
         name,
         type,
+        scope: walletScope,
+        ownerDiscordId: walletScope === "personal" ? (ownerDiscordId || actorId) : null,
+        ownerName: walletScope === "personal" ? (ownerName || actorName) : null,
         accountIdentifier: accountIdentifier || null,
         balance,
         startingBalance: balance,
@@ -5837,7 +5855,7 @@ export async function registerRoutes(
           description: "Starting balance",
           performedBy: actorId,
           performedByName: actorName,
-          performedByRole: "owner",
+          performedByRole: isOwner ? "owner" : "staff",
         });
       }
       res.status(201).json(wallet);
@@ -5846,17 +5864,27 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/wallets/:id", requireOwner, async (req, res) => {
+  app.patch("/api/wallets/:id", requireStaff, async (req, res) => {
     try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallet = await storage.getWallet(req.params.id);
       if (!wallet) return res.status(404).json({ message: "Wallet not found" });
+      const isOwner = (req.user as any)?.role === "owner";
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      if (!isOwner && wallet.ownerDiscordId !== actorId) return res.status(403).json({ message: "Cannot edit this wallet" });
+      if (!isOwner && wallet.scope === "company") return res.status(403).json({ message: "Cannot edit company wallets" });
       const updates: any = { updatedAt: new Date() };
       if (req.body.name !== undefined) updates.name = req.body.name;
       if (req.body.type !== undefined) updates.type = req.body.type;
       if (req.body.accountIdentifier !== undefined) updates.accountIdentifier = req.body.accountIdentifier;
       if (req.body.notes !== undefined) updates.notes = req.body.notes;
-      if (req.body.isActive !== undefined) updates.isActive = req.body.isActive;
-      if (req.body.startingBalance !== undefined) updates.startingBalance = req.body.startingBalance;
+      if (isOwner) {
+        if (req.body.isActive !== undefined) updates.isActive = req.body.isActive;
+        if (req.body.startingBalance !== undefined) updates.startingBalance = req.body.startingBalance;
+        if (req.body.scope !== undefined) updates.scope = req.body.scope;
+        if (req.body.ownerDiscordId !== undefined) updates.ownerDiscordId = req.body.ownerDiscordId;
+        if (req.body.ownerName !== undefined) updates.ownerName = req.body.ownerName;
+      }
       const updated = await storage.updateWallet(req.params.id, updates);
       res.json(updated);
     } catch (error) {
@@ -5900,7 +5928,8 @@ export async function registerRoutes(
 
   app.post("/api/wallets/transfer", requireStaff, async (req, res) => {
     try {
-      const { fromWalletId, toWalletId, amount, description } = req.body;
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      const { fromWalletId, toWalletId, amount, description, relatedOrderId, proofUrl } = req.body;
       if (!fromWalletId || !toWalletId || fromWalletId === toWalletId) return res.status(400).json({ message: "Invalid wallet selection" });
       const numAmount = parseFloat(amount);
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ message: "Invalid amount" });
@@ -5910,6 +5939,10 @@ export async function registerRoutes(
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       const actorName = getActorName(req);
       const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner) {
+        if (fromWallet.ownerDiscordId !== actorId) return res.status(403).json({ message: "You can only transfer from your own wallet" });
+        if (toWallet.scope !== "company") return res.status(403).json({ message: "Staff can only transfer to company wallets" });
+      }
       const transferId = `TRF-${Date.now().toString(36)}`;
       const status = isOwner ? "completed" : "pending";
       await storage.createWalletTransfer({
@@ -5918,6 +5951,8 @@ export async function registerRoutes(
         toWalletId,
         amount: numAmount.toFixed(2),
         description: description || null,
+        relatedOrderId: relatedOrderId || null,
+        proofUrl: proofUrl || null,
         performedBy: actorId,
         performedByName: actorName,
         status,
@@ -5938,6 +5973,7 @@ export async function registerRoutes(
           category: "transfer",
           description: `Transfer to ${toWallet.name}${description ? ': ' + description : ''}`,
           relatedTransferId: transferId,
+          relatedOrderId: relatedOrderId || null,
           performedBy: actorId,
           performedByName: actorName,
           performedByRole: "owner",
@@ -5952,6 +5988,7 @@ export async function registerRoutes(
           category: "transfer",
           description: `Transfer from ${fromWallet.name}${description ? ': ' + description : ''}`,
           relatedTransferId: transferId,
+          relatedOrderId: relatedOrderId || null,
           performedBy: actorId,
           performedByName: actorName,
           performedByRole: "owner",
@@ -5991,6 +6028,7 @@ export async function registerRoutes(
         category: "transfer",
         description: `Transfer to ${toWallet.name}${transfer.description ? ': ' + transfer.description : ''}`,
         relatedTransferId: transfer.id,
+        relatedOrderId: transfer.relatedOrderId || null,
         performedBy: actorId,
         performedByName: actorName,
         performedByRole: "owner",
@@ -6005,6 +6043,7 @@ export async function registerRoutes(
         category: "transfer",
         description: `Transfer from ${fromWallet.name}${transfer.description ? ': ' + transfer.description : ''}`,
         relatedTransferId: transfer.id,
+        relatedOrderId: transfer.relatedOrderId || null,
         performedBy: actorId,
         performedByName: actorName,
         performedByRole: "owner",
@@ -6012,6 +6051,13 @@ export async function registerRoutes(
       await storage.updateWallet(transfer.fromWalletId, { balance: newFromBal.toFixed(2), updatedAt: new Date() });
       await storage.updateWallet(transfer.toWalletId, { balance: newToBal.toFixed(2), updatedAt: new Date() });
       await storage.updateWalletTransfer(transfer.id, { status: "completed", approvedBy: actorId, approvedByName: actorName, approvedAt: new Date() });
+      if (transfer.relatedOrderId) {
+        const links = await storage.getOrderPaymentLinks(transfer.relatedOrderId);
+        const matchingLink = links.find(l => l.transferId === transfer.id || (l.receivedByWalletId === transfer.fromWalletId && l.transferStatus === "pending_transfer"));
+        if (matchingLink) {
+          await storage.updateOrderPaymentLink(matchingLink.id, { transferStatus: "transferred", transferId: transfer.id });
+        }
+      }
       res.json({ message: "Transfer approved" });
     } catch (error) {
       res.status(500).json({ message: "Failed to approve transfer" });
@@ -6020,6 +6066,7 @@ export async function registerRoutes(
 
   app.get("/api/wallet-transactions", requireStaff, async (req, res) => {
     try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const filters: any = {};
       if (req.query.walletId) filters.walletId = req.query.walletId;
       if (req.query.category) filters.category = req.query.category;
@@ -6027,7 +6074,14 @@ export async function registerRoutes(
       if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
       if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
       if (req.query.orderId) filters.orderId = req.query.orderId;
-      const transactions = await storage.getWalletTransactions(filters);
+      let transactions = await storage.getWalletTransactions(filters);
+      const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner) {
+        const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+        const wallets = await storage.getWallets();
+        const visibleWalletIds = new Set(wallets.filter(w => w.scope === "company" || w.ownerDiscordId === actorId).map(w => w.id));
+        transactions = transactions.filter(tx => visibleWalletIds.has(tx.walletId));
+      }
       res.json(transactions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch transactions" });
@@ -6036,7 +6090,13 @@ export async function registerRoutes(
 
   app.get("/api/wallet-transfers", requireStaff, async (req, res) => {
     try {
-      const transfers = await storage.getWalletTransfers();
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      let transfers = await storage.getWalletTransfers();
+      const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner) {
+        const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+        transfers = transfers.filter(t => t.performedBy === actorId);
+      }
       res.json(transfers);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch transfers" });
@@ -6045,6 +6105,7 @@ export async function registerRoutes(
 
   app.get("/api/business-payouts", requireStaff, async (req, res) => {
     try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const filters: any = {};
       if (req.query.status) filters.status = req.query.status;
       if (req.query.category) filters.category = req.query.category;
@@ -6052,7 +6113,13 @@ export async function registerRoutes(
       if (req.query.walletId) filters.walletId = req.query.walletId;
       if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
       if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
-      const payouts = await storage.getBusinessPayouts(filters);
+      let payouts = await storage.getBusinessPayouts(filters);
+      const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner) {
+        const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+        const actorName = getActorName(req);
+        payouts = payouts.filter(p => p.requestedBy === actorId || p.recipientName === actorName);
+      }
       res.json(payouts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch business payouts" });
@@ -6061,7 +6128,8 @@ export async function registerRoutes(
 
   app.post("/api/business-payouts", requireStaff, async (req, res) => {
     try {
-      const { recipientName, recipientRole, category, amount, description, walletId, orderId } = req.body;
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      const { recipientName, recipientRole, category, amount, description, walletId, orderId, proofUrl } = req.body;
       if (!recipientName || !recipientRole || !category || !amount) {
         return res.status(400).json({ message: "Recipient name, role, category and amount are required" });
       }
@@ -6080,6 +6148,7 @@ export async function registerRoutes(
         amount: numAmount.toFixed(2),
         description: description || null,
         orderId: orderId || null,
+        proofUrl: proofUrl || null,
         status: isOwner ? "approved" : "pending",
         requestedBy: actorId,
         requestedByName: actorName,
@@ -6174,26 +6243,170 @@ export async function registerRoutes(
 
   app.get("/api/wallet-summary", requireStaff, async (req, res) => {
     try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallets = await storage.getWallets();
+      const isOwner = (req.user as any)?.role === "owner";
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       const activeWallets = wallets.filter(w => w.isActive);
-      const totalBalance = activeWallets.reduce((sum, w) => sum + parseFloat(w.balance?.toString() || "0"), 0);
-      const transactions = await storage.getWalletTransactions();
-      const totalDeposits = transactions.filter(t => t.type === "deposit" || t.type === "transfer_in" || t.type === "fine_received" || t.type === "order_income").reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
-      const totalWithdrawals = transactions.filter(t => t.type === "withdrawal" || t.type === "transfer_out" || t.type === "grinder_payout" || t.type === "business_payout").reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
+      const relevantWallets = isOwner ? activeWallets : activeWallets.filter(w => w.ownerDiscordId === actorId);
+      const companyWallets = activeWallets.filter(w => w.scope === "company");
+      const personalWallets = activeWallets.filter(w => w.scope === "personal");
+      const totalBalance = (isOwner ? companyWallets : relevantWallets).reduce((sum, w) => sum + parseFloat(w.balance?.toString() || "0"), 0);
+      const allTx = await storage.getWalletTransactions();
+      const relevantWalletIds = new Set(relevantWallets.map(w => w.id));
+      const transactions = isOwner ? allTx : allTx.filter(t => relevantWalletIds.has(t.walletId));
+      const totalDeposits = transactions.filter(t => ["deposit", "transfer_in", "fine_received", "order_income"].includes(t.type)).reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
+      const totalWithdrawals = transactions.filter(t => ["withdrawal", "transfer_out", "grinder_payout", "business_payout"].includes(t.type)).reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
       const payouts = await storage.getBusinessPayouts();
       const pendingPayouts = payouts.filter(p => p.status === "pending").reduce((sum, p) => sum + parseFloat(p.amount?.toString() || "0"), 0);
       const paidPayouts = payouts.filter(p => p.status === "paid").reduce((sum, p) => sum + parseFloat(p.amount?.toString() || "0"), 0);
+      const transfers = await storage.getWalletTransfers();
+      const pendingTransfers = transfers.filter(t => t.status === "pending").reduce((sum, t) => sum + parseFloat(t.amount?.toString() || "0"), 0);
+
+      const perWalletStats: any[] = relevantWallets.map(w => {
+        const wTx = allTx.filter(t => t.walletId === w.id);
+        const wIn = wTx.filter(t => ["deposit", "transfer_in", "fine_received", "order_income"].includes(t.type)).reduce((s, t) => s + parseFloat(t.amount?.toString() || "0"), 0);
+        const wOut = wTx.filter(t => ["withdrawal", "transfer_out", "grinder_payout", "business_payout"].includes(t.type)).reduce((s, t) => s + parseFloat(t.amount?.toString() || "0"), 0);
+        return { walletId: w.id, name: w.name, type: w.type, scope: w.scope, balance: parseFloat(w.balance?.toString() || "0"), totalIn: wIn, totalOut: wOut, txCount: wTx.length };
+      });
+
+      const staffHolding = isOwner ? personalWallets.reduce((sum, w) => sum + parseFloat(w.balance?.toString() || "0"), 0) : 0;
+      const orderPaymentLinks = await storage.getOrderPaymentLinks();
+      const outstandingTransfers = orderPaymentLinks.filter(l => l.transferStatus === "pending_transfer").length;
+
       res.json({
         totalBalance,
-        walletCount: activeWallets.length,
+        walletCount: relevantWallets.length,
+        companyWalletCount: companyWallets.length,
+        personalWalletCount: personalWallets.length,
         totalDeposits,
         totalWithdrawals,
         pendingPayouts,
         paidPayouts,
+        pendingTransfers,
+        staffHolding,
+        outstandingTransfers,
         transactionCount: transactions.length,
+        perWalletStats,
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch wallet summary" });
+    }
+  });
+
+  app.get("/api/order-payment-links", requireStaff, async (req, res) => {
+    try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      const orderId = req.query.orderId as string | undefined;
+      let links = await storage.getOrderPaymentLinks(orderId);
+      const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner) {
+        const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+        const wallets = await storage.getWallets();
+        const visibleWalletIds = new Set(wallets.filter(w => w.scope === "company" || w.ownerDiscordId === actorId).map(w => w.id));
+        links = links.filter(l => visibleWalletIds.has(l.receivedByWalletId));
+      }
+      res.json(links);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch order payment links" });
+    }
+  });
+
+  app.post("/api/order-payment-links", requireStaff, async (req, res) => {
+    try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      const { orderId, receivedByWalletId, companyWalletId, amount, proofUrl, notes } = req.body;
+      if (!orderId || !receivedByWalletId || !amount) return res.status(400).json({ message: "Order ID, wallet, and amount are required" });
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ message: "Invalid amount" });
+      const wallet = await storage.getWallet(receivedByWalletId);
+      if (!wallet) return res.status(404).json({ message: "Wallet not found" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const isOwner = (req.user as any)?.role === "owner";
+      if (!isOwner && wallet.scope === "personal" && wallet.ownerDiscordId !== actorId) {
+        return res.status(403).json({ message: "You can only link payments to your own wallet or company wallets" });
+      }
+      const actorName = getActorName(req);
+      const isCompanyWallet = wallet.scope === "company";
+      const transferStatus = isCompanyWallet ? "not_needed" : "pending_transfer";
+      const id = `OPL-${Date.now().toString(36)}`;
+      const link = await storage.createOrderPaymentLink({
+        id,
+        orderId,
+        receivedByWalletId,
+        companyWalletId: companyWalletId || null,
+        amount: numAmount.toFixed(2),
+        transferStatus,
+        proofUrl: proofUrl || null,
+        notes: notes || null,
+        createdBy: actorId,
+        createdByName: actorName,
+      });
+
+      const currentBal = parseFloat(wallet.balance?.toString() || "0");
+      const newBal = currentBal + numAmount;
+      await storage.createWalletTransaction({
+        id: `WTX-${Date.now().toString(36)}-opl`,
+        walletId: wallet.id,
+        type: "order_income",
+        amount: numAmount.toFixed(2),
+        balanceBefore: currentBal.toFixed(2),
+        balanceAfter: newBal.toFixed(2),
+        category: "order_income",
+        description: `Order payment received - ${orderId}`,
+        relatedOrderId: orderId,
+        performedBy: actorId,
+        performedByName: actorName,
+        performedByRole: (req.user as any)?.role || "staff",
+      });
+      await storage.updateWallet(wallet.id, { balance: newBal.toFixed(2), updatedAt: new Date() });
+
+      res.status(201).json(link);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create order payment link" });
+    }
+  });
+
+  app.post("/api/order-payment-links/:id/request-transfer", requireOwner, async (req, res) => {
+    try {
+      const link = (await storage.getOrderPaymentLinks()).find(l => l.id === req.params.id);
+      if (!link) return res.status(404).json({ message: "Payment link not found" });
+      if (link.transferStatus !== "pending_transfer") return res.status(400).json({ message: "Transfer not needed or already completed" });
+      const { companyWalletId } = req.body;
+      if (!companyWalletId) return res.status(400).json({ message: "Company wallet is required" });
+      const companyWallet = await storage.getWallet(companyWalletId);
+      if (!companyWallet || companyWallet.scope !== "company") return res.status(400).json({ message: "Must select a company wallet" });
+      await storage.updateOrderPaymentLink(req.params.id, { companyWalletId, transferStatus: "pending_transfer" });
+      res.json({ message: "Transfer requested" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to request transfer" });
+    }
+  });
+
+  app.get("/api/wallet-config", requireStaff, async (req, res) => {
+    try {
+      if (isBusinessBlocked(req)) return res.status(403).json({ message: "Access denied" });
+      const config = await storage.getQueueConfig();
+      const customRoles = (config as any)?.customPayoutRoles || [];
+      const customCategories = (config as any)?.customPayoutCategories || [];
+      res.json({ customRoles, customCategories });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch wallet config" });
+    }
+  });
+
+  app.patch("/api/wallet-config", requireOwner, async (req, res) => {
+    try {
+      const { customRoles, customCategories } = req.body;
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(500).json({ message: "Config not found" });
+      const updates: any = {};
+      if (customRoles !== undefined) updates.customPayoutRoles = customRoles;
+      if (customCategories !== undefined) updates.customPayoutCategories = customCategories;
+      await storage.upsertQueueConfig({ ...config, ...updates } as any);
+      res.json({ message: "Config updated" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update wallet config" });
     }
   });
 

@@ -36,7 +36,7 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - **Deletion Request Workflow:** Staff can request deletion of various entities, requiring owner approval.
 - **Multi-Tier Grinder Roles:** Supports multiple simultaneous grinder roles and progression tiers, displayed with badges and editable via scorecard.
 - **Fine Payment System:** Grinders can submit fine payments with proof for staff review, impacting company profit.
-- **Business Wallet System:** Comprehensive financial tracking with multiple payment wallets, transactions, transfers, and business payouts, including role-based access controls and integration with grinder payouts and fine payments.
+- **Business Wallet System:** Comprehensive financial tracking with company and personal wallet scopes, per-wallet KPIs, order payment linking (tracks which wallet received payment and transfer status), staff transfer restrictions (personal→company only, pending approval), configurable payout roles/categories, proof URL support on transfers/payouts, outstanding transfer alerts, and integration with grinder payouts and fine payments. User "davidgrinds" (ID: 872820240139046952) is blocked from accessing Wallets and Business Performance.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database, managed with Drizzle ORM.

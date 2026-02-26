@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
@@ -27,18 +27,25 @@ export default function StaffPayouts() {
   const [proofUrl, setProofUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedWalletId, setSelectedWalletId] = useState<string>("");
+  const isOwner = user?.role === "owner";
+  const { data: wallets = [] } = useQuery<any[]>({ queryKey: ["/api/wallets"] });
 
   const payoutMutation = useMutation({
-    mutationFn: async ({ id, status, paymentProofUrl }: { id: string; status: string; paymentProofUrl?: string }) => {
+    mutationFn: async ({ id, status, paymentProofUrl, walletId }: { id: string; status: string; paymentProofUrl?: string; walletId?: string }) => {
       const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
-      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy, paymentProofUrl });
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy, paymentProofUrl, walletId });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet-summary"] });
       toast({ title: "Payout request updated" });
       setMarkPaidDialog(null);
       setProofUrl("");
+      setSelectedWalletId("");
     },
   });
 
@@ -74,8 +81,6 @@ export default function StaffPayouts() {
   const [reduceReason, setReduceReason] = useState("");
   const [denyReductionDialog, setDenyReductionDialog] = useState<string | null>(null);
   const [denyReductionReason, setDenyReductionReason] = useState("");
-
-  const isOwner = user?.role === "owner";
 
   const reduceMutation = useMutation({
     mutationFn: async ({ id, newAmount, reason }: { id: string; newAmount: string; reason: string }) => {
@@ -641,6 +646,22 @@ export default function StaffPayouts() {
                 </p>
               </div>
 
+              {isOwner && wallets.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Deduct from Wallet (optional)</p>
+                  <Select value={selectedWalletId || "none"} onValueChange={v => setSelectedWalletId(v === "none" ? "" : v)}>
+                    <SelectTrigger data-testid="select-payout-wallet"><SelectValue placeholder="Select wallet" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No wallet deduction</SelectItem>
+                      {wallets.filter((w: any) => w.isActive).map((w: any) => (
+                        <SelectItem key={w.id} value={w.id}>{w.name} ({formatCurrency(Number(w.balance || 0))})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">If selected, the payout amount will be deducted from this wallet</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Proof (optional)</p>
                 <input
@@ -713,6 +734,7 @@ export default function StaffPayouts() {
                     id: markPaidDialog.id,
                     status: "Paid",
                     paymentProofUrl: proofUrl || undefined,
+                    walletId: selectedWalletId || undefined,
                   });
                 }
               }}

@@ -4,7 +4,7 @@ import {
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
   patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks,
-  deletionRequests, finePayments, businessWallets, walletTransactions, businessPayouts, walletTransfers,
+  deletionRequests, finePayments, businessWallets, walletTransactions, businessPayouts, walletTransfers, orderPaymentLinks,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
   type Order, type InsertOrder,
@@ -40,6 +40,7 @@ import {
   type WalletTransaction, type InsertWalletTransaction,
   type BusinessPayout, type InsertBusinessPayout,
   type WalletTransfer, type InsertWalletTransfer,
+  type OrderPaymentLink, type InsertOrderPaymentLink,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -216,6 +217,10 @@ export interface IStorage {
   getWalletTransfers(): Promise<WalletTransfer[]>;
   createWalletTransfer(data: InsertWalletTransfer): Promise<WalletTransfer>;
   updateWalletTransfer(id: string, data: Partial<WalletTransfer>): Promise<WalletTransfer | undefined>;
+
+  getOrderPaymentLinks(orderId?: string): Promise<OrderPaymentLink[]>;
+  createOrderPaymentLink(data: InsertOrderPaymentLink): Promise<OrderPaymentLink>;
+  updateOrderPaymentLink(id: string, data: Partial<OrderPaymentLink>): Promise<OrderPaymentLink | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1573,6 +1578,23 @@ export class DatabaseStorage implements IStorage {
 
   async updateWalletTransfer(id: string, data: Partial<WalletTransfer>): Promise<WalletTransfer | undefined> {
     const [updated] = await db.update(walletTransfers).set(data).where(eq(walletTransfers.id, id)).returning();
+    return updated;
+  }
+
+  async getOrderPaymentLinks(orderId?: string): Promise<OrderPaymentLink[]> {
+    if (orderId) {
+      return await db.select().from(orderPaymentLinks).where(eq(orderPaymentLinks.orderId, orderId)).orderBy(desc(orderPaymentLinks.createdAt));
+    }
+    return await db.select().from(orderPaymentLinks).orderBy(desc(orderPaymentLinks.createdAt));
+  }
+
+  async createOrderPaymentLink(data: InsertOrderPaymentLink): Promise<OrderPaymentLink> {
+    const [created] = await db.insert(orderPaymentLinks).values(data).returning();
+    return created;
+  }
+
+  async updateOrderPaymentLink(id: string, data: Partial<OrderPaymentLink>): Promise<OrderPaymentLink | undefined> {
+    const [updated] = await db.update(orderPaymentLinks).set(data).where(eq(orderPaymentLinks.id, id)).returning();
     return updated;
   }
 }

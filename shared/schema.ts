@@ -184,6 +184,8 @@ export const queueConfig = pgTable("queue_config", {
   largeOrderThreshold: numeric("large_order_threshold").notNull().default("500"),
   largeOrderEliteBoost: numeric("large_order_elite_boost").notNull().default("0.15"),
   dailyCheckupsEnabled: boolean("daily_checkups_enabled").notNull().default(true),
+  customPayoutRoles: jsonb("custom_payout_roles"),
+  customPayoutCategories: jsonb("custom_payout_categories"),
 });
 
 export const orderUpdates = pgTable("order_updates", {
@@ -741,13 +743,16 @@ export type InsertFinePayment = z.infer<typeof insertFinePaymentSchema>;
 export const WALLET_TYPES = ["PayPal", "Zelle", "Chase Bank", "Cash App", "Venmo", "Bank Account", "Crypto", "Other"] as const;
 export const TRANSACTION_TYPES = ["deposit", "withdrawal", "transfer_in", "transfer_out", "grinder_payout", "business_payout", "fine_received", "order_income", "adjustment"] as const;
 export const TRANSACTION_CATEGORIES = ["staff_pay", "owner_pay", "commission", "bot_maintenance", "grinder_payout", "fine", "order_income", "transfer", "subscription", "refund", "misc"] as const;
-export const BUSINESS_PAYOUT_CATEGORIES = ["staff_pay", "owner_pay", "commission", "bot_maintenance", "subscription", "misc"] as const;
-export const BUSINESS_PAYOUT_ROLES = ["staff", "owner", "creator", "vendor", "misc"] as const;
+export const DEFAULT_PAYOUT_CATEGORIES = ["Staff Pay", "Owner Pay", "Commission", "Bot Maintenance", "Subscription", "Misc"] as const;
+export const DEFAULT_PAYOUT_ROLES = ["Staff", "Owner", "Creator", "Vendor", "Misc"] as const;
 
 export const businessWallets = pgTable("business_wallets", {
   id: varchar("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(),
+  scope: text("scope").notNull().default("company"),
+  ownerDiscordId: varchar("owner_discord_id"),
+  ownerName: text("owner_name"),
   accountIdentifier: text("account_identifier"),
   balance: numeric("balance").notNull().default("0"),
   startingBalance: numeric("starting_balance").notNull().default("0"),
@@ -776,6 +781,7 @@ export const walletTransactions = pgTable("wallet_transactions", {
   relatedPayoutId: varchar("related_payout_id"),
   relatedGrinderId: varchar("related_grinder_id"),
   relatedTransferId: varchar("related_transfer_id"),
+  proofUrl: text("proof_url"),
   performedBy: varchar("performed_by").notNull(),
   performedByName: text("performed_by_name").notNull(),
   performedByRole: text("performed_by_role"),
@@ -795,6 +801,7 @@ export const businessPayouts = pgTable("business_payouts", {
   amount: numeric("amount").notNull(),
   description: text("description"),
   orderId: varchar("order_id"),
+  proofUrl: text("proof_url"),
   status: text("status").notNull().default("pending"),
   requestedBy: varchar("requested_by").notNull(),
   requestedByName: text("requested_by_name").notNull(),
@@ -819,6 +826,8 @@ export const walletTransfers = pgTable("wallet_transfers", {
   toWalletId: varchar("to_wallet_id").references(() => businessWallets.id).notNull(),
   amount: numeric("amount").notNull(),
   description: text("description"),
+  relatedOrderId: varchar("related_order_id"),
+  proofUrl: text("proof_url"),
   performedBy: varchar("performed_by").notNull(),
   performedByName: text("performed_by_name").notNull(),
   status: text("status").notNull().default("pending"),
@@ -831,6 +840,25 @@ export const walletTransfers = pgTable("wallet_transfers", {
 export const insertWalletTransferSchema = createInsertSchema(walletTransfers).omit({ approvedBy: true, approvedByName: true, approvedAt: true, createdAt: true });
 export type InsertWalletTransfer = z.infer<typeof insertWalletTransferSchema>;
 export type WalletTransfer = typeof walletTransfers.$inferSelect;
+
+export const orderPaymentLinks = pgTable("order_payment_links", {
+  id: varchar("id").primaryKey(),
+  orderId: varchar("order_id").notNull(),
+  receivedByWalletId: varchar("received_by_wallet_id").references(() => businessWallets.id).notNull(),
+  companyWalletId: varchar("company_wallet_id").references(() => businessWallets.id),
+  amount: numeric("amount").notNull(),
+  transferStatus: text("transfer_status").notNull().default("not_needed"),
+  transferId: varchar("transfer_id"),
+  proofUrl: text("proof_url"),
+  notes: text("notes"),
+  createdBy: varchar("created_by").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertOrderPaymentLinkSchema = createInsertSchema(orderPaymentLinks).omit({ createdAt: true });
+export type InsertOrderPaymentLink = z.infer<typeof insertOrderPaymentLinkSchema>;
+export type OrderPaymentLink = typeof orderPaymentLinks.$inferSelect;
 
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
