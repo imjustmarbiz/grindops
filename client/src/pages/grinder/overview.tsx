@@ -237,7 +237,7 @@ export default function GrinderOverview() {
                 )}
               </h1>
               {isElite ? (
-                <Badge className="bg-gradient-to-r from-cyan-500/20 to-teal-500/20 text-cyan-300 border-cyan-500/30 gap-1" data-testid="badge-primary-role">
+                <Badge className="bg-cyan-950 text-cyan-300 border-cyan-500/40 gap-1" data-testid="badge-primary-role">
                   <Crown className="w-3.5 h-3.5" />
                   Elite Grinder
                 </Badge>
