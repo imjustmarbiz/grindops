@@ -69,6 +69,8 @@
     --ring: 0 85% 55%;
     --sidebar-primary: 0 85% 55%;
     --sidebar-ring: 0 85% 55%;
+    --sidebar-accent: 0 40% 12%;
+    --sidebar-accent-foreground: 0 85% 55%;
     --accent: 45 100% 51%;
     --accent-foreground: 240 10% 4%;
     --card: 240 12% 7%;
@@ -82,6 +84,8 @@
     --ring: 196 60% 55%;
     --sidebar-primary: 196 60% 55%;
     --sidebar-ring: 196 60% 55%;
+    --sidebar-accent: 196 30% 12%;
+    --sidebar-accent-foreground: 196 60% 55%;
   }
 
   .theme-grinder {
@@ -89,6 +93,8 @@
     --ring: 196 60% 55%;
     --sidebar-primary: 196 60% 55%;
     --sidebar-ring: 196 60% 55%;
+    --sidebar-accent: 196 30% 12%;
+    --sidebar-accent-foreground: 196 60% 55%;
   }
 
   body {

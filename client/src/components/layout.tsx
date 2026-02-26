@@ -128,11 +128,11 @@ function AppSidebar() {
                         data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           isActive 
-                            ? "bg-primary/10 text-primary font-medium shadow-sm shadow-primary/5" 
+                            ? "font-medium" 
                             : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
                         }`}
                       >
-                        <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : ""}`} />
+                        <item.icon className="w-5 h-5" />
                         <span className="flex-1">{item.title}</span>
                         {(unreadAlerts > 0 || staffUnreadNotifs > 0) && (
                           <Badge className="bg-blue-500/20 text-blue-400 border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse">{unreadAlerts || staffUnreadNotifs}</Badge>
