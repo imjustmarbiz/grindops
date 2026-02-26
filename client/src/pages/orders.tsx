@@ -563,9 +563,9 @@ export default function Orders() {
         <div className="overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1200px] table-fixed w-full">
           <colgroup>
-            <col className="w-[7%]" />
-            <col className="w-[12%]" />
             <col className="w-[6%]" />
+            <col className="w-[11%]" />
+            <col className="w-[8%]" />
             <col className="w-[8%]" />
             <col className="w-[5%]" />
             <col className="w-[10%]" />
@@ -669,7 +669,7 @@ export default function Orders() {
                   </TableCell>
                   <TableCell>
                     <Select value={order.platform || ""} onValueChange={(val) => saveField(order.id, { platform: val || null })}>
-                      <SelectTrigger className="h-7 text-xs bg-background/50 border-white/10 w-24" data-testid={`select-platform-${order.id}`}>
+                      <SelectTrigger className="h-7 text-xs bg-background/50 border-white/10 w-full min-w-0" data-testid={`select-platform-${order.id}`}>
                         <SelectValue placeholder="Platform" />
                       </SelectTrigger>
                       <SelectContent>
