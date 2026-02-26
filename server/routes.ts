@@ -1486,12 +1486,16 @@ export async function registerRoutes(
       const discordRoles = (authUser as any).discordRoles as string[] | null;
       const grinderCurrentRoles = (myGrinder as any).roles as string[] | null;
 
-      if (discordRoles && discordRoles.length > 0) {
+      const isDevElite = userId === "dev-elite-user";
+      if (discordRoles && discordRoles.length > 0 || isDevElite) {
         const detectedRoles = new Set<string>();
-        for (const dRoleId of discordRoles) {
-          const label = ROLE_LABELS[dRoleId];
-          if (label) detectedRoles.add(label);
+        if (discordRoles) {
+          for (const dRoleId of discordRoles) {
+            const label = ROLE_LABELS[dRoleId];
+            if (label) detectedRoles.add(label);
+          }
         }
+        if (isDevElite) detectedRoles.add("Elite Grinder");
         if (detectedRoles.size === 0) detectedRoles.add("Grinder");
         if (!detectedRoles.has("Grinder") && detectedRoles.size > 0) detectedRoles.add("Grinder");
 
