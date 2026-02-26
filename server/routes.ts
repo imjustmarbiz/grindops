@@ -1553,6 +1553,7 @@ export async function registerRoutes(
       if (o.status !== "Open") return false;
       return true;
     });
+    console.log(`[grinder-me] ${myGrinder.name} (${myGrinder.category}): ${allOrders.length} total orders, ${openOrders.length} open, statuses: ${[...new Set(allOrders.map((o: any) => o.status))].join(",")}`);
 
     const availableOrders = openOrders.map((o: any) => {
       const orderBids = allBids.filter((b: any) => b.orderId === o.id);
