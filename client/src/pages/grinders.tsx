@@ -827,7 +827,7 @@ export default function Grinders() {
                 <TableRow key={g.id} className="hover:bg-white/[0.03] cursor-pointer border-white/[0.04] transition-colors" onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {categoryIcon(g.category || "Grinder")}
+                      {categoryIcon(g.displayRole || g.category || "Grinder")}
                       <div>
                         <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
                         {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}
@@ -993,7 +993,7 @@ export default function Grinders() {
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto border-white/10 bg-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
-              {selectedGrinder && categoryIcon(selectedGrinder.category || "Grinder")}
+              {selectedGrinder && categoryIcon(selectedGrinder.displayRole || selectedGrinder.category || "Grinder")}
               {selectedGrinder?.name} - Scorecard
             </DialogTitle>
           </DialogHeader>

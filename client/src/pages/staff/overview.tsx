@@ -249,7 +249,7 @@ export default function StaffOverview() {
                   <div className="space-y-1.5">
                     {matchedGrinders.map(g => (
                       <div key={g.id} onClick={() => { setSearchQuery(""); navigate("/grinders"); }} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm cursor-pointer hover:bg-white/10 transition-colors" data-testid={`search-grinder-${g.id}`}>
-                        {categoryIcon(g.category)}
+                        {categoryIcon(g.displayRole || g.category)}
                         <span className="font-medium">{g.name}</span>
                         {g.discordUsername && <span className="text-xs text-muted-foreground">@{g.discordUsername}</span>}
                         <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
@@ -550,7 +550,7 @@ export default function StaffOverview() {
               {grindersWithStrikes.slice(0, 5).map((g) => (
                 <div key={g.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors" data-testid={`card-risk-${g.id}`}>
                   <div className="flex items-center gap-3">
-                    {categoryIcon(g.category)}
+                    {categoryIcon(g.displayRole || g.category)}
                     <div>
                       <span className="text-sm font-medium">{g.name}</span>
                       {g.suspended && <Badge className="ml-2 bg-red-500/15 text-red-400 border-red-500/20 text-[9px]">Suspended</Badge>}

@@ -53,6 +53,7 @@ export default function StaffAdmin() {
   const [editProfileCapacity, setEditProfileCapacity] = useState("");
   const [editProfileNotes, setEditProfileNotes] = useState("");
   const [editProfileTwitch, setEditProfileTwitch] = useState("");
+  const [editProfileDisplayRole, setEditProfileDisplayRole] = useState("");
   const [checkupOrderSearch, setCheckupOrderSearch] = useState("");
   const [taskGrinderId, setTaskGrinderId] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
@@ -1134,6 +1135,7 @@ export default function StaffAdmin() {
                             setEditProfileCapacity(String(g.capacity));
                             setEditProfileNotes(g.notes || "");
                             setEditProfileTwitch(g.twitchUsername || "");
+                            setEditProfileDisplayRole(g.displayRole || "");
                           }}>
                           Edit
                         </Button>
@@ -1177,7 +1179,11 @@ export default function StaffAdmin() {
                   <button
                     key={role}
                     type="button"
-                    onClick={() => setEditProfileRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])}
+                    onClick={() => setEditProfileRoles(prev => {
+                      const next = prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role];
+                      if (!next.includes(editProfileDisplayRole)) setEditProfileDisplayRole("");
+                      return next;
+                    })}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                       editProfileRoles.includes(role)
                         ? (role === "Elite Grinder" ? "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" :
@@ -1196,6 +1202,31 @@ export default function StaffAdmin() {
                 ))}
               </div>
             </div>
+
+            {editProfileRoles.length > 1 && (
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Display Icon</label>
+                <div className="flex flex-wrap gap-2">
+                  {editProfileRoles.map(role => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setEditProfileDisplayRole(role)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                        (editProfileDisplayRole || editProfileRoles[0]) === role
+                          ? "border-primary/50 text-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-white/[0.06] text-muted-foreground bg-white/[0.02] hover:bg-white/[0.05]"
+                      }`}
+                      data-testid={`toggle-display-role-${role.toLowerCase().replace(/\s/g, "-")}`}
+                    >
+                      {categoryIcon(role)}
+                      {role}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Choose which role icon appears on the grinder list</p>
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium mb-1 block">Tier (auto-calculated)</label>
@@ -1237,12 +1268,14 @@ export default function StaffAdmin() {
                   toast({ title: "At least one role required", variant: "destructive" });
                   return;
                 }
+                const selectedDisplay = editProfileRoles.length > 1 ? (editProfileDisplayRole || editProfileRoles[0]) : null;
                 updateProfileMutation.mutate({
                   grinderId: editProfileGrinder.id,
                   data: {
                     name: editProfileName,
                     roles: editProfileRoles,
                     category: editProfileRoles[0],
+                    displayRole: selectedDisplay,
                     capacity: parseInt(editProfileCapacity),
                     notes: editProfileNotes || null,
                     twitchUsername: editProfileTwitch.trim() || null,

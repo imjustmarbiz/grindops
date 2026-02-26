@@ -857,6 +857,7 @@ export class DatabaseStorage implements IStorage {
         grinderId: g.id,
         grinderName: g.name,
         category: g.category,
+        displayRole: g.displayRole,
         tier: g.tier,
         scores: {
           margin: Math.round(marginScore * 100) / 100,

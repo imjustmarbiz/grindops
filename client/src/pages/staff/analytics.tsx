@@ -348,7 +348,7 @@ export default function StaffAnalytics() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          {categoryIcon(g.category)}
+                          {categoryIcon(g.displayRole || g.category)}
                           <span className="font-medium text-sm truncate cursor-pointer hover:underline"
                             data-testid={`link-earner-${g.id}`}
                             onClick={() => navigate(`/grinders?scorecard=${g.id}`)}>{g.name}</span>

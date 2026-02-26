@@ -467,7 +467,7 @@ export default function Dashboard() {
                   <div className="space-y-1.5">
                     {matchedGrinders.map(g => (
                       <div key={g.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/5 text-sm" data-testid={`search-grinder-${g.id}`}>
-                        {categoryIcon(g.category)}
+                        {categoryIcon(g.displayRole || g.category)}
                         <span className="font-medium">{g.name}</span>
                         {g.discordUsername && <span className="text-xs text-muted-foreground">@{g.discordUsername}</span>}
                         <Badge variant="outline" className="text-[10px]">{g.category}</Badge>
@@ -1051,7 +1051,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {categoryIcon(g.category)}
+                        {categoryIcon(g.displayRole || g.category)}
                         <span className="font-medium text-sm truncate">{g.name}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -1179,7 +1179,7 @@ export default function Dashboard() {
                   {grindersWithStrikes.slice(0, 4).map((g) => (
                     <div key={g.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white/5" data-testid={`card-risk-${g.id}`}>
                       <div className="flex items-center gap-2">
-                        {categoryIcon(g.category)}
+                        {categoryIcon(g.displayRole || g.category)}
                         <span className="text-sm font-medium">{g.name}</span>
                       </div>
                       <div className="flex items-center gap-1.5">

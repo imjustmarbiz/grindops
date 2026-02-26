@@ -51,7 +51,7 @@ function SuggestionCard({ s, i, customerPrice }: { s: SuggestionResult; i: numbe
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.05] text-muted-foreground"}`}>
           #{i + 1}
         </div>
-        {categoryIcon(s.category)}
+        {categoryIcon(s.displayRole || s.category)}
         <div>
           <p className="font-medium text-sm">{s.grinderName}</p>
           <p className="text-[10px] text-muted-foreground">{s.category} · {s.activeOrders}/{s.capacity} active</p>
@@ -256,7 +256,7 @@ export default function Queue() {
                           #{i + 1}
                         </div>
                         <div className="flex items-center gap-2">
-                          {categoryIcon(s.category)}
+                          {categoryIcon(s.displayRole || s.category)}
                           <span className="font-medium">{s.grinderName}</span>
                         </div>
                         <Badge variant="outline" className="text-xs bg-white/[0.03]">{s.category}</Badge>
