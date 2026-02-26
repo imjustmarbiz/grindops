@@ -22,6 +22,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { useAuth } from "@/hooks/use-auth";
 import type { Order, Service, Grinder, Bid } from "@shared/schema";
 
 import { Link } from "wouter";
@@ -232,6 +233,8 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
 }
 
 export default function Orders() {
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
@@ -791,20 +794,22 @@ export default function Orders() {
                           <TooltipContent>Assign replacement grinder</TooltipContent>
                         </Tooltip>
                       )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-muted-foreground hover:text-red-400"
-                            onClick={() => deleteMutation.mutate(order.id)}
-                            data-testid={`button-delete-order-${order.id}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete order</TooltipContent>
-                      </Tooltip>
+                      {isOwner && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                              onClick={() => deleteMutation.mutate(order.id)}
+                              data-testid={`button-delete-order-${order.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete order</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

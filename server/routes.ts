@@ -603,7 +603,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.orders.delete.path, requireStaff, async (req, res) => {
+  app.delete(api.orders.delete.path, requireOwner, async (req, res) => {
     try {
       const deleted = await storage.deleteOrder(req.params.id);
       if (!deleted) return res.status(404).json({ message: "Order not found" });
