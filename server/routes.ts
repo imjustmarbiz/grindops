@@ -212,8 +212,13 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupDiscordAuth(app);
 
-  const express = await import("express");
-  app.use('/uploads', express.default.static(path.join(process.cwd(), "uploads")));
+  const express = (await import("express")).default;
+  app.use('/uploads', express.static(path.join(process.cwd(), "uploads"), {
+    fallthrough: false,
+    setHeaders: (res) => {
+      res.set('Access-Control-Allow-Origin', '*');
+    }
+  }));
 
   app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/auth') || req.path === '/logout' || req.path.startsWith('/public/')) {
