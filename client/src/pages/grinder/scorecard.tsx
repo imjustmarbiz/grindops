@@ -93,6 +93,7 @@ export default function GrinderScorecard() {
   const payoutSummary = scorecardData?.payoutSummary || {};
   const orderHistory: any[] = scorecardData?.orderHistory || [];
   const tierThresholds: any[] = scorecardData?.tierThresholds || [];
+  const windowStats = scorecardData?.windowStats || { completedL30D: 0, completedL90D: 0, onTimeL30D: 0, tenureDays: 0 };
 
   const qualityScore = freshGrinder.avgQualityRating != null ? Number(freshGrinder.avgQualityRating) : 0;
   const onTimeRate = freshGrinder.onTimeRate != null ? Number(freshGrinder.onTimeRate) : 0;
@@ -120,12 +121,25 @@ export default function GrinderScorecard() {
   const tierProgress = tierIndex >= 0 ? Math.min(((tierIndex) / (TIER_ORDER.length - 1)) * 100, 100) : 0;
 
   const nextTierReqs = nextTier ? tierThresholds.find((t: any) => t.tier === nextTier) : null;
-  const tierProgressMetrics = nextTierReqs ? [
-    { label: "Completed Orders", current: completedOrders, required: nextTierReqs.minCompleted, unit: "" },
-    { label: "Quality Score", current: Math.round(qualityScore), required: nextTierReqs.minQuality, unit: "%" },
-    { label: "Win Rate", current: Math.round(winRate), required: nextTierReqs.minWinRate, unit: "%" },
-    { label: "On-Time Rate", current: Math.round(onTimeRate), required: nextTierReqs.minOnTime, unit: "%" },
-    { label: "Total Earnings", current: totalEarnings, required: nextTierReqs.minEarnings, unit: "$", isCurrency: true },
+
+  const formatDays = (days: number) => {
+    if (days >= 365) return `${Math.floor(days / 365)}y ${days % 365 > 0 ? Math.floor((days % 365) / 30) + "mo" : ""}`.trim();
+    if (days >= 30) return `${Math.floor(days / 30)}mo ${days % 30 > 0 ? (days % 30) + "d" : ""}`.trim();
+    return `${days}d`;
+  };
+
+  type TierMetric = { label: string; current: number; required: number; unit: string; isCurrency?: boolean; isDays?: boolean; category: "short" | "mid" | "long" };
+
+  const tierProgressMetrics: TierMetric[] = nextTierReqs ? [
+    { label: "Orders (Last 30d)", current: windowStats.completedL30D, required: nextTierReqs.minCompletedL30D, unit: "", category: "short" as const },
+    ...(nextTierReqs.minOnTimeL30D > 0 ? [{ label: "On-Time (Last 30d)", current: Math.round(windowStats.onTimeL30D), required: nextTierReqs.minOnTimeL30D, unit: "%", category: "short" as const }] : []),
+    { label: "Orders (Last 90d)", current: windowStats.completedL90D, required: nextTierReqs.minCompletedL90D, unit: "", category: "mid" as const },
+    { label: "Quality Score", current: Math.round(qualityScore), required: nextTierReqs.minQuality, unit: "%", category: "mid" as const },
+    { label: "Win Rate", current: Math.round(winRate), required: nextTierReqs.minWinRate, unit: "%", category: "mid" as const },
+    { label: "Total Orders", current: completedOrders, required: nextTierReqs.minCompleted, unit: "", category: "long" as const },
+    { label: "On-Time Rate", current: Math.round(onTimeRate), required: nextTierReqs.minOnTime, unit: "%", category: "long" as const },
+    { label: "Total Earnings", current: totalEarnings, required: nextTierReqs.minEarnings, unit: "$", isCurrency: true, category: "long" as const },
+    { label: "Tenure", current: windowStats.tenureDays, required: nextTierReqs.minTenureDays, unit: "", isDays: true, category: "long" as const },
   ] : [];
 
   const totalPaidOut = payoutSummary.totalPaidOut || 0;
@@ -251,40 +265,67 @@ export default function GrinderScorecard() {
               ))}
             </div>
 
-            {nextTierReqs && tierProgressMetrics.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                <p className="text-xs font-medium text-white/50 mb-2.5">Requirements for <span className={getTierColor(nextTier!)}>{nextTier}</span></p>
-                <div className="space-y-2">
-                  {tierProgressMetrics.map((m, i) => {
-                    const met = m.current >= m.required;
-                    const pct = Math.min((m.current / m.required) * 100, 100);
-                    const displayCurrent = (m as any).isCurrency ? `$${m.current.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `${m.current}${m.unit}`;
-                    const displayRequired = (m as any).isCurrency ? `$${m.required.toLocaleString()}` : `${m.required}${m.unit}`;
-                    return (
-                      <div key={i} className="flex items-center gap-3" data-testid={`tier-req-${i}`}>
-                        <div className="w-2.5 h-2.5 shrink-0">
-                          {met ? <CheckCircle className="w-2.5 h-2.5 text-emerald-400" /> : <div className="w-2.5 h-2.5 rounded-full border border-white/20" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[11px] text-white/50">{m.label}</span>
-                            <span className={`text-[11px] font-medium ${met ? "text-emerald-400" : "text-white/70"}`}>
-                              {displayCurrent} / {displayRequired}
-                            </span>
+            {nextTierReqs && tierProgressMetrics.length > 0 && (() => {
+              const categories = [
+                { key: "short" as const, label: "Short-Term (30 Days)", color: "text-amber-400", borderColor: "border-amber-500/15", bgColor: "bg-amber-500/[0.03]" },
+                { key: "mid" as const, label: "Mid-Term (90 Days)", color: "text-blue-400", borderColor: "border-blue-500/15", bgColor: "bg-blue-500/[0.03]" },
+                { key: "long" as const, label: "Long-Term (All-Time)", color: "text-violet-400", borderColor: "border-violet-500/15", bgColor: "bg-violet-500/[0.03]" },
+              ];
+              const totalMet = tierProgressMetrics.filter(m => m.current >= m.required).length;
+              return (
+                <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                  <p className="text-xs font-medium text-white/50 mb-3">Requirements for <span className={getTierColor(nextTier!)}>{nextTier}</span></p>
+                  <div className="space-y-3">
+                    {categories.map(cat => {
+                      const catMetrics = tierProgressMetrics.filter(m => m.category === cat.key);
+                      if (catMetrics.length === 0) return null;
+                      const catMet = catMetrics.filter(m => m.current >= m.required).length;
+                      return (
+                        <div key={cat.key} className={`rounded-lg border ${cat.borderColor} ${cat.bgColor} p-3`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`text-[10px] font-semibold uppercase tracking-wider ${cat.color}`}>{cat.label}</span>
+                            <span className={`text-[10px] font-medium ${catMet === catMetrics.length ? "text-emerald-400" : "text-white/40"}`}>{catMet}/{catMetrics.length}</span>
                           </div>
-                          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${met ? "bg-emerald-500" : "bg-white/20"}`} style={{ width: `${pct}%` }} />
+                          <div className="space-y-1.5">
+                            {catMetrics.map((m, i) => {
+                              const met = m.current >= m.required;
+                              const pct = Math.min((m.current / Math.max(m.required, 1)) * 100, 100);
+                              const displayCurrent = m.isCurrency
+                                ? `$${m.current.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                                : m.isDays ? formatDays(m.current) : `${m.current}${m.unit}`;
+                              const displayRequired = m.isCurrency
+                                ? `$${m.required.toLocaleString()}`
+                                : m.isDays ? formatDays(m.required) : `${m.required}${m.unit}`;
+                              return (
+                                <div key={i} className="flex items-center gap-2.5" data-testid={`tier-req-${cat.key}-${i}`}>
+                                  <div className="w-2.5 h-2.5 shrink-0">
+                                    {met ? <CheckCircle className="w-2.5 h-2.5 text-emerald-400" /> : <div className="w-2.5 h-2.5 rounded-full border border-white/20" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-0.5">
+                                      <span className="text-[11px] text-white/50">{m.label}</span>
+                                      <span className={`text-[11px] font-medium ${met ? "text-emerald-400" : "text-white/70"}`}>
+                                        {displayCurrent} / {displayRequired}
+                                      </span>
+                                    </div>
+                                    <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                                      <div className={`h-full rounded-full transition-all duration-500 ${met ? "bg-emerald-500" : "bg-white/20"}`} style={{ width: `${pct}%` }} />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-white/30 mt-2.5">
+                    Meet all requirements across all three time windows to advance. {totalMet}/{tierProgressMetrics.length} met
+                  </p>
                 </div>
-                <p className="text-[10px] text-white/30 mt-2.5">
-                  Meet all 5 requirements to advance. {tierProgressMetrics.filter(m => m.current >= m.required).length}/{tierProgressMetrics.length} met
-                </p>
-              </div>
-            )}
+              );
+            })()}
 
             {tier === "Elite" && (
               <div className="mt-3 pt-3 border-t border-white/[0.06]">

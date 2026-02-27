@@ -1,19 +1,49 @@
 import { storage } from "./storage";
 
 const TIER_THRESHOLDS = [
-  { tier: "Elite",   minCompleted: 75, minQuality: 90, minWinRate: 65, minOnTime: 90, minEarnings: 5000 },
-  { tier: "Diamond", minCompleted: 50, minQuality: 85, minWinRate: 55, minOnTime: 85, minEarnings: 2500 },
-  { tier: "Gold",    minCompleted: 25, minQuality: 75, minWinRate: 45, minOnTime: 75, minEarnings: 1000 },
-  { tier: "Silver",  minCompleted: 10, minQuality: 65, minWinRate: 35, minOnTime: 65, minEarnings: 300 },
-  { tier: "Bronze",  minCompleted: 3,  minQuality: 50, minWinRate: 20, minOnTime: 50, minEarnings: 50 },
+  {
+    tier: "Elite",
+    minCompleted: 75, minQuality: 90, minWinRate: 65, minOnTime: 90, minEarnings: 5000,
+    minTenureDays: 180, minCompletedL30D: 8, minCompletedL90D: 20, minOnTimeL30D: 85,
+  },
+  {
+    tier: "Diamond",
+    minCompleted: 50, minQuality: 85, minWinRate: 55, minOnTime: 85, minEarnings: 2500,
+    minTenureDays: 120, minCompletedL30D: 5, minCompletedL90D: 12, minOnTimeL30D: 80,
+  },
+  {
+    tier: "Gold",
+    minCompleted: 25, minQuality: 75, minWinRate: 45, minOnTime: 75, minEarnings: 1000,
+    minTenureDays: 60, minCompletedL30D: 3, minCompletedL90D: 7, minOnTimeL30D: 70,
+  },
+  {
+    tier: "Silver",
+    minCompleted: 10, minQuality: 65, minWinRate: 35, minOnTime: 65, minEarnings: 300,
+    minTenureDays: 14, minCompletedL30D: 2, minCompletedL90D: 3, minOnTimeL30D: 0,
+  },
+  {
+    tier: "Bronze",
+    minCompleted: 3, minQuality: 50, minWinRate: 20, minOnTime: 50, minEarnings: 50,
+    minTenureDays: 3, minCompletedL30D: 1, minCompletedL90D: 1, minOnTimeL30D: 0,
+  },
 ];
+
+export { TIER_THRESHOLDS };
+
+interface WindowStats {
+  completedL30D: number;
+  completedL90D: number;
+  onTimeL30D: number;
+  tenureDays: number;
+}
 
 function calculateTier(
   completedOrders: number,
   qualityScore: number,
   winRate: number,
   onTimeRate: number,
-  totalEarnings: number
+  totalEarnings: number,
+  windowStats: WindowStats
 ): string {
   for (const t of TIER_THRESHOLDS) {
     if (
@@ -21,7 +51,11 @@ function calculateTier(
       qualityScore >= t.minQuality &&
       winRate >= t.minWinRate &&
       onTimeRate >= t.minOnTime &&
-      totalEarnings >= t.minEarnings
+      totalEarnings >= t.minEarnings &&
+      windowStats.tenureDays >= t.minTenureDays &&
+      windowStats.completedL30D >= t.minCompletedL30D &&
+      windowStats.completedL90D >= t.minCompletedL90D &&
+      (t.minOnTimeL30D === 0 || windowStats.onTimeL30D >= t.minOnTimeL30D)
     ) {
       return t.tier;
     }
@@ -42,6 +76,24 @@ export async function recalcGrinderStats(grinderId: string) {
   const onTimeRate = completedCount > 0 ? ((onTimeCount / completedCount) * 100) : 100;
 
   const completionRate = totalNonCancelled > 0 ? ((completedCount / totalNonCancelled) * 100) : 100;
+
+  const now = new Date();
+  const now30dAgo = new Date(now);
+  now30dAgo.setDate(now30dAgo.getDate() - 30);
+  const now90dAgo = new Date(now);
+  now90dAgo.setDate(now90dAgo.getDate() - 90);
+
+  const completedL30D = completed.filter((a: any) => {
+    const d = a.deliveredDateTime ? new Date(a.deliveredDateTime) : null;
+    return d && d >= now30dAgo;
+  });
+  const completedL90D = completed.filter((a: any) => {
+    const d = a.deliveredDateTime ? new Date(a.deliveredDateTime) : null;
+    return d && d >= now90dAgo;
+  });
+
+  const onTimeL30DCount = completedL30D.filter((a: any) => a.isOnTime === true).length;
+  const onTimeL30D = completedL30D.length > 0 ? ((onTimeL30DCount / completedL30D.length) * 100) : 100;
 
   let totalSpeedScore = 0;
   let speedCount = 0;
@@ -141,7 +193,18 @@ export async function recalcGrinderStats(grinderId: string) {
     ? ((active.length / grinder.capacity) * 100).toFixed(0)
     : "0";
 
-  const autoTier = calculateTier(completedCount, qualityScore, winRate, onTimeRate, totalEarnings);
+  const tenureDays = grinder.joinedAt
+    ? Math.floor((now.getTime() - new Date(grinder.joinedAt).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  const windowStats: WindowStats = {
+    completedL30D: completedL30D.length,
+    completedL90D: completedL90D.length,
+    onTimeL30D: Math.round(onTimeL30D * 10) / 10,
+    tenureDays,
+  };
+
+  const autoTier = calculateTier(completedCount, qualityScore, winRate, onTimeRate, totalEarnings, windowStats);
 
   const updates: any = {
     completedOrders: completedCount,
@@ -161,5 +224,5 @@ export async function recalcGrinderStats(grinderId: string) {
   };
 
   await storage.updateGrinder(grinderId, updates);
-  return updates;
+  return { ...updates, windowStats };
 }

@@ -122,6 +122,7 @@ function TierProgressBar({ currentTier, grinder }: { currentTier: string; grinde
           );
         })}
       </div>
+      <p className="text-[8px] text-muted-foreground/40 mt-1">All-time requirements shown. 30d/90d activity + tenure also required — see grinder scorecard.</p>
     </div>
   );
 }

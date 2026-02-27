@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireGrinderOrStaff } from "./discord/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
-import { recalcGrinderStats } from "./recalcStats";
+import { recalcGrinderStats, TIER_THRESHOLDS } from "./recalcStats";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
@@ -4259,9 +4259,10 @@ export async function registerRoutes(
       let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
 
-      await recalcGrinderStats(myGrinder.id);
+      const recalcResult = await recalcGrinderStats(myGrinder.id);
       myGrinder = await storage.getGrinder(myGrinder.id) as any;
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+      const windowStats = recalcResult?.windowStats || { completedL30D: 0, completedL90D: 0, onTimeL30D: 0, tenureDays: 0 };
 
       const reports = await storage.getPerformanceReports(myGrinder.id);
       const approvedReports = reports
@@ -4337,17 +4338,10 @@ export async function registerRoutes(
         return order && (order.status === "Completed" || order.status === "Paid Out");
       });
 
-      const tierThresholds = [
-        { tier: "Elite",   minCompleted: 75, minQuality: 90, minWinRate: 65, minOnTime: 90, minEarnings: 5000 },
-        { tier: "Diamond", minCompleted: 50, minQuality: 85, minWinRate: 55, minOnTime: 85, minEarnings: 2500 },
-        { tier: "Gold",    minCompleted: 25, minQuality: 75, minWinRate: 45, minOnTime: 75, minEarnings: 1000 },
-        { tier: "Silver",  minCompleted: 10, minQuality: 65, minWinRate: 35, minOnTime: 65, minEarnings: 300 },
-        { tier: "Bronze",  minCompleted: 3,  minQuality: 50, minWinRate: 20, minOnTime: 50, minEarnings: 50 },
-      ];
-
       res.json({
         grinder: myGrinder,
-        tierThresholds,
+        tierThresholds: TIER_THRESHOLDS,
+        windowStats,
         recentReports: approvedReports,
         checkpointCompliance,
         orderLogs: enrichedLogs,
