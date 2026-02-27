@@ -101,12 +101,6 @@ const featureItems = [
     url: "/grinder/reviews",
   },
   {
-    icon: MessageSquare,
-    title: "Customer Updates",
-    desc: "Attach proof URLs to your daily updates so customers get automatic Discord notifications with your progress. When you complete an order, customers approve your work through Discord before your payout is processed. No direct customer contact needed — the bot handles everything.",
-    url: "/grinder/assignments",
-  },
-  {
     icon: Wrench,
     title: "Order Repairs",
     desc: "Fix existing orders, claim missing in-progress orders, or add completed orders not in your dashboard. Your one-stop shop for order auditing.",

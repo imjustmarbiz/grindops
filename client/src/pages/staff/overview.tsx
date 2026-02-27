@@ -527,23 +527,6 @@ export default function StaffOverview() {
       </div>
 
       <FadeInUp>
-        <Card className="border-0 bg-gradient-to-br from-blue-500/10 via-background to-blue-900/5 overflow-hidden relative mb-6" data-testid="card-customer-pipeline-info">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-blue-500/5 -translate-y-12 translate-x-12" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-blue-400">
-              <MessageSquare className="w-4 h-4" />
-              Customer Updates Pipeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Orders with linked customer Discord IDs receive automated updates throughout the lifecycle. Customers approve completion via Discord before payouts are created. Force-approve available for unresponsive customers. Toggle in Admin &gt; System.
-            </p>
-          </CardContent>
-        </Card>
-      </FadeInUp>
-
-      <FadeInUp>
       <Card className="border-white/[0.06] bg-white/[0.02]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">

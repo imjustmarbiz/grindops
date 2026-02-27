@@ -592,25 +592,6 @@ export default function GrinderOverview() {
         </FadeInUp>
       )}
 
-      {stats.activeAssignments > 0 && (
-        <FadeInUp>
-          <Card className="border-0 bg-gradient-to-br from-blue-500/10 via-background to-blue-900/5 overflow-hidden relative" data-testid="card-customer-updates-info">
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-blue-500/5 -translate-y-12 translate-x-12" />
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-blue-400">
-                <MessageSquare className="w-4 h-4" />
-                Customer Updates Active
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Your daily updates and proof uploads are automatically sent to customers via Discord. When you complete an order, the customer approves your work through Discord before your payout is generated.
-              </p>
-            </CardContent>
-          </Card>
-        </FadeInUp>
-      )}
-
       {lostBids.length > 0 && (
         <FadeInUp>
         <Card className="border-0 bg-gradient-to-r from-red-500/[0.06] via-background to-red-500/[0.03] overflow-hidden relative">
