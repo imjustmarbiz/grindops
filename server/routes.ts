@@ -5050,7 +5050,7 @@ export async function registerRoutes(
   app.post('/api/order-claims/staff', requireStaff, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { repairType, grinderId, ticketName, serviceId, proofNotes, completedDateTime, startDateTime, dueDate, grinderAmount, customerPrice, platform, gamertag } = req.body;
+      const { repairType, grinderId, ticketName, serviceId, proofNotes, completedDateTime, startDateTime, dueDate, payoutDate, grinderAmount, customerPrice, platform, gamertag } = req.body;
       const validTypes = ["claim_missing", "add_completed"];
       if (!repairType || !validTypes.includes(repairType)) return res.status(400).json({ error: "Invalid repair type" });
       if (!grinderId) return res.status(400).json({ error: "Grinder is required" });
@@ -5074,7 +5074,7 @@ export async function registerRoutes(
         grinderAmount: grinderAmount || null,
         payoutPlatform: null,
         payoutDetails: null,
-        fixFields: JSON.stringify({ customerPrice, platform, gamertag }),
+        fixFields: JSON.stringify({ customerPrice, platform, gamertag, payoutDate }),
         status: "pending",
       });
 
@@ -5279,7 +5279,9 @@ export async function registerRoutes(
             const existingPayouts = (await storage.getPayoutRequests(claim.grinderId))
               .filter(p => p.orderId === resolvedOrderId);
             if (existingPayouts.length === 0) {
-              await storage.createPayoutRequest({
+              let repairFixData: Record<string, any> = {};
+              try { repairFixData = JSON.parse(claim.fixFields || "{}"); } catch { repairFixData = {}; }
+              const payoutReq: any = {
                 id: `PR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
                 assignmentId: existingAssignments[0].id,
                 orderId: resolvedOrderId,
@@ -5289,7 +5291,12 @@ export async function registerRoutes(
                 payoutDetails: claim.payoutDetails || null,
                 status: "Pending",
                 completionProofUrl: "grind-repair",
-              });
+              };
+              if (repairFixData.payoutDate) {
+                payoutReq.paidAt = new Date(repairFixData.payoutDate);
+                payoutReq.status = "Paid";
+              }
+              await storage.createPayoutRequest(payoutReq);
             }
           }
 

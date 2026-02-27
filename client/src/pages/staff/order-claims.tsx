@@ -141,6 +141,7 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
   const [completedDateTime, setCompletedDateTime] = useState("");
   const [startDateTime, setStartDateTime] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [payoutDate, setPayoutDate] = useState("");
   const [proofNotes, setProofNotes] = useState("");
 
   const createMutation = useMutation({
@@ -152,7 +153,7 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
       toast({ title: "Repair request created" });
       setGrinderId(""); setServiceId(""); setTicketName(""); setGrinderAmount("");
       setCustomerPrice(""); setPlatform(""); setGamertag(""); setCompletedDateTime("");
-      setStartDateTime(""); setDueDate(""); setProofNotes("");
+      setStartDateTime(""); setDueDate(""); setPayoutDate(""); setProofNotes("");
       onSuccess();
     },
     onError: (err: Error) => {
@@ -175,6 +176,7 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
       completedDateTime: completedDateTime || undefined,
       startDateTime: startDateTime || undefined,
       dueDate: dueDate || undefined,
+      payoutDate: payoutDate || undefined,
       proofNotes: proofNotes || undefined,
     });
   };
@@ -276,6 +278,12 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
                 <div>
                   <Label className="text-xs text-muted-foreground mb-1 block">Completed Date *</Label>
                   <Input type="datetime-local" value={completedDateTime} onChange={e => setCompletedDateTime(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-completed" />
+                </div>
+              )}
+              {repairType === "add_completed" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Payout Date</Label>
+                  <Input type="date" value={payoutDate} onChange={e => setPayoutDate(e.target.value)} className="bg-white/[0.03] border-white/10 text-xs" data-testid="input-staff-repair-payout-date" />
                 </div>
               )}
               <div>
