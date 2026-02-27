@@ -527,8 +527,13 @@ export default function GrinderOverview() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge
-                          className={a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}>
-                          {a.status}
+                          className={
+                            (a.orderStatus || a.status) === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" :
+                            (a.orderStatus || a.status) === "Paid Out" ? "bg-cyan-500/20 text-cyan-400 border-0" :
+                            (a.orderStatus || a.status) === "Completed" || a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" :
+                            "bg-white/[0.06] text-white/40 border-0"
+                          }>
+                          {a.orderStatus || a.status}
                         </Badge>
                         <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
                       </div>

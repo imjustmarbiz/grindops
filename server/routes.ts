@@ -1952,6 +1952,7 @@ export async function registerRoutes(
           id: a.id,
           orderId: a.orderId,
           status: a.status,
+          orderStatus: order?.status || a.status,
           assignedDateTime: a.assignedDateTime,
           dueDateTime: a.dueDateTime,
           deliveredDateTime: a.deliveredDateTime,
