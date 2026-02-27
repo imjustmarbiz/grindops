@@ -2085,6 +2085,7 @@ export async function registerRoutes(
       assignments: assignmentsData,
       bids: myBids.map((b: any) => {
         const order = allOrders.find((o: any) => o.id === b.orderId);
+        const svc = order ? allServices.find((s: any) => s.id === order.serviceId) : null;
         return {
           id: b.id,
           orderId: b.orderId,
@@ -2096,7 +2097,20 @@ export async function registerRoutes(
           canStart: b.canStart,
           discordMessageId: b.discordMessageId,
           hasTicket: !!(order?.discordTicketChannelId),
+          ticketChannelUrl: order?.discordTicketChannelId
+            ? (resolvedGuildId
+              ? `https://discord.com/channels/${resolvedGuildId}/${order.discordTicketChannelId}`
+              : `https://discord.com/channels/@me/${order.discordTicketChannelId}`)
+            : null,
           biddingClosesAt: order?.biddingClosesAt || null,
+          serviceName: svc?.name || order?.serviceId || null,
+          platform: order?.platform || null,
+          complexity: order?.complexity || null,
+          mgtOrderNumber: order?.mgtOrderNumber || null,
+          isRush: order?.isRush || false,
+          isEmergency: order?.isEmergency || false,
+          dueDateTime: order?.dueDateTime || null,
+          orderStatus: order?.status || null,
         };
       }),
       availableOrders,

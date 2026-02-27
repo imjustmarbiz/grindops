@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
-import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ export default function GrinderBids() {
   } = useGrinderData();
 
   const [editBidDialog, setEditBidDialog] = useState<any>(null);
-  const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [editBidAmount, setEditBidAmount] = useState("");
   const [editTimeline, setEditTimeline] = useState("");
   const [editCanStart, setEditCanStart] = useState("");
@@ -132,12 +130,23 @@ export default function GrinderBids() {
                         </div>
                       )}
                       <div>
-                        <p className="font-medium">Order {b.orderId}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium">Order {b.mgtOrderNumber || b.orderId}</p>
+                          {b.serviceName && <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-white/10 text-white/50">{b.serviceName}</Badge>}
+                          {b.isRush && <Badge className="text-[10px] h-4 px-1.5 bg-orange-500/15 text-orange-400 border-0">Rush</Badge>}
+                          {b.isEmergency && <Badge className="text-[10px] h-4 px-1.5 bg-red-500/15 text-red-400 border-0">Emergency</Badge>}
+                        </div>
                         <div className="flex items-center gap-3 text-sm text-white/40 mt-1 flex-wrap">
                           <span className="font-medium text-white/60">Bid: ${b.bidAmount}</span>
-                          {b.timeline && <span>Timeline: {b.timeline}</span>}
-                          {b.canStart && <span>Can Start: {b.canStart}</span>}
-                          <span>{b.bidTime ? new Date(b.bidTime).toLocaleDateString() : ""}</span>
+                          {b.platform && <span>• {b.platform}</span>}
+                          {b.complexity && <span>• Complexity: {b.complexity}</span>}
+                          {b.timeline && <span>• Timeline: {b.timeline}h</span>}
+                          {b.canStart && <span>• Start: {b.canStart}</span>}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-white/25 mt-0.5 flex-wrap">
+                          <span>Bid placed: {b.bidTime ? new Date(b.bidTime).toLocaleDateString() : ""}</span>
+                          {b.dueDateTime && <span>• Due: {new Date(b.dueDateTime).toLocaleDateString()}</span>}
+                          {b.orderStatus && <span>• Order: {b.orderStatus}</span>}
                         </div>
                       </div>
                     </div>
@@ -176,27 +185,14 @@ export default function GrinderBids() {
                               <FileCheck className="w-3 h-3" /> View Order
                             </Button>
                           </Link>
-                          {b.hasTicket && (
-                            <Button size="sm" variant="outline"
+                          {b.hasTicket && b.ticketChannelUrl && (
+                            <Button size="sm" variant="outline" asChild
                               className="gap-1 text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
                               data-testid={`button-join-ticket-${b.id}`}
-                              disabled={joiningTicket === b.orderId}
-                              onClick={async () => {
-                                setJoiningTicket(b.orderId);
-                                try {
-                                  const res = await apiRequest("POST", `/api/orders/${b.orderId}/ticket-invite`);
-                                  const data = await res.json();
-                                  if (data.inviteUrl) window.open(data.inviteUrl, '_blank');
-                                  else if (data.channelUrl) window.open(data.channelUrl, '_blank');
-                                  toast({ title: "Ticket opened" });
-                                } catch (err: any) {
-                                  toast({ title: "Could not join ticket", description: err.message || "The bot may not have access.", variant: "destructive" });
-                                } finally {
-                                  setJoiningTicket(null);
-                                }
-                              }}
                             >
-                              {joiningTicket === b.orderId ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} Join Ticket
+                              <a href={b.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="w-3 h-3" /> Join Ticket
+                              </a>
                             </Button>
                           )}
                         </>
