@@ -119,11 +119,11 @@ function AppSidebar() {
   const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || undefined;
 
   return (
-    <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
+    <Sidebar className="border-r border-border/50 bg-sidebar-background">
       <SidebarContent>
         <div className="p-6 flex items-center gap-3">
           <img src={spLogo} alt="SP Logo" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
-          <span className="font-display font-bold text-2xl tracking-tight text-glow">GrindOps</span>
+          <span className="font-display font-bold text-2xl tracking-tight text-primary dark:text-glow">GrindOps</span>
         </div>
         
         <SidebarGroup>
@@ -196,7 +196,7 @@ function AppSidebar() {
             <Button 
               variant="outline" 
               data-testid="button-logout"
-              className="w-full justify-start gap-2 border-white/10 hover:bg-white/10 hover:text-destructive transition-colors hover-elevate" 
+              className="w-full justify-start gap-2 border-border hover:bg-accent/10 hover:text-destructive transition-colors hover-elevate" 
               onClick={() => logout()}
             >
               <LogOut className="w-4 h-4" />
@@ -264,23 +264,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
           
-          <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-6 backdrop-blur-md bg-background/50 relative z-10">
-            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
+          <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border px-4 sm:px-6 backdrop-blur-md bg-background/80 relative z-10">
+            <SidebarTrigger className="hover-elevate hover:bg-accent/10 p-2 rounded-md transition-colors" />
             <div className="ml-auto flex items-center gap-2 sm:gap-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="hover-elevate hover:bg-white/10"
+                className="hover-elevate hover:bg-accent/10"
                 data-testid="button-toggle-theme"
               >
-                {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5 text-foreground" />}
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setChatOpen(true)}
-                className="relative hover-elevate hover:bg-white/10"
+                className="relative hover-elevate hover:bg-accent/10"
                 data-testid="button-open-chat"
               >
                 <MessageCircle className="w-5 h-5" />
