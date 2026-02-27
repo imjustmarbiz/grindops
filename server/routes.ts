@@ -5269,6 +5269,19 @@ export async function registerRoutes(
       actor: myGrinder.id,
       details: { taskTitle: task.title },
     });
+
+    if (task.orderId && task.assignmentId) {
+      await storage.createActivityCheckpoint({
+        id: `CP-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        assignmentId: task.assignmentId,
+        orderId: task.orderId,
+        grinderId: myGrinder.id,
+        type: "order_update",
+        response: null,
+        note: `Task completed: ${task.title}`,
+      });
+    }
+
     res.json(updated);
   });
 
