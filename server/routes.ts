@@ -2626,10 +2626,10 @@ export async function registerRoutes(
       reviewedAt: new Date(),
     };
     if (status === "Paid") {
-      updateData.paidAt = paidAt ? new Date(paidAt) : new Date();
+      updateData.paidAt = paidAt ? new Date(paidAt + "T12:00:00") : new Date();
     }
     if (paidAt && !status) {
-      updateData.paidAt = new Date(paidAt);
+      updateData.paidAt = new Date(paidAt + "T12:00:00");
       delete updateData.status;
     }
     if (paymentProofUrl) {
@@ -5351,7 +5351,7 @@ export async function registerRoutes(
                 completionProofUrl: "grind-repair",
               };
               if (repairFixData.payoutDate) {
-                payoutReq.paidAt = new Date(repairFixData.payoutDate);
+                payoutReq.paidAt = new Date(repairFixData.payoutDate + "T12:00:00");
                 payoutReq.status = "Paid";
               }
               await storage.createPayoutRequest(payoutReq);
