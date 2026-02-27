@@ -538,6 +538,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
 
   const [ticketOrderId, setTicketOrderId] = useState("");
   const [ticketChannelId, setTicketChannelId] = useState("");
+  const [ticketCustomerDiscordId, setTicketCustomerDiscordId] = useState("");
 
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -609,14 +610,17 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
   });
 
   const linkTicketMutation = useMutation({
-    mutationFn: async (data: { orderId: string; discordTicketChannelId: string }) => {
-      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/ticket`, { discordTicketChannelId: data.discordTicketChannelId });
+    mutationFn: async (data: { orderId: string; discordTicketChannelId: string; customerDiscordId?: string }) => {
+      const body: Record<string, string> = { discordTicketChannelId: data.discordTicketChannelId };
+      if (data.customerDiscordId) body.customerDiscordId = data.customerDiscordId;
+      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/customer-discord`, body);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       setTicketOrderId("");
       setTicketChannelId("");
+      setTicketCustomerDiscordId("");
       toast({ title: "Ticket linked", description: "Discord ticket has been linked to the order." });
     },
     onError: (err: any) => {
@@ -1011,7 +1015,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <label className="text-xs text-muted-foreground font-medium">Select Assigned Order</label>
-                <Select value={ticketOrderId} onValueChange={(v) => { setTicketOrderId(v); setTicketChannelId(""); }}>
+                <Select value={ticketOrderId} onValueChange={(v) => { setTicketOrderId(v); setTicketChannelId(""); setTicketCustomerDiscordId(""); }}>
                   <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-ticket-order">
                     <SelectValue placeholder="Choose an assigned order" />
                   </SelectTrigger>
@@ -1039,15 +1043,28 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground font-medium">Customer Discord ID <span className="text-muted-foreground/50">(optional)</span></label>
+              <Input
+                placeholder="Customer's Discord user ID for update tagging"
+                value={ticketCustomerDiscordId}
+                onChange={(e) => setTicketCustomerDiscordId(e.target.value)}
+                className="bg-background/50 border-white/10 font-mono"
+                data-testid="input-ticket-customer-discord-id"
+              />
+              <p className="text-[10px] text-muted-foreground/60">If provided, the customer will be tagged in all automated updates sent to this ticket channel.</p>
+            </div>
 
             {ticketOrderId && (() => {
               const order = allOrders.find(o => o.id === ticketOrderId);
               const existingTicket = (order as any)?.discordTicketChannelId;
+              const existingCustomer = (order as any)?.customerDiscordId;
               return existingTicket ? (
                 <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Link2 className="w-4 h-4 text-purple-400" />
                     <span className="text-sm text-purple-300">Ticket linked: <span className="font-mono text-xs">{existingTicket}</span></span>
+                    {existingCustomer && <span className="text-xs text-blue-400">Customer: <span className="font-mono">{existingCustomer}</span></span>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
