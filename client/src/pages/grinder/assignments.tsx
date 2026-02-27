@@ -265,7 +265,7 @@ export default function GrinderAssignments() {
                       <div className="flex items-center gap-1"><Clock className="w-3 h-3" /> Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</div>
                       <div className="flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</div>
                       {a.deliveredDateTime && <div className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Done: {new Date(a.deliveredDateTime).toLocaleDateString()}</div>}
-                      {a.grinderEarnings && <div className="text-[#5865F2] font-semibold text-sm sm:text-base ml-auto sm:ml-0">${Number(a.grinderEarnings).toFixed(2)}</div>}
+                      {a.grinderEarnings && <div className="text-emerald-400 font-semibold text-sm sm:text-base ml-auto sm:ml-0">${Number(a.grinderEarnings).toFixed(2)}</div>}
                     </div>
                     {(a.serviceName || a.platform || a.gamertag) && (
                       <div className="flex items-center gap-x-3 gap-y-1 mt-2 text-[11px] sm:text-xs text-white/30 flex-wrap">
