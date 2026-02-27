@@ -1062,13 +1062,27 @@ function CheckpointHistory({ assignmentId }: { assignmentId: string }) {
         <div key={cp.id} className="flex items-start gap-2 p-2 rounded bg-white/[0.02] border border-white/[0.04] text-xs">
           <span>{typeIcons[cp.type] || "📋"}</span>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium capitalize">{cp.type.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
-              {cp.response && <Badge variant="outline" className="text-[10px] h-4 px-1">{cp.response}</Badge>}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium capitalize">{cp.type.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>
+              {cp.response === "pending" && <Badge className="text-[10px] h-4 px-1 bg-amber-500/15 text-amber-400 border border-amber-500/20">Pending</Badge>}
+              {cp.response === "approved" && <Badge className="text-[10px] h-4 px-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Approved</Badge>}
+              {cp.response === "denied" && <Badge className="text-[10px] h-4 px-1 bg-red-500/15 text-red-400 border border-red-500/20">Denied</Badge>}
+              {cp.response && !["pending", "approved", "denied"].includes(cp.response) && <Badge variant="outline" className="text-[10px] h-4 px-1">{cp.response}</Badge>}
               {cp.resolvedAt && <Badge className="text-[10px] h-4 px-1 bg-emerald-500/20 text-emerald-400 border-0">Resolved</Badge>}
             </div>
-            {cp.note && <p className="text-white/40 mt-0.5 truncate">{cp.note}</p>}
+            {cp.note && <p className="text-white/40 mt-0.5">{cp.note}</p>}
             {cp.resolvedNote && <p className="text-emerald-400/60 mt-0.5 truncate">Staff: {cp.resolvedNote}</p>}
+            {cp.proofUrls && Array.isArray(cp.proofUrls) && cp.proofUrls.length > 0 && (
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                {cp.proofUrls.map((url: string, idx: number) => (
+                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                    <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer text-blue-400 border-blue-500/30 hover:bg-blue-500/10">
+                      <ExternalLink className="w-2.5 h-2.5" /> Proof {idx + 1}
+                    </Badge>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           <span className="text-white/20 whitespace-nowrap">{new Date(cp.createdAt).toLocaleString()}</span>
         </div>

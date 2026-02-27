@@ -3850,7 +3850,25 @@ export async function registerRoutes(
 
       const checkpoints = await storage.getActivityCheckpoints(req.params.assignmentId);
       const mine = checkpoints.filter((c: any) => c.grinderId === myGrinder.id);
-      res.json(mine);
+
+      const allUpdates = await storage.getOrderUpdates(myGrinder.id);
+      const assignmentUpdates = allUpdates.filter((u: any) => u.assignmentId === req.params.assignmentId);
+      const updateCheckpoints = assignmentUpdates.map((u: any) => ({
+        id: `update-${u.id}`,
+        assignmentId: u.assignmentId,
+        grinderId: myGrinder.id,
+        type: "order_update",
+        note: u.message + (u.newDeadline ? ` | New deadline: ${new Date(u.newDeadline).toLocaleDateString()}` : ""),
+        response: u.deadlineStatus || null,
+        createdAt: u.createdAt,
+        proofUrls: u.proofUrls || [],
+      }));
+
+      const combined = [...mine, ...updateCheckpoints].sort((a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      res.json(combined);
     } catch (err) {
       res.status(500).json({ message: String(err) });
     }
@@ -4059,7 +4077,28 @@ export async function registerRoutes(
         assignmentId as string | undefined,
         grinderId as string | undefined
       );
-      res.json(checkpoints);
+
+      const allUpdates = await storage.getOrderUpdates(grinderId as string | undefined);
+      const filteredUpdates = assignmentId
+        ? allUpdates.filter((u: any) => u.assignmentId === assignmentId)
+        : allUpdates;
+
+      const updateCheckpoints = filteredUpdates.map((u: any) => ({
+        id: `update-${u.id}`,
+        assignmentId: u.assignmentId,
+        grinderId: u.grinderId,
+        type: "order_update",
+        note: u.message + (u.newDeadline ? ` | New deadline: ${new Date(u.newDeadline).toLocaleDateString()}` : ""),
+        response: u.deadlineStatus || null,
+        createdAt: u.createdAt,
+        proofUrls: u.proofUrls || [],
+      }));
+
+      const combined = [...checkpoints, ...updateCheckpoints].sort((a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      res.json(combined);
     } catch (err) {
       res.status(500).json({ message: String(err) });
     }
