@@ -165,7 +165,7 @@ export default function GrinderAssignments() {
 
   const filters = [
     { key: "all", label: "All", mobileLabel: "All", color: "bg-white/[0.06] text-white/60" },
-    { key: "active", label: "In Progress", mobileLabel: "Active", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
+    { key: "active", label: "In Progress", mobileLabel: "Active", color: "bg-[#5865F2]/15 text-[#5865F2] border-[#5865F2]/20" },
     { key: "completed", label: "Needs Payout", mobileLabel: "Payout", color: "bg-amber-500/15 text-amber-400 border-amber-500/20" },
     { key: "awaiting_payout", label: "Payout Pending", mobileLabel: "Pending", color: "bg-violet-500/15 text-violet-400 border-violet-500/20" },
     { key: "paid", label: "Paid Out", mobileLabel: "Paid", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
@@ -244,36 +244,38 @@ export default function GrinderAssignments() {
           {filteredAssignments.map((a: any) => (
             <Card key={a.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-work-assignment-${a.id}`}>
               <CardContent className="p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-base sm:text-lg">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : (a.displayId || a.orderId)}</span>
-                      <Badge className={`shrink-0 ${
-                        (a.orderStatus || a.status) === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" :
-                        (a.orderStatus || a.status) === "Paid Out" ? "bg-cyan-500/20 text-cyan-400 border-0" :
-                        (a.orderStatus || a.status) === "Completed" || a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" :
-                        "bg-white/[0.06] text-white/40 border-0"
-                      }`}>
-                        {a.orderStatus || a.status}
-                      </Badge>
-                      {a.isRush && <Badge className="border-0 bg-orange-500/20 text-orange-400 text-[10px]">Rush</Badge>}
-                      {a.isEmergency && <Badge className="border-0 bg-red-500/20 text-red-400 text-[10px]">Emergency</Badge>}
+                      <span className="font-bold text-lg sm:text-xl">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : (a.displayId || a.orderId)}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge className={`shrink-0 ${
+                          (a.orderStatus || a.status) === "Active" ? "bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/20" :
+                          (a.orderStatus || a.status) === "Paid Out" ? "bg-cyan-500/20 text-cyan-400 border-0" :
+                          (a.orderStatus || a.status) === "Completed" || a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" :
+                          "bg-white/[0.06] text-white/40 border-0"
+                        }`}>
+                          {a.orderStatus || a.status}
+                        </Badge>
+                        {a.isRush && <Badge className="border-0 bg-orange-500/20 text-orange-400 text-[10px]">Rush</Badge>}
+                        {a.isEmergency && <Badge className="border-0 bg-red-500/20 text-red-400 text-[10px]">Emergency</Badge>}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-white/40 flex-wrap">
-                      <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
-                      <span>Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</span>
-                      {a.deliveredDateTime && <span>Done: {new Date(a.deliveredDateTime).toLocaleDateString()}</span>}
-                      {a.grinderEarnings && <span className="text-emerald-400 font-medium">${Number(a.grinderEarnings).toFixed(2)}</span>}
+                    <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 text-xs sm:text-sm text-white/40 flex-wrap">
+                      <div className="flex items-center gap-1"><Clock className="w-3 h-3" /> Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</div>
+                      <div className="flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}</div>
+                      {a.deliveredDateTime && <div className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Done: {new Date(a.deliveredDateTime).toLocaleDateString()}</div>}
+                      {a.grinderEarnings && <div className="text-[#5865F2] font-semibold text-sm sm:text-base ml-auto sm:ml-0">${Number(a.grinderEarnings).toFixed(2)}</div>}
                     </div>
                     {(a.serviceName || a.platform || a.gamertag) && (
-                      <div className="flex items-center gap-2 sm:gap-3 mt-1.5 text-xs text-white/30 flex-wrap">
-                        {a.serviceName && <span>{a.serviceName.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}</span>}
-                        {a.platform && <span>• {a.platform}</span>}
-                        {a.gamertag && <span>• {a.gamertag}</span>}
+                      <div className="flex items-center gap-x-3 gap-y-1 mt-2 text-[11px] sm:text-xs text-white/30 flex-wrap">
+                        {a.serviceName && <span className="bg-white/5 px-1.5 py-0.5 rounded">{a.serviceName.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}</span>}
+                        {a.platform && <span className="flex items-center gap-1"><PlatformIcon platform={a.platform} className="w-3 h-3" /> {a.platform}</span>}
+                        {a.gamertag && <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50">{a.gamertag}</span>}
                         {a.complexity && a.complexity > 1 && <span>• Complexity {a.complexity}/5</span>}
                         {a.customerDiscordUsername && (
-                          <span>
-                            • Customer: <span className="text-emerald-400 font-medium">@{a.customerDiscordUsername}</span>
+                          <span className="flex items-center gap-1">
+                            • <FaDiscord className="w-3 h-3 text-[#5865F2]" /> <span className="text-[#5865F2] font-medium">@{a.customerDiscordUsername}</span>
                           </span>
                         )}
                         {a.location && <span>• {a.location}</span>}
@@ -282,38 +284,42 @@ export default function GrinderAssignments() {
                   </div>
                 </div>
                 {a.status === "Active" && (
-                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 sm:flex-wrap">
-                    {a.hasTicket && a.ticketChannelId && (
-                      <Button size="sm" variant="outline" asChild
-                        className="gap-1 text-[11px] sm:text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 h-8"
-                        data-testid={`button-join-ticket-${a.id}`}
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {a.hasTicket && a.ticketChannelId && (
+                        <Button size="sm" variant="outline" asChild
+                          className="w-full gap-2 text-xs font-semibold bg-[#5865F2]/10 border-[#5865F2]/30 text-[#5865F2] hover:bg-[#5865F2]/20 h-10 active:scale-95 transition-transform"
+                          data-testid={`button-join-ticket-${a.id}`}
+                          disabled={!a.hasTicketAck}
+                        >
+                          <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
+                            <FaDiscord className="w-4 h-4" /> Discord Ticket
+                          </a>
+                        </Button>
+                      )}
+                      {a.orderBrief && (
+                        <Button size="sm" variant="outline"
+                          className="w-full gap-2 text-xs font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 h-10 active:scale-95 transition-transform"
+                          data-testid={`button-view-brief-${a.id}`}
+                          disabled={!a.hasTicketAck}
+                          onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
+                          <ClipboardList className="w-4 h-4" /> View Brief
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Button size="sm" variant="outline" className="w-full gap-2 text-xs font-semibold h-10 active:scale-95 transition-transform" data-testid={`button-update-${a.id}`}
                         disabled={!a.hasTicketAck}
-                      >
-                        <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
-                          <FaDiscord className="w-3 h-3" /> Discord Ticket
-                        </a>
+                        onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
+                        <MessageSquare className="w-4 h-4" /> Update
                       </Button>
-                    )}
-                    {a.orderBrief && (
-                      <Button size="sm" variant="outline"
-                        className="gap-1 text-[11px] sm:text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 h-8"
-                        data-testid={`button-view-brief-${a.id}`}
+                      <Button size="sm" variant="outline" className="w-full gap-2 text-xs font-semibold h-10 active:scale-95 transition-transform" data-testid={`button-deadline-${a.id}`}
                         disabled={!a.hasTicketAck}
-                        onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
-                        <ClipboardList className="w-3 h-3" /> View Brief
+                        onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(a.dueDateTime ? new Date(a.dueDateTime).toISOString().split("T")[0] : ""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
+                        <CalendarClock className="w-4 h-4" /> Deadline
                       </Button>
-                    )}
-                    <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-update-${a.id}`}
-                      disabled={!a.hasTicketAck}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
-                      <MessageSquare className="w-3 h-3" /> Update
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-deadline-${a.id}`}
-                      disabled={!a.hasTicketAck}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(a.dueDateTime ? new Date(a.dueDateTime).toISOString().split("T")[0] : ""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
-                      <CalendarClock className="w-3 h-3" /> Deadline
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 col-span-2 sm:col-span-1 h-8" data-testid={`button-complete-${a.id}`}
+                    </div>
+                    <Button size="sm" variant="outline" className="w-full gap-2 text-sm font-bold bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 h-12 active:scale-95 transition-transform shadow-lg shadow-emerald-500/5 mt-1" data-testid={`button-complete-${a.id}`}
                       disabled={!a.hasTicketAck || !a.hasLoggedIn || !a.hasStarted || !a.hasLoggedOff}
                       title={!a.hasTicketAck ? "Accept order first" : !a.hasLoggedIn ? "Log in first" : !a.hasStarted ? "Start order first" : !a.hasLoggedOff ? "Log off first" : ""}
                       onClick={() => {
@@ -322,7 +328,7 @@ export default function GrinderAssignments() {
                         if (defaultMethod) { setCompletePlatform(defaultMethod.platform); setCompleteDetails(defaultMethod.details); setCompleteSaveMethod(false); }
                         else { setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); }
                       }}>
-                      <CheckCircle className="w-3 h-3" /> Mark Complete
+                      <CheckCircle className="w-5 h-5" /> Mark Complete
                     </Button>
                   </div>
                 )}
@@ -354,46 +360,42 @@ export default function GrinderAssignments() {
                         <p className="text-[11px] text-red-400 font-medium">You declined this order. It has been sent back for reassignment.</p>
                       </div>
                     )}
-                    <div className={`grid grid-cols-3 sm:flex sm:items-center gap-1 sm:gap-1.5 sm:flex-wrap ${!a.hasTicketAck || a.ticketAckResponse === "no" ? "opacity-40 pointer-events-none" : ""}`}>
-                      {a.hasTicketAck && a.ticketAckResponse === "yes" && (
-                        <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3 mr-1" /> Accepted
-                        </Badge>
-                      )}
-                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-1.5 sm:px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
+                    <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-white/[0.06]">
+                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-9 px-1 active:scale-95 transition-transform ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
                         disabled={checkpointMutation.isPending || a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 active:scale-95 transition-transform" data-testid={`button-logoff-${a.id}`}
                         disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> <span className="hidden sm:inline">Log</span> Off
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
                       </Button>
                       {!a.hasStarted ? (
-                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 active:scale-95 transition-transform" data-testid={`button-start-order-${a.id}`}
                           disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
                           onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
                           <Play className="w-3 h-3" /> Start
                         </Button>
                       ) : (
-                        <Badge className="text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                        <Badge className="h-9 flex items-center justify-center text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
                           <Play className="w-3 h-3 mr-1" /> Started
                         </Badge>
                       )}
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 active:scale-95 transition-transform" data-testid={`button-issue-${a.id}`}
                         disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
                         <AlertTriangle className="w-3 h-3" /> Issue
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20" data-testid={`button-request-replacement-${a.id}`}
-                        disabled={!a.hasTicketAck || a.ticketAckResponse === "no"}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20 active:scale-95 transition-transform" data-testid={`button-replace-${a.id}`}
+                        disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => { setReplacementDialog(a); setReplacementReason(""); }}>
                         <Repeat className="w-3 h-3" /> Replace
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2" data-testid={`button-view-checkpoints-${a.id}`}
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 active:scale-95 transition-transform" data-testid={`button-history-${a.id}`}
+                        disabled={!a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => setExpandedCheckpoints(expandedCheckpoints === a.id ? null : a.id)}>
-                        <FileText className="w-3 h-3" /> History
+                        <Clock className="w-3 h-3" /> History
                       </Button>
                     </div>
                     {expandedCheckpoints === a.id && <CheckpointHistory assignmentId={a.id} />}
