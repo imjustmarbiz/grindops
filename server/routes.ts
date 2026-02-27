@@ -3347,7 +3347,7 @@ export async function registerRoutes(
       entityId: alert.id,
       action: "alert_sent",
       actor: createdBy || "staff",
-      details: `Target: ${targetType || "all"}, Title: ${title}`,
+      details: JSON.stringify({ target: targetType || "all", title, message: message?.substring(0, 100) }),
     });
 
     res.status(201).json(alert);

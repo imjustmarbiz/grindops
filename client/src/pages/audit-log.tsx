@@ -200,13 +200,17 @@ export default function AuditLogPage() {
                     </TableCell>
                     <TableCell className="text-sm">{log.actor}</TableCell>
                     <TableCell className="max-w-[300px]">
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(details).slice(0, 4).map(([k, v]) => (
-                          <span key={k} className="text-xs bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded-md">
-                            <span className="text-muted-foreground">{formatLabel(k)}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                          </span>
-                        ))}
-                      </div>
+                      {Object.keys(details).length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(details).slice(0, 4).map(([k, v]) => (
+                            <span key={k} className="text-xs bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded-md">
+                              <span className="text-muted-foreground">{formatLabel(k)}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : log.details ? (
+                        <span className="text-xs text-muted-foreground">{log.details.length > 80 ? log.details.substring(0, 80) + "…" : log.details}</span>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 );
