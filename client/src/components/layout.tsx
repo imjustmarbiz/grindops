@@ -40,7 +40,7 @@ const staffNavItems = [
   { title: "Reports", url: "/reports", icon: FileBarChart },
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Orders", url: "/orders", icon: ListOrdered },
-  { title: "Orders Assigned", url: "/assignments", icon: FileCheck },
+  { title: "Order Assignments", url: "/assignments", icon: FileCheck },
   { title: "Order Repairs", url: "/order-claims", icon: Wrench },
   { title: "Grinder Payouts", url: "/payouts", icon: DollarSign },
   { title: "AI Queue", url: "/queue", icon: Brain },

@@ -197,6 +197,7 @@ export const queueConfig = pgTable("queue_config", {
   earlyAccessMode: boolean("early_access_mode").notNull().default(false),
   customPayoutRoles: jsonb("custom_payout_roles"),
   customPayoutCategories: jsonb("custom_payout_categories"),
+  platforms: jsonb("platforms").$type<string[]>().default(["Xbox", "PS5"]),
 });
 
 export const orderUpdates = pgTable("order_updates", {

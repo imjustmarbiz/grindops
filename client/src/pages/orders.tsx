@@ -23,6 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { usePlatforms } from "@/hooks/use-platforms";
 import { useAuth } from "@/hooks/use-auth";
 import type { Order, Service, Grinder, Bid } from "@shared/schema";
 
@@ -243,6 +244,7 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
 export default function Orders() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
+  const platforms = usePlatforms();
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
   const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 30000 });
@@ -736,11 +738,7 @@ export default function Orders() {
                         <SelectValue placeholder="Platform" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Xbox">Xbox</SelectItem>
-                        <SelectItem value="PS5">PS5</SelectItem>
-                        <SelectItem value="PS4">PS4</SelectItem>
-                        <SelectItem value="PC">PC</SelectItem>
-                        <SelectItem value="Switch">Switch</SelectItem>
+                        {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </TableCell>

@@ -22,6 +22,7 @@ import {
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Service } from "@shared/schema";
+import { usePlatforms } from "@/hooks/use-platforms";
 
 
 const DATA_TABLES = [
@@ -508,6 +509,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
+  const platforms = usePlatforms();
   const {
     orders: allOrders,
     bids: allBids,
@@ -729,11 +731,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                   <SelectValue placeholder="Select platform" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Xbox">Xbox</SelectItem>
-                  <SelectItem value="PS5">PS5</SelectItem>
-                  <SelectItem value="PS4">PS4</SelectItem>
-                  <SelectItem value="PC">PC</SelectItem>
-                  <SelectItem value="Switch">Switch</SelectItem>
+                  {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

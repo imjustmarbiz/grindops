@@ -65,7 +65,7 @@ const features = [
   },
   {
     icon: FileCheck,
-    title: "Orders Assigned",
+    title: "Order Assignments",
     description: "Track all active and completed assignments. Monitor pay splits, margin percentages, reassignment history, and ensure work is progressing on schedule.",
     url: "/assignments",
   },

@@ -15,6 +15,8 @@ import {
   Wrench, Check, X, FileText, ExternalLink, Clock, Search, Hash, Copy, CalendarDays, Play, CheckCircle, DollarSign, Wallet, Gamepad2, LinkIcon, PlusCircle, AlertTriangle, ChevronDown, ChevronUp, UserPlus
 } from "lucide-react";
 
+import { usePlatforms } from "@/hooks/use-platforms";
+
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
 function statusBadge(status: string) {
@@ -130,6 +132,7 @@ type StaffFields = {
 
 function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[]; grinders: Grinder[]; onSuccess: () => void }) {
   const { toast } = useToast();
+  const platforms = usePlatforms();
   const [open, setOpen] = useState(false);
   const [repairType, setRepairType] = useState<string>("add_completed");
   const [grinderId, setGrinderId] = useState("");
@@ -257,11 +260,7 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
                     <SelectValue placeholder="Select platform" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Xbox">Xbox</SelectItem>
-                    <SelectItem value="PS5">PS5</SelectItem>
-                    <SelectItem value="PS4">PS4</SelectItem>
-                    <SelectItem value="PC">PC</SelectItem>
-                    <SelectItem value="Switch">Switch</SelectItem>
+                    {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -314,6 +313,7 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
 export default function StaffOrderClaims() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const platforms = usePlatforms();
   const [filter, setFilter] = useState<StatusFilter>("pending");
   const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
   const [staffFields, setStaffFields] = useState<Record<string, StaffFields>>({});
@@ -606,11 +606,7 @@ export default function StaffOrderClaims() {
                                       <SelectValue placeholder="Select platform" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="Xbox">Xbox</SelectItem>
-                                      <SelectItem value="PS5">PS5</SelectItem>
-                                      <SelectItem value="PS4">PS4</SelectItem>
-                                      <SelectItem value="PC">PC</SelectItem>
-                                      <SelectItem value="Switch">Switch</SelectItem>
+                                      {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                     </SelectContent>
                                   </Select>
                                 </div>

@@ -25,6 +25,7 @@ import { FaXbox } from "react-icons/fa6";
 import { SiPlaystation } from "react-icons/si";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
 import { pluralize, formatLabel } from "@/lib/staff-utils";
+import { usePlatforms } from "@/hooks/use-platforms";
 import spLogo from "@assets/image_1771930905137.png";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -100,6 +101,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
+  const platforms = usePlatforms();
   const { data: analytics, isLoading, dataUpdatedAt } = useQuery<AnalyticsSummary>({ queryKey: ["/api/analytics/summary"], refetchInterval: 30000 });
   const { data: grindersList, dataUpdatedAt: grindersUpdatedAt } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 30000 });
   const { data: auditLogs, dataUpdatedAt: logsUpdatedAt } = useQuery<AuditLog[]>({ queryKey: ["/api/audit-logs?limit=15"], refetchInterval: 30000 });
@@ -608,11 +610,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Select platform" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Xbox">Xbox</SelectItem>
-                  <SelectItem value="PS5">PS5</SelectItem>
-                  <SelectItem value="PS4">PS4</SelectItem>
-                  <SelectItem value="PC">PC</SelectItem>
-                  <SelectItem value="Switch">Switch</SelectItem>
+                  {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -321,6 +321,25 @@ export default function StaffAdmin() {
   const [alertTarget, setAlertTarget] = useState("all");
   const [alertTargetUserId, setAlertTargetUserId] = useState("");
   const [alertUserSearch, setAlertUserSearch] = useState("");
+
+  const { data: platformsList = ["Xbox", "PS5"] } = useQuery<string[]>({ queryKey: ["/api/platforms"] });
+  const [newPlatform, setNewPlatform] = useState("");
+  const [editingPlatforms, setEditingPlatforms] = useState<string[] | null>(null);
+  const activePlatforms = editingPlatforms || platformsList;
+
+  const updatePlatformsMutation = useMutation({
+    mutationFn: async (platforms: string[]) => {
+      const res = await apiRequest("PATCH", "/api/config/platforms", { platforms });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/platforms"] });
+      setEditingPlatforms(null);
+      setNewPlatform("");
+      toast({ title: "Platforms updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update platforms", description: e.message, variant: "destructive" }),
+  });
 
   const { data: allSiteAlerts = [] } = useQuery<any[]>({
     queryKey: ["/api/site-alerts/all"],
@@ -1761,6 +1780,100 @@ export default function StaffAdmin() {
                     <p className="text-[10px] text-cyan-400 px-1">
                       Early access is ON. Only grinders with the Elite Grinder Discord role can log in. Staff and owners bypass this restriction.
                     </p>
+                  )}
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-platform-management">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                      <Gamepad2 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    Platform Management
+                    <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                      {activePlatforms.length} Active
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Manage the platform options available across all order forms and dropdowns. Add or remove platforms as your services change.
+                  </p>
+                  <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex flex-wrap gap-2">
+                      {activePlatforms.map((p) => (
+                        <div key={p} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm font-medium text-emerald-400" data-testid={`platform-tag-${p}`}>
+                          <Gamepad2 className="w-3 h-3" />
+                          {p}
+                          <button
+                            onClick={() => {
+                              const updated = activePlatforms.filter(x => x !== p);
+                              if (updated.length === 0) { toast({ title: "At least one platform is required", variant: "destructive" }); return; }
+                              setEditingPlatforms(updated);
+                            }}
+                            className="ml-1 hover:text-red-400 transition-colors"
+                            data-testid={`button-remove-platform-${p}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newPlatform}
+                        onChange={(e) => setNewPlatform(e.target.value)}
+                        placeholder="Add new platform..."
+                        className="bg-white/[0.04] border-white/[0.08] text-sm flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newPlatform.trim()) {
+                            if (activePlatforms.includes(newPlatform.trim())) { toast({ title: "Platform already exists", variant: "destructive" }); return; }
+                            setEditingPlatforms([...activePlatforms, newPlatform.trim()]);
+                            setNewPlatform("");
+                          }
+                        }}
+                        data-testid="input-new-platform"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10"
+                        onClick={() => {
+                          if (!newPlatform.trim()) return;
+                          if (activePlatforms.includes(newPlatform.trim())) { toast({ title: "Platform already exists", variant: "destructive" }); return; }
+                          setEditingPlatforms([...activePlatforms, newPlatform.trim()]);
+                          setNewPlatform("");
+                        }}
+                        data-testid="button-add-platform"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {editingPlatforms && (
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/20"
+                        onClick={() => updatePlatformsMutation.mutate(editingPlatforms)}
+                        disabled={updatePlatformsMutation.isPending}
+                        data-testid="button-save-platforms"
+                      >
+                        {updatePlatformsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                        Save Changes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-white/[0.08]"
+                        onClick={() => { setEditingPlatforms(null); setNewPlatform(""); }}
+                        data-testid="button-cancel-platforms"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>

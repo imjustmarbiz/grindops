@@ -6265,6 +6265,40 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/platforms", isAuthenticated, async (req, res) => {
+    try {
+      const config = await storage.getQueueConfig();
+      const platforms = (config as any)?.platforms || ["Xbox", "PS5"];
+      res.json(platforms);
+    } catch (error) {
+      res.json(["Xbox", "PS5"]);
+    }
+  });
+
+  app.patch("/api/config/platforms", requireOwner, async (req, res) => {
+    try {
+      const { platforms } = req.body;
+      if (!Array.isArray(platforms) || platforms.length === 0) return res.status(400).json({ error: "At least one platform is required" });
+      if (!platforms.every((p: any) => typeof p === "string" && p.trim().length > 0)) return res.status(400).json({ error: "Invalid platform name" });
+      const cleaned = platforms.map((p: string) => p.trim());
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, platforms: cleaned } as any);
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: "platforms_updated",
+        entityType: "config",
+        entityId: "platforms",
+        actor: actorName,
+        details: `Platforms updated to: ${cleaned.join(", ")}`,
+      });
+      res.json({ success: true, platforms: cleaned });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update platforms" });
+    }
+  });
+
   app.get("/api/site-alerts", isAuthenticated, async (req, res) => {
     try {
       const userRole = (req.user as any)?.role || "none";

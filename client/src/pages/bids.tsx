@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2, AlertTriangle } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import type { Bid, Order, Grinder } from "@shared/schema";
+import type { Bid, Order, Grinder, Service } from "@shared/schema";
 
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
@@ -30,6 +30,8 @@ export default function Bids() {
   const { data: bids, isLoading } = useQuery<Bid[]>({ queryKey: ["/api/bids"], refetchInterval: 30000 });
   const { data: orders } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
   const { data: grinders } = useQuery<Grinder[]>({ queryKey: ["/api/grinders"], refetchInterval: 30000 });
+  const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"], refetchInterval: 30000 });
+  const serviceNameMap = new Map((services || []).map(s => [s.id, s.name]));
 
   const [filterOrderId, setFilterOrderId] = useState<string>("all");
   const [editingBid, setEditingBid] = useState<Bid | null>(null);
@@ -674,7 +676,7 @@ export default function Bids() {
                     .filter((o: Order) => o.status !== "Completed" && o.status !== "Paid Out")
                     .map((o: Order) => (
                       <SelectItem key={o.id} value={o.id}>
-                        {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {o.serviceName || "Unknown"} {o.customerPrice ? `($${o.customerPrice})` : ""}
+                        {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {serviceNameMap.get(o.serviceId) || o.serviceId || "Unknown"} {o.customerPrice ? `($${o.customerPrice})` : ""}
                       </SelectItem>
                     ))}
                 </SelectContent>
