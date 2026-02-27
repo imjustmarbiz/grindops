@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
-import { FaXbox } from "react-icons/fa6";
+import { FaXbox, FaDiscord } from "react-icons/fa6";
 import { SiPlaystation, SiSteam, SiNintendoswitch } from "react-icons/si";
 
 function PlatformIcon({ platform, className }: { platform: string | null; className?: string }) {
@@ -291,7 +291,7 @@ export default function GrinderAssignments() {
                         disabled={!a.hasTicketAck}
                       >
                         <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-3 h-3" /> Discord Ticket
+                          <FaDiscord className="w-3 h-3" /> Discord Ticket
                         </a>
                       </Button>
                     )}

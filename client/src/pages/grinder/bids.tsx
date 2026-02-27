@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Loader2, Gavel, X, Edit3, ExternalLink, FileCheck
+  Loader2, Gavel, X, Edit3, FileCheck
 } from "lucide-react";
+import { FaDiscord } from "react-icons/fa6";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
 
@@ -191,7 +192,7 @@ export default function GrinderBids() {
                               data-testid={`button-join-ticket-${b.id}`}
                             >
                               <a href={b.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-3 h-3" /> Discord Ticket
+                                <FaDiscord className="w-3 h-3" /> Discord Ticket
                               </a>
                             </Button>
                           )}
