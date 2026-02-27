@@ -292,7 +292,7 @@ export default function GrinderAssignments() {
                           data-testid={`button-join-ticket-${a.id}`}
                           disabled={!a.hasTicketAck}
                         >
-                          <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
+                          <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer" title="Join the Discord ticket for this order. The bot provides a permanent link for access.">
                             <FaDiscord className="w-4 h-4" /> Discord Ticket
                           </a>
                         </Button>
