@@ -271,10 +271,9 @@ export default function GrinderAssignments() {
                         {a.platform && <span>• {a.platform}</span>}
                         {a.gamertag && <span>• {a.gamertag}</span>}
                         {a.complexity && a.complexity > 1 && <span>• Complexity {a.complexity}/5</span>}
-                        {a.customerDiscordId && (
+                        {a.customerDiscordUsername && (
                           <span>
-                            • Customer: <span className="font-mono text-[10px] text-blue-400/80">{a.customerDiscordId}</span>
-                            {a.customerDiscordUsername && ` (@${a.customerDiscordUsername})`}
+                            • Customer: <span className="text-emerald-400 font-medium">@{a.customerDiscordUsername}</span>
                           </span>
                         )}
                         {a.location && <span>• {a.location}</span>}
