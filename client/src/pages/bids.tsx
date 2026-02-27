@@ -252,7 +252,7 @@ export default function Bids() {
         const grinderName = grinder?.name?.toLowerCase() || "";
         const grinderUsername = grinder?.discordUsername?.toLowerCase() || "";
         const orderDisplay = order?.mgtOrderNumber?.toString().toLowerCase() || "";
-        const bidDisplay = b.mgtProposalId?.toString().toLowerCase() || b.id.toLowerCase();
+        const bidDisplay = b.mgtProposalId?.toString().toLowerCase() || (b.displayId || b.id).toLowerCase();
         const bidMessage = b.notes?.toLowerCase() || "";
         return grinderName.includes(q) || grinderUsername.includes(q) || orderDisplay.includes(q) || bidDisplay.includes(q) || bidMessage.includes(q);
       });
@@ -440,7 +440,7 @@ export default function Bids() {
                 "hover:bg-white/[0.03] border-white/[0.04]";
               return (
                 <TableRow key={bid.id} className={`${rowStyle} transition-all`} data-testid={`row-bid-${bid.id}`}>
-                  <TableCell className="font-mono text-sm">{bid.mgtProposalId ? `P${bid.mgtProposalId}` : bid.id}</TableCell>
+                  <TableCell className="font-mono text-sm">{bid.mgtProposalId ? `P${bid.mgtProposalId}` : (bid.displayId || bid.id)}</TableCell>
                   <TableCell className="font-medium text-primary">{orderRef}</TableCell>
                   <TableCell>
                     <div>

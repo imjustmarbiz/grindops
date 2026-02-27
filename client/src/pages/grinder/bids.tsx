@@ -131,7 +131,7 @@ export default function GrinderBids() {
                       )}
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium">Order {b.mgtOrderNumber || b.orderId}</p>
+                          <p className="font-medium">Order {b.mgtOrderNumber || b.displayId || b.orderId}</p>
                           {b.serviceName && <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-white/10 text-white/50">{b.serviceName}</Badge>}
                           {b.isRush && <Badge className="text-[10px] h-4 px-1.5 bg-orange-500/15 text-orange-400 border-0">Rush</Badge>}
                           {b.isEmergency && <Badge className="text-[10px] h-4 px-1.5 bg-red-500/15 text-red-400 border-0">Emergency</Badge>}

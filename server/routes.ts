@@ -7,7 +7,7 @@ import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireG
 import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats, TIER_THRESHOLDS } from "./recalcStats";
 import { sendCustomerUpdate, sendCompletionApprovalRequest } from "./discord/customerUpdates";
-import { generateOrderDisplayId, generateBidDisplayId, generateAssignmentDisplayId, generateUpdateDisplayId, generatePayoutDisplayId, generateStrikeDisplayId, generateFineDisplayId, generateEventDisplayId, generateReviewDisplayId, generateClaimDisplayId } from "./display-id";
+import { generateOrderDisplayId, generateBidDisplayId, generateAssignmentDisplayId, generateUpdateDisplayId, generatePayoutDisplayId, generateStrikeDisplayId, generateFineDisplayId, generateEventDisplayId, generateReviewDisplayId, generateClaimDisplayId, generateShortId } from "./display-id";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
@@ -913,7 +913,7 @@ export async function registerRoutes(
         return res.status(409).json({ message: "Order was already assigned by another action. Please refresh and try again." });
       }
 
-      const assignmentId = `ASN-${Date.now().toString(36)}`;
+      const assignmentId = generateShortId("ASN");
       const asnDisplayId = await generateAssignmentDisplayId(orderId);
       const assignmentData: any = {
         id: assignmentId,
@@ -976,7 +976,7 @@ export async function registerRoutes(
       }
 
       if (!acceptedBidId) {
-        const staffBidId = `BID-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const staffBidId = generateShortId("BID");
         const bidDisplay = await generateBidDisplayId(orderId);
         await storage.createBid({
           id: staffBidId,
@@ -1361,7 +1361,7 @@ export async function registerRoutes(
       const body = req.body;
       const bidDisplayId = body.orderId ? await generateBidDisplayId(body.orderId) : undefined;
       const input = {
-        id: body.id || `BID-${Date.now().toString(36)}`,
+        id: body.id || generateShortId("BID"),
         displayId: bidDisplayId,
         orderId: body.orderId,
         grinderId: body.grinderId,
@@ -1440,7 +1440,7 @@ export async function registerRoutes(
           });
 
           const now = new Date();
-          const assignmentId = `ASN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          const assignmentId = generateShortId("ASN");
           const asnDisplay = await generateAssignmentDisplayId(bid.orderId);
           await storage.createAssignment({
             id: assignmentId,
@@ -1622,7 +1622,7 @@ export async function registerRoutes(
           });
 
           const now = new Date();
-          const assignmentId = `ASN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          const assignmentId = generateShortId("ASN");
           const asnDisplay2 = await generateAssignmentDisplayId(bid.orderId);
           await storage.createAssignment({
             id: assignmentId,
@@ -2775,7 +2775,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "You are at your order limit" });
       }
 
-      const bidId = `BID-${Date.now().toString(36)}`;
+      const bidId = generateShortId("BID");
       const grinderBidDisplay = await generateBidDisplayId(orderId);
       const now = new Date();
       const estDelivery = timeline
@@ -5707,7 +5707,7 @@ export async function registerRoutes(
         }
       }
 
-      const id = `RPR-${Date.now().toString(36)}`;
+      const id = generateShortId("RPR");
       const clmDisplay = await generateClaimDisplayId();
       const claim = await storage.createOrderClaimRequest({
         id,
@@ -5759,7 +5759,7 @@ export async function registerRoutes(
       if (!grinder) return res.status(404).json({ error: "Grinder not found" });
       if (repairType === "add_completed" && !completedDateTime) return res.status(400).json({ error: "Completed date is required" });
 
-      const id = `RPR-${Date.now().toString(36)}`;
+      const id = generateShortId("RPR");
       const staffClmDisplay = await generateClaimDisplayId();
       const claim = await storage.createOrderClaimRequest({
         id,
@@ -5882,7 +5882,7 @@ export async function registerRoutes(
             if (!resolvedServiceId) return res.status(400).json({ error: "Service is required to approve a repair without an order ID" });
             if (!customerPrice) return res.status(400).json({ error: "Customer price is required to approve a repair without an order ID" });
 
-            const newOrderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+            const newOrderId = generateShortId("ORD");
             const repairOrderIds = await generateOrderDisplayId();
             const orderDueDate = claim.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             const isCompleted = isAddCompleted || !!claim.completedDateTime;
@@ -5938,7 +5938,7 @@ export async function registerRoutes(
           const complianceExempt = isAddCompleted ? true : (enableDailyCompliance === true ? false : true);
 
           if (existingAssignments.length === 0) {
-            const newAssignmentId = `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const newAssignmentId = generateShortId("ASN");
             const repairAsnDisplay = await generateAssignmentDisplayId(resolvedOrderId);
             await storage.createAssignment({
               id: newAssignmentId,
@@ -5987,7 +5987,7 @@ export async function registerRoutes(
             await storage.updateOrder(resolvedOrderId, { companyProfit: String(profit.toFixed(2)) });
           }
 
-          const repairBidId = `BID-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4)}`;
+          const repairBidId = generateShortId("BID");
           const repairBidDisplay = await generateBidDisplayId(resolvedOrderId);
           await storage.createBid({
             id: repairBidId,

@@ -247,7 +247,7 @@ export default function GrinderAssignments() {
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-base sm:text-lg">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : a.orderId}</span>
+                      <span className="font-bold text-base sm:text-lg">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : (a.displayId || a.orderId)}</span>
                       <Badge className={`shrink-0 ${
                         (a.orderStatus || a.status) === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" :
                         (a.orderStatus || a.status) === "Paid Out" ? "bg-cyan-500/20 text-cyan-400 border-0" :

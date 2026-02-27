@@ -109,3 +109,13 @@ export function formatDisplayId(entity: { displayId?: string | null; id: string;
   if ('mgtOrderNumber' in entity && entity.mgtOrderNumber) return `ORD-${getOrderPad(entity.mgtOrderNumber)}`;
   return entity.id;
 }
+
+export function generateShortId(prefix: string): string {
+  const chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+  let result = "";
+  const bytes = require("crypto").randomBytes(4);
+  for (let i = 0; i < 4; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  return `${prefix}-${result}`;
+}

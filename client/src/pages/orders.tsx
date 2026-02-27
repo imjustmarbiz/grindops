@@ -812,7 +812,7 @@ export default function Orders() {
                             }}
                           />
                         ) : (
-                          <span className="truncate">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                          <span className="truncate">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : (order.displayId || order.id)}</span>
                         )}
                         {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
                       </div>
@@ -1302,7 +1302,7 @@ export default function Orders() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Order</span>
                 <span className="font-bold text-primary" data-testid="text-reassign-order-id">
-                  {reassignOrder.mgtOrderNumber ? `#${reassignOrder.mgtOrderNumber}` : reassignOrder.id}
+                  {reassignOrder.mgtOrderNumber ? `#${reassignOrder.mgtOrderNumber}` : (reassignOrder.displayId || reassignOrder.id)}
                 </span>
               </div>
               <div className="flex items-center justify-between mb-2">
@@ -1416,7 +1416,7 @@ export default function Orders() {
         {deleteRequestOrder && (
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-              <p className="text-sm font-medium">{deleteRequestOrder.id}</p>
+              <p className="text-sm font-medium">{deleteRequestOrder.displayId || deleteRequestOrder.id}</p>
               <p className="text-xs text-muted-foreground">
                 {services?.find(s => s.id === deleteRequestOrder.serviceId)?.name || deleteRequestOrder.serviceId}
                 {deleteRequestOrder.customerPrice && <span className="ml-2 text-emerald-400">${Number(deleteRequestOrder.customerPrice).toFixed(2)}</span>}
