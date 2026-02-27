@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ClipboardCheck, Star, Clock, CheckCircle, Trophy, CalendarCheck,
   BarChart3, FileText, MessageSquare, LogIn, AlertTriangle, Send,
-  ScrollText, CheckSquare, ExternalLink
+  ScrollText, CheckSquare, ExternalLink, Wallet, DollarSign,
+  TrendingUp, Award, ShieldCheck, Package
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -19,6 +20,30 @@ function getGradeLetter(score: number): { letter: string; color: string } {
   if (score >= 60) return { letter: "C", color: "text-yellow-400" };
   if (score >= 40) return { letter: "D", color: "text-orange-400" };
   return { letter: "F", color: "text-red-400" };
+}
+
+const TIER_ORDER = ["New", "Bronze", "Silver", "Gold", "Diamond", "Elite"];
+
+function getTierColor(tier: string) {
+  switch (tier) {
+    case "Elite": return "text-cyan-400";
+    case "Diamond": return "text-violet-400";
+    case "Gold": return "text-amber-400";
+    case "Silver": return "text-gray-300";
+    case "Bronze": return "text-orange-400";
+    default: return "text-white/60";
+  }
+}
+
+function getTierBg(tier: string) {
+  switch (tier) {
+    case "Elite": return "bg-cyan-500/15";
+    case "Diamond": return "bg-violet-500/15";
+    case "Gold": return "bg-amber-500/15";
+    case "Silver": return "bg-gray-400/15";
+    case "Bronze": return "bg-orange-500/15";
+    default: return "bg-white/[0.05]";
+  }
 }
 
 export default function GrinderScorecard() {
@@ -65,6 +90,8 @@ export default function GrinderScorecard() {
   const reports = performanceReports || [];
   const orderLogs: any[] = scorecardData?.orderLogs || [];
   const strikeLogs: any[] = scorecardData?.strikeLogs || [];
+  const payoutSummary = scorecardData?.payoutSummary || {};
+  const orderHistory: any[] = scorecardData?.orderHistory || [];
 
   const qualityScore = freshGrinder.avgQualityRating != null ? Number(freshGrinder.avgQualityRating) : 0;
   const onTimeRate = freshGrinder.onTimeRate != null ? Number(freshGrinder.onTimeRate) : 0;
@@ -85,6 +112,19 @@ export default function GrinderScorecard() {
     { label: "Win Rate", value: winRate, icon: Trophy, gradient: "bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-500/[0.04]", iconBg: "bg-purple-500/15", textColor: "text-purple-400" },
     { label: "Daily Update Compliance", value: dailyUpdateCompliance, icon: CalendarCheck, gradient: "bg-gradient-to-br from-yellow-500/[0.08] via-background to-yellow-500/[0.04]", iconBg: "bg-yellow-500/15", textColor: "text-yellow-400" },
   ];
+
+  const tierIndex = TIER_ORDER.indexOf(tier);
+  const nextTier = tierIndex < TIER_ORDER.length - 1 ? TIER_ORDER[tierIndex + 1] : null;
+  const tierProgress = tierIndex >= 0 ? Math.min(((tierIndex) / (TIER_ORDER.length - 1)) * 100, 100) : 0;
+
+  const totalPaidOut = payoutSummary.totalPaidOut || 0;
+  const totalPending = payoutSummary.totalPending || 0;
+  const paidCount = payoutSummary.paidCount || 0;
+  const pendingCount = payoutSummary.pendingCount || 0;
+  const recentPayouts: any[] = payoutSummary.recentPayouts || [];
+  const pendingPayoutsList: any[] = payoutSummary.pendingPayoutsList || [];
+
+  const activeStrikes = freshGrinder.strikes || 0;
 
   return (
     <AnimatedPage className="space-y-6" data-testid="scorecard-page">
@@ -164,6 +204,177 @@ export default function GrinderScorecard() {
           </Card>
         ))}
       </div>
+      </FadeInUp>
+
+      <FadeInUp>
+      <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-tier-progress">
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className={`w-9 h-9 rounded-xl ${getTierBg(tier)} flex items-center justify-center`}>
+              <Award className={`w-5 h-5 ${getTierColor(tier)}`} />
+            </div>
+            Tier Progress
+            <Badge className={`ml-auto border-0 ${getTierBg(tier)} ${getTierColor(tier)} text-xs`} data-testid="badge-current-tier">{tier}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-white/40">Current Tier</span>
+                  {nextTier && <span className="text-xs text-white/40">Next: <span className={getTierColor(nextTier)}>{nextTier}</span></span>}
+                </div>
+                <div className="relative h-3 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 bg-gradient-to-r from-orange-500 via-amber-500 via-gray-300 via-violet-500 to-cyan-500" style={{ width: `${tierProgress}%` }} />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between px-1">
+              {TIER_ORDER.map((t, i) => (
+                <div key={t} className={`flex flex-col items-center gap-1 ${tierIndex >= i ? "opacity-100" : "opacity-30"}`}>
+                  <div className={`w-2 h-2 rounded-full ${tierIndex >= i ? getTierBg(t).replace("/15", "/60") : "bg-white/10"}`} />
+                  <span className={`text-[9px] font-medium ${tierIndex === i ? getTierColor(t) : "text-white/40"}`}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      </FadeInUp>
+
+      <FadeInUp>
+      <Card className="border-0 bg-gradient-to-br from-violet-500/[0.08] via-background to-violet-900/[0.04] overflow-hidden relative" data-testid="card-payout-summary">
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-violet-500/[0.02] -translate-y-8 translate-x-8" />
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-violet-400" />
+            </div>
+            Payout Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 mb-4">
+            {[
+              { label: "Total Paid", value: `$${totalPaidOut.toFixed(2)}`, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+              { label: "Pending", value: `$${totalPending.toFixed(2)}`, color: "text-amber-400", bg: "bg-amber-500/10" },
+              { label: "Paid Payouts", value: String(paidCount), color: "text-violet-400", bg: "bg-violet-500/10" },
+              { label: "Avg Payout", value: paidCount > 0 ? `$${(totalPaidOut / paidCount).toFixed(2)}` : "$0.00", color: "text-blue-400", bg: "bg-blue-500/10" },
+            ].map((stat, i) => (
+              <div key={i} className={`p-3 rounded-lg ${stat.bg} border border-white/[0.04]`} data-testid={`payout-stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">{stat.label}</p>
+                <p className={`text-lg font-bold ${stat.color} mt-1`}>{stat.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {pendingPayoutsList.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-white/40 mb-2">Pending Payouts</p>
+              <div className="space-y-2">
+                {pendingPayoutsList.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/[0.04] border border-amber-500/10" data-testid={`pending-payout-${p.id}`}>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-sm text-white/70">{p.orderId}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-amber-400">${parseFloat(p.amount || "0").toFixed(2)}</span>
+                      <Badge className="border-0 text-[10px] bg-amber-500/15 text-amber-400">{p.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {recentPayouts.length > 0 && (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-white/40 mb-2">Recent Payouts</p>
+              <div className="space-y-2">
+                {recentPayouts.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10" data-testid={`recent-payout-${p.id}`}>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-sm text-white/70">{p.orderId}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-emerald-400">${parseFloat(p.amount || "0").toFixed(2)}</span>
+                      {p.paidAt && <span className="text-[10px] text-white/30">{new Date(p.paidAt).toLocaleDateString()}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {paidCount === 0 && pendingCount === 0 && (
+            <div className="text-center py-4">
+              <p className="text-white/40 text-sm">No payouts yet</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      </FadeInUp>
+
+      <FadeInUp>
+      <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-strike-history">
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-red-500/[0.02] -translate-y-8 translate-x-8" />
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+            </div>
+            Strike & Fine History
+            <div className="ml-auto flex items-center gap-2">
+              <Badge className={`border-0 text-xs ${activeStrikes > 0 ? "bg-red-500/15 text-red-400" : "bg-emerald-500/15 text-emerald-400"}`} data-testid="badge-active-strikes">
+                {activeStrikes}/3 strikes
+              </Badge>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {strikeLogs.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/[0.08] flex items-center justify-center mx-auto mb-3">
+                <ShieldCheck className="w-6 h-6 text-emerald-400/40" />
+              </div>
+              <p className="text-emerald-400/60 text-sm font-medium" data-testid="text-no-strikes">Clean record — no strikes or fines</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {strikeLogs.map((log: any) => (
+                <div key={log.id} className={`p-3 rounded-xl border ${log.action === "add" ? "bg-red-500/[0.04] border-red-500/10" : "bg-emerald-500/[0.04] border-emerald-500/10"}`} data-testid={`strike-log-${log.id}`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                    <div className="flex items-center gap-2">
+                      {log.action === "add" ? (
+                        <Badge className="border-0 text-[10px] bg-red-500/15 text-red-400">+Strike</Badge>
+                      ) : (
+                        <Badge className="border-0 text-[10px] bg-emerald-500/15 text-emerald-400">-Strike</Badge>
+                      )}
+                      <span className="text-xs text-white/50">{log.resultingStrikes}/3 strikes</span>
+                    </div>
+                    <span className="text-[10px] text-white/40">
+                      {log.createdAt ? new Date(log.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/60 mt-1">{log.reason}</p>
+                  {Number(log.fineAmount) > 0 && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-xs font-medium text-amber-400">${Number(log.fineAmount).toFixed(2)} fine</span>
+                      <Badge variant="outline" className={`text-[10px] ${log.finePaid ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-red-500/20 text-red-400 bg-red-500/10"}`}>
+                        {log.finePaid ? "Paid" : "Unpaid"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
       </FadeInUp>
 
       <FadeInUp>
@@ -252,52 +463,49 @@ export default function GrinderScorecard() {
       </Card>
       </FadeInUp>
 
-      <FadeInUp>
-      {strikeLogs.length > 0 && (
-        <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-strike-history">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-red-500/[0.02] -translate-y-8 translate-x-8" />
+      {orderHistory.length > 0 && (
+        <FadeInUp>
+        <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-order-history">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-3 text-lg">
-              <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+              <div className={`w-9 h-9 rounded-xl ${isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15"} flex items-center justify-center`}>
+                <Package className={`w-5 h-5 ${eliteAccent}`} />
               </div>
-              Strike & Fine History
-              <Badge variant="outline" className="text-xs ml-auto">{strikeLogs.length}</Badge>
+              Completed Orders
+              <Badge className={`${isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-[#5865F2]/20 text-[#5865F2]"} border-0 text-xs ml-auto`}>{orderHistory.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {strikeLogs.map((log: any) => (
-                <div key={log.id} className={`p-3 rounded-xl border ${log.action === "add" ? "bg-red-500/[0.04] border-red-500/10" : "bg-emerald-500/[0.04] border-emerald-500/10"}`} data-testid={`strike-log-${log.id}`}>
-                  <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                    <div className="flex items-center gap-2">
-                      {log.action === "add" ? (
-                        <Badge className="border-0 text-[10px] bg-red-500/15 text-red-400">+Strike</Badge>
-                      ) : (
-                        <Badge className="border-0 text-[10px] bg-emerald-500/15 text-emerald-400">-Strike</Badge>
-                      )}
-                      <span className="text-xs text-white/50">{log.resultingStrikes}/3 strikes</span>
+            <div className="space-y-2">
+              {orderHistory.map((order: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`order-history-${idx}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${order.isOnTime === true ? "bg-emerald-500/15" : order.isOnTime === false ? "bg-red-500/15" : "bg-white/[0.06]"}`}>
+                      {order.isOnTime === true ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : order.isOnTime === false ? <Clock className="w-4 h-4 text-red-400" /> : <Package className="w-4 h-4 text-white/30" />}
                     </div>
-                    <span className="text-[10px] text-white/40">
-                      {log.createdAt ? new Date(log.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
-                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{order.orderId}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {order.serviceName && <span className="text-[10px] text-white/30">{order.serviceName}</span>}
+                        {order.deliveredAt && <span className="text-[10px] text-white/30">{new Date(order.deliveredAt).toLocaleDateString()}</span>}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-white/60 mt-1">{log.reason}</p>
-                  {Number(log.fineAmount) > 0 && (
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-xs font-medium text-amber-400">${Number(log.fineAmount).toFixed(2)} fine</span>
-                      <Badge variant="outline" className={`text-[10px] ${log.finePaid ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-red-500/20 text-red-400 bg-red-500/10"}`}>
-                        {log.finePaid ? "Paid" : "Unpaid"}
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-medium text-emerald-400">${parseFloat(order.earnings || "0").toFixed(2)}</span>
+                    {order.isOnTime === true && <Badge className="border-0 text-[10px] bg-emerald-500/15 text-emerald-400">On Time</Badge>}
+                    {order.isOnTime === false && <Badge className="border-0 text-[10px] bg-red-500/15 text-red-400">Late</Badge>}
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+        </FadeInUp>
       )}
 
+      <FadeInUp>
       <Card className="border-0 bg-white/[0.03] overflow-hidden relative" data-testid="card-order-logs">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
         <CardHeader className="pb-2">

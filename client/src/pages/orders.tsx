@@ -648,7 +648,20 @@ export default function Orders() {
                   <TableCell className="font-mono font-medium max-w-[130px]" data-testid={`text-order-id-${order.id}`}>
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="truncate">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                        {isOwner ? (
+                          <InlineTextEdit
+                            value={order.mgtOrderNumber ? String(order.mgtOrderNumber) : ""}
+                            orderId={order.id}
+                            field="mgtOrderNumber"
+                            placeholder={order.id}
+                            onSave={(id, data) => {
+                              const val = data.mgtOrderNumber;
+                              saveField(id, { mgtOrderNumber: val ? Number(val) : null });
+                            }}
+                          />
+                        ) : (
+                          <span className="truncate">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                        )}
                         {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
                       </div>
                       <Tooltip>

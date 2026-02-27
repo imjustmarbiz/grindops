@@ -146,7 +146,7 @@ export default function GrinderPayouts() {
                 <span className="text-xs text-white/40">Avg Payout</span>
               </div>
               <p className="text-2xl font-bold text-violet-400" data-testid="text-avg-payout">${avgPayout.toFixed(2)}</p>
-              <p className="text-[10px] text-white/30 mt-1">{topPlatform ? `Preferred: ${topPlatform}` : "No payouts yet"}</p>
+              <p className="text-[10px] text-white/30 mt-1">{topPlatform ? `Preferred: ${topPlatform}` : paidPayouts.length > 0 ? `${paidPayouts.length} paid` : "No payouts yet"}</p>
             </CardContent>
           </Card>
         </div>
