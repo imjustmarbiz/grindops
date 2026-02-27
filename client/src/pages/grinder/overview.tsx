@@ -22,42 +22,19 @@ import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, type BadgeId } from "@/components/achievement-badges";
 import type { GrinderBadge } from "@shared/schema";
 
-function BadgePopup({ id, meta, onClose }: { id: BadgeId; meta: { label: string; tooltip: string }; onClose: () => void }) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 });
-  const [arrowBelow, setArrowBelow] = useState(true);
+function BadgeItem({ id }: { id: BadgeId }) {
   const BadgeComp = BADGE_COMPONENTS[id];
+  const meta = BADGE_META[id];
+  const [showMobile, setShowMobile] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const spaceAbove = rect.top;
-    const showBelow = spaceAbove < 120;
-    setArrowBelow(!showBelow);
-
-    const popupWidth = 200;
-    let left = rect.left + rect.width / 2 - popupWidth / 2;
-    if (left < 8) left = 8;
-    if (left + popupWidth > window.innerWidth - 8) left = window.innerWidth - 8 - popupWidth;
-
-    setStyle({
-      position: "fixed",
-      top: showBelow ? rect.bottom + 8 : undefined,
-      bottom: showBelow ? undefined : window.innerHeight - rect.top + 8,
-      left,
-      width: popupWidth,
-      zIndex: 9999,
-      opacity: 1,
-    });
-  }, []);
-
-  useEffect(() => {
+    if (!showMobile) return;
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
-      if (popupRef.current && !popupRef.current.contains(target) && triggerRef.current && !triggerRef.current.contains(target)) {
-        onClose();
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setShowMobile(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -66,60 +43,60 @@ function BadgePopup({ id, meta, onClose }: { id: BadgeId; meta: { label: string;
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [onClose]);
+  }, [showMobile]);
+
+  useEffect(() => {
+    if (!showMobile || !popupRef.current || !containerRef.current) return;
+    const popup = popupRef.current;
+    const container = containerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const popupWidth = popup.offsetWidth;
+    const rightOverflow = containerRect.left + popupWidth / 2 + containerRect.width / 2 - window.innerWidth + 8;
+    const leftOverflow = -(containerRect.left + containerRect.width / 2 - popupWidth / 2 - 8);
+    if (rightOverflow > 0) popup.style.transform = `translateX(-${rightOverflow}px)`;
+    else if (leftOverflow > 0) popup.style.transform = `translateX(${leftOverflow}px)`;
+    else popup.style.transform = "translateX(0)";
+  }, [showMobile]);
 
   return (
-    <>
+    <div ref={containerRef} className="relative group">
       <button
-        ref={triggerRef}
-        onClick={onClose}
+        onClick={() => setShowMobile(prev => !prev)}
         className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
         data-testid={`badge-tap-${id}`}
       >
         <BadgeComp />
         <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
       </button>
+
       <div
-        ref={popupRef}
-        style={style}
-        className="p-2.5 rounded-lg bg-popover border border-border shadow-2xl animate-in fade-in-0 zoom-in-95"
-        data-testid={`badge-popup-${id}`}
+        className="hidden md:group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 rounded-lg bg-popover border border-border shadow-2xl z-[9999] pointer-events-none"
+        data-testid={`badge-tooltip-${id}`}
       >
         <p className="text-xs font-bold text-foreground">{meta.label}</p>
         <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
       </div>
-    </>
+
+      {showMobile && (
+        <div
+          ref={popupRef}
+          className="md:hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 rounded-lg bg-popover border border-border shadow-2xl z-[9999] animate-in fade-in-0 zoom-in-95"
+          data-testid={`badge-popup-${id}`}
+        >
+          <p className="text-xs font-bold text-foreground">{meta.label}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
 function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
-  const [activeBadge, setActiveBadge] = useState<BadgeId | null>(null);
-
   return (
     <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
-      {badgeIds.map(id => {
-        const BadgeComp = BADGE_COMPONENTS[id];
-        const meta = BADGE_META[id];
-        if (activeBadge === id) {
-          return (
-            <div key={id} className="relative">
-              <BadgePopup id={id} meta={meta} onClose={() => setActiveBadge(null)} />
-            </div>
-          );
-        }
-        return (
-          <div key={id} className="relative">
-            <button
-              onClick={() => setActiveBadge(id)}
-              className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
-              data-testid={`badge-tap-${id}`}
-            >
-              <BadgeComp />
-              <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none text-center max-w-[64px] truncate">{meta.label}</span>
-            </button>
-          </div>
-        );
-      })}
+      {badgeIds.map(id => (
+        <BadgeItem key={id} id={id} />
+      ))}
     </div>
   );
 }

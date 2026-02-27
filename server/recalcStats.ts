@@ -196,8 +196,20 @@ export async function recalcGrinderStats(grinderId: string) {
     ? ((active.length / grinder.capacity) * 100).toFixed(0)
     : "0";
 
-  const tenureDays = grinder.joinedAt
-    ? Math.floor((now.getTime() - new Date(grinder.joinedAt).getTime()) / (1000 * 60 * 60 * 24))
+  let earliestOrderDate: Date | null = null;
+  for (const a of myAssignments) {
+    const candidates = [
+      (a as any).startDateTime ? new Date((a as any).startDateTime) : null,
+      a.assignedDateTime ? new Date(a.assignedDateTime) : null,
+    ].filter(Boolean) as Date[];
+    for (const d of candidates) {
+      if (!earliestOrderDate || d < earliestOrderDate) earliestOrderDate = d;
+    }
+  }
+
+  const tenureStart = earliestOrderDate || (grinder.joinedAt ? new Date(grinder.joinedAt) : null);
+  const tenureDays = tenureStart
+    ? Math.floor((now.getTime() - tenureStart.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
   const windowStats: WindowStats = {
