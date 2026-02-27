@@ -645,10 +645,10 @@ export default function Orders() {
                 "hover:bg-white/[0.03]";
               return (
                 <TableRow key={order.id} className={`${orderRowStyle} border-white/[0.04] transition-all`} data-testid={`row-order-${order.id}`}>
-                  <TableCell className="font-mono font-medium" data-testid={`text-order-id-${order.id}`}>
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex flex-col">
-                        <span className="max-w-[120px] truncate block">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                  <TableCell className="font-mono font-medium max-w-[130px]" data-testid={`text-order-id-${order.id}`}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="truncate">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
                         {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
                       </div>
                       <Tooltip>
