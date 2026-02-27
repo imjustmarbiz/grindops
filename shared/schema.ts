@@ -599,7 +599,11 @@ export const finePayments = pgTable("fine_payments", {
 
 export const insertServiceSchema = createInsertSchema(services);
 export const insertGrinderSchema = createInsertSchema(grinders);
-export const insertOrderSchema = createInsertSchema(orders).omit({ createdAt: true });
+export const insertOrderSchema = createInsertSchema(orders, {
+  orderDueDate: z.string().or(z.date()),
+  customerPrice: z.string(),
+  complexity: z.number().min(1).max(5),
+}).omit({ createdAt: true });
 export const insertBidSchema = createInsertSchema(bids);
 export const insertAssignmentSchema = createInsertSchema(assignments);
 export const insertQueueConfigSchema = createInsertSchema(queueConfig);

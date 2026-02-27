@@ -702,19 +702,16 @@ export default function Dashboard() {
               const dueDate = new Date();
               dueDate.setDate(dueDate.getDate() + Number(manualOrderDueDays || 3));
               createManualOrderMutation.mutate({
-                id: `MO-${Date.now().toString(36)}`,
                 serviceId: manualOrderService,
                 customerPrice: manualOrderPrice,
                 platform: manualOrderPlatform || null,
                 gamertag: manualOrderGamertag || null,
                 orderDueDate: dueDate.toISOString(),
                 isRush: manualOrderIsRush,
-                isEmergency: false,
                 complexity: Number(manualOrderComplexity),
                 notes: manualOrderNotes || null,
                 isManual: true,
                 visibleToGrinders: manualOrderSendToGrinders,
-                status: "Open",
                 discordTicketChannelId: manualOrderTicketChannel || null,
                 customerDiscordId: manualOrderCustomerDiscord || null,
               });

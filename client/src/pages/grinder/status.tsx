@@ -53,15 +53,42 @@ export default function GrinderStatus() {
           </CardHeader>
           <CardContent className="space-y-4 relative">
             {isElite ? (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/20">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shrink-0">
-                  <Crown className="w-6 h-6 text-white" />
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/20">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shrink-0">
+                    <Crown className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-cyan-300 text-lg">Elite Status Active</p>
+                    <p className="text-sm text-muted-foreground">You have access to elite-tier orders and 30-second priority bidding.</p>
+                  </div>
+                  <Sparkles className="w-6 h-6 text-cyan-400 ml-auto animate-pulse shrink-0" />
                 </div>
-                <div>
-                  <p className="font-bold text-cyan-300 text-lg">Elite Status Active</p>
-                  <p className="text-sm text-muted-foreground">You have access to elite-tier orders and priority bidding.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                        <ArrowUpCircle className="w-4 h-4 text-cyan-400" />
+                      </div>
+                      <p className="font-semibold text-sm">Priority Access</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      You get a 30-second head start on all new orders before they become available to regular grinders.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                        <Shield className="w-4 h-4 text-teal-400" />
+                      </div>
+                      <p className="font-semibold text-sm">Elite Reputation</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Your applications carry a premium "Elite" badge, signaling high reliability and quality to staff.
+                    </p>
+                  </div>
                 </div>
-                <Sparkles className="w-6 h-6 text-cyan-400 ml-auto animate-pulse shrink-0" />
               </div>
             ) : (
               <>
