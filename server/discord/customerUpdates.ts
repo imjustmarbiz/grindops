@@ -14,17 +14,17 @@ export type CustomerUpdateType =
   | "grinder_replaced"
   | "order_assigned";
 
-const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; title: string; description: string }> = {
-  progress: { color: 0x3B82F6, emoji: "📋", title: "Progress Update", description: "Your grinder has submitted a progress update on your order." },
-  deadline_change: { color: 0xF59E0B, emoji: "📅", title: "Deadline Updated", description: "The deadline for your order has been adjusted." },
-  order_started: { color: 0x10B981, emoji: "🚀", title: "Order Started", description: "Your grinder has begun working on your order." },
-  order_completed: { color: 0x22C55E, emoji: "✅", title: "Order Completed", description: "Your order has been completed." },
-  issue_reported: { color: 0xEF4444, emoji: "⚠️", title: "Issue Reported", description: "Your grinder has reported an issue with your order." },
-  login: { color: 0x6366F1, emoji: "🟢", title: "Grinder Online", description: "Your grinder is now online and ready to work." },
-  logoff: { color: 0x6B7280, emoji: "🔴", title: "Grinder Offline", description: "Your grinder has gone offline. Work will resume next session." },
-  proof_uploaded: { color: 0x8B5CF6, emoji: "📸", title: "Proof Submitted", description: "Your grinder has submitted proof of progress." },
-  grinder_replaced: { color: 0xF97316, emoji: "🔄", title: "Grinder Reassigned", description: "Your order has been reassigned to a new grinder." },
-  order_assigned: { color: 0x06B6D4, emoji: "📌", title: "Order Assigned", description: "A grinder has been assigned to your order." },
+const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; title: string }> = {
+  progress: { color: 0x3B82F6, emoji: "📋", title: "Progress Update" },
+  deadline_change: { color: 0xF59E0B, emoji: "📅", title: "Deadline Updated" },
+  order_started: { color: 0x10B981, emoji: "🚀", title: "Order Started" },
+  order_completed: { color: 0x22C55E, emoji: "✅", title: "Order Completed" },
+  issue_reported: { color: 0xEF4444, emoji: "⚠️", title: "Issue Reported" },
+  login: { color: 0x6366F1, emoji: "🟢", title: "Grinder Online" },
+  logoff: { color: 0x6B7280, emoji: "🔴", title: "Grinder Offline" },
+  proof_uploaded: { color: 0x8B5CF6, emoji: "📸", title: "Proof Submitted" },
+  grinder_replaced: { color: 0xF97316, emoji: "🔄", title: "Grinder Reassigned" },
+  order_assigned: { color: 0x06B6D4, emoji: "📌", title: "Order Assigned" },
 };
 
 const BRAND_FOOTER = "GrindOps by Service Plug LLC";
@@ -136,7 +136,7 @@ export async function sendCustomerUpdate(options: {
       .setColor(config.color)
       .setAuthor({ name: BRAND_FOOTER, iconURL: BRAND_ICON })
       .setTitle(`${config.emoji}  ${config.title}`)
-      .setDescription(`${config.description}\n\n> ${message}`)
+      .setDescription(message)
       .addFields(
         { name: "🎮 Order", value: `\`${orderLabel}\``, inline: true },
         { name: "🛠️ Service", value: serviceName, inline: true },

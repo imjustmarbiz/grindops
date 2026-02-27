@@ -4221,15 +4221,40 @@ export async function registerRoutes(
         order_update: "progress",
       };
       if (checkpointUpdateMap[type]) {
-        const updateMsg = type === "issue"
-          ? `An issue has been reported: ${note || "No details provided."}`
-          : type === "start_order"
-          ? "Your grinder has started working on your order. Progress updates will follow."
-          : type === "login"
-          ? "Your grinder is now online and actively working on your order."
-          : type === "logoff"
-          ? "Your grinder has gone offline for now. Work will resume in the next session."
-          : note || req.body.message || "A progress update has been submitted.";
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" });
+        let updateMsg = "";
+
+        if (type === "login") {
+          updateMsg = `Logged in at **${timeStr} EST**. Your order is actively being worked on.`;
+        } else if (type === "logoff") {
+          let sessionInfo = "";
+          const existingCheckpoints = await storage.getActivityCheckpoints(assignmentId);
+          const loginLogoffs = existingCheckpoints
+            .filter((c: any) => c.grinderId === myGrinder.id && (c.type === "login" || c.type === "logoff"))
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const lastLogin = loginLogoffs.find((c: any) => c.type === "login");
+          if (lastLogin) {
+            const loginTime = new Date(lastLogin.createdAt);
+            const diffMs = now.getTime() - loginTime.getTime();
+            const diffMins = Math.round(diffMs / 60000);
+            if (diffMins >= 60) {
+              const hrs = Math.floor(diffMins / 60);
+              const mins = diffMins % 60;
+              sessionInfo = `Session duration: **${hrs}h ${mins}m**.`;
+            } else {
+              sessionInfo = `Session duration: **${diffMins}m**.`;
+            }
+          }
+          updateMsg = `Logged off at **${timeStr} EST**. ${sessionInfo} Work will resume next session.`;
+        } else if (type === "start_order") {
+          updateMsg = `Work began at **${timeStr} EST**. You will receive progress updates as your grinder makes headway.`;
+        } else if (type === "issue") {
+          updateMsg = `**Issue Details:**\n${note || "No details provided."}`;
+        } else {
+          updateMsg = note || req.body.message || "A progress update has been submitted.";
+        }
+
         sendCustomerUpdate({
           orderId,
           updateType: checkpointUpdateMap[type] as any,
