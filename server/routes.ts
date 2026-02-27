@@ -4030,7 +4030,7 @@ export async function registerRoutes(
           grinderId,
           updateType: isCompleted ? "completion" : "system",
           message: isCompleted
-            ? `Order completed. Grinder Pay: $${parseFloat(assignment.grinderPay || "0").toFixed(2)}`
+            ? `Order completed. Grinder Pay: $${parseFloat(assignment.grinderEarnings || assignment.bidAmount || "0").toFixed(2)}`
             : `Order assigned — Status: ${order.status}`,
           createdAt: order.completedAt || assignment.assignedAt || order.createdAt,
           orderTitle: order.title || order.id,
@@ -4297,7 +4297,7 @@ export async function registerRoutes(
           grinderId: myGrinder.id,
           updateType: isCompleted ? "completion" : "system",
           message: isCompleted
-            ? `Order completed. Grinder Pay: $${parseFloat(assignment.grinderPay || "0").toFixed(2)}`
+            ? `Order completed. Grinder Pay: $${parseFloat(assignment.grinderEarnings || assignment.bidAmount || "0").toFixed(2)}`
             : `Order assigned — Status: ${order.status}`,
           createdAt: order.completedAt || assignment.assignedAt || order.createdAt,
           orderTitle: order.title || order.id,
@@ -4308,12 +4308,55 @@ export async function registerRoutes(
 
       const strikeLogs = await storage.getStrikeLogs(myGrinder.id);
 
+      const payoutReqs = await storage.getPayoutRequests(myGrinder.id);
+      const paidPayouts = payoutReqs.filter((p: any) => p.status === "Paid");
+      const pendingPayouts = payoutReqs.filter((p: any) => p.status === "Pending" || p.status === "Approved");
+      const totalPaidOut = paidPayouts.reduce((sum: number, p: any) => sum + parseFloat(p.amount?.toString() || "0"), 0);
+      const totalPending = pendingPayouts.reduce((sum: number, p: any) => sum + parseFloat(p.amount?.toString() || "0"), 0);
+
+      const myAssignmentsFull = (await storage.getAssignments()).filter((a: any) => a.grinderId === myGrinder.id);
+      const completedAssignments = myAssignmentsFull.filter((a: any) => {
+        const order = orderMap.get(a.orderId);
+        return order && (order.status === "Completed" || order.status === "Paid Out");
+      });
+
       res.json({
         grinder: myGrinder,
         recentReports: approvedReports,
         checkpointCompliance,
         orderLogs: enrichedLogs,
         strikeLogs,
+        payoutSummary: {
+          totalPaidOut,
+          totalPending,
+          paidCount: paidPayouts.length,
+          pendingCount: pendingPayouts.length,
+          recentPayouts: paidPayouts.slice(0, 10).map((p: any) => ({
+            id: p.id,
+            orderId: p.orderId,
+            amount: p.amount,
+            status: p.status,
+            paidAt: p.paidAt,
+          })),
+          pendingPayoutsList: pendingPayouts.slice(0, 10).map((p: any) => ({
+            id: p.id,
+            orderId: p.orderId,
+            amount: p.amount,
+            status: p.status,
+          })),
+        },
+        orderHistory: completedAssignments.slice(0, 20).map((a: any) => {
+          const order = orderMap.get(a.orderId);
+          return {
+            orderId: a.orderId,
+            earnings: a.grinderEarnings || a.bidAmount || "0",
+            deliveredAt: a.deliveredDateTime,
+            isOnTime: a.isOnTime,
+            qualityRating: a.qualityRating,
+            orderStatus: order?.status,
+            serviceName: order?.serviceId,
+          };
+        }),
       });
     } catch (err) {
       res.status(500).json({ message: String(err) });
