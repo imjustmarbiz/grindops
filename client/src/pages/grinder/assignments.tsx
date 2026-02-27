@@ -460,7 +460,7 @@ export default function GrinderAssignments() {
               {orderUpdates.slice(0, 10).map((u: any) => (
                 <div key={u.id} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`card-update-${u.id}`}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Order {u.orderId}</span>
+                    <span className="text-sm font-medium">Order #{assignments?.find((a: any) => a.orderId === u.orderId)?.mgtOrderNumber || u.orderId}</span>
                     <span className="text-xs text-white/30">{new Date(u.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="text-sm text-white/50">{u.message}</p>
