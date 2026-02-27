@@ -1997,7 +1997,9 @@ export async function registerRoutes(
       assignments: await Promise.all(myAssignments.map(async (a: any) => {
         const order = allOrders.find((o: any) => o.id === a.orderId);
         const checkpoints = await storage.getActivityCheckpoints(a.id);
-        const hasTicketAck = checkpoints.some((cp: any) => cp.type === "ticket_ack");
+        const ticketAckCheckpoint = checkpoints.find((cp: any) => cp.type === "ticket_ack");
+        const hasTicketAck = !!ticketAckCheckpoint;
+        const ticketAckResponse = ticketAckCheckpoint?.response || null;
         const hasLoggedIn = checkpoints.some((cp: any) => cp.type === "login");
         const hasLoggedOff = checkpoints.some((cp: any) => cp.type === "logoff");
         const hasUpdated = checkpoints.some((cp: any) => cp.type === "order_update") ||
@@ -2022,6 +2024,7 @@ export async function registerRoutes(
           grinderId: a.grinderId,
           hasTicket: !!(order?.discordTicketChannelId),
           hasTicketAck,
+          ticketAckResponse,
           orderBrief: order?.orderBrief || null,
           platform: order?.platform || null,
           gamertag: order?.gamertag || null,
@@ -3959,6 +3962,50 @@ export async function registerRoutes(
       }
 
       res.status(201).json(checkpoint);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.post("/api/grinder/me/request-replacement", async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+
+      const { assignmentId, orderId, reason } = req.body;
+      if (!assignmentId || !orderId || !reason) {
+        return res.status(400).json({ message: "assignmentId, orderId, and reason are required" });
+      }
+
+      const assignment = await storage.getAssignment(assignmentId);
+      if (!assignment || assignment.grinderId !== myGrinder.id || assignment.status !== "Active") {
+        return res.status(400).json({ message: "Assignment not found or not active" });
+      }
+
+      const order = await storage.getOrder(orderId);
+      const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId;
+
+      const staffNotif = await storage.createNotification({
+        id: `N-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        type: "replacement_request",
+        title: "Replacement Requested",
+        message: `${myGrinder.name} is requesting a replacement on order ${orderRef}. Reason: ${reason}`,
+        userId: "staff",
+        relatedId: orderId,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        entityType: "assignment",
+        entityId: assignmentId,
+        action: "grinder_replacement_request",
+        actor: myGrinder.name || myGrinder.id,
+        details: JSON.stringify({ orderId, reason }),
+      });
+
+      res.status(201).json({ message: "Replacement request sent to staff for review." });
     } catch (err) {
       res.status(500).json({ message: String(err) });
     }

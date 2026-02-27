@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2, FileCheck, CheckCircle, Star, Send, CalendarClock,
-  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video, Play, Tv
+  MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video, Play, Tv, Repeat
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
@@ -90,6 +90,8 @@ export default function GrinderAssignments() {
   const [savePayoutMethod, setSavePayoutMethod] = useState(true);
   const [issueDialog, setIssueDialog] = useState<any>(null);
   const [issueNote, setIssueNote] = useState("");
+  const [replacementDialog, setReplacementDialog] = useState<any>(null);
+  const [replacementReason, setReplacementReason] = useState("");
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<string | null>(null);
   const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [ticketConfirm, setTicketConfirm] = useState<{ assignmentId: string; orderId: string; action: "accept" | "decline" } | null>(null);
@@ -111,6 +113,20 @@ export default function GrinderAssignments() {
       queryClient.invalidateQueries({ queryKey: ["/api/grinder/me/checkpoints", vars.assignmentId] });
       const typeLabels: Record<string, string> = { ticket_ack: "Ticket accepted", login: "Logged in", logoff: "Logged off", issue: "Issue reported", order_update: "Update submitted", start_order: "Order started" };
       toast({ title: typeLabels[vars.type] || "Checkpoint recorded" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const replacementMutation = useMutation({
+    mutationFn: async (data: { assignmentId: string; orderId: string; reason: string }) => {
+      const res = await apiRequest("POST", "/api/grinder/me/request-replacement", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/grinder/me"] });
+      toast({ title: "Replacement request sent", description: "Staff will review your request." });
+      setReplacementDialog(null);
+      setReplacementReason("");
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -344,23 +360,30 @@ export default function GrinderAssignments() {
                         </div>
                       </div>
                     )}
-                    <div className={`grid grid-cols-3 sm:flex sm:items-center gap-1 sm:gap-1.5 sm:flex-wrap ${!a.hasTicketAck ? "opacity-40 pointer-events-none" : ""}`}>
-                      <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle className="w-3 h-3 mr-1" /> Accepted
-                      </Badge>
+                    {a.hasTicketAck && a.ticketAckResponse === "no" && (
+                      <div className="p-2.5 rounded-lg bg-red-500/[0.08] border border-red-500/20 mb-2">
+                        <p className="text-[11px] text-red-400 font-medium">You declined this order. It has been sent back for reassignment.</p>
+                      </div>
+                    )}
+                    <div className={`grid grid-cols-3 sm:flex sm:items-center gap-1 sm:gap-1.5 sm:flex-wrap ${!a.hasTicketAck || a.ticketAckResponse === "no" ? "opacity-40 pointer-events-none" : ""}`}>
+                      {a.hasTicketAck && a.ticketAckResponse === "yes" && (
+                        <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Accepted
+                        </Badge>
+                      )}
                       <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-1.5 sm:px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
-                        disabled={checkpointMutation.isPending || a.isLoggedIn || !a.hasTicketAck}
+                        disabled={checkpointMutation.isPending || a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
-                        disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck}
+                        disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
                         <PlatformIcon platform={a.platform} className="w-3 h-3" /> <span className="hidden sm:inline">Log</span> Off
                       </Button>
                       {!a.hasStarted ? (
                         <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
-                          disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck}
+                          disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
                           onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
                           <Play className="w-3 h-3" /> Start
                         </Button>
@@ -370,9 +393,14 @@ export default function GrinderAssignments() {
                         </Badge>
                       )}
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
-                        disabled={checkpointMutation.isPending || !a.hasTicketAck}
+                        disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
                         <AlertTriangle className="w-3 h-3" /> Issue
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20" data-testid={`button-request-replacement-${a.id}`}
+                        disabled={!a.hasTicketAck || a.ticketAckResponse === "no"}
+                        onClick={() => { setReplacementDialog(a); setReplacementReason(""); }}>
+                        <Repeat className="w-3 h-3" /> Replace
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2" data-testid={`button-view-checkpoints-${a.id}`}
                         onClick={() => setExpandedCheckpoints(expandedCheckpoints === a.id ? null : a.id)}>
@@ -957,6 +985,51 @@ export default function GrinderAssignments() {
               }}>
               {checkpointMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
               Submit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!replacementDialog} onOpenChange={(open) => { if (!open) { setReplacementDialog(null); setReplacementReason(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Repeat className="w-5 h-5 text-orange-400" />
+              Request Replacement - Order {replacementDialog?.mgtOrderNumber ? `#${replacementDialog.mgtOrderNumber}` : replacementDialog?.orderId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-amber-500/[0.08] border border-amber-500/20 space-y-2">
+              <p className="text-xs font-medium text-amber-400">Before requesting a replacement, please be aware:</p>
+              <ul className="text-[11px] text-amber-300/80 space-y-1 list-disc list-inside">
+                <li>This request will be reviewed by staff before any action is taken</li>
+                <li>Your status for future order assignments may be affected</li>
+                <li>You may or may not be subject to a strike and/or fine depending on the circumstances</li>
+                <li>Your payout may be reduced or forfeited depending on the progress made on the order</li>
+                <li>If approved, the order will be sent to the emergency open orders queue for reassignment</li>
+              </ul>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Reason for replacement request *</label>
+              <Textarea
+                value={replacementReason}
+                onChange={(e) => setReplacementReason(e.target.value)}
+                placeholder="Explain why you need a replacement grinder for this order..."
+                data-testid="input-replacement-reason"
+                rows={3}
+              />
+            </div>
+            <Button className="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/20" data-testid="button-submit-replacement"
+              disabled={!replacementReason.trim() || replacementMutation.isPending}
+              onClick={() => {
+                replacementMutation.mutate({
+                  assignmentId: replacementDialog.id,
+                  orderId: replacementDialog.orderId,
+                  reason: replacementReason,
+                });
+              }}>
+              {replacementMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Repeat className="w-4 h-4 mr-2" />}
+              Submit Replacement Request
             </Button>
           </div>
         </DialogContent>
