@@ -648,7 +648,7 @@ export default function Orders() {
                   <TableCell className="font-mono font-medium" data-testid={`text-order-id-${order.id}`}>
                     <div className="flex items-center gap-1.5">
                       <div className="flex flex-col">
-                        <span>{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
+                        <span className="max-w-[120px] truncate block">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.id}</span>
                         {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
                       </div>
                       <Tooltip>

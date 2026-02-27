@@ -5008,7 +5008,7 @@ export async function registerRoutes(
         }
       }
 
-      const id = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const id = `RPR-${Date.now().toString(36)}`;
       const claim = await storage.createOrderClaimRequest({
         id,
         grinderId: user.grinderId,
@@ -5058,7 +5058,7 @@ export async function registerRoutes(
       if (!grinder) return res.status(404).json({ error: "Grinder not found" });
       if (repairType === "add_completed" && !completedDateTime) return res.status(400).json({ error: "Completed date is required" });
 
-      const id = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const id = `RPR-${Date.now().toString(36)}`;
       const claim = await storage.createOrderClaimRequest({
         id,
         grinderId,
@@ -5179,7 +5179,7 @@ export async function registerRoutes(
             if (!resolvedServiceId) return res.status(400).json({ error: "Service is required to approve a repair without an order ID" });
             if (!customerPrice) return res.status(400).json({ error: "Customer price is required to approve a repair without an order ID" });
 
-            const newOrderId = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const newOrderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
             const orderDueDate = claim.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             const isCompleted = isAddCompleted || !!claim.completedDateTime;
 
