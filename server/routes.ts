@@ -1761,7 +1761,7 @@ export async function registerRoutes(
       sendCustomerUpdate({
         orderId: assignment.orderId,
         updateType: "grinder_replaced",
-        message: `Your order has been reassigned to a new grinder: **${replacementGrinder.name}**. They will continue working on your order seamlessly.${input.reason ? `\n\n*Reason: ${input.reason}*` : ""}`,
+        message: `Your order has been reassigned to a new grinder. They will continue working on your order seamlessly.${input.reason ? `\n\nReason: ${input.reason}` : ""}`,
         grinderName: replacementGrinder.name,
         assignmentId: req.params.id,
       }).catch(err => console.error("[customer-updates] Replacement error:", err));
@@ -2524,17 +2524,17 @@ export async function registerRoutes(
       details: JSON.stringify({ orderId, assignmentId, updateType, message }),
     });
 
-    if (!newDeadline) {
-      const customerUpdateType = updateType === "issue" ? "issue_reported" : "progress";
-      sendCustomerUpdate({
-        orderId,
-        updateType: customerUpdateType as any,
-        message,
-        proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
-        grinderName: myGrinder.name,
-        assignmentId,
-      }).catch(err => console.error("[customer-updates] Error:", err));
-    }
+    const customerUpdateType = newDeadline
+      ? "deadline_change"
+      : updateType === "issue" ? "issue_reported" : "progress";
+    sendCustomerUpdate({
+      orderId,
+      updateType: customerUpdateType as any,
+      message,
+      proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
+      grinderName: myGrinder.name,
+      assignmentId,
+    }).catch(err => console.error("[customer-updates] Error:", err));
 
     res.status(201).json(update);
   });
@@ -4222,14 +4222,14 @@ export async function registerRoutes(
       };
       if (checkpointUpdateMap[type]) {
         const updateMsg = type === "issue"
-          ? `⚠️ Issue reported: ${note || "No details provided"}`
+          ? `An issue has been reported: ${note || "No details provided."}`
           : type === "start_order"
-          ? `${myGrinder.name} has started working on your order.`
+          ? "Your grinder has started working on your order. Progress updates will follow."
           : type === "login"
-          ? `${myGrinder.name} is now online and working.`
+          ? "Your grinder is now online and actively working on your order."
           : type === "logoff"
-          ? `${myGrinder.name} has gone offline. Work will resume next session.`
-          : note || req.body.message || "Progress update submitted.";
+          ? "Your grinder has gone offline for now. Work will resume in the next session."
+          : note || req.body.message || "A progress update has been submitted.";
         sendCustomerUpdate({
           orderId,
           updateType: checkpointUpdateMap[type] as any,
@@ -4431,13 +4431,14 @@ export async function registerRoutes(
         const grinder = allGrinders.find((g: any) => g.id === u.grinderId);
         log.push({
           id: u.id,
-          type: u.type || "order_update",
+          type: u.updateType || "order_update",
           source: "update",
           grinderName: grinder?.name || u.grinderId || "Unknown",
           grinderId: u.grinderId,
           note: u.message,
           newDeadline: u.newDeadline,
           acknowledgedBy: u.acknowledgedBy,
+          proofUrls: u.proofUrls || [],
           createdAt: u.createdAt,
         });
       }
@@ -4507,7 +4508,7 @@ export async function registerRoutes(
         sendCustomerUpdate({
           orderId: update.orderId,
           updateType: "deadline_change" as any,
-          message: `Deadline extended to ${new Date(update.newDeadline).toLocaleDateString()}. Reason: ${update.message}`,
+          message: `The deadline for your order has been extended to ${new Date(update.newDeadline).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.\n\nReason: ${update.message}`,
           grinderName: update.grinderId,
           assignmentId: update.assignmentId,
         }).catch(err => console.error("[customer-updates] Deadline approval notification error:", err));
@@ -4946,37 +4947,6 @@ export async function registerRoutes(
     }
   });
 
-  // ============ GRINDER ORDER UPDATE SUBMISSION ============
-
-  app.post("/api/grinder/me/order-updates", async (req, res) => {
-    try {
-      const userId = (req as any).userId;
-      const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
-      if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
-
-      const { assignmentId, orderId, message, mediaUrls, mediaTypes } = req.body;
-      if (!assignmentId || !orderId || !message) {
-        return res.status(400).json({ message: "assignmentId, orderId, and message are required" });
-      }
-
-      const chatUpdDisplay = await generateUpdateDisplayId(orderId);
-      const update = await storage.createOrderUpdate({
-        id: `OU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-        displayId: chatUpdDisplay,
-        assignmentId,
-        orderId,
-        grinderId: myGrinder.id,
-        message,
-        mediaUrls: mediaUrls || [],
-        mediaTypes: mediaTypes || [],
-      });
-
-      res.status(201).json(update);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  });
 
   app.get('/api/chat/members', async (req, res) => {
     const user = (req as any).user;

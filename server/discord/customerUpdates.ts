@@ -14,18 +14,21 @@ export type CustomerUpdateType =
   | "grinder_replaced"
   | "order_assigned";
 
-const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; title: string }> = {
-  progress: { color: 0x3B82F6, emoji: "📋", title: "Order Progress Update" },
-  deadline_change: { color: 0xF59E0B, emoji: "📅", title: "Deadline Update" },
-  order_started: { color: 0x10B981, emoji: "🚀", title: "Order Started" },
-  order_completed: { color: 0x22C55E, emoji: "✅", title: "Order Completed" },
-  issue_reported: { color: 0xEF4444, emoji: "⚠️", title: "Issue Reported" },
-  login: { color: 0x6366F1, emoji: "🟢", title: "Grinder Online" },
-  logoff: { color: 0x6B7280, emoji: "🔴", title: "Grinder Offline" },
-  proof_uploaded: { color: 0x8B5CF6, emoji: "📸", title: "Proof Submitted" },
-  grinder_replaced: { color: 0xF97316, emoji: "🔄", title: "Grinder Reassigned" },
-  order_assigned: { color: 0x06B6D4, emoji: "📌", title: "Order Assigned" },
+const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; title: string; description: string }> = {
+  progress: { color: 0x3B82F6, emoji: "📋", title: "Progress Update", description: "Your grinder has submitted a progress update on your order." },
+  deadline_change: { color: 0xF59E0B, emoji: "📅", title: "Deadline Updated", description: "The deadline for your order has been adjusted." },
+  order_started: { color: 0x10B981, emoji: "🚀", title: "Order Started", description: "Your grinder has begun working on your order." },
+  order_completed: { color: 0x22C55E, emoji: "✅", title: "Order Completed", description: "Your order has been completed." },
+  issue_reported: { color: 0xEF4444, emoji: "⚠️", title: "Issue Reported", description: "Your grinder has reported an issue with your order." },
+  login: { color: 0x6366F1, emoji: "🟢", title: "Grinder Online", description: "Your grinder is now online and ready to work." },
+  logoff: { color: 0x6B7280, emoji: "🔴", title: "Grinder Offline", description: "Your grinder has gone offline. Work will resume next session." },
+  proof_uploaded: { color: 0x8B5CF6, emoji: "📸", title: "Proof Submitted", description: "Your grinder has submitted proof of progress." },
+  grinder_replaced: { color: 0xF97316, emoji: "🔄", title: "Grinder Reassigned", description: "Your order has been reassigned to a new grinder." },
+  order_assigned: { color: 0x06B6D4, emoji: "📌", title: "Order Assigned", description: "A grinder has been assigned to your order." },
 };
+
+const BRAND_FOOTER = "GrindOps by Service Plug LLC";
+const BRAND_ICON = "https://cdn.discordapp.com/embed/avatars/0.png";
 
 async function isCustomerUpdatesEnabled(): Promise<boolean> {
   try {
@@ -43,6 +46,37 @@ function getActiveGrinderId(assignment: any): string {
   return assignment.grinderId;
 }
 
+async function resolveGrinderInfo(grinderName?: string, assignmentId?: string): Promise<{ name: string; discordId: string | null }> {
+  let name = grinderName || "Your Grinder";
+  let discordId: string | null = null;
+
+  if (assignmentId) {
+    const assignment = await storage.getAssignment(assignmentId);
+    if (assignment) {
+      const activeId = getActiveGrinderId(assignment);
+      const grinder = await storage.getGrinder(activeId);
+      if (grinder) {
+        name = grinder.name || name;
+        discordId = grinder.discordUserId || null;
+      }
+    }
+  }
+
+  if (!discordId && grinderName) {
+    const allGrinders = await storage.getGrinders();
+    const match = allGrinders.find((g: any) => g.name === grinderName);
+    if (match) {
+      discordId = match.discordUserId || null;
+    }
+  }
+
+  return { name, discordId };
+}
+
+function grinderMention(discordId: string | null, name: string): string {
+  return discordId ? `<@${discordId}>` : `**${name}**`;
+}
+
 export async function sendCustomerUpdate(options: {
   orderId: string;
   updateType: CustomerUpdateType;
@@ -51,7 +85,7 @@ export async function sendCustomerUpdate(options: {
   grinderName?: string;
   assignmentId?: string;
 }): Promise<boolean> {
-  const { orderId, updateType, message, proofUrls, grinderName } = options;
+  const { orderId, updateType, message, proofUrls } = options;
 
   try {
     if (!(await isCustomerUpdatesEnabled())) {
@@ -90,46 +124,38 @@ export async function sendCustomerUpdate(options: {
     const config = UPDATE_CONFIG[updateType] || UPDATE_CONFIG.progress;
     const customerMention = order.customerDiscordId ? `<@${order.customerDiscordId}>` : "";
 
-    let resolvedGrinderName = grinderName;
-    if (!resolvedGrinderName && options.assignmentId) {
-      const assignment = await storage.getAssignment(options.assignmentId);
-      if (assignment) {
-        const activeId = getActiveGrinderId(assignment);
-        const grinder = await storage.getGrinder(activeId);
-        resolvedGrinderName = grinder?.name || "Your Grinder";
-      }
-    }
-    if (!resolvedGrinderName) resolvedGrinderName = "Your Grinder";
+    const grinderInfo = await resolveGrinderInfo(options.grinderName, options.assignmentId);
+    const grinderTag = grinderMention(grinderInfo.discordId, grinderInfo.name);
 
     const services = await storage.getServices();
     const service = services.find((s: any) => s.id === order.serviceId);
     const serviceName = service?.name || "Service";
+    const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id;
 
     const embed = new EmbedBuilder()
       .setColor(config.color)
-      .setTitle(`${config.emoji} ${config.title}`)
-      .setDescription(message)
+      .setAuthor({ name: BRAND_FOOTER, iconURL: BRAND_ICON })
+      .setTitle(`${config.emoji}  ${config.title}`)
+      .setDescription(`${config.description}\n\n> ${message}`)
       .addFields(
-        { name: "Order", value: order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id, inline: true },
-        { name: "Service", value: serviceName, inline: true },
-        { name: "Grinder", value: resolvedGrinderName, inline: true },
+        { name: "🎮 Order", value: `\`${orderLabel}\``, inline: true },
+        { name: "🛠️ Service", value: serviceName, inline: true },
+        { name: "👤 Grinder", value: grinderTag, inline: true },
       )
       .setTimestamp()
-      .setFooter({ text: "SP Grinder Queue" });
+      .setFooter({ text: BRAND_FOOTER });
 
     if (proofUrls && proofUrls.length > 0) {
-      const proofList = proofUrls.map((url, i) => `[Proof ${i + 1}](${url})`).join(" | ");
+      const proofList = proofUrls.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
       embed.addFields({ name: "📎 Attached Proof", value: proofList });
       if (proofUrls[0].match(/\.(png|jpg|jpeg|gif|webp)(\?|$)/i)) {
         embed.setImage(proofUrls[0]);
       }
     }
 
-    if (order.orderDueDate) {
-      embed.addFields({ name: "Deadline", value: new Date(order.orderDueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), inline: true });
-    }
-
-    const content = customerMention ? `${customerMention} — Here's an update on your order:` : undefined;
+    const content = customerMention
+      ? `${customerMention} — Here is an update on your order:`
+      : undefined;
 
     await channel.send({ content, embeds: [embed] });
     console.log(`[customer-updates] Sent ${updateType} update to channel ${channelId} for order ${orderId}`);
@@ -147,7 +173,7 @@ export async function sendCompletionApprovalRequest(options: {
   proofUrls?: string[];
   grinderName?: string;
 }): Promise<boolean> {
-  const { orderId, assignmentId, completionProofUrl, proofUrls, grinderName } = options;
+  const { orderId, assignmentId, completionProofUrl, proofUrls } = options;
 
   try {
     if (!(await isCustomerUpdatesEnabled())) return false;
@@ -168,21 +194,26 @@ export async function sendCompletionApprovalRequest(options: {
 
     const services = await storage.getServices();
     const service = services.find((s: any) => s.id === order.serviceId);
+    const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id;
+
+    const grinderInfo = await resolveGrinderInfo(options.grinderName, assignmentId);
+    const grinderTag = grinderMention(grinderInfo.discordId, grinderInfo.name);
 
     const embed = new EmbedBuilder()
       .setColor(0x22C55E)
-      .setTitle("✅ Order Completed — Approval Required")
+      .setAuthor({ name: BRAND_FOOTER, iconURL: BRAND_ICON })
+      .setTitle("✅  Order Completed — Approval Required")
       .setDescription(
-        `Your order has been completed by **${grinderName || "your grinder"}**!\n\n` +
+        `Your order has been completed by ${grinderTag}!\n\n` +
         `Please review the proof below and click **Approve** to confirm the work is satisfactory.\n\n` +
         `If you have any concerns, please reach out to staff in this channel.`
       )
       .addFields(
-        { name: "Order", value: order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id, inline: true },
-        { name: "Service", value: service?.name || "Service", inline: true },
+        { name: "🎮 Order", value: `\`${orderLabel}\``, inline: true },
+        { name: "🛠️ Service", value: service?.name || "Service", inline: true },
       )
       .setTimestamp()
-      .setFooter({ text: "SP Grinder Queue" });
+      .setFooter({ text: BRAND_FOOTER });
 
     const allProofs = [
       ...(completionProofUrl ? [completionProofUrl] : []),
@@ -190,7 +221,7 @@ export async function sendCompletionApprovalRequest(options: {
     ].filter(Boolean);
 
     if (allProofs.length > 0) {
-      const proofList = allProofs.map((url, i) => `[Proof ${i + 1}](${url})`).join(" | ");
+      const proofList = allProofs.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
       embed.addFields({ name: "📎 Completion Proof", value: proofList });
       if (allProofs[0].match(/\.(png|jpg|jpeg|gif|webp)(\?|$)/i)) {
         embed.setImage(allProofs[0]);
