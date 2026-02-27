@@ -1,7 +1,8 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials } from "discord.js";
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials, type ButtonInteraction } from "discord.js";
 import { storage } from "../storage";
 import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance, backfillMissedMessages, startProposalBidSync } from "./mgtWatcher";
 import { GRINDER_ROLES, ROLE_LABELS } from "@shared/schema";
+import { handleCustomerApprovalButton } from "./customerUpdates";
 
 let client: Client | null = null;
 
@@ -142,6 +143,22 @@ const commands = [
       opt.setName("order").setDescription("Order ID").setRequired(true))
     .addStringOption(opt =>
       opt.setName("grinder").setDescription("Grinder ID").setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName("requestupdate")
+    .setDescription("Request an update on your order (customer command)")
+    .addStringOption(opt =>
+      opt.setName("order").setDescription("Order ID or MGT number (e.g. MGT-168)").setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName("orderstatus")
+    .setDescription("Check the status of your order (customer command)")
+    .addStringOption(opt =>
+      opt.setName("order").setDescription("Order ID or MGT number (e.g. MGT-168)").setRequired(true)),
+
+  new SlashCommandBuilder()
+    .setName("myorders")
+    .setDescription("View all your orders (customer command)"),
 
 ];
 
@@ -525,6 +542,192 @@ async function handleAssign(interaction: ChatInputCommandInteraction) {
   }
 }
 
+async function findOrderByInput(input: string) {
+  const trimmed = input.trim();
+  const mgtMatch = trimmed.match(/^(?:MGT[- ]?)?(\d+)$/i);
+  if (mgtMatch) {
+    const mgtNum = parseInt(mgtMatch[1]);
+    const allOrders = await storage.getOrders();
+    return allOrders.find((o: any) => o.mgtOrderNumber === mgtNum) || null;
+  }
+  return await storage.getOrder(trimmed);
+}
+
+async function handleRequestUpdate(interaction: ChatInputCommandInteraction) {
+  const orderInput = interaction.options.getString("order", true);
+  const customerDiscordId = interaction.user.id;
+
+  try {
+    const order = await findOrderByInput(orderInput);
+    if (!order) {
+      await interaction.reply({ content: "Order not found. Please check the order ID.", ephemeral: true });
+      return;
+    }
+
+    if (order.customerDiscordId && order.customerDiscordId !== customerDiscordId) {
+      await interaction.reply({ content: "You are not the customer for this order.", ephemeral: true });
+      return;
+    }
+
+    if (!order.assignedGrinderId) {
+      await interaction.reply({ content: "This order has not been assigned to a grinder yet.", ephemeral: true });
+      return;
+    }
+
+    const allAssignments = await storage.getAssignments();
+    const assignment = allAssignments.find((a: any) => a.orderId === order.id && a.status === "Active");
+    const activeGrinderId = assignment
+      ? (assignment.wasReassigned && assignment.replacementGrinderId ? assignment.replacementGrinderId : assignment.grinderId)
+      : order.assignedGrinderId;
+
+    await storage.createGrinderTask({
+      id: `GT-${Date.now().toString(36)}`,
+      grinderId: activeGrinderId,
+      orderId: order.id,
+      assignmentId: assignment?.id || null,
+      title: `Customer Update Request — ${order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id}`,
+      description: `The customer has requested an update on this order via Discord. Please provide a progress update as soon as possible.`,
+      type: "customer_request",
+      status: "pending",
+      priority: "urgent",
+      createdBy: customerDiscordId,
+      createdByName: interaction.user.username,
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle("📋 Update Request Sent")
+      .setColor(0x3B82F6)
+      .setDescription(`Your update request has been sent to the grinder working on order **${order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id}**.\n\nThey will be notified and should respond soon.`)
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } catch (error: any) {
+    await interaction.reply({ content: "Something went wrong processing your request.", ephemeral: true });
+  }
+}
+
+async function handleOrderStatus(interaction: ChatInputCommandInteraction) {
+  const orderInput = interaction.options.getString("order", true);
+  const customerDiscordId = interaction.user.id;
+
+  try {
+    const order = await findOrderByInput(orderInput);
+    if (!order) {
+      await interaction.reply({ content: "Order not found. Please check the order ID.", ephemeral: true });
+      return;
+    }
+
+    if (order.customerDiscordId && order.customerDiscordId !== customerDiscordId) {
+      await interaction.reply({ content: "You are not the customer for this order.", ephemeral: true });
+      return;
+    }
+
+    const services = await storage.getServices();
+    const service = services.find((s: any) => s.id === order.serviceId);
+
+    let grinderInfo = "Not yet assigned";
+    const allAssignments = await storage.getAssignments();
+    const assignment = allAssignments.find((a: any) => a.orderId === order.id && (a.status === "Active" || a.status === "Completed"));
+    if (assignment) {
+      const activeId = assignment.wasReassigned && assignment.replacementGrinderId ? assignment.replacementGrinderId : assignment.grinderId;
+      const grinder = await storage.getGrinder(activeId);
+      grinderInfo = grinder?.name || activeId;
+    }
+
+    let lastUpdate = "No updates yet";
+    const updates = await storage.getOrderUpdates(order.id);
+    if (updates.length > 0) {
+      const latest = updates.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      lastUpdate = `${latest.message}\n*— ${new Date(latest.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}*`;
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle(`📦 Order Status — ${order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id}`)
+      .setColor(order.status === "Completed" ? 0x22C55E : order.status === "Active" || order.status === "Assigned" ? 0x3B82F6 : 0x6B7280)
+      .addFields(
+        { name: "Service", value: service?.name || "N/A", inline: true },
+        { name: "Status", value: order.status, inline: true },
+        { name: "Grinder", value: grinderInfo, inline: true },
+        { name: "Deadline", value: order.orderDueDate ? new Date(order.orderDueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A", inline: true },
+        { name: "Platform", value: order.platform || "N/A", inline: true },
+        { name: "Last Update", value: lastUpdate },
+      )
+      .setTimestamp()
+      .setFooter({ text: "SP Grinder Queue" });
+
+    if (assignment?.customerApproved) {
+      embed.addFields({ name: "Customer Approval", value: `✅ Approved on ${new Date(assignment.customerApprovedAt!).toLocaleDateString()}`, inline: true });
+    } else if (assignment?.status === "Completed" && !assignment?.customerApproved) {
+      embed.addFields({ name: "Customer Approval", value: "⏳ Pending your approval", inline: true });
+    }
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } catch (error: any) {
+    await interaction.reply({ content: "Something went wrong fetching order status.", ephemeral: true });
+  }
+}
+
+async function handleMyOrders(interaction: ChatInputCommandInteraction) {
+  const customerDiscordId = interaction.user.id;
+
+  try {
+    const allOrders = await storage.getOrders();
+    const myOrders = allOrders.filter((o: any) => o.customerDiscordId === customerDiscordId);
+
+    if (myOrders.length === 0) {
+      await interaction.reply({ content: "No orders found linked to your Discord account.", ephemeral: true });
+      return;
+    }
+
+    const services = await storage.getServices();
+    const sorted = myOrders.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 10);
+
+    const embed = new EmbedBuilder()
+      .setTitle(`📦 Your Orders (${myOrders.length} total)`)
+      .setColor(0x5865F2)
+      .setTimestamp()
+      .setFooter({ text: "Showing up to 10 most recent • SP Grinder Queue" });
+
+    for (const order of sorted) {
+      const service = services.find((s: any) => s.id === order.serviceId);
+      const statusEmoji = order.status === "Completed" ? "✅" : order.status === "Assigned" ? "🔵" : order.status === "Open" ? "🟡" : "⚪";
+      embed.addFields({
+        name: `${statusEmoji} ${order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id}`,
+        value: `**Service:** ${service?.name || "N/A"}\n**Status:** ${order.status}\n**Deadline:** ${order.orderDueDate ? new Date(order.orderDueDate).toLocaleDateString() : "N/A"}`,
+        inline: true,
+      });
+    }
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } catch (error: any) {
+    await interaction.reply({ content: "Something went wrong fetching your orders.", ephemeral: true });
+  }
+}
+
+async function handleButtonInteraction(interaction: ButtonInteraction) {
+  const customId = interaction.customId;
+
+  if (customId.startsWith("customer_approve:")) {
+    const token = customId.replace("customer_approve:", "");
+    const result = await handleCustomerApprovalButton(token, interaction.user.id);
+
+    if (result.success) {
+      const embed = new EmbedBuilder()
+        .setTitle("✅ Order Approved!")
+        .setColor(0x22C55E)
+        .setDescription(result.message)
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+    } else {
+      await interaction.reply({ content: result.message, ephemeral: true });
+    }
+    return;
+  }
+
+  await interaction.reply({ content: "Unknown action.", ephemeral: true });
+}
+
+
 export async function startDiscordBot() {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token) {
@@ -614,22 +817,39 @@ export async function startDiscordBot() {
   });
 
   client.on("interactionCreate", async (interaction) => {
+    if (interaction.isButton()) {
+      try {
+        await handleButtonInteraction(interaction);
+      } catch (error) {
+        console.error("[discord] Error handling button:", error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: "Something went wrong.", ephemeral: true });
+        }
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
-    const STAFF_ROLE_ID = "1466369178729578663";
-    const OWNER_ROLE_ID = "1466369177043599514";
-    const member = interaction.member;
-    const roles = member && "cache" in (member.roles as any)
-      ? (member.roles as any).cache
-      : member?.roles;
-    const hasAccess = roles && (
-      (typeof roles.has === "function" && (roles.has(STAFF_ROLE_ID) || roles.has(OWNER_ROLE_ID))) ||
-      (Array.isArray(roles) && (roles.includes(STAFF_ROLE_ID) || roles.includes(OWNER_ROLE_ID)))
-    );
+    const CUSTOMER_COMMANDS = ["requestupdate", "orderstatus", "myorders"];
+    const isCustomerCommand = CUSTOMER_COMMANDS.includes(interaction.commandName);
 
-    if (!hasAccess) {
-      await interaction.reply({ content: "You don't have permission to use this command. Staff or Owner role required.", ephemeral: true });
-      return;
+    if (!isCustomerCommand) {
+      const STAFF_ROLE_ID = "1466369178729578663";
+      const OWNER_ROLE_ID = "1466369177043599514";
+      const member = interaction.member;
+      const roles = member && "cache" in (member.roles as any)
+        ? (member.roles as any).cache
+        : member?.roles;
+      const hasAccess = roles && (
+        (typeof roles.has === "function" && (roles.has(STAFF_ROLE_ID) || roles.has(OWNER_ROLE_ID))) ||
+        (Array.isArray(roles) && (roles.includes(STAFF_ROLE_ID) || roles.includes(OWNER_ROLE_ID)))
+      );
+
+      if (!hasAccess) {
+        await interaction.reply({ content: "You don't have permission to use this command. Staff or Owner role required.", ephemeral: true });
+        return;
+      }
     }
 
     try {
@@ -644,6 +864,9 @@ export async function startDiscordBot() {
         case "setprice": await handleSetPrice(interaction); break;
         case "placebid": await handlePlaceBid(interaction); break;
         case "assign": await handleAssign(interaction); break;
+        case "requestupdate": await handleRequestUpdate(interaction); break;
+        case "orderstatus": await handleOrderStatus(interaction); break;
+        case "myorders": await handleMyOrders(interaction); break;
         default:
           await interaction.reply({ content: "Unknown command.", ephemeral: true });
       }

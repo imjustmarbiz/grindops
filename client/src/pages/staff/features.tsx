@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   BookOpen, LayoutDashboard, BarChart3, Wallet, Settings, Brain, 
   ListOrdered, Users, Gavel, FileCheck, FileBarChart, Tv, ScrollText, 
-  Calendar, Newspaper, Star, LinkIcon, CalendarDays, Package, DollarSign, ChevronRight
+  Calendar, Newspaper, Star, LinkIcon, CalendarDays, Package, DollarSign, ChevronRight,
+  MessageSquare
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -127,6 +128,12 @@ const features = [
     title: "Business (Owner Only)",
     description: "Financial overview with revenue tracking, cost analysis, margin calculations, and profitability metrics. The complete picture of your business performance.",
     url: "/business",
+  },
+  {
+    icon: MessageSquare,
+    title: "Discord Customer Service Pipeline",
+    description: "Automated customer communication system via Discord. Link customer Discord IDs during ticket setup to enable automated order updates, completion approval requests, and customer slash commands (/requestupdate, /orderstatus, /myorders). Includes force-approve for unresponsive customers and an admin toggle to enable or disable the pipeline.",
+    url: "/admin",
   },
   {
     icon: ScrollText,

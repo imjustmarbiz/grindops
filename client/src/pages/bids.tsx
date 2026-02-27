@@ -46,6 +46,7 @@ export default function Bids() {
 
   const [ticketDialog, setTicketDialog] = useState<{ orderId: string; orderLabel: string } | null>(null);
   const [ticketChannelId, setTicketChannelId] = useState("");
+  const [customerDiscordId, setCustomerDiscordId] = useState("");
 
   const [pricePrompt, setPricePrompt] = useState<{ bidId: string; orderId: string; orderLabel: string; isOverride?: boolean } | null>(null);
   const [promptPrice, setPromptPrice] = useState("");
@@ -61,14 +62,17 @@ export default function Bids() {
   };
 
   const linkTicketMutation = useMutation({
-    mutationFn: async (data: { orderId: string; discordTicketChannelId: string }) => {
-      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/ticket`, { discordTicketChannelId: data.discordTicketChannelId });
+    mutationFn: async (data: { orderId: string; discordTicketChannelId: string; customerDiscordId?: string }) => {
+      const body: Record<string, string> = { discordTicketChannelId: data.discordTicketChannelId };
+      if (data.customerDiscordId) body.customerDiscordId = data.customerDiscordId;
+      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/customer-discord`, body);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       setTicketDialog(null);
       setTicketChannelId("");
+      setCustomerDiscordId("");
       toast({ title: "Ticket linked", description: "Discord ticket has been linked to the order." });
     },
     onError: (e: any) => toast({ title: "Failed to link ticket", description: e.message, variant: "destructive" }),
@@ -854,7 +858,7 @@ export default function Bids() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!ticketDialog} onOpenChange={(open) => { if (!open) { setTicketDialog(null); setTicketChannelId(""); } }}>
+      <Dialog open={!!ticketDialog} onOpenChange={(open) => { if (!open) { setTicketDialog(null); setTicketChannelId(""); setCustomerDiscordId(""); } }}>
         <DialogContent className="max-w-md" data-testid="dialog-link-ticket">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -882,11 +886,27 @@ export default function Bids() {
                 <p className="text-xs text-red-400">Channel ID must be a 17-20 digit number</p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Customer Discord ID</Label>
+              <Input
+                placeholder="Customer's Discord user ID"
+                value={customerDiscordId}
+                onChange={(e) => setCustomerDiscordId(e.target.value)}
+                className="bg-white/[0.03] border-white/[0.08] font-mono"
+                data-testid="input-customer-discord-id"
+              />
+              <p className="text-xs text-muted-foreground/70">
+                The customer's Discord user ID for DM updates
+              </p>
+              {customerDiscordId.trim() && !/^\d{17,20}$/.test(customerDiscordId.trim()) && (
+                <p className="text-xs text-red-400">User ID must be a 17-20 digit number</p>
+              )}
+            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              onClick={() => { setTicketDialog(null); setTicketChannelId(""); }}
+              onClick={() => { setTicketDialog(null); setTicketChannelId(""); setCustomerDiscordId(""); }}
               className="border-white/[0.08]"
               data-testid="button-skip-ticket"
             >
@@ -894,12 +914,13 @@ export default function Bids() {
             </Button>
             <Button
               className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white gap-2"
-              disabled={!ticketChannelId.trim() || !/^\d{17,20}$/.test(ticketChannelId.trim()) || linkTicketMutation.isPending}
+              disabled={!ticketChannelId.trim() || !/^\d{17,20}$/.test(ticketChannelId.trim()) || (customerDiscordId.trim() !== "" && !/^\d{17,20}$/.test(customerDiscordId.trim())) || linkTicketMutation.isPending}
               onClick={() => {
                 if (ticketDialog) {
                   linkTicketMutation.mutate({
                     orderId: ticketDialog.orderId,
                     discordTicketChannelId: ticketChannelId.trim(),
+                    customerDiscordId: customerDiscordId.trim() || undefined,
                   });
                 }
               }}

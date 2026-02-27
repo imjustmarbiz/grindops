@@ -21,7 +21,7 @@ export default function StaffPayouts() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { payoutReqs, grinders, grinderUpdates, analyticsLoading } = useStaffData();
+  const { payoutReqs, grinders, grinderUpdates, analyticsLoading, assignments, orders } = useStaffData();
 
   const [markPaidDialog, setMarkPaidDialog] = useState<{ id: string; grinder: string; amount: number; existingPaidAt?: string } | null>(null);
   const [proofUrl, setProofUrl] = useState<string>("");
@@ -490,6 +490,18 @@ export default function StaffPayouts() {
                         <span className="font-medium">{grinder?.name || p.grinderId}</span>
                         <span className="text-emerald-400 font-bold text-lg">{formatCurrency(Number(p.amount))}</span>
                         <Badge variant="outline" className={`text-[10px] ${p.status === "Approved" ? "text-blue-400 border-blue-500/30 bg-blue-500/10" : "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"}`}>{p.status}</Badge>
+                        {(() => {
+                          const payoutOrder = (orders || []).find((o: any) => o.id === p.orderId);
+                          const payoutAssignment = (assignments || []).find((a: any) => a.id === p.assignmentId);
+                          if (payoutOrder?.customerDiscordId && payoutAssignment && !payoutAssignment.customerApproved) {
+                            return (
+                              <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10" data-testid={`badge-customer-pending-${p.id}`}>
+                                <Clock className="w-2.5 h-2.5 mr-0.5" /> Customer Pending
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap mt-1.5">
                         {p.payoutPlatform && (

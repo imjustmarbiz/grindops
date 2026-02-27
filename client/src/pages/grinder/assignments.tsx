@@ -75,6 +75,7 @@ export default function GrinderAssignments() {
   const [updateMessage, setUpdateMessage] = useState("");
   const [updateType, setUpdateType] = useState("progress");
   const [newDeadline, setNewDeadline] = useState("");
+  const [updateProofUrls, setUpdateProofUrls] = useState<string[]>([""]);
   const [completeDialog, setCompleteDialog] = useState<any>(null);
   const [completePlatform, setCompletePlatform] = useState("");
   const [completeDetails, setCompleteDetails] = useState("");
@@ -294,11 +295,11 @@ export default function GrinderAssignments() {
                       </Button>
                     )}
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-update-${a.id}`}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); }}>
+                      onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofUrls([""]); }}>
                       <MessageSquare className="w-3 h-3" /> Update
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-deadline-${a.id}`}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(""); }}>
+                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofUrls([""]); }}>
                       <CalendarClock className="w-3 h-3" /> Deadline
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 col-span-2 sm:col-span-1 h-8" data-testid={`button-complete-${a.id}`}
@@ -437,6 +438,17 @@ export default function GrinderAssignments() {
                   </div>
                   <p className="text-sm text-white/50">{u.message}</p>
                   {u.newDeadline && <p className="text-xs text-yellow-400 mt-1">New deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>}
+                  {u.proofUrls && Array.isArray(u.proofUrls) && u.proofUrls.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      {u.proofUrls.map((url: string, idx: number) => (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                          <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer text-blue-400 border-blue-500/30 hover:bg-blue-500/10" data-testid={`badge-proof-url-${u.id}-${idx}`}>
+                            <ExternalLink className="w-2.5 h-2.5" /> Proof {idx + 1}
+                          </Badge>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -445,7 +457,7 @@ export default function GrinderAssignments() {
         </FadeInUp>
       )}
 
-      <Dialog open={!!updateDialog} onOpenChange={(open) => !open && setUpdateDialog(null)}>
+      <Dialog open={!!updateDialog} onOpenChange={(open) => { if (!open) { setUpdateDialog(null); setUpdateProofUrls([""]); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -471,19 +483,53 @@ export default function GrinderAssignments() {
                 <Input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} data-testid="input-new-deadline" />
               </div>
             )}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Proof URLs <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <div className="space-y-2">
+                {updateProofUrls.map((url, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={url}
+                      onChange={(e) => {
+                        const next = [...updateProofUrls];
+                        next[idx] = e.target.value;
+                        setUpdateProofUrls(next);
+                      }}
+                      placeholder="https://..."
+                      data-testid={`input-proof-url-${idx}`}
+                    />
+                    {updateProofUrls.length > 1 && (
+                      <Button size="icon" variant="ghost" className="shrink-0"
+                        data-testid={`button-remove-proof-url-${idx}`}
+                        onClick={() => setUpdateProofUrls(updateProofUrls.filter((_, i) => i !== idx))}>
+                        <span className="text-muted-foreground text-sm">✕</span>
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button type="button" variant="ghost" size="sm" className="text-xs text-muted-foreground"
+                  data-testid="button-add-proof-url"
+                  onClick={() => setUpdateProofUrls([...updateProofUrls, ""])}>
+                  + Add another URL
+                </Button>
+              </div>
+            </div>
             <Button className="w-full" data-testid="button-submit-update"
               disabled={!updateMessage || submitUpdateMutation.isPending}
               onClick={() => {
+                const filteredProofUrls = updateProofUrls.filter(u => u.trim());
                 submitUpdateMutation.mutate({
                   assignmentId: updateDialog.id,
                   orderId: updateDialog.orderId,
                   updateType,
                   message: updateMessage,
                   newDeadline: newDeadline || undefined,
+                  proofUrls: filteredProofUrls.length > 0 ? filteredProofUrls : undefined,
                 });
                 setUpdateDialog(null);
                 setUpdateMessage("");
                 setNewDeadline("");
+                setUpdateProofUrls([""]);
               }}>
               {submitUpdateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
               Submit

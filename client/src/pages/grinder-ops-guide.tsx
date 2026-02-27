@@ -720,6 +720,50 @@ const slides: Slide[] = [
     tip: "This is your quick-reference guide. Combined with this Operations Guide, you'll know the platform inside out.",
   },
   {
+    id: "customer-updates",
+    title: "Customer Updates",
+    subtitle: "How your work connects to customer communication and approval",
+    icon: Users,
+    iconColor: "text-blue-400",
+    sections: [
+      {
+        heading: "Proof URLs in Daily Updates",
+        points: [
+          "When submitting a daily update, you can attach one or more proof URLs",
+          "Proof URLs are links to screenshots, videos, or other evidence of your progress",
+          "These URLs are visible to staff and may be shared with the customer automatically",
+          "Adding proof to your updates builds trust and can speed up the approval process",
+        ],
+      },
+      {
+        heading: "Completion Proof & Customer Approval",
+        points: [
+          "When you mark an order as complete and upload proof, the customer may be notified automatically",
+          "If a customer Discord ID is linked, the customer receives a completion approval request",
+          "The customer can approve the completion directly through Discord before payout is processed",
+          "If the customer does not respond, staff can force-approve the completion on your behalf",
+        ],
+      },
+      {
+        heading: "What This Means for You",
+        points: [
+          "Providing clear proof URLs with your updates helps the process move faster",
+          "Customer approval is an additional step that may occur before your payout is finalized",
+          "You do not need to contact the customer directly; the system handles communication",
+          "Focus on quality work and thorough proof to ensure smooth approvals",
+        ],
+      },
+    ],
+    steps: [
+      "When submitting a daily update, add proof URLs using the 'Add another' button",
+      "Include links to screenshots or videos showing your progress",
+      "When marking an order complete, upload your completion proof as usual",
+      "Check your payout status; it may show 'Customer Pending' while awaiting approval",
+      "If delayed, staff will force-approve so your payout is not held up indefinitely",
+    ],
+    tip: "Always include proof URLs with your updates. Clear evidence of progress leads to faster customer approvals and quicker payouts.",
+  },
+  {
     id: "workflow-summary",
     title: "Daily Workflow Summary",
     subtitle: "The ideal daily routine for a high-performing grinder",

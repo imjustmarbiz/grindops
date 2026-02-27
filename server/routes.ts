@@ -6,6 +6,7 @@ import { z } from "zod";
 import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireGrinderOrStaff } from "./discord/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats, TIER_THRESHOLDS } from "./recalcStats";
+import { sendCustomerUpdate, sendCompletionApprovalRequest } from "./discord/customerUpdates";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
@@ -1604,6 +1605,14 @@ export async function registerRoutes(
         }),
       });
 
+      sendCustomerUpdate({
+        orderId: assignment.orderId,
+        updateType: "grinder_replaced",
+        message: `Your order has been reassigned to a new grinder: **${replacementGrinder.name}**. They will continue working on your order seamlessly.${input.reason ? `\n\n*Reason: ${input.reason}*` : ""}`,
+        grinderName: replacementGrinder.name,
+        assignmentId: req.params.id,
+      }).catch(err => console.error("[customer-updates] Replacement error:", err));
+
       res.json(result);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -2185,7 +2194,7 @@ export async function registerRoutes(
     const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
-    const { assignmentId, orderId, updateType, message, newDeadline } = req.body;
+    const { assignmentId, orderId, updateType, message, newDeadline, proofUrls } = req.body;
     if (!assignmentId || !orderId || !message) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -2203,6 +2212,7 @@ export async function registerRoutes(
       updateType: updateType || "progress",
       message,
       newDeadline: newDeadline ? new Date(newDeadline) : null,
+      proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : [],
     });
 
     if (newDeadline) {
@@ -2217,6 +2227,16 @@ export async function registerRoutes(
       actor: myGrinder.name,
       details: JSON.stringify({ orderId, assignmentId, updateType, message }),
     });
+
+    const customerUpdateType = newDeadline ? "deadline_change" : (updateType === "issue" ? "issue_reported" : "progress");
+    sendCustomerUpdate({
+      orderId,
+      updateType: customerUpdateType as any,
+      message,
+      proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
+      grinderName: myGrinder.name,
+      assignmentId,
+    }).catch(err => console.error("[customer-updates] Error:", err));
 
     res.status(201).json(update);
   });
@@ -2585,7 +2605,17 @@ export async function registerRoutes(
     const existingPayouts = await storage.getPayoutRequests(myGrinder.id);
     const alreadyRequested = existingPayouts.find((p: any) => p.assignmentId === assignment.id);
 
-    if (!alreadyRequested && Number(payoutAmount) > 0) {
+    const order2 = assignment.orderId ? await storage.getOrder(assignment.orderId) : null;
+    const hasCustomerLink = order2?.discordTicketChannelId && order2?.customerDiscordId;
+
+    if (hasCustomerLink) {
+      sendCompletionApprovalRequest({
+        orderId: assignment.orderId,
+        assignmentId: assignment.id,
+        completionProofUrl,
+        grinderName: myGrinder.name,
+      }).catch(err => console.error("[customer-updates] Completion approval error:", err));
+    } else if (!alreadyRequested && Number(payoutAmount) > 0) {
       await storage.createPayoutRequest({
         id: `PR-${Date.now().toString(36)}`,
         assignmentId: assignment.id,
@@ -2595,7 +2625,7 @@ export async function registerRoutes(
         payoutPlatform: payoutPlatform,
         payoutDetails: payoutDetails,
         status: "Pending",
-        notes: "Auto-created on order completion",
+        notes: "Auto-created on order completion (no customer link)",
         reviewedBy: null,
         completionProofUrl: completionProofUrl || null,
       });
@@ -2607,7 +2637,7 @@ export async function registerRoutes(
       entityId: assignment.id,
       action: "marked_complete_by_grinder",
       actor: myGrinder.name,
-      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), autoPayoutCreated: !alreadyRequested, payoutPlatform, payoutDetails }),
+      details: JSON.stringify({ orderId: assignment.orderId, isOnTime, completedAt: now.toISOString(), hasCustomerApproval: !!hasCustomerLink, payoutPlatform, payoutDetails }),
     });
 
     res.json(updated);
@@ -3824,6 +3854,32 @@ export async function registerRoutes(
         actor: myGrinder.name || myGrinder.id,
         details: JSON.stringify({ assignmentId, orderId, type, response: response || null }),
       });
+
+      const checkpointUpdateMap: Record<string, string> = {
+        login: "login",
+        logoff: "logoff",
+        start_order: "order_started",
+        issue: "issue_reported",
+        order_update: "progress",
+      };
+      if (checkpointUpdateMap[type]) {
+        const updateMsg = type === "issue"
+          ? `⚠️ Issue reported: ${note || "No details provided"}`
+          : type === "start_order"
+          ? `${myGrinder.name} has started working on your order.`
+          : type === "login"
+          ? `${myGrinder.name} is now online and working.`
+          : type === "logoff"
+          ? `${myGrinder.name} has gone offline. Work will resume next session.`
+          : note || req.body.message || "Progress update submitted.";
+        sendCustomerUpdate({
+          orderId,
+          updateType: checkpointUpdateMap[type] as any,
+          message: updateMsg,
+          grinderName: myGrinder.name,
+          assignmentId,
+        }).catch(err => console.error("[customer-updates] Checkpoint error:", err));
+      }
 
       res.status(201).json(checkpoint);
     } catch (err) {
@@ -5494,6 +5550,17 @@ export async function registerRoutes(
             entityId: claim.id,
             details: `Approved ${typeLabel} repair for order ${resolvedOrderId} by grinder ${claim.grinderId}. ${!claim.orderId ? "New order created from repair." : ""}`,
           });
+
+          const repairOrder = await storage.getOrder(resolvedOrderId);
+          if (repairOrder?.discordTicketChannelId && repairOrder?.customerDiscordId && isCompleted) {
+            const repGrinder = await storage.getGrinder(claim.grinderId);
+            sendCompletionApprovalRequest({
+              orderId: resolvedOrderId,
+              assignmentId: existingAssignments[0].id,
+              proofUrls: claim.proofLinks as string[] || [],
+              grinderName: repGrinder?.name || "Grinder",
+            }).catch(err => console.error("[customer-updates] Repair approval error:", err));
+          }
         }
       }
 
@@ -6064,6 +6131,108 @@ export async function registerRoutes(
       res.json({ success: true, enabled });
     } catch (error) {
       res.status(500).json({ error: "Failed to update maintenance config" });
+    }
+  });
+
+  app.patch("/api/config/customer-updates", requireOwner, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled must be a boolean" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, customerUpdatesEnabled: enabled });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: enabled ? "customer_updates_enabled" : "customer_updates_disabled",
+        entityType: "config",
+        entityId: "customer-updates",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: `Customer Discord updates ${enabled ? "enabled" : "disabled"} by ${actorName}`,
+      });
+      res.json({ success: true, enabled });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update customer updates config" });
+    }
+  });
+
+  app.patch("/api/orders/:id/customer-discord", requireStaff, async (req, res) => {
+    try {
+      const { customerDiscordId, discordTicketChannelId } = req.body;
+      const order = await storage.getOrder(req.params.id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      const updates: any = {};
+      if (customerDiscordId !== undefined) updates.customerDiscordId = customerDiscordId || null;
+      if (discordTicketChannelId !== undefined) updates.discordTicketChannelId = discordTicketChannelId || null;
+
+      await storage.updateOrder(req.params.id, updates);
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "customer_discord_updated",
+        actor: getActorName(req),
+        details: JSON.stringify({ customerDiscordId, discordTicketChannelId }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/staff/assignments/:id/force-approve", requireStaff, async (req, res) => {
+    try {
+      const assignment = await storage.getAssignment(req.params.id);
+      if (!assignment) return res.status(404).json({ message: "Assignment not found" });
+
+      await storage.updateAssignment(req.params.id, {
+        customerApproved: true,
+        customerApprovedAt: new Date(),
+      });
+
+      const activeGrinderId = assignment.wasReassigned && assignment.replacementGrinderId
+        ? assignment.replacementGrinderId : assignment.grinderId;
+
+      const existingPayouts = await storage.getPayoutRequests();
+      const hasExisting = existingPayouts.some((p: any) => p.assignmentId === assignment.id);
+
+      if (!hasExisting) {
+        const earnings = Number(assignment.grinderEarnings) || Number(assignment.bidAmount) || 0;
+        if (earnings > 0) {
+          const grinder = await storage.getGrinder(activeGrinderId);
+          const payoutMethods = grinder ? await storage.getGrinderPayoutMethods(grinder.id) : [];
+          const defaultMethod = payoutMethods.find((m: any) => m.isDefault) || payoutMethods[0];
+
+          await storage.createPayoutRequest({
+            id: `PR-${Date.now().toString(36)}`,
+            assignmentId: assignment.id,
+            orderId: assignment.orderId,
+            grinderId: activeGrinderId,
+            amount: earnings.toString(),
+            payoutPlatform: defaultMethod?.platform || null,
+            payoutDetails: defaultMethod?.details || null,
+            status: "Pending",
+            notes: "Auto-created after staff force-approval",
+          });
+        }
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "assignment",
+        entityId: req.params.id,
+        action: "customer_force_approved",
+        actor: getActorName(req),
+        details: JSON.stringify({ orderId: assignment.orderId }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
     }
   });
 

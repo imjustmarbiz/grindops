@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -271,6 +271,18 @@ export default function StaffAdmin() {
     onSuccess: (_, enabled) => {
       queryClient.invalidateQueries({ queryKey: ["/api/config"] });
       toast({ title: enabled ? "MGT Bot data tracking enabled" : "MGT Bot data tracking disabled" });
+    },
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
+  const toggleCustomerUpdatesMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", "/api/config/customer-updates", { enabled });
+      return res.json();
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: enabled ? "Customer updates pipeline enabled" : "Customer updates pipeline disabled" });
     },
     onError: () => toast({ title: "Failed to update", variant: "destructive" }),
   });
@@ -1677,6 +1689,42 @@ export default function StaffAdmin() {
                     {queueConfig?.mgtBotEnabled !== false
                       ? "Bot is actively syncing order data from the MGT Discord server."
                       : "Bot sync is disabled. Only manually created orders will appear in the dashboard."}
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-900/[0.04] overflow-hidden relative" data-testid="card-customer-updates">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4 text-blue-400" />
+                    </div>
+                    Customer Updates Pipeline
+                    <Badge className={`ml-auto text-xs ${queueConfig?.customerUpdatesEnabled !== false ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
+                      {queueConfig?.customerUpdatesEnabled !== false ? "Active" : "Disabled"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div>
+                      <p className="text-sm font-medium">Customer Discord Updates</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">When enabled, the Discord bot sends automated updates to customers in their ticket channels about order progress, completion, and grinder activity.</p>
+                    </div>
+                    <Switch
+                      checked={queueConfig?.customerUpdatesEnabled !== false}
+                      onCheckedChange={(checked) => toggleCustomerUpdatesMutation.mutate(checked)}
+                      disabled={toggleCustomerUpdatesMutation.isPending}
+                      data-testid="switch-customer-updates"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground px-1">
+                    {queueConfig?.customerUpdatesEnabled !== false
+                      ? "Customer updates are active. Customers receive automated messages about their order status."
+                      : "Customer updates are disabled. No automated messages will be sent to customers."}
                   </p>
                 </CardContent>
               </Card>

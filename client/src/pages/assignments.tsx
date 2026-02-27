@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent, RefreshCw } from "lucide-react";
+import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent, RefreshCw, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -83,6 +83,20 @@ export default function Assignments() {
       },
     });
   };
+
+  const forceApproveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/staff/assignments/${id}/force-approve`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      toast({ title: "Customer approval forced successfully" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to force approve", description: err.message, variant: "destructive" });
+    },
+  });
 
   const replaceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -335,6 +349,16 @@ export default function Assignments() {
                           <RefreshCw className="w-2 h-2 mr-0.5" />Needs Replacement
                         </Badge>
                       )}
+                      {a.status === "Completed" && !a.customerApproved && order?.customerDiscordId && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 w-fit">
+                          ⏳ Awaiting Customer
+                        </Badge>
+                      )}
+                      {a.customerApproved && (
+                        <Badge variant="outline" className="text-[10px] border-emerald-500/20 text-emerald-400 bg-emerald-500/10 w-fit">
+                          ✅ Customer Approved
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -352,6 +376,22 @@ export default function Assignments() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Replace grinder</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {a.status === "Completed" && !a.customerApproved && order?.customerDiscordId && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => forceApproveMutation.mutate(a.id)}
+                            disabled={forceApproveMutation.isPending}
+                            data-testid={`button-force-approve-${a.id}`}
+                          >
+                            <ShieldCheck className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Force approve customer</TooltipContent>
                       </Tooltip>
                     )}
                     {a.status === "Cancelled" && (() => {

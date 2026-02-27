@@ -115,6 +115,7 @@ export const orders = pgTable("orders", {
   orderBrief: text("order_brief"),
   discordBidLink: text("discord_bid_link"),
   discordTicketChannelId: varchar("discord_ticket_channel_id"),
+  customerDiscordId: varchar("customer_discord_id"),
   skipDailyCheckup: boolean("skip_daily_checkup").notNull().default(false),
   isManual: boolean("is_manual").notNull().default(false),
   visibleToGrinders: boolean("visible_to_grinders").notNull().default(true),
@@ -170,6 +171,9 @@ export const assignments = pgTable("assignments", {
   notes: text("notes"),
   startedAt: timestamp("started_at"),
   exemptFromCompliance: boolean("exempt_from_compliance").notNull().default(false),
+  customerApproved: boolean("customer_approved").notNull().default(false),
+  customerApprovedAt: timestamp("customer_approved_at"),
+  customerApprovalToken: varchar("customer_approval_token"),
 });
 
 export const queueConfig = pgTable("queue_config", {
@@ -189,6 +193,7 @@ export const queueConfig = pgTable("queue_config", {
   mgtBotEnabled: boolean("mgt_bot_enabled").notNull().default(true),
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
   maintenanceModeSetBy: varchar("maintenance_mode_set_by"),
+  customerUpdatesEnabled: boolean("customer_updates_enabled").notNull().default(true),
   earlyAccessMode: boolean("early_access_mode").notNull().default(false),
   customPayoutRoles: jsonb("custom_payout_roles"),
   customPayoutCategories: jsonb("custom_payout_categories"),
@@ -204,6 +209,7 @@ export const orderUpdates = pgTable("order_updates", {
   newDeadline: timestamp("new_deadline"),
   mediaUrls: text("media_urls").array().default([]),
   mediaTypes: text("media_types").array().default([]),
+  proofUrls: text("proof_urls").array().default([]),
   acknowledgedBy: text("acknowledged_by"),
   acknowledgedAt: timestamp("acknowledged_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -7,7 +7,8 @@ import {
   Settings, Brain, ListOrdered, Users, Gavel, FileCheck, FileBarChart,
   Tv, ScrollText, Calendar, Newspaper, Star, CalendarDays, Package,
   DollarSign, BookOpen, LinkIcon, Sparkles, CheckCircle, ArrowRight,
-  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList, Award, UserCheck
+  Shield, Search, Bell, Target, TrendingUp, AlertTriangle, ClipboardList, Award, UserCheck,
+  MessageSquare
 } from "lucide-react";
 
 type Slide = {
@@ -928,6 +929,59 @@ const slides: Slide[] = [
       "Share this page with new staff for orientation",
     ],
     tip: "Combined with this Operations Guide, the Features page gives new staff everything they need to get started.",
+  },
+  {
+    id: "customer-pipeline",
+    title: "Customer Service Pipeline",
+    subtitle: "Automated Discord-based customer communication and approval system",
+    icon: MessageSquare,
+    iconColor: "text-blue-400",
+    sections: [
+      {
+        heading: "Customer Discord ID Linking",
+        points: [
+          "When linking a Discord ticket, staff can also enter the customer's Discord user ID",
+          "The Customer Discord ID enables automated DM updates to the customer",
+          "Both the ticket channel ID and customer Discord ID are set during the ticket linking step",
+          "Orders with a linked customer show a 'Customer Linked' badge in the orders list",
+        ],
+      },
+      {
+        heading: "Automated Order Updates",
+        points: [
+          "When enabled, the bot sends automated updates to customers in their ticket channels",
+          "Customers receive notifications about order progress, grinder activity, and completion",
+          "Grinders can attach proof URLs to their daily updates for customer visibility",
+          "Completion proof triggers an automatic customer approval request via Discord",
+        ],
+      },
+      {
+        heading: "Customer Approval & Commands",
+        points: [
+          "Customers can approve order completion directly through Discord",
+          "Available slash commands: /requestupdate, /orderstatus, /myorders",
+          "If a customer does not respond, staff can use 'Force Approve' on completed assignments",
+          "Force Approve is available for completed assignments where customerApproved is pending",
+        ],
+      },
+      {
+        heading: "Admin Toggle",
+        points: [
+          "The Customer Updates Pipeline can be enabled or disabled from the Admin System tab",
+          "Toggle controls whether the Discord bot sends automated updates to customers",
+          "When disabled, no automated customer messages are sent but manual workflows still work",
+        ],
+      },
+    ],
+    steps: [
+      "During ticket linking, enter both the Discord Ticket Channel ID and Customer Discord ID",
+      "Ensure the Customer Updates Pipeline is enabled in Admin > System tab",
+      "Monitor orders for 'Customer Linked' badges to confirm setup",
+      "After order completion, check if the customer has approved via Discord",
+      "Use 'Force Approve' on the Assignments page if the customer is unresponsive",
+      "Review the Payouts page for 'Customer Pending' status indicators",
+    ],
+    tip: "Link the customer Discord ID during ticket setup for the smoothest experience. Customers who receive automated updates tend to approve faster.",
   },
   {
     id: "workflow-summary",

@@ -758,14 +758,22 @@ export default function Orders() {
                     </Select>
                   </TableCell>
                   <TableCell className="overflow-hidden">
-                    {assignedGrinder ? (
-                      <div className="flex items-center gap-1 min-w-0">
-                        <User className="w-3 h-3 text-primary shrink-0" />
-                        <span className="text-sm font-medium truncate">{assignedGrinder.name}</span>
-                      </div>
-                    ) : order.assignedGrinderId ? (
-                      <span className="text-xs text-muted-foreground truncate block">{order.assignedGrinderId}</span>
-                    ) : <span className="text-muted-foreground">-</span>}
+                    <div className="flex flex-col gap-1">
+                      {assignedGrinder ? (
+                        <div className="flex items-center gap-1 min-w-0">
+                          <User className="w-3 h-3 text-primary shrink-0" />
+                          <span className="text-sm font-medium truncate">{assignedGrinder.name}</span>
+                        </div>
+                      ) : order.assignedGrinderId ? (
+                        <span className="text-xs text-muted-foreground truncate block">{order.assignedGrinderId}</span>
+                      ) : <span className="text-muted-foreground">-</span>}
+                      {order.customerDiscordId && (
+                        <Badge className="bg-purple-500/15 text-purple-400 border border-purple-500/20 text-[10px] gap-1 w-fit" data-testid={`badge-customer-linked-${order.id}`}>
+                          <User className="w-2.5 h-2.5" />
+                          Customer Linked
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <InlineDateEdit value={order.orderDueDate} orderId={order.id} onSave={saveField} />
