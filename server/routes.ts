@@ -5293,6 +5293,32 @@ export async function registerRoutes(
             }
           }
 
+          await storage.createOrderUpdate({
+            id: `OU-${Date.now().toString(36)}`,
+            assignmentId: existingAssignments[0].id,
+            orderId: resolvedOrderId,
+            grinderId: claim.grinderId,
+            updateType: "system",
+            message: repairType === "add_completed"
+              ? `Completed order backlogged via repair request. Earnings: $${parseFloat(claim.grinderAmount || "0").toFixed(2)}`
+              : `Missing order claimed via repair request and linked to profile.`,
+          });
+
+          const repairGrinder = await storage.getGrinder(claim.grinderId);
+          if (repairGrinder?.discordUserId) {
+            await storage.createNotification({
+              id: `NOTIF-${Date.now().toString(36)}`,
+              title: repairType === "add_completed" ? "Completed Order Backlogged" : "Missing Order Claimed",
+              body: repairType === "add_completed"
+                ? `A completed order has been backlogged to your profile. Order: ${resolvedOrderId}. Earnings: $${parseFloat(claim.grinderAmount || "0").toFixed(2)}. Your stats have been updated.`
+                : `A missing order (${resolvedOrderId}) has been claimed and linked to your profile.`,
+              type: "success",
+              roleScope: null,
+              userId: repairGrinder.discordUserId,
+              readBy: [],
+            });
+          }
+
           const { recalcGrinderStats } = await import("./recalcStats");
           await recalcGrinderStats(claim.grinderId);
 
