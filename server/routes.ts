@@ -5982,6 +5982,10 @@ export async function registerRoutes(
             orderId: resolvedOrderId,
             grinderId: claim.grinderId,
             bidAmount: grinderPay,
+            bidTime: new Date(),
+            estDeliveryDate: claim.dueDate || order?.orderDueDate || new Date(),
+            timeline: "Repair",
+            canStart: "Immediately",
             status: "Accepted",
             proposalId: `repair-${claim.id}`,
             proposalLink: null,
@@ -6071,6 +6075,13 @@ export async function registerRoutes(
         }
       }
 
+      const updated = await storage.updateOrderClaimRequest(req.params.id, {
+        status,
+        decidedBy: user.id,
+        decidedByName: user.displayName || user.username,
+        decisionNote: decisionNote || null,
+        decidedAt: new Date(),
+      });
       if (!updated) {
         console.error(`[claims] Failed to update claim status for ID ${req.params.id}`);
         return res.status(404).json({ error: "Order claim not found during final update" });
