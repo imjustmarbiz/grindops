@@ -2547,7 +2547,7 @@ export async function registerRoutes(
       if (!orderId || !bidAmount) return res.status(400).json({ message: "orderId and bidAmount are required" });
 
       if (!myGrinder.rulesAccepted) {
-        return res.status(403).json({ message: "You must accept the Grinder Rules before placing bids. Use /grinder rules from the MGT Bot in any Discord text channel to accept." });
+        return res.status(403).json({ message: "You must accept the Grinder Rules before placing bids. Go to your Overview page and accept the rules there." });
       }
 
       if (myGrinder.suspended) {
