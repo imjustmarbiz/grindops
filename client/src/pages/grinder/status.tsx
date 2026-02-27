@@ -89,6 +89,44 @@ export default function GrinderStatus() {
                     </p>
                   </div>
                 </div>
+
+                {eliteCoaching && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <p className="font-semibold text-sm">Elite Performance Coaching</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border/50">
+                            <th className="text-left py-2 text-muted-foreground font-medium">Metric</th>
+                            <th className="text-right py-2 text-muted-foreground font-medium">Yours</th>
+                            <th className="text-right py-2 text-muted-foreground font-medium">Elite Avg</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { label: "Win Rate", yours: `${Number(eliteCoaching.yourMetrics.winRate).toFixed(1)}%`, elite: `${Number(eliteCoaching.eliteAverages.winRate).toFixed(1)}%`, good: eliteCoaching.yourMetrics.winRate >= eliteCoaching.eliteAverages.winRate },
+                            { label: "Quality", yours: `${(Number(eliteCoaching.yourMetrics.quality) / 20).toFixed(1)}/5`, elite: `${(Number(eliteCoaching.eliteAverages.quality) / 20).toFixed(1)}/5`, good: eliteCoaching.yourMetrics.quality >= eliteCoaching.eliteAverages.quality },
+                            { label: "On-Time", yours: `${Number(eliteCoaching.yourMetrics.onTime).toFixed(0)}%`, elite: `${Number(eliteCoaching.eliteAverages.onTime).toFixed(0)}%`, good: eliteCoaching.yourMetrics.onTime >= eliteCoaching.eliteAverages.onTime },
+                            { label: "Completion", yours: `${Number(eliteCoaching.yourMetrics.completion).toFixed(0)}%`, elite: `${Number(eliteCoaching.eliteAverages.completion).toFixed(0)}%`, good: eliteCoaching.yourMetrics.completion >= eliteCoaching.eliteAverages.completion },
+                            { label: "Turnaround", yours: `${Number(eliteCoaching.yourMetrics.turnaround).toFixed(1)}h`, elite: `${Number(eliteCoaching.eliteAverages.turnaround).toFixed(1)}h`, good: eliteCoaching.yourMetrics.turnaround <= eliteCoaching.eliteAverages.turnaround },
+                            { label: "Completed", yours: String(eliteCoaching.yourMetrics.completed), elite: String(eliteCoaching.eliteAverages.completed), good: eliteCoaching.yourMetrics.completed >= eliteCoaching.eliteAverages.completed },
+                          ].map((row) => (
+                            <tr key={row.label} className="border-b border-border/30">
+                              <td className="py-2 text-muted-foreground">{row.label}</td>
+                              <td className={`py-2 text-right font-medium ${row.good ? "text-green-400" : "text-red-400"}`}>{row.yours}</td>
+                              <td className="py-2 text-right text-muted-foreground/60">{row.elite}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>
