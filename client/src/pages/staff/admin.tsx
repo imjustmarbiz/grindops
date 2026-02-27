@@ -23,7 +23,104 @@ import {
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { OperationsContent, ServiceManagement, DeletionRequestsPanel, ClearDataPanel } from "./operations";
+import type { Service } from "@shared/schema";
 
+function ServiceLogoManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: services = [] } = useQuery<Service[]>({ queryKey: ["/api/services"] });
+
+  const activeServices = services.filter((s) => s.isActive);
+
+  return (
+    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+      {activeServices.length === 0 && (
+        <p className="text-xs text-muted-foreground italic">No active services found.</p>
+      )}
+      {activeServices.map((service) => (
+        <div
+          key={service.id}
+          className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+          data-testid={`service-logo-row-${service.id}`}
+        >
+          {service.logoUrl ? (
+            <img
+              src={service.logoUrl}
+              alt={`${service.name} logo`}
+              className="w-10 h-10 rounded-lg object-contain bg-black/30 border border-white/10 flex-shrink-0"
+              data-testid={`img-service-logo-${service.id}`}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-white/[0.05] border border-dashed border-white/10 flex items-center justify-center flex-shrink-0">
+              <Gamepad2 className="w-4 h-4 text-muted-foreground/40" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{service.name}</p>
+            <p className="text-[10px] text-muted-foreground">{service.group}</p>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {service.logoUrl && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                data-testid={`button-remove-service-logo-${service.id}`}
+                onClick={async () => {
+                  try {
+                    await apiRequest("DELETE", `/api/services/${service.id}/logo`);
+                    queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+                    toast({ title: `Logo removed for ${service.name}` });
+                  } catch {
+                    toast({ title: "Failed to remove logo", variant: "destructive" });
+                  }
+                }}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            )}
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                className="hidden"
+                data-testid={`input-service-logo-${service.id}`}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const formData = new FormData();
+                  formData.append("logo", file);
+                  try {
+                    const res = await fetch(`/api/services/${service.id}/logo`, {
+                      method: "POST",
+                      body: formData,
+                      credentials: "include",
+                    });
+                    if (!res.ok) throw new Error("Upload failed");
+                    queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+                    toast({ title: `Logo updated for ${service.name}` });
+                  } catch {
+                    toast({ title: "Failed to upload logo", variant: "destructive" });
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs pointer-events-none gap-1"
+                data-testid={`button-upload-service-logo-${service.id}`}
+              >
+                <Plus className="w-3 h-3" />
+                {service.logoUrl ? "Replace" : "Upload"}
+              </Button>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function StaffAdmin() {
   const { toast } = useToast();
@@ -1765,7 +1862,7 @@ export default function StaffAdmin() {
                 </CardHeader>
                 <CardContent className="relative space-y-3">
                   <p className="text-xs text-muted-foreground">
-                    This logo appears as a thumbnail in the top-right corner of all customer update embeds sent via Discord.
+                    Default logo shown in Discord embeds when a service has no specific logo assigned. Overridden by per-service logos below.
                   </p>
                   {queueConfig?.embedThumbnailUrl && (
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
@@ -1826,6 +1923,26 @@ export default function StaffAdmin() {
                       </Button>
                     </label>
                   </div>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-service-logos">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                      <Gamepad2 className="w-4 h-4 text-amber-400" />
+                    </div>
+                    Service Embed Logos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Assign a unique logo per service. When a customer update is sent, the embed will show the logo matching the order's service — or fall back to the default logo above.
+                  </p>
+                  <ServiceLogoManager />
                 </CardContent>
               </Card>
             </FadeInUp>

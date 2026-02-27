@@ -6744,6 +6744,55 @@ export async function registerRoutes(
     }
   });
 
+  const serviceLogoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+      if (allowed.test(path.extname(file.originalname))) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed (jpg, png, gif, webp)"));
+      }
+    },
+  });
+
+  app.post("/api/services/:id/logo", requireStaff, serviceLogoUpload.single("logo"), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const serviceId = req.params.id;
+      const service = await storage.getServices().then(s => s.find(svc => svc.id === serviceId));
+      if (!service) return res.status(404).json({ error: "Service not found" });
+      const ext = path.extname(req.file.originalname) || ".png";
+      const filename = `service-logo-${serviceId}${ext}`;
+      const dir = path.join(process.cwd(), "uploads", "branding");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const filepath = path.join(dir, filename);
+      fs.writeFileSync(filepath, req.file.buffer);
+      const logoUrl = `/uploads/branding/${filename}`;
+      await storage.updateService(serviceId, { logoUrl });
+      res.json({ logoUrl });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to upload service logo" });
+    }
+  });
+
+  app.delete("/api/services/:id/logo", requireStaff, async (req, res) => {
+    try {
+      const serviceId = req.params.id;
+      const service = await storage.getServices().then(s => s.find(svc => svc.id === serviceId));
+      if (!service) return res.status(404).json({ error: "Service not found" });
+      if (service.logoUrl && !service.logoUrl.startsWith("http")) {
+        const filepath = path.join(process.cwd(), service.logoUrl.replace(/^\//, ""));
+        if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+      }
+      await storage.updateService(serviceId, { logoUrl: null });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove service logo" });
+    }
+  });
+
   app.patch("/api/orders/:id/customer-discord", requireStaff, async (req, res) => {
     try {
       const { customerDiscordId, discordTicketChannelId } = req.body;

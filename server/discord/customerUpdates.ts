@@ -37,16 +37,30 @@ function getAppBaseUrl(): string | null {
   return null;
 }
 
-async function getEmbedThumbnailUrl(): Promise<string | null> {
+function resolveUrl(urlPath: string | null | undefined, host: string | null): string | null {
+  if (!urlPath) return null;
+  if (urlPath.startsWith("http")) return urlPath;
+  if (host) return `${host}${urlPath}`;
+  return null;
+}
+
+async function getEmbedThumbnailUrl(serviceId?: string | null): Promise<string | null> {
   try {
     const host = getAppBaseUrl();
     if (!host) return null;
+
+    if (serviceId) {
+      const allServices = await storage.getServices();
+      const service = allServices.find((s: any) => s.id === serviceId);
+      if (service?.logoUrl) {
+        const serviceLogoUrl = resolveUrl(service.logoUrl, host);
+        if (serviceLogoUrl) return serviceLogoUrl;
+      }
+    }
+
     const config = await storage.getQueueConfig();
     const customUrl = config?.embedThumbnailUrl;
-    if (customUrl) {
-      if (customUrl.startsWith("http")) return customUrl;
-      return `${host}${customUrl}`;
-    }
+    if (customUrl) return resolveUrl(customUrl, host) || `${host}/embed-logo.png`;
     return `${host}/embed-logo.png`;
   } catch {
     return null;
@@ -155,7 +169,7 @@ export async function sendCustomerUpdate(options: {
     const serviceName = service?.name || "Service";
     const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id;
 
-    const thumbnailUrl = await getEmbedThumbnailUrl();
+    const thumbnailUrl = await getEmbedThumbnailUrl(order.serviceId);
 
     const embed = new EmbedBuilder()
       .setColor(config.color)
@@ -225,7 +239,7 @@ export async function sendCompletionApprovalRequest(options: {
 
     const grinderInfo = await resolveGrinderInfo(options.grinderName, assignmentId);
     const grinderTag = grinderMention(grinderInfo.discordId, grinderInfo.name);
-    const thumbnailUrl = await getEmbedThumbnailUrl();
+    const thumbnailUrl = await getEmbedThumbnailUrl(order.serviceId);
 
     const embed = new EmbedBuilder()
       .setColor(0x22C55E)

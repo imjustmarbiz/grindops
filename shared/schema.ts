@@ -48,6 +48,7 @@ export const services = pgTable("services", {
   slaDays: integer("sla_days").notNull().default(1),
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
+  logoUrl: text("logo_url"),
 });
 
 export const grinders = pgTable("grinders", {
