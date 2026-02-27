@@ -324,6 +324,53 @@ const slides: Slide[] = [
     tip: "Grinders receive automatic notifications when you change payout status. Use date filters to review payouts from specific periods.",
   },
   {
+    id: "wallets",
+    title: "Business Wallet",
+    subtitle: "Manage personal and company wallets, transfers, and payouts",
+    icon: Wallet,
+    iconColor: "text-emerald-400",
+    sections: [
+      {
+        heading: "Wallet Types",
+        points: [
+          "Personal Wallets: each staff member has their own wallet for tracking earnings",
+          "Company Wallets: shared business wallets managed by owners",
+          "Balance tracking: deposits, withdrawals, and transfers all update in real time",
+          "Non-owners see their wallet as 'My Wallet' in the sidebar",
+        ],
+      },
+      {
+        heading: "Transfers",
+        points: [
+          "Transfer funds between any wallets you have access to",
+          "Staff-to-staff transfers: send funds to other staff members' personal wallets",
+          "All staff transfers require owner approval before processing",
+          "Owner transfers execute immediately with no approval needed",
+          "Optional transfer fees can be applied to any transfer",
+          "Add descriptions and proof URLs for documentation",
+        ],
+      },
+      {
+        heading: "Transaction History",
+        points: [
+          "Full transaction ledger for every wallet showing deposits, withdrawals, and transfers",
+          "Each transaction records balance before/after for complete audit trail",
+          "Filter and search transactions by type, date, or amount",
+          "Related order IDs link transactions back to specific orders",
+        ],
+      },
+    ],
+    steps: [
+      "Navigate to Business Wallet (or My Wallet) in the sidebar",
+      "View your wallet balances and recent transactions",
+      "Use the Transfer form to move funds between wallets",
+      "Staff: select 'To' wallet — you can send to your own, company, or other staff wallets",
+      "Add a description and optional proof URL, then submit",
+      "Wait for owner approval if you're staff (owners process instantly)",
+    ],
+    tip: "All transfers are logged and auditable. Staff-to-staff transfers always need owner approval, so include clear descriptions to speed up the review.",
+  },
+  {
     id: "admin",
     title: "Admin",
     subtitle: "Unified command center with Operations, Management, and System tabs",
