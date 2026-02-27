@@ -48,13 +48,20 @@ function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value || "");
   const inputRef = useRef<HTMLInputElement>(null);
+  const savedRef = useRef(false);
 
   useEffect(() => {
-    if (editing && inputRef.current) inputRef.current.focus();
+    if (editing) {
+      savedRef.current = false;
+      if (inputRef.current) inputRef.current.focus();
+    }
   }, [editing]);
 
   const save = () => {
-    const newVal = editValue.trim() || null;
+    if (savedRef.current) return;
+    savedRef.current = true;
+    const currentVal = inputRef.current?.value ?? editValue;
+    const newVal = currentVal.trim() || null;
     if (newVal !== (value || null)) {
       onSave(orderId, { [field]: newVal });
     }
@@ -72,7 +79,7 @@ function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
           data-testid={`input-edit-${field}-${orderId}`}
           onKeyDown={(e) => {
             if (e.key === "Enter") save();
-            if (e.key === "Escape") { setEditValue(value || ""); setEditing(false); }
+            if (e.key === "Escape") { setEditValue(value || ""); savedRef.current = true; setEditing(false); }
           }}
           onBlur={save}
           placeholder={placeholder}
