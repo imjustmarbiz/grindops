@@ -30,6 +30,29 @@ const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; 
 const BRAND_FOOTER = "GrindOps by Service Plug LLC";
 const BRAND_ICON = "https://cdn.discordapp.com/embed/avatars/0.png";
 
+function getAppBaseUrl(): string | null {
+  const domains = process.env.REPLIT_DOMAINS;
+  if (domains) return `https://${domains.split(",")[0].trim()}`;
+  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  return null;
+}
+
+async function getEmbedThumbnailUrl(): Promise<string | null> {
+  try {
+    const host = getAppBaseUrl();
+    if (!host) return null;
+    const config = await storage.getQueueConfig();
+    const customUrl = config?.embedThumbnailUrl;
+    if (customUrl) {
+      if (customUrl.startsWith("http")) return customUrl;
+      return `${host}${customUrl}`;
+    }
+    return `${host}/embed-logo.png`;
+  } catch {
+    return null;
+  }
+}
+
 async function isCustomerUpdatesEnabled(): Promise<boolean> {
   try {
     const config = await storage.getQueueConfig();
@@ -132,6 +155,8 @@ export async function sendCustomerUpdate(options: {
     const serviceName = service?.name || "Service";
     const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id;
 
+    const thumbnailUrl = await getEmbedThumbnailUrl();
+
     const embed = new EmbedBuilder()
       .setColor(config.color)
       .setAuthor({ name: BRAND_FOOTER, iconURL: BRAND_ICON })
@@ -144,6 +169,8 @@ export async function sendCustomerUpdate(options: {
       )
       .setTimestamp()
       .setFooter({ text: BRAND_FOOTER });
+
+    if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
 
     if (proofUrls && proofUrls.length > 0) {
       const proofList = proofUrls.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
@@ -198,6 +225,7 @@ export async function sendCompletionApprovalRequest(options: {
 
     const grinderInfo = await resolveGrinderInfo(options.grinderName, assignmentId);
     const grinderTag = grinderMention(grinderInfo.discordId, grinderInfo.name);
+    const thumbnailUrl = await getEmbedThumbnailUrl();
 
     const embed = new EmbedBuilder()
       .setColor(0x22C55E)
@@ -214,6 +242,8 @@ export async function sendCompletionApprovalRequest(options: {
       )
       .setTimestamp()
       .setFooter({ text: BRAND_FOOTER });
+
+    if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
 
     const allProofs = [
       ...(completionProofUrl ? [completionProofUrl] : []),

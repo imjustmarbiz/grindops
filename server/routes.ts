@@ -72,6 +72,11 @@ if (!fs.existsSync(updateProofsDir)) {
   fs.mkdirSync(updateProofsDir, { recursive: true });
 }
 
+const brandingDir = path.join(process.cwd(), "uploads", "branding");
+if (!fs.existsSync(brandingDir)) {
+  fs.mkdirSync(brandingDir, { recursive: true });
+}
+
 const updateProofUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, updateProofsDir),
@@ -6692,6 +6697,50 @@ export async function registerRoutes(
       res.json({ success: true, enabled });
     } catch (error) {
       res.status(500).json({ error: "Failed to update customer updates config" });
+    }
+  });
+
+  const brandingUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, brandingDir),
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `embed-logo${ext}`);
+      },
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+      if (allowed.test(path.extname(file.originalname))) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed (jpg, png, gif, webp)"));
+      }
+    },
+  });
+
+  app.post("/api/config/embed-logo", requireOwner, brandingUpload.single("logo"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No file uploaded" });
+      const logoUrl = `/uploads/branding/${file.filename}`;
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, embedThumbnailUrl: logoUrl });
+      res.json({ success: true, url: logoUrl });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to upload embed logo" });
+    }
+  });
+
+  app.delete("/api/config/embed-logo", requireOwner, async (req, res) => {
+    try {
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, embedThumbnailUrl: null });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove embed logo" });
     }
   });
 

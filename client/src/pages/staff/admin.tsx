@@ -1753,6 +1753,84 @@ export default function StaffAdmin() {
             </FadeInUp>
 
             <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-embed-logo">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-purple-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                      <Gamepad2 className="w-4 h-4 text-purple-400" />
+                    </div>
+                    Discord Embed Logo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    This logo appears as a thumbnail in the top-right corner of all customer update embeds sent via Discord.
+                  </p>
+                  {queueConfig?.embedThumbnailUrl && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <img
+                        src={queueConfig.embedThumbnailUrl}
+                        alt="Embed Logo"
+                        className="w-16 h-16 rounded-lg object-contain bg-black/30 border border-white/10"
+                        data-testid="img-embed-logo-preview"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">Current Logo</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[200px]">{queueConfig.embedThumbnailUrl}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+                        data-testid="button-remove-embed-logo"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("DELETE", "/api/config/embed-logo");
+                            queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+                            toast({ title: "Embed logo removed" });
+                          } catch {
+                            toast({ title: "Failed to remove logo", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1 cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/gif,image/webp"
+                        className="hidden"
+                        data-testid="input-embed-logo-upload"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const formData = new FormData();
+                          formData.append("logo", file);
+                          try {
+                            const res = await fetch("/api/config/embed-logo", { method: "POST", body: formData, credentials: "include" });
+                            if (!res.ok) throw new Error("Upload failed");
+                            queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+                            toast({ title: "Embed logo updated" });
+                          } catch {
+                            toast({ title: "Failed to upload logo", variant: "destructive" });
+                          }
+                          e.target.value = "";
+                        }}
+                      />
+                      <Button variant="outline" size="sm" className="w-full pointer-events-none gap-2" data-testid="button-upload-embed-logo">
+                        <Plus className="w-3 h-3" /> {queueConfig?.embedThumbnailUrl ? "Replace Logo" : "Upload Logo"}
+                      </Button>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
               <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-early-access">
                 <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
                 <CardHeader className="pb-3">
