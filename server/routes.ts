@@ -6071,17 +6071,14 @@ export async function registerRoutes(
         }
       }
 
-      const updated = await storage.updateOrderClaimRequest(req.params.id, {
-        status,
-        decidedBy: user.id,
-        decidedByName: user.displayName || user.username,
-        decisionNote: decisionNote || null,
-        decidedAt: new Date(),
-      });
+      if (!updated) {
+        console.error(`[claims] Failed to update claim status for ID ${req.params.id}`);
+        return res.status(404).json({ error: "Order claim not found during final update" });
+      }
       res.json(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating order claim:", error);
-      res.status(500).json({ error: "Failed to update order claim" });
+      res.status(500).json({ error: error.message || "Failed to update order claim" });
     }
   });
 
