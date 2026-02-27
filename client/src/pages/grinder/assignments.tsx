@@ -75,7 +75,9 @@ export default function GrinderAssignments() {
   const [updateMessage, setUpdateMessage] = useState("");
   const [updateType, setUpdateType] = useState("progress");
   const [newDeadline, setNewDeadline] = useState("");
-  const [updateProofUrls, setUpdateProofUrls] = useState<string[]>([""]);
+  const [updateProofFiles, setUpdateProofFiles] = useState<File[]>([]);
+  const [updateProofUrls, setUpdateProofUrls] = useState<string[]>([]);
+  const [uploadingUpdateProofs, setUploadingUpdateProofs] = useState(false);
   const [completeDialog, setCompleteDialog] = useState<any>(null);
   const [completePlatform, setCompletePlatform] = useState("");
   const [completeDetails, setCompleteDetails] = useState("");
@@ -97,6 +99,7 @@ export default function GrinderAssignments() {
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const proofInputRef = useRef<HTMLInputElement>(null);
+  const updateProofInputRef = useRef<HTMLInputElement>(null);
 
   const checkpointMutation = useMutation({
     mutationFn: async (data: { assignmentId: string; orderId: string; type: string; response?: string; note?: string }) => {
@@ -264,7 +267,7 @@ export default function GrinderAssignments() {
                       <Button size="sm" variant="outline"
                         className="gap-1 text-[11px] sm:text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 h-8"
                         data-testid={`button-join-ticket-${a.id}`}
-                        disabled={joiningTicket === a.orderId}
+                        disabled={joiningTicket === a.orderId || !a.hasTicketAck}
                         onClick={async () => {
                           setJoiningTicket(a.orderId);
                           try {
@@ -290,19 +293,23 @@ export default function GrinderAssignments() {
                       <Button size="sm" variant="outline"
                         className="gap-1 text-[11px] sm:text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 h-8"
                         data-testid={`button-view-brief-${a.id}`}
+                        disabled={!a.hasTicketAck}
                         onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
                         <ClipboardList className="w-3 h-3" /> View Brief
                       </Button>
                     )}
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-update-${a.id}`}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofUrls([""]); }}>
+                      disabled={!a.hasTicketAck}
+                      onClick={() => { setUpdateDialog(a); setUpdateType("progress"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
                       <MessageSquare className="w-3 h-3" /> Update
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-deadline-${a.id}`}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofUrls([""]); }}>
+                      disabled={!a.hasTicketAck}
+                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
                       <CalendarClock className="w-3 h-3" /> Deadline
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 col-span-2 sm:col-span-1 h-8" data-testid={`button-complete-${a.id}`}
+                      disabled={!a.hasTicketAck}
                       onClick={() => {
                         setCompleteDialog(a);
                         const defaultMethod = payoutMethods?.find((m: any) => m.isDefault) || payoutMethods?.[0];
@@ -319,29 +326,40 @@ export default function GrinderAssignments() {
                       <p className="text-[10px] uppercase tracking-wider text-white/30 font-medium">Activity Checkpoints</p>
                       <StreamStatusBadge twitchUsername={grinder?.twitchUsername} isStreaming={grinder?.isStreaming} />
                     </div>
-                    <div className="grid grid-cols-3 sm:flex sm:items-center gap-1 sm:gap-1.5 sm:flex-wrap">
-                      {!a.hasTicketAck && (
-                        <>
-                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
+                    {!a.hasTicketAck && (
+                      <div className="p-2.5 rounded-lg bg-amber-500/[0.08] border border-amber-500/20 mb-2">
+                        <p className="text-[11px] text-amber-400 mb-2 font-medium">You must accept or decline this order before doing anything else.</p>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-3 bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20" data-testid={`button-ack-yes-${a.id}`}
                             disabled={checkpointMutation.isPending}
                             onClick={() => setTicketConfirm({ assignmentId: a.id, orderId: a.orderId, action: "accept" })}>
-                            <TicketCheck className="w-3 h-3" /> <span className="hidden sm:inline">Accept</span><span className="sm:hidden">Accept</span>
+                            <TicketCheck className="w-3 h-3" /> Accept Order
                           </Button>
-                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-3 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-ack-no-${a.id}`}
                             disabled={checkpointMutation.isPending}
                             onClick={() => setTicketConfirm({ assignmentId: a.id, orderId: a.orderId, action: "decline" })}>
-                            <TicketCheck className="w-3 h-3" /> <span className="hidden sm:inline">Decline</span><span className="sm:hidden">Decline</span>
+                            <TicketCheck className="w-3 h-3" /> Decline Order
                           </Button>
-                        </>
-                      )}
-                      {a.hasTicketAck && (
-                        <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3 mr-1" /> Responded
-                        </Badge>
-                      )}
+                        </div>
+                      </div>
+                    )}
+                    <div className={`grid grid-cols-3 sm:flex sm:items-center gap-1 sm:gap-1.5 sm:flex-wrap ${!a.hasTicketAck ? "opacity-40 pointer-events-none" : ""}`}>
+                      <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                        <CheckCircle className="w-3 h-3 mr-1" /> Accepted
+                      </Badge>
+                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-1.5 sm:px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
+                        disabled={checkpointMutation.isPending || a.isLoggedIn || !a.hasTicketAck}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
+                        disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck}
+                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
+                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> <span className="hidden sm:inline">Log</span> Off
+                      </Button>
                       {!a.hasStarted ? (
                         <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" data-testid={`button-start-order-${a.id}`}
-                          disabled={checkpointMutation.isPending || !a.isLoggedIn}
+                          disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck}
                           onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
                           <Play className="w-3 h-3" /> Start
                         </Button>
@@ -350,18 +368,8 @@ export default function GrinderAssignments() {
                           <Play className="w-3 h-3 mr-1" /> Started
                         </Badge>
                       )}
-                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-7 px-1.5 sm:px-2 ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
-                        disabled={checkpointMutation.isPending || a.isLoggedIn}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" data-testid={`button-logoff-${a.id}`}
-                        disabled={checkpointMutation.isPending || !a.isLoggedIn}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> <span className="hidden sm:inline">Log</span> Off
-                      </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-[10px] h-7 px-1.5 sm:px-2 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20" data-testid={`button-issue-${a.id}`}
-                        disabled={checkpointMutation.isPending}
+                        disabled={checkpointMutation.isPending || !a.hasTicketAck}
                         onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
                         <AlertTriangle className="w-3 h-3" /> Issue
                       </Button>
@@ -483,56 +491,83 @@ export default function GrinderAssignments() {
                 <Input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} data-testid="input-new-deadline" />
               </div>
             )}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Proof URLs <span className="text-muted-foreground font-normal">(optional)</span></label>
-              <div className="space-y-2">
-                {updateProofUrls.map((url, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Input
-                      value={url}
-                      onChange={(e) => {
-                        const next = [...updateProofUrls];
-                        next[idx] = e.target.value;
-                        setUpdateProofUrls(next);
-                      }}
-                      placeholder="https://..."
-                      data-testid={`input-proof-url-${idx}`}
-                    />
-                    {updateProofUrls.length > 1 && (
-                      <Button size="icon" variant="ghost" className="shrink-0"
-                        data-testid={`button-remove-proof-url-${idx}`}
-                        onClick={() => setUpdateProofUrls(updateProofUrls.filter((_, i) => i !== idx))}>
-                        <span className="text-muted-foreground text-sm">✕</span>
-                      </Button>
-                    )}
+            {updateType === "progress" && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">Proof Attachments <span className="text-muted-foreground font-normal">(optional, max 5)</span></label>
+                <input
+                  ref={updateProofInputRef}
+                  type="file"
+                  accept="image/*,video/*,.pdf,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.webm"
+                  multiple
+                  className="hidden"
+                  data-testid="input-update-proof-files"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    const combined = [...updateProofFiles, ...files].slice(0, 5);
+                    setUpdateProofFiles(combined);
+                    e.target.value = "";
+                  }}
+                />
+                {updateProofFiles.length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {updateProofFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-1.5 rounded bg-white/[0.03] border border-white/[0.06] text-xs">
+                        <Upload className="w-3 h-3 text-blue-400 shrink-0" />
+                        <span className="truncate flex-1 text-white/60">{file.name}</span>
+                        <span className="text-white/30 shrink-0">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                        <Button size="icon" variant="ghost" className="h-5 w-5 shrink-0"
+                          data-testid={`button-remove-proof-file-${idx}`}
+                          onClick={() => setUpdateProofFiles(updateProofFiles.filter((_, i) => i !== idx))}>
+                          <span className="text-muted-foreground text-xs">✕</span>
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                <Button type="button" variant="ghost" size="sm" className="text-xs text-muted-foreground"
-                  data-testid="button-add-proof-url"
-                  onClick={() => setUpdateProofUrls([...updateProofUrls, ""])}>
-                  + Add another URL
+                )}
+                <Button type="button" variant="outline" className="w-full gap-2 border-dashed border-white/20 hover:border-white/40 text-xs h-8"
+                  data-testid="button-add-proof-files"
+                  disabled={updateProofFiles.length >= 5}
+                  onClick={() => updateProofInputRef.current?.click()}>
+                  <Upload className="w-3 h-3" /> {updateProofFiles.length > 0 ? `Add More (${updateProofFiles.length}/5)` : "Attach Proof Files"}
                 </Button>
               </div>
-            </div>
+            )}
             <Button className="w-full" data-testid="button-submit-update"
-              disabled={!updateMessage || submitUpdateMutation.isPending}
-              onClick={() => {
-                const filteredProofUrls = updateProofUrls.filter(u => u.trim());
+              disabled={!updateMessage || submitUpdateMutation.isPending || uploadingUpdateProofs}
+              onClick={async () => {
+                let proofUrls: string[] = [];
+                if (updateProofFiles.length > 0) {
+                  setUploadingUpdateProofs(true);
+                  try {
+                    const formData = new FormData();
+                    updateProofFiles.forEach(f => formData.append("files", f));
+                    const uploadRes = await fetch("/api/grinder/me/upload-update-proofs", { method: "POST", body: formData, credentials: "include" });
+                    if (!uploadRes.ok) throw new Error("Upload failed");
+                    const uploadData = await uploadRes.json();
+                    proofUrls = uploadData.urls;
+                  } catch (err: any) {
+                    toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+                    setUploadingUpdateProofs(false);
+                    return;
+                  }
+                  setUploadingUpdateProofs(false);
+                }
                 submitUpdateMutation.mutate({
                   assignmentId: updateDialog.id,
                   orderId: updateDialog.orderId,
                   updateType,
                   message: updateMessage,
                   newDeadline: newDeadline || undefined,
-                  proofUrls: filteredProofUrls.length > 0 ? filteredProofUrls : undefined,
+                  proofUrls: proofUrls.length > 0 ? proofUrls : undefined,
                 });
                 setUpdateDialog(null);
                 setUpdateMessage("");
                 setNewDeadline("");
-                setUpdateProofUrls([""]);
+                setUpdateProofFiles([]);
+                setUpdateProofUrls([]);
               }}>
-              {submitUpdateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-              Submit
+              {(submitUpdateMutation.isPending || uploadingUpdateProofs) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              {uploadingUpdateProofs ? "Uploading..." : "Submit"}
             </Button>
           </div>
         </DialogContent>

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
+import { ROLE_LABELS } from "@shared/schema";
 import { formatCurrency, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -321,6 +322,7 @@ export default function StaffAdmin() {
   const [alertTarget, setAlertTarget] = useState("all");
   const [alertTargetUserId, setAlertTargetUserId] = useState("");
   const [alertUserSearch, setAlertUserSearch] = useState("");
+  const [alertTargetRoles, setAlertTargetRoles] = useState<string[]>([]);
 
   const { data: platformsList = ["Xbox", "PS5"] } = useQuery<string[]>({ queryKey: ["/api/platforms"] });
   const [newPlatform, setNewPlatform] = useState("");
@@ -390,6 +392,7 @@ export default function StaffAdmin() {
     { value: "all", label: "Everyone", icon: Users, desc: "All staff & grinders" },
     { value: "staff", label: "Staff Only", icon: Shield, desc: "Staff & owners only" },
     { value: "grinders", label: "Grinders Only", icon: User, desc: "Grinders only" },
+    { value: "roles", label: "Specific Roles", icon: ShieldCheck, desc: "By role" },
     { value: "user", label: "Specific User", icon: UserPlus, desc: "One person" },
   ];
 
@@ -1949,14 +1952,14 @@ export default function StaffAdmin() {
 
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Send To</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                         {alertTargetOptions.map(opt => {
                           const Icon = opt.icon;
                           const isActive = alertTarget === opt.value;
                           return (
                             <button
                               key={opt.value}
-                              onClick={() => { setAlertTarget(opt.value); if (opt.value !== "user") setAlertTargetUserId(""); }}
+                              onClick={() => { setAlertTarget(opt.value); if (opt.value !== "user") setAlertTargetUserId(""); if (opt.value !== "roles") setAlertTargetRoles([]); }}
                               className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition-all ${
                                 isActive
                                   ? "border-primary/40 bg-primary/10 text-primary"
@@ -2003,6 +2006,38 @@ export default function StaffAdmin() {
                       </div>
                     )}
 
+                    {alertTarget === "roles" && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Select Roles</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {Object.entries(ROLE_LABELS).map(([roleId, label]) => {
+                            const isSelected = alertTargetRoles.includes(roleId);
+                            return (
+                              <button
+                                key={roleId}
+                                onClick={() => {
+                                  if (isSelected) setAlertTargetRoles(alertTargetRoles.filter(r => r !== roleId));
+                                  else setAlertTargetRoles([...alertTargetRoles, roleId]);
+                                }}
+                                className={`text-left px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-colors ${
+                                  isSelected
+                                    ? "bg-primary/15 text-primary border border-primary/20"
+                                    : "hover:bg-white/[0.05] text-muted-foreground border border-white/[0.06]"
+                                }`}
+                                data-testid={`button-alert-role-${roleId}`}
+                              >
+                                <ShieldCheck className="w-3 h-3 shrink-0" />
+                                <span>{label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {alertTargetRoles.length > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-1.5">{alertTargetRoles.length} role{alertTargetRoles.length !== 1 ? "s" : ""} selected</p>
+                        )}
+                      </div>
+                    )}
+
                     <Button
                       onClick={() => {
                         const selectedUser = allUsersForAlert.find(u => u.id === alertTargetUserId);
@@ -2011,9 +2046,10 @@ export default function StaffAdmin() {
                           target: alertTarget,
                           targetUserId: alertTarget === "user" ? alertTargetUserId : undefined,
                           targetUserName: alertTarget === "user" ? (selectedUser?.name || alertUserSearch) : undefined,
+                          targetRoles: alertTarget === "roles" ? alertTargetRoles : undefined,
                         });
                       }}
-                      disabled={!alertMessage.trim() || (alertTarget === "user" && !alertTargetUserId) || createAlertMutation.isPending}
+                      disabled={!alertMessage.trim() || (alertTarget === "user" && !alertTargetUserId) || (alertTarget === "roles" && alertTargetRoles.length === 0) || createAlertMutation.isPending}
                       className="w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20"
                       data-testid="button-send-alert"
                     >
@@ -2039,7 +2075,7 @@ export default function StaffAdmin() {
                             <p className="text-sm font-medium truncate" data-testid={`text-alert-message-${alert.id}`}>{alert.message}</p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <Badge className="text-[10px] bg-white/[0.06] border-white/[0.08]">
-                                {alert.target === "all" ? "Everyone" : alert.target === "staff" ? "Staff" : alert.target === "grinders" ? "Grinders" : alert.targetUserName || "User"}
+                                {alert.target === "all" ? "Everyone" : alert.target === "staff" ? "Staff" : alert.target === "grinders" ? "Grinders" : alert.target === "roles" ? (alert.targetRoles?.map((r: string) => ROLE_LABELS[r] || r).join(", ") || "Roles") : alert.targetUserName || "User"}
                               </Badge>
                               <span className="text-[10px] text-muted-foreground">
                                 by {alert.createdByName} · {new Date(alert.createdAt).toLocaleDateString()}

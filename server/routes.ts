@@ -66,6 +66,31 @@ if (!fs.existsSync(fineProofsDir)) {
   fs.mkdirSync(fineProofsDir, { recursive: true });
 }
 
+const updateProofsDir = path.join(process.cwd(), "uploads", "update-proofs");
+if (!fs.existsSync(updateProofsDir)) {
+  fs.mkdirSync(updateProofsDir, { recursive: true });
+}
+
+const updateProofUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, updateProofsDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const ext = path.extname(file.originalname);
+      cb(null, `${uniqueSuffix}${ext}`);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mkv|avi|pdf)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image, video, and PDF files are allowed"));
+    }
+  },
+});
+
 const proofUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, proofsDir),
@@ -1150,29 +1175,32 @@ export async function registerRoutes(
         }
       }
 
-      const { getDiscordBotClient } = await import("./discord/bot");
-      const client = getDiscordBotClient();
-      if (!client) return res.status(503).json({ message: "Discord bot is not connected" });
-
+      let client: any = null;
       try {
-        const channel = await client.channels.fetch(order.discordTicketChannelId);
-        if (!channel) return res.status(404).json({ message: "Discord channel not found" });
+        const { getDiscordBotClient } = await import("./discord/bot");
+        client = getDiscordBotClient();
+      } catch (_) {}
 
-        if ('guild' in channel && (channel as any).guild) {
-          const guildId = (channel as any).guild.id;
-          if ('createInvite' in channel && typeof channel.createInvite === 'function') {
-            const invite = await channel.createInvite({ maxAge: 3600, maxUses: 1, unique: true });
-            return res.json({ inviteUrl: `https://discord.gg/${invite.code}`, channelId: order.discordTicketChannelId, guildId });
-          } else {
-            return res.json({ channelUrl: `https://discord.com/channels/${guildId}/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId, guildId });
+      if (client) {
+        try {
+          const channel = await client.channels.fetch(order.discordTicketChannelId);
+          if (channel) {
+            if ('guild' in channel && (channel as any).guild) {
+              const guildId = (channel as any).guild.id;
+              if ('createInvite' in channel && typeof channel.createInvite === 'function') {
+                const invite = await channel.createInvite({ maxAge: 3600, maxUses: 1, unique: true });
+                return res.json({ inviteUrl: `https://discord.gg/${invite.code}`, channelId: order.discordTicketChannelId, guildId });
+              } else {
+                return res.json({ channelUrl: `https://discord.com/channels/${guildId}/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId, guildId });
+              }
+            }
           }
-        } else {
-          return res.json({ channelUrl: `https://discord.com/channels/@me/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId });
+        } catch (discordErr: any) {
+          console.error("[ticket-invite] Discord error, falling back to direct link:", discordErr.message);
         }
-      } catch (discordErr: any) {
-        console.error("[ticket-invite] Discord error:", discordErr);
-        return res.status(500).json({ message: "Could not create invite. The bot may not have permission to access that channel." });
       }
+
+      return res.json({ channelUrl: `https://discord.com/channels/@me/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId });
     } catch (err) {
       res.status(500).json({ message: String(err) });
     }
@@ -3852,6 +3880,30 @@ export async function registerRoutes(
         }
       }
 
+      if (type === "ticket_ack" && response === "no") {
+        await storage.updateAssignment(assignmentId, { status: "Cancelled" } as any);
+        const order = await storage.getOrder(orderId);
+        if (order) {
+          await storage.updateOrderStatus(orderId, "Need Replacement");
+          await storage.updateOrder(orderId, { assignedGrinderId: null } as any);
+        }
+        await createSystemNotification({
+          userId: myGrinder.discordUserId,
+          type: "replacement_no_penalty",
+          title: "Order Declined",
+          message: `You declined the ticket for order ${order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId}. You have been unassigned.`,
+          relatedId: orderId,
+        });
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          entityType: "assignment",
+          entityId: assignmentId,
+          action: "ticket_declined_replacement",
+          actor: myGrinder.name || myGrinder.id,
+          details: JSON.stringify({ orderId, reason: note }),
+        });
+      }
+
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
         entityType: "checkpoint",
@@ -4735,6 +4787,15 @@ export async function registerRoutes(
     }
 
     res.json({ url });
+  });
+
+  app.post('/api/grinder/me/upload-update-proofs', updateProofUpload.array('files', 5), async (req, res) => {
+    const userId = (req as any).userId;
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
+    const urls = files.map(f => `/uploads/update-proofs/${f.filename}`);
+    res.json({ urls });
   });
 
   app.delete('/api/chat/threads/:threadId', async (req, res) => {
