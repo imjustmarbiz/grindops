@@ -14,6 +14,7 @@ import multer from "multer";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 const WALLET_BLOCKED_IDS: string[] = [];
+const WALLET_RESTRICTED_IDS = ["872820240139046952"];
 
 function isBusinessBlocked(req: any): boolean {
   const discordId = (req.user as any)?.discordId || "";
@@ -23,6 +24,11 @@ function isBusinessBlocked(req: any): boolean {
 function isWalletBlocked(req: any): boolean {
   const discordId = (req.user as any)?.discordId || "";
   return WALLET_BLOCKED_IDS.includes(discordId);
+}
+
+function isWalletRestricted(req: any): boolean {
+  const discordId = (req.user as any)?.discordId || "";
+  return WALLET_RESTRICTED_IDS.includes(discordId);
 }
 
 function formatUSD(n: number): string {
@@ -6101,7 +6107,7 @@ export async function registerRoutes(
     try {
       if (isWalletBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallets = await storage.getWallets();
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       if (isOwner) return res.json(wallets);
       const visible = wallets.filter(w => w.scope === "company" || w.ownerDiscordId === actorId || w.scope === "personal");
@@ -6123,7 +6129,7 @@ export async function registerRoutes(
       if (!name || !type) return res.status(400).json({ message: "Name and type are required" });
       const actorName = getActorName(req);
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       const walletScope = scope || (isOwner ? "company" : "personal");
       if (!isOwner && walletScope === "company") return res.status(403).json({ message: "Staff can only create personal wallets" });
       const id = `WAL-${Date.now().toString(36)}`;
@@ -6169,7 +6175,7 @@ export async function registerRoutes(
       if (isWalletBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallet = await storage.getWallet(req.params.id);
       if (!wallet) return res.status(404).json({ message: "Wallet not found" });
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       if (!isOwner && wallet.ownerDiscordId !== actorId) return res.status(403).json({ message: "Cannot edit this wallet" });
       if (!isOwner && wallet.scope === "company") return res.status(403).json({ message: "Cannot edit company wallets" });
@@ -6197,7 +6203,7 @@ export async function registerRoutes(
       if (isWalletBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallet = await storage.getWallet(req.params.id);
       if (!wallet) return res.status(404).json({ message: "Wallet not found" });
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       if (!isOwner) {
         if (wallet.scope === "company") return res.status(403).json({ message: "Staff cannot adjust company wallets" });
@@ -6245,7 +6251,7 @@ export async function registerRoutes(
       if (!fromWallet || !toWallet) return res.status(404).json({ message: "Wallet not found" });
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       const actorName = getActorName(req);
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       if (!isOwner) {
         if (fromWallet.ownerDiscordId !== actorId) return res.status(403).json({ message: "You can only transfer from your own wallet" });
         const toIsOwn = toWallet.ownerDiscordId === actorId;
@@ -6416,7 +6422,7 @@ export async function registerRoutes(
       if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
       if (req.query.orderId) filters.orderId = req.query.orderId;
       let transactions = await storage.getWalletTransactions(filters);
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       if (!isOwner) {
         const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
         const wallets = await storage.getWallets();
@@ -6433,7 +6439,7 @@ export async function registerRoutes(
     try {
       if (isWalletBlocked(req)) return res.status(403).json({ message: "Access denied" });
       let transfers = await storage.getWalletTransfers();
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       if (!isOwner) {
         const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
         transfers = transfers.filter(t => t.performedBy === actorId);
@@ -6614,7 +6620,7 @@ export async function registerRoutes(
     try {
       if (isWalletBlocked(req)) return res.status(403).json({ message: "Access denied" });
       const wallets = await storage.getWallets();
-      const isOwner = (req.user as any)?.role === "owner";
+      const isOwner = (req.user as any)?.role === "owner" && !isWalletRestricted(req);
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
       const activeWallets = wallets.filter(w => w.isActive);
       const relevantWallets = isOwner ? activeWallets : activeWallets.filter(w => w.ownerDiscordId === actorId);

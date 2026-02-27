@@ -98,7 +98,9 @@ function AppSidebar() {
   }).length;
   const isElite = !isStaff && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
+  const WALLET_RESTRICTED_IDS = ["872820240139046952"];
   const canSeeBusiness = isOwner && !BUSINESS_BLOCKED_IDS.includes(userId);
+  const isWalletRestricted = WALLET_RESTRICTED_IDS.includes(userId);
   const navItems = isStaff
     ? staffNavItems.filter(item => {
         if (item.url === "/business") return canSeeBusiness;
@@ -106,7 +108,7 @@ function AppSidebar() {
         if (item.url === "/staff-overview") return isOwner;
         return true;
       }).map(item => {
-        if (item.url === "/wallets" && !isOwner) return { ...item, title: "My Wallet" };
+        if (item.url === "/wallets" && (!isOwner || isWalletRestricted)) return { ...item, title: "My Wallet" };
         return item;
       })
     : grinderNavItems;

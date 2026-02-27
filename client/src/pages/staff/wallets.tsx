@@ -53,8 +53,9 @@ export default function StaffWallets() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const isOwner = user?.role === "owner";
+  const WALLET_RESTRICTED_IDS = ["872820240139046952"];
   const myDiscordId = (user as any)?.discordId || user?.id || "";
+  const isOwner = user?.role === "owner" && !WALLET_RESTRICTED_IDS.includes(myDiscordId);
 
   const [activeTab, setActiveTab] = useState("transactions");
   const [createWalletOpen, setCreateWalletOpen] = useState(false);
