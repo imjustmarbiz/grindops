@@ -408,6 +408,7 @@ export class DatabaseStorage implements IStorage {
     const orderId = `MGT-${mgtOrderNumber}`;
     const [created] = await db.insert(orders).values({
       id: orderId,
+      displayId: `ORD-${String(mgtOrderNumber).padStart(2, '0')}`,
       mgtOrderNumber,
       serviceId: data.serviceId || "UNKNOWN",
       customerPrice: data.customerPrice || "0",

@@ -7,6 +7,7 @@ import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireG
 import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats, TIER_THRESHOLDS } from "./recalcStats";
 import { sendCustomerUpdate, sendCompletionApprovalRequest } from "./discord/customerUpdates";
+import { generateOrderDisplayId, generateBidDisplayId, generateAssignmentDisplayId, generateUpdateDisplayId, generatePayoutDisplayId, generateStrikeDisplayId, generateFineDisplayId, generateEventDisplayId, generateReviewDisplayId, generateClaimDisplayId } from "./display-id";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
@@ -629,6 +630,13 @@ export async function registerRoutes(
           (input as any).orderBrief = briefLines.join("\n");
         }
       }
+      if (!input.mgtOrderNumber) {
+        const orderIds = await generateOrderDisplayId();
+        (input as any).mgtOrderNumber = orderIds.mgtOrderNumber;
+        (input as any).displayId = orderIds.displayId;
+      } else {
+        (input as any).displayId = `ORD-${String(input.mgtOrderNumber).padStart(2, '0')}`;
+      }
       const result = await storage.createOrder(input);
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
@@ -688,8 +696,10 @@ export async function registerRoutes(
             outstandingFine: newOutstandingFine,
           });
 
+          const replStrDisplay = await generateStrikeDisplayId();
           await storage.createStrikeLog({
             id: `SL-${Date.now().toString(36)}`,
+            displayId: replStrDisplay,
             grinderId: order.assignedGrinderId,
             action: "add",
             reason: `Replacement on order ${orderRef}: ${reasonText}`,
@@ -769,8 +779,10 @@ export async function registerRoutes(
           const alreadyRequested = existingPayouts.find((p: any) => p.assignmentId === activeAssignment.id);
 
           if (!alreadyRequested && Number(payoutAmount) > 0) {
+            const payDisplay1 = await generatePayoutDisplayId(order.id);
             await storage.createPayoutRequest({
               id: `PR-${Date.now().toString(36)}`,
+              displayId: payDisplay1,
               assignmentId: activeAssignment.id,
               orderId: order.id,
               grinderId: order.assignedGrinderId,
@@ -891,8 +903,10 @@ export async function registerRoutes(
       }
 
       const assignmentId = `ASN-${Date.now().toString(36)}`;
+      const asnDisplayId = await generateAssignmentDisplayId(orderId);
       const assignmentData: any = {
         id: assignmentId,
+        displayId: asnDisplayId,
         grinderId: input.grinderId,
         orderId: orderId,
         assignedDateTime: now,
@@ -952,8 +966,10 @@ export async function registerRoutes(
 
       if (!acceptedBidId) {
         const staffBidId = `BID-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const bidDisplay = await generateBidDisplayId(orderId);
         await storage.createBid({
           id: staffBidId,
+          displayId: bidDisplay,
           orderId: orderId,
           grinderId: input.grinderId,
           bidAmount: input.bidAmount,
@@ -1254,8 +1270,10 @@ export async function registerRoutes(
   app.post(api.bids.create.path, requireStaff, async (req, res) => {
     try {
       const body = req.body;
+      const bidDisplayId = body.orderId ? await generateBidDisplayId(body.orderId) : undefined;
       const input = {
         id: body.id || `BID-${Date.now().toString(36)}`,
+        displayId: bidDisplayId,
         orderId: body.orderId,
         grinderId: body.grinderId,
         bidAmount: String(body.bidAmount),
@@ -1334,8 +1352,10 @@ export async function registerRoutes(
 
           const now = new Date();
           const assignmentId = `ASN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          const asnDisplay = await generateAssignmentDisplayId(bid.orderId);
           await storage.createAssignment({
             id: assignmentId,
+            displayId: asnDisplay,
             grinderId: bid.grinderId,
             orderId: bid.orderId,
             assignedDateTime: now,
@@ -1514,8 +1534,10 @@ export async function registerRoutes(
 
           const now = new Date();
           const assignmentId = `ASN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          const asnDisplay2 = await generateAssignmentDisplayId(bid.orderId);
           await storage.createAssignment({
             id: assignmentId,
+            displayId: asnDisplay2,
             grinderId: bid.grinderId,
             orderId: bid.orderId,
             assignedDateTime: now,
@@ -1588,6 +1610,9 @@ export async function registerRoutes(
   app.post(api.assignments.create.path, requireStaff, async (req, res) => {
     try {
       const input = api.assignments.create.input.parse(req.body);
+      if (!input.displayId && input.orderId) {
+        (input as any).displayId = await generateAssignmentDisplayId(input.orderId);
+      }
       const result = await storage.createAssignment(input);
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
@@ -2308,8 +2333,10 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Not your assignment" });
     }
 
+    const updDisplayId = await generateUpdateDisplayId(orderId);
     const update = await storage.createOrderUpdate({
       id: `OU-${Date.now().toString(36)}`,
+      displayId: updDisplayId,
       assignmentId,
       orderId,
       grinderId: myGrinder.id,
@@ -2376,8 +2403,10 @@ export async function registerRoutes(
       }
     }
 
+    const payDisplay2 = await generatePayoutDisplayId(orderId);
     const request = await storage.createPayoutRequest({
       id: `PR-${Date.now().toString(36)}`,
+      displayId: payDisplay2,
       assignmentId,
       orderId,
       grinderId: myGrinder.id,
@@ -2579,6 +2608,7 @@ export async function registerRoutes(
       }
 
       const bidId = `BID-${Date.now().toString(36)}`;
+      const grinderBidDisplay = await generateBidDisplayId(orderId);
       const now = new Date();
       const estDelivery = timeline
         ? new Date(now.getTime() + parseInt(timeline) * 3600000)
@@ -2586,6 +2616,7 @@ export async function registerRoutes(
 
       const newBid = await storage.createBid({
         id: bidId,
+        displayId: grinderBidDisplay,
         orderId,
         grinderId: myGrinder.id,
         bidAmount: String(bidAmount),
@@ -2719,8 +2750,10 @@ export async function registerRoutes(
         grinderName: myGrinder.name,
       }).catch(err => console.error("[customer-updates] Completion approval error:", err));
     } else if (!alreadyRequested && Number(payoutAmount) > 0) {
+      const payDisplay3 = await generatePayoutDisplayId(assignment.orderId);
       await storage.createPayoutRequest({
         id: `PR-${Date.now().toString(36)}`,
+        displayId: payDisplay3,
         assignmentId: assignment.id,
         orderId: assignment.orderId,
         grinderId: myGrinder.id,
@@ -3230,8 +3263,10 @@ export async function registerRoutes(
 
       const proofUrl = `/uploads/fine-proofs/${req.file.filename}`;
 
+      const finDisplay = await generateFineDisplayId();
       const payment = await storage.createFinePayment({
         id: `FP-${Date.now().toString(36)}`,
+        displayId: finDisplay,
         grinderId: myGrinder.id,
         amount: currentFine.toString(),
         paymentMethod,
@@ -3415,8 +3450,10 @@ export async function registerRoutes(
 
     await recalcGrinderStats(grinderId);
 
+    const strDisplayId = await generateStrikeDisplayId();
     const strikeLog = await storage.createStrikeLog({
       id: `SL-${Date.now().toString(36)}`,
+      displayId: strDisplayId,
       grinderId,
       action,
       reason,
@@ -3516,8 +3553,10 @@ export async function registerRoutes(
             await storage.updateStrikeLog(appeal.strikeLogId, { finePaid: true, finePaidAt: new Date() });
           }
 
+          const appealStrDisplay = await generateStrikeDisplayId();
           await storage.createStrikeLog({
             id: `SL-${Date.now().toString(36)}`,
+            displayId: appealStrDisplay,
             grinderId: appeal.grinderId,
             action: "remove",
             reason: `Strike appeal approved: ${reviewNote || "Appeal granted"}`,
@@ -4751,8 +4790,10 @@ export async function registerRoutes(
         return res.status(400).json({ message: "assignmentId, orderId, and message are required" });
       }
 
+      const chatUpdDisplay = await generateUpdateDisplayId(orderId);
       const update = await storage.createOrderUpdate({
         id: `OU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        displayId: chatUpdDisplay,
         assignmentId,
         orderId,
         grinderId: myGrinder.id,
@@ -5211,8 +5252,10 @@ export async function registerRoutes(
     if (user.role !== "staff" && user.role !== "owner") return res.status(403).json({ error: "Staff only" });
     const { type, title, description, startDate, endDate, discountPercent, tags, priority } = req.body;
     if (!title || !description || !startDate) return res.status(400).json({ error: "Title, description, and start date are required" });
+    const evtDisplay = await generateEventDisplayId();
     const event = await storage.createEvent({
       id: `EVT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      displayId: evtDisplay,
       type: type || "event",
       title,
       description,
@@ -5384,8 +5427,10 @@ export async function registerRoutes(
       if (rating < 1 || rating > 5) return res.status(400).json({ error: "Rating must be 1-5" });
 
       const id = `REV-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const revDisplay = await generateReviewDisplayId(orderId || null);
       const review = await storage.createCustomerReview({
         id,
+        displayId: revDisplay,
         grinderId,
         orderId: orderId || null,
         reviewerId: user.id,
@@ -5493,8 +5538,10 @@ export async function registerRoutes(
       }
 
       const id = `RPR-${Date.now().toString(36)}`;
+      const clmDisplay = await generateClaimDisplayId();
       const claim = await storage.createOrderClaimRequest({
         id,
+        displayId: clmDisplay,
         grinderId: user.grinderId,
         repairType,
         orderId: orderId || null,
@@ -5543,8 +5590,10 @@ export async function registerRoutes(
       if (repairType === "add_completed" && !completedDateTime) return res.status(400).json({ error: "Completed date is required" });
 
       const id = `RPR-${Date.now().toString(36)}`;
+      const staffClmDisplay = await generateClaimDisplayId();
       const claim = await storage.createOrderClaimRequest({
         id,
+        displayId: staffClmDisplay,
         grinderId,
         repairType,
         orderId: null,
@@ -5664,11 +5713,14 @@ export async function registerRoutes(
             if (!customerPrice) return res.status(400).json({ error: "Customer price is required to approve a repair without an order ID" });
 
             const newOrderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+            const repairOrderIds = await generateOrderDisplayId();
             const orderDueDate = claim.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             const isCompleted = isAddCompleted || !!claim.completedDateTime;
 
             await storage.createOrder({
               id: newOrderId,
+              displayId: repairOrderIds.displayId,
+              mgtOrderNumber: repairOrderIds.mgtOrderNumber,
               serviceId: resolvedServiceId,
               customerPrice: String(customerPrice),
               platform: platform || null,
@@ -5717,8 +5769,10 @@ export async function registerRoutes(
 
           if (existingAssignments.length === 0) {
             const newAssignmentId = `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const repairAsnDisplay = await generateAssignmentDisplayId(resolvedOrderId);
             await storage.createAssignment({
               id: newAssignmentId,
+              displayId: repairAsnDisplay,
               orderId: resolvedOrderId,
               grinderId: claim.grinderId,
               status: isCompleted ? "Completed" : "Active",
@@ -5769,8 +5823,10 @@ export async function registerRoutes(
             if (existingPayouts.length === 0) {
               let repairFixData: Record<string, any> = {};
               try { repairFixData = JSON.parse(claim.fixFields || "{}"); } catch { repairFixData = {}; }
+              const repairPayDisplay = await generatePayoutDisplayId(resolvedOrderId);
               const payoutReq: any = {
                 id: `PR-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                displayId: repairPayDisplay,
                 assignmentId: existingAssignments[0].id,
                 orderId: resolvedOrderId,
                 grinderId: claim.grinderId,
@@ -5788,8 +5844,10 @@ export async function registerRoutes(
             }
           }
 
+          const repairUpdDisplay = await generateUpdateDisplayId(resolvedOrderId);
           await storage.createOrderUpdate({
             id: `OU-${Date.now().toString(36)}`,
+            displayId: repairUpdDisplay,
             assignmentId: existingAssignments[0].id,
             orderId: resolvedOrderId,
             grinderId: claim.grinderId,
@@ -6231,8 +6289,10 @@ export async function registerRoutes(
       }
 
       const reviewId = `REV-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const custRevDisplay = await generateReviewDisplayId(code.orderId || null);
       const review = await storage.createCustomerReview({
         id: reviewId,
+        displayId: custRevDisplay,
         grinderId: code.grinderId,
         orderId: code.orderId || null,
         reviewerId: `customer-${code.id}`,
@@ -6484,8 +6544,10 @@ export async function registerRoutes(
           const payoutMethods = grinder ? await storage.getGrinderPayoutMethods(grinder.id) : [];
           const defaultMethod = payoutMethods.find((m: any) => m.isDefault) || payoutMethods[0];
 
+          const payDisplay4 = await generatePayoutDisplayId(assignment.orderId);
           await storage.createPayoutRequest({
             id: `PR-${Date.now().toString(36)}`,
+            displayId: payDisplay4,
             assignmentId: assignment.id,
             orderId: assignment.orderId,
             grinderId: activeGrinderId,

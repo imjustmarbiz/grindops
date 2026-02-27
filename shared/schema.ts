@@ -96,6 +96,7 @@ export const grinders = pgTable("grinders", {
 
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   mgtOrderNumber: integer("mgt_order_number"),
   discordMessageId: varchar("discord_message_id"),
   serviceId: varchar("service_id").references(() => services.id).notNull(),
@@ -128,6 +129,7 @@ export const orders = pgTable("orders", {
 
 export const bids = pgTable("bids", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   mgtProposalId: integer("mgt_proposal_id"),
   discordMessageId: varchar("discord_message_id"),
   orderId: varchar("order_id").references(() => orders.id).notNull(),
@@ -147,6 +149,7 @@ export const bids = pgTable("bids", {
 
 export const assignments = pgTable("assignments", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   orderId: varchar("order_id").references(() => orders.id).notNull(),
   assignedDateTime: timestamp("assigned_date_time").defaultNow().notNull(),
@@ -202,6 +205,7 @@ export const queueConfig = pgTable("queue_config", {
 
 export const orderUpdates = pgTable("order_updates", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   assignmentId: varchar("assignment_id").references(() => assignments.id).notNull(),
   orderId: varchar("order_id").references(() => orders.id).notNull(),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
@@ -252,6 +256,7 @@ export const performanceReports = pgTable("performance_reports", {
 
 export const payoutRequests = pgTable("payout_requests", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   assignmentId: varchar("assignment_id").references(() => assignments.id).notNull(),
   orderId: varchar("order_id").references(() => orders.id).notNull(),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
@@ -316,6 +321,7 @@ export const staffAlerts = pgTable("staff_alerts", {
 
 export const strikeLogs = pgTable("strike_logs", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   action: text("action").notNull(),
   reason: text("reason").notNull(),
@@ -401,6 +407,7 @@ export const notifications = pgTable("notifications", {
 
 export const events = pgTable("events", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   type: text("type").notNull().default("event"),
   title: text("title").notNull(),
   description: text("description").notNull(),
@@ -430,6 +437,7 @@ export const patchNotes = pgTable("patch_notes", {
 
 export const customerReviews = pgTable("customer_reviews", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   orderId: varchar("order_id").references(() => orders.id),
   reviewerId: varchar("reviewer_id").notNull(),
@@ -451,6 +459,7 @@ export const customerReviews = pgTable("customer_reviews", {
 
 export const orderClaimRequests = pgTable("order_claim_requests", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   repairType: text("repair_type").notNull().default("claim_missing"),
   orderId: varchar("order_id"),
@@ -575,6 +584,7 @@ export const assignmentsRelations = relations(assignments, ({ one }) => ({
 
 export const finePayments = pgTable("fine_payments", {
   id: varchar("id").primaryKey(),
+  displayId: varchar("display_id"),
   grinderId: varchar("grinder_id").references(() => grinders.id).notNull(),
   amount: numeric("amount").notNull(),
   paymentMethod: text("payment_method").notNull(),
