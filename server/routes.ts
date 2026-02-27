@@ -4256,7 +4256,7 @@ export async function registerRoutes(
               sessionInfo = `Session duration: **${diffMins}m**.`;
             }
           }
-          updateMsg = `Logged off at **${timeStr} EST**. ${sessionInfo} Work will resume next session.`;
+          updateMsg = `Logged off at **${timeStr} EST**. ${sessionInfo}`;
         } else if (type === "start_order") {
           updateMsg = `Work began at **${timeStr} EST**. You will receive progress updates as your grinder makes headway.`;
         } else if (type === "issue") {
