@@ -4011,6 +4011,30 @@ export async function registerRoutes(
         };
       });
 
+      const loggedOrderIds = new Set(orderUpdateLogs.map((l: any) => l.orderId));
+      const allAssignments = await storage.getAssignments();
+      const grinderAssignments = allAssignments.filter((a: any) => a.grinderId === grinderId);
+      for (const assignment of grinderAssignments) {
+        if (!assignment.orderId || loggedOrderIds.has(assignment.orderId)) continue;
+        const order = orderMap.get(assignment.orderId);
+        if (!order) continue;
+        const isCompleted = order.status === "Completed" || order.status === "Paid Out";
+        enrichedLogs.push({
+          id: `SYN-${assignment.orderId}`,
+          assignmentId: assignment.id,
+          orderId: assignment.orderId,
+          grinderId,
+          updateType: isCompleted ? "completion" : "system",
+          message: isCompleted
+            ? `Order completed. Grinder Pay: $${parseFloat(assignment.grinderPay || "0").toFixed(2)}`
+            : `Order assigned — Status: ${order.status}`,
+          createdAt: order.completedAt || assignment.assignedAt || order.createdAt,
+          orderTitle: order.title || order.id,
+          orderStatus: order.status,
+        });
+      }
+      enrichedLogs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
       const checkpoints = await storage.getActivityCheckpoints(undefined, grinderId);
 
       const checkpointCompliance = {
@@ -4253,6 +4277,30 @@ export async function registerRoutes(
           orderStatus: order?.status || "Unknown",
         };
       });
+
+      const loggedOrderIds = new Set(orderUpdateLogs.map((l: any) => l.orderId));
+      const allAssignments = await storage.getAssignments();
+      const myAssignments = allAssignments.filter((a: any) => a.grinderId === myGrinder.id);
+      for (const assignment of myAssignments) {
+        if (!assignment.orderId || loggedOrderIds.has(assignment.orderId)) continue;
+        const order = orderMap.get(assignment.orderId);
+        if (!order) continue;
+        const isCompleted = order.status === "Completed" || order.status === "Paid Out";
+        enrichedLogs.push({
+          id: `SYN-${assignment.orderId}`,
+          assignmentId: assignment.id,
+          orderId: assignment.orderId,
+          grinderId: myGrinder.id,
+          updateType: isCompleted ? "completion" : "system",
+          message: isCompleted
+            ? `Order completed. Grinder Pay: $${parseFloat(assignment.grinderPay || "0").toFixed(2)}`
+            : `Order assigned — Status: ${order.status}`,
+          createdAt: order.completedAt || assignment.assignedAt || order.createdAt,
+          orderTitle: order.title || order.id,
+          orderStatus: order.status,
+        });
+      }
+      enrichedLogs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       const strikeLogs = await storage.getStrikeLogs(myGrinder.id);
 
