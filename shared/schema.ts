@@ -880,6 +880,7 @@ export const siteAlerts = pgTable("site_alerts", {
   target: text("target").notNull().default("all"),
   targetUserId: varchar("target_user_id"),
   targetUserName: text("target_user_name"),
+  targetRoles: text("target_roles").array().default([]),
   enabled: boolean("enabled").notNull().default(true),
   createdBy: varchar("created_by").notNull(),
   createdByName: text("created_by_name").notNull(),

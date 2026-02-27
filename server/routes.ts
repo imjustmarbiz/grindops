@@ -6268,10 +6268,20 @@ export async function registerRoutes(
 
       const allAlerts = await db.select().from(siteAlerts).where(eq(siteAlerts.enabled, true)).orderBy(desc(siteAlerts.createdAt));
 
+      let userGrinderRoles: string[] = [];
+      if (userRole === "grinder") {
+        const grinder = (await storage.getGrinders()).find(g => g.discordUserId === discordId || g.id === odId);
+        if (grinder) userGrinderRoles = (grinder.roles as string[]) || [];
+      }
+
       const filtered = allAlerts.filter(a => {
         if (a.target === "all") return true;
         if (a.target === "staff" && isStaffOrOwner) return true;
         if (a.target === "grinders" && userRole === "grinder") return true;
+        if (a.target === "roles" && a.targetRoles && a.targetRoles.length > 0) {
+          if (isStaffOrOwner) return true;
+          return userGrinderRoles.some(r => a.targetRoles!.includes(r));
+        }
         if (a.target === "user" && a.targetUserId && (a.targetUserId === discordId || a.targetUserId === odId)) return true;
         return false;
       });
@@ -6293,10 +6303,11 @@ export async function registerRoutes(
 
   app.post("/api/site-alerts", requireOwner, async (req, res) => {
     try {
-      const { message, target, targetUserId, targetUserName } = req.body;
+      const { message, target, targetUserId, targetUserName, targetRoles } = req.body;
       if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
-      if (!["all", "staff", "grinders", "user"].includes(target)) return res.status(400).json({ error: "Invalid target" });
+      if (!["all", "staff", "grinders", "user", "roles"].includes(target)) return res.status(400).json({ error: "Invalid target" });
       if (target === "user" && !targetUserId) return res.status(400).json({ error: "Target user ID is required" });
+      if (target === "roles" && (!Array.isArray(targetRoles) || targetRoles.length === 0)) return res.status(400).json({ error: "At least one role must be selected" });
 
       const actorName = (req.user as any)?.discordUsername || (req.user as any)?.firstName || "Owner";
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
@@ -6308,18 +6319,21 @@ export async function registerRoutes(
         target,
         targetUserId: target === "user" ? targetUserId : null,
         targetUserName: target === "user" ? (targetUserName || null) : null,
+        targetRoles: target === "roles" ? targetRoles : [],
         enabled: true,
         createdBy: actorId,
         createdByName: actorName,
       });
 
+      const { ROLE_LABELS } = await import("@shared/schema");
+      const roleNames = target === "roles" ? (targetRoles as string[]).map((r: string) => ROLE_LABELS[r] || r).join(", ") : "";
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
         action: "site_alert_created",
         entityType: "site_alert",
         entityId: id,
         actor: actorName,
-        details: `Site alert created: "${message.trim().slice(0, 80)}" → ${target}${target === "user" ? ` (${targetUserName || targetUserId})` : ""}`,
+        details: `Site alert created: "${message.trim().slice(0, 80)}" → ${target}${target === "user" ? ` (${targetUserName || targetUserId})` : ""}${target === "roles" ? ` (${roleNames})` : ""}`,
       });
 
       res.json({ success: true, id });
