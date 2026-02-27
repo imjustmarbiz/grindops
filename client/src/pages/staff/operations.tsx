@@ -526,6 +526,8 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
   const [manualOrderSendToGrinders, setManualOrderSendToGrinders] = useState(true);
   const [manualOrderIsRush, setManualOrderIsRush] = useState(false);
   const [manualOrderComplexity, setManualOrderComplexity] = useState("1");
+  const [manualOrderTicketChannel, setManualOrderTicketChannel] = useState("");
+  const [manualOrderCustomerDiscord, setManualOrderCustomerDiscord] = useState("");
 
   const [assignOrderId, setAssignOrderId] = useState("");
   const [assignGrinderId, setAssignGrinderId] = useState("");
@@ -559,6 +561,8 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
       setManualOrderSendToGrinders(true);
       setManualOrderIsRush(false);
       setManualOrderComplexity("1");
+      setManualOrderTicketChannel("");
+      setManualOrderCustomerDiscord("");
       toast({ title: "Manual order created", description: manualOrderSendToGrinders ? "Order is visible to grinders for bidding." : "Order created for manual assignment only." });
     },
     onError: (err: any) => {
@@ -759,6 +763,16 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
             <label className="text-xs text-muted-foreground font-medium">Notes (optional)</label>
             <Input placeholder="Additional details..." value={manualOrderNotes} onChange={(e) => setManualOrderNotes(e.target.value)} className="bg-background/50 border-white/10" data-testid="input-manual-notes" />
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Discord Ticket Channel ID (optional)</label>
+              <Input placeholder="Paste ticket channel ID" value={manualOrderTicketChannel} onChange={(e) => setManualOrderTicketChannel(e.target.value)} className="bg-background/50 border-white/10 font-mono" data-testid="input-manual-ticket-channel" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Customer Discord ID (optional)</label>
+              <Input placeholder="Customer's Discord user ID" value={manualOrderCustomerDiscord} onChange={(e) => setManualOrderCustomerDiscord(e.target.value)} className="bg-background/50 border-white/10 font-mono" data-testid="input-manual-customer-discord" />
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
             <div className="flex items-center gap-2 flex-1">
               <button
@@ -812,6 +826,8 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                 isManual: true,
                 visibleToGrinders: manualOrderSendToGrinders,
                 status: "Open",
+                discordTicketChannelId: manualOrderTicketChannel || null,
+                customerDiscordId: manualOrderCustomerDiscord || null,
               });
             }}
           >

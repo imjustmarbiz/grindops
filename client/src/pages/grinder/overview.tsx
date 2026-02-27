@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
-  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight, Coins, Landmark, Globe
+  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight, Coins, Landmark, Globe, MessageSquare
 } from "lucide-react";
 import { FaXbox } from "react-icons/fa6";
 import { SiPlaystation } from "react-icons/si";
@@ -545,6 +545,27 @@ export default function GrinderOverview() {
                   <span className="text-sm text-white/60">{tip}</span>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+        </FadeInUp>
+      )}
+
+      {stats.activeAssignments > 0 && (
+        <FadeInUp>
+        <Card className="border-0 bg-gradient-to-r from-blue-500/[0.08] via-background to-blue-500/[0.03] overflow-hidden relative" data-testid="card-customer-updates-info">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.02] -translate-y-8 translate-x-8" />
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
+                <MessageSquare className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm text-blue-400">Customer Updates Active</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Your daily updates and proof uploads are automatically sent to customers via Discord. When you complete an order, the customer approves your work before payout.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

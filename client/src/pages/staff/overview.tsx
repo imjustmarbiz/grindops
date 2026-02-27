@@ -12,7 +12,7 @@ import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } fro
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
-  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
+  Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet, MessageSquare,
 } from "lucide-react";
 
 
@@ -582,6 +582,25 @@ export default function StaffOverview() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+      </FadeInUp>
+
+      <FadeInUp>
+      <Card className="border-blue-500/15 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent overflow-hidden relative" data-testid="card-customer-pipeline-info">
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.04] -translate-y-16 translate-x-16" />
+        <CardContent className="p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-semibold text-blue-300">Customer Updates Pipeline</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Orders with linked customer Discord IDs receive automated updates throughout the lifecycle. Customers approve completion via Discord before payouts are created. Force-approve available for unresponsive customers. Toggle in Admin &gt; System.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
       </FadeInUp>

@@ -91,6 +91,7 @@ export const api = {
         orderBrief: z.string().nullable().optional(),
         discordBidLink: z.string().nullable().optional(),
         discordTicketChannelId: z.string().nullable().optional(),
+        customerDiscordId: z.string().nullable().optional(),
         assignedGrinderId: z.string().nullable().optional(),
         mgtOrderNumber: z.number().nullable().optional(),
         customerPrice: z.string().optional(),

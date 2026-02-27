@@ -132,7 +132,7 @@ const features = [
   {
     icon: MessageSquare,
     title: "Discord Customer Service Pipeline",
-    description: "Automated customer communication system via Discord. Link customer Discord IDs during ticket setup to enable automated order updates, completion approval requests, and customer slash commands (/requestupdate, /orderstatus, /myorders). Includes force-approve for unresponsive customers and an admin toggle to enable or disable the pipeline.",
+    description: "Automated customer communication system via Discord. Link customer Discord IDs during manual order creation or ticket setup to enable full lifecycle updates — login/logoff notifications, daily progress reports with proof URLs, completion alerts, and grinder replacement notices. Customers approve completed work through Discord before payouts are created. Slash commands (/requestupdate, /orderstatus, /myorders) let customers check status anytime. Force-approve available for unresponsive customers. Toggle the entire pipeline on/off in Admin > System settings.",
     url: "/admin",
   },
   {

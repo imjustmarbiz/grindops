@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen, LayoutDashboard, Zap, FileCheck, Gavel, Banknote, ClipboardCheck, ClipboardList, Brain,
   Bell, Calendar, Newspaper, Star, LinkIcon, CalendarDays, Lightbulb, TrendingUp,
-  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon, ScrollText, Wrench
+  CalendarClock, Send, ArrowUpCircle, Crown, ChevronRight, AlertOctagon, ScrollText, Wrench, MessageSquare
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -99,6 +99,12 @@ const featureItems = [
     title: "Submit Review",
     desc: "Submit customer reviews with ratings and proof screenshots. Reviews help build trust with the platform and can positively impact your scorecard.",
     url: "/grinder/reviews",
+  },
+  {
+    icon: MessageSquare,
+    title: "Customer Updates",
+    desc: "Attach proof URLs to your daily updates so customers get automatic Discord notifications with your progress. When you complete an order, customers approve your work through Discord before your payout is processed. No direct customer contact needed — the bot handles everything.",
+    url: "/grinder/assignments",
   },
   {
     icon: Wrench,
