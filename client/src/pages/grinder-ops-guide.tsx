@@ -239,7 +239,7 @@ const slides: Slide[] = [
           "Order ID (optional): If you know it",
           "Service: Select from the dropdown",
           "Proof Links: URLs showing your work",
-          "Dates: Due date, start date, completion date (required for Add Completed)",
+          "Dates: Due date, start date, completion date (only for Add Completed — hidden for Claim Missing)",
           "Payout: Your amount, platform (Zelle, PayPal, etc.), and details",
         ],
       },
@@ -366,6 +366,7 @@ const slides: Slide[] = [
           "Completion Rate: Orders finished vs. cancelled",
           "Win Rate: Bids accepted vs. total bids",
           "Daily Update Compliance: Consistency of progress reports",
+          "Tier Progress: shows actual progress (X/Y) with mini bars for all 5 requirements",
         ],
       },
       {

@@ -207,39 +207,6 @@ const slides: Slide[] = [
     tip: "Fleet Utilization shows what percentage of total capacity is in use. If it's above 85%, consider onboarding more grinders.",
   },
   {
-    id: "wallets",
-    title: "Business Wallet",
-    subtitle: "Fund management, transfers, and payout tracking",
-    icon: Wallet,
-    iconColor: "text-orange-400",
-    sections: [
-      {
-        heading: "Wallet Types",
-        points: [
-          "Personal Wallets: each staff member has their own wallet",
-          "Company Wallets: shared wallets for business operations",
-          "All wallets track balance, deposits, withdrawals, and transfers",
-        ],
-      },
-      {
-        heading: "Transfers & Approvals",
-        points: [
-          "Transfer funds between your own wallets instantly",
-          "Staff-to-staff transfers: send to any staff member's personal wallet",
-          "All staff-initiated transfers require owner approval before processing",
-          "Transaction history shows full audit trail with status tracking",
-        ],
-      },
-    ],
-    steps: [
-      "Select the source wallet and enter the transfer amount",
-      "Choose a destination: your wallet, company wallet, or another staff member",
-      "Submit the transfer — it will be pending until owner approves",
-      "Track transfer status in the transaction history panel",
-    ],
-    tip: "Staff-to-staff transfers always require owner approval. Plan ahead for time-sensitive transfers.",
-  },
-  {
     id: "analytics",
     title: "Analytics",
     subtitle: "Long-term performance trends, efficiency metrics, and insights",
@@ -381,6 +348,7 @@ const slides: Slide[] = [
         heading: "Operations Tab",
         points: [
           "Manual Order Creation: create orders that bypass the standard flow",
+          "Complexity auto-sets from the service's default when creating manual orders",
           "Override Assignment: force-assign any grinder to any order with custom pay",
           "Staff Alerts: broadcast Info, Success, or Urgent alerts to all grinders",
           "Discord Ticket Linking: connect orders to Discord support channels",
@@ -511,7 +479,8 @@ const slides: Slide[] = [
         points: [
           "Letter grade (A-F) with quality score breakdown",
           "Performance metrics: On-Time Rate, Completion Rate, Win Rate",
-          "Order history and assignment timeline",
+          "Tier Progress: actual progress numbers (X/Y) with mini bars for all 5 requirements",
+          "Order history with service names, MGT #, platform, and gamertag",
           "Strike history and fine records",
         ],
       },
@@ -570,9 +539,11 @@ const slides: Slide[] = [
         heading: "Assignment Tracking",
         points: [
           "Sortable columns: Order, Grinder, Assigned/Due/Delivered dates",
+          "Service name, platform, gamertag, and MGT # shown per assignment",
           "Financial details: Order Price, Grinder Pay, Margin, Profit",
           "Quality rating per assignment from staff reviews",
-          "Status tracking: Active, Completed, Cancelled",
+          "Status badges: 'Paid Out' (cyan) vs 'Completed' (blue), rush/emergency indicators",
+          "Payout badge shows 'Payout Paid' (amber) when payout is marked paid",
         ],
       },
       {
@@ -761,6 +732,7 @@ const slides: Slide[] = [
         heading: "Repair Review Process",
         points: [
           "Three repair types: Fix Order (update existing), Claim Missing (add in-progress), Add Completed (add finished order)",
+          "Claim Missing hides the completion date field (in-progress orders don't need one)",
           "Each request shows: repair type badge, ticket name, order ID, service, proof links, dates",
           "Payout details: grinder amount, platform, payment info",
           "Staff Fill-In panel: add Customer Price, Platform, Gamertag, Service if missing",
