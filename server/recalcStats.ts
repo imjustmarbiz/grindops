@@ -221,6 +221,10 @@ export async function recalcGrinderStats(grinderId: string) {
 
   const autoTier = calculateTier(completedCount, qualityScore, winRate, onTimeRate, totalEarnings, windowStats);
 
+  const shouldUpdateJoinedAt = earliestOrderDate && (
+    !grinder.joinedAt || earliestOrderDate < new Date(grinder.joinedAt)
+  );
+
   const updates: any = {
     completedOrders: completedCount,
     activeOrders: active.length,
@@ -236,6 +240,7 @@ export async function recalcGrinderStats(grinderId: string) {
     tier: autoTier,
     ...(avgTurnaroundDays ? { avgTurnaroundDays } : {}),
     ...(lastAssigned ? { lastAssigned } : {}),
+    ...(shouldUpdateJoinedAt ? { joinedAt: earliestOrderDate } : {}),
   };
 
   await storage.updateGrinder(grinderId, updates);
