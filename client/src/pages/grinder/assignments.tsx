@@ -360,44 +360,44 @@ export default function GrinderAssignments() {
                         <p className="text-[11px] text-red-400 font-medium">You declined this order. It has been sent back for reassignment.</p>
                       </div>
                     )}
-                    <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-white/[0.06]">
-                      <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-9 px-1 active:scale-95 transition-transform ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
-                        disabled={checkpointMutation.isPending || a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 active:scale-95 transition-transform" data-testid={`button-logoff-${a.id}`}
-                        disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
-                        onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
-                        <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
-                      </Button>
-                      {!a.hasStarted ? (
-                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 active:scale-95 transition-transform" data-testid={`button-start-order-${a.id}`}
-                          disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
-                          onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
-                          <Play className="w-3 h-3" /> Start
+                      <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-white/[0.06]">
+                        <Button size="sm" variant="outline" className={`gap-1 text-[10px] h-9 px-1 active:scale-95 transition-transform ${platformLoginColors(a.platform)}`} data-testid={`button-login-${a.id}`}
+                          disabled={checkpointMutation.isPending || a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
+                          onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "login" })}>
+                          <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log In
                         </Button>
-                      ) : (
-                        <Badge className="h-9 flex items-center justify-center text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
-                          <Play className="w-3 h-3 mr-1" /> Started
-                        </Badge>
-                      )}
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 active:scale-95 transition-transform" data-testid={`button-issue-${a.id}`}
-                        disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
-                        onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
-                        <AlertTriangle className="w-3 h-3" /> Issue
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20 active:scale-95 transition-transform" data-testid={`button-replace-${a.id}`}
-                        disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
-                        onClick={() => { setReplacementDialog(a); setReplacementReason(""); }}>
-                        <Repeat className="w-3 h-3" /> Replace
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 active:scale-95 transition-transform" data-testid={`button-history-${a.id}`}
-                        disabled={!a.hasTicketAck || a.ticketAckResponse === "no"}
-                        onClick={() => setExpandedCheckpoints(expandedCheckpoints === a.id ? null : a.id)}>
-                        <Clock className="w-3 h-3" /> History
-                      </Button>
-                    </div>
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 active:scale-95 transition-transform" data-testid={`button-logoff-${a.id}`}
+                          disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
+                          onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "logoff" })}>
+                          <PlatformIcon platform={a.platform} className="w-3 h-3" /> Log Off
+                        </Button>
+                        {!a.hasStarted ? (
+                          <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 active:scale-95 transition-transform" data-testid={`button-start-order-${a.id}`}
+                            disabled={checkpointMutation.isPending || !a.isLoggedIn || !a.hasTicketAck || a.ticketAckResponse === "no"}
+                            onClick={() => checkpointMutation.mutate({ assignmentId: a.id, orderId: a.orderId, type: "start_order" })}>
+                            <Play className="w-3 h-3" /> Start
+                          </Button>
+                        ) : (
+                          <Badge className="h-9 flex items-center justify-center text-[10px] bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                            <Play className="w-3 h-3 mr-1" /> Started
+                          </Badge>
+                        )}
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 active:scale-95 transition-transform" data-testid={`button-issue-${a.id}`}
+                          disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
+                          onClick={() => { setIssueDialog({ ...a, checkpointType: "issue" }); setIssueNote(""); }}>
+                          <AlertTriangle className="w-3 h-3" /> Issue
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20 active:scale-95 transition-transform" data-testid={`button-replace-${a.id}`}
+                          disabled={checkpointMutation.isPending || !a.hasTicketAck || a.ticketAckResponse === "no"}
+                          onClick={() => { setReplacementDialog(a); setReplacementReason(""); }}>
+                          <Repeat className="w-3 h-3" /> Replace
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1 text-[10px] h-9 px-1 active:scale-95 transition-transform" data-testid={`button-history-${a.id}`}
+                          disabled={!a.hasTicketAck || a.ticketAckResponse === "no"}
+                          onClick={() => setExpandedCheckpoints(expandedCheckpoints === a.id ? null : a.id)}>
+                          <Clock className="w-3 h-3" /> History
+                        </Button>
+                      </div>
                     {expandedCheckpoints === a.id && <CheckpointHistory assignmentId={a.id} />}
                   </div>
                 )}
