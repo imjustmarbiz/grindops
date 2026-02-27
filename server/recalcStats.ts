@@ -238,8 +238,8 @@ export async function recalcGrinderStats(grinderId: string) {
     ordersAssignedL7D,
     utilization,
     tier: autoTier,
-    ...(avgTurnaroundDays ? { avgTurnaroundDays } : {}),
-    ...(lastAssigned ? { lastAssigned } : {}),
+    avgTurnaroundDays: avgTurnaroundDays || null,
+    lastAssigned: lastAssigned || null,
     ...(shouldUpdateJoinedAt ? { joinedAt: earliestOrderDate } : {}),
   };
 

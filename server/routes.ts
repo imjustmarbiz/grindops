@@ -370,6 +370,17 @@ export async function registerRoutes(
           results[table] = false;
         }
       }
+      const statsTables = ["orders", "bids", "assignments", "payout_requests", "activity_checkpoints", "strike_logs"];
+      const needsRecalc = toDelete.some(t => statsTables.includes(t));
+      if (needsRecalc && !toDelete.includes("grinders")) {
+        try {
+          const allGrinders = await storage.getGrinders();
+          for (const g of allGrinders) {
+            await recalcGrinderStats(g.id);
+          }
+        } catch (e) {
+        }
+      }
       res.json({ success: true, results });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -4557,6 +4568,8 @@ export async function registerRoutes(
       const { grinderId } = req.params;
       const grinder = await storage.getGrinder(grinderId);
       if (!grinder) return res.status(404).json({ message: "Grinder not found" });
+
+      await recalcGrinderStats(grinderId);
 
       const reports = await storage.getPerformanceReports(grinderId);
       const sortedReports = reports
