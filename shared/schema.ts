@@ -125,6 +125,9 @@ export const orders = pgTable("orders", {
   firstBidAt: timestamp("first_bid_at"),
   biddingClosesAt: timestamp("bidding_closes_at"),
   biddingNotifiedStages: jsonb("bidding_notified_stages").notNull().default([]),
+  refundToCustomer: numeric("refund_to_customer"),
+  refundToGrinder: numeric("refund_to_grinder"),
+  refundToCompany: numeric("refund_to_company"),
 });
 
 export const bids = pgTable("bids", {

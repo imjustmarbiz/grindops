@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText, UserMinus, RefreshCw, ShieldAlert, ShieldX, ShieldCheck } from "lucide-react";
+import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText, UserMinus, RefreshCw, ShieldAlert, ShieldX, ShieldCheck, Search } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -267,6 +267,14 @@ export default function Orders() {
   const [replacementPromptOrder, setReplacementPromptOrder] = useState<Order | null>(null);
   const [replacementAction, setReplacementAction] = useState<"strike" | "warning" | "no_penalty">("no_penalty");
   const [replacementReason, setReplacementReason] = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterService, setFilterService] = useState("all");
+  const [filterPlatform, setFilterPlatform] = useState("all");
+  const [refundOrder, setRefundOrder] = useState<Order | null>(null);
+  const [refundCustomer, setRefundCustomer] = useState("");
+  const [refundGrinder, setRefundGrinder] = useState("");
+  const [refundCompany, setRefundCompany] = useState("");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -317,6 +325,25 @@ export default function Orders() {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to delete order", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: async ({ id, refundToCustomer, refundToGrinder, refundToCompany }: { id: string; refundToCustomer: string; refundToGrinder: string; refundToCompany: string }) => {
+      const res = await apiRequest("POST", `/api/orders/${id}/refund`, { refundToCustomer, refundToGrinder, refundToCompany });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      toast({ title: "Order refunded", description: "Refund amounts have been recorded." });
+      setRefundOrder(null);
+      setRefundCustomer("");
+      setRefundGrinder("");
+      setRefundCompany("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Refund failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -624,6 +651,79 @@ export default function Orders() {
       </FadeInUp>
 
       <FadeInUp>
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by order ID, gamertag, or service..."
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              className="pl-9 bg-white/[0.03] border-white/[0.08]"
+              data-testid="input-filter-search"
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Open">Open</SelectItem>
+              <SelectItem value="Assigned">Assigned</SelectItem>
+              <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="Refunded">Refunded</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterService} onValueChange={setFilterService}>
+            <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-service">
+              <SelectValue placeholder="Service" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Services</SelectItem>
+              {(services || []).map((s: Service) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterPlatform} onValueChange={setFilterPlatform}>
+            <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-platform">
+              <SelectValue placeholder="Platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Platforms</SelectItem>
+              {platforms.map(p => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3" data-testid="text-filter-count">
+          Showing {(() => {
+            const searchLower = filterSearch.toLowerCase();
+            return sortedOrders.filter((order: Order) => {
+              if (filterStatus !== "all" && order.status !== filterStatus) return false;
+              if (filterService !== "all" && order.serviceId !== filterService) return false;
+              if (filterPlatform !== "all" && order.platform !== filterPlatform) return false;
+              if (filterSearch) {
+                const svc = (services || []).find((s: Service) => s.id === order.serviceId);
+                const searchable = [
+                  order.id,
+                  order.mgtOrderNumber ? String(order.mgtOrderNumber) : "",
+                  order.gamertag || "",
+                  svc?.name || "",
+                ].join(" ").toLowerCase();
+                if (!searchable.includes(searchLower)) return false;
+              }
+              return true;
+            }).length;
+          })()} of {(orders || []).length} orders
+        </p>
+      </div>
+      </FadeInUp>
+
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1200px] table-fixed w-full">
@@ -660,9 +760,27 @@ export default function Orders() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {(() => {
+              const searchLower = filterSearch.toLowerCase();
+              const filteredOrders = sortedOrders.filter((order: Order) => {
+                if (filterStatus !== "all" && order.status !== filterStatus) return false;
+                if (filterService !== "all" && order.serviceId !== filterService) return false;
+                if (filterPlatform !== "all" && order.platform !== filterPlatform) return false;
+                if (filterSearch) {
+                  const svc = (services || []).find((s: Service) => s.id === order.serviceId);
+                  const searchable = [
+                    order.id,
+                    order.mgtOrderNumber ? String(order.mgtOrderNumber) : "",
+                    order.gamertag || "",
+                    svc?.name || "",
+                  ].join(" ").toLowerCase();
+                  if (!searchable.includes(searchLower)) return false;
+                }
+                return true;
+              });
+              return isLoading ? (
               <TableRow><TableCell colSpan={11} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : sortedOrders && sortedOrders.length > 0 ? sortedOrders.map((order: Order) => {
+            ) : filteredOrders.length > 0 ? filteredOrders.map((order: Order) => {
               const service = (services || []).find((s: Service) => s.id === order.serviceId);
               const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
               const orderRowStyle =
@@ -673,6 +791,7 @@ export default function Orders() {
                 order.status === "In Progress" ? "border-l-2 border-l-purple-500/60 bg-purple-500/[0.03] hover:bg-purple-500/[0.06]" :
                 order.status === "Completed" ? "border-l-2 border-l-emerald-500/60 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06]" :
                 order.status === "Paid Out" ? "border-l-2 border-l-cyan-500/40 opacity-60 hover:opacity-80" :
+                order.status === "Refunded" ? "border-l-2 border-l-orange-500/60 bg-orange-500/[0.03] hover:bg-orange-500/[0.06]" :
                 order.status === "Cancelled" ? "border-l-2 border-l-red-500/40 opacity-40 hover:opacity-65" :
                 order.status === "Need Replacement" ? "border-l-2 border-l-orange-500/60 bg-orange-500/[0.04] hover:bg-orange-500/[0.07]" :
                 "hover:bg-white/[0.03]";
@@ -904,6 +1023,13 @@ export default function Orders() {
                           setReplacementReason("");
                           return;
                         }
+                        if (val === "Refunded") {
+                          setRefundOrder(order);
+                          setRefundCustomer(order.customerPrice || "0");
+                          setRefundGrinder("0");
+                          setRefundCompany("0");
+                          return;
+                        }
                         statusMutation.mutate({ id: order.id, status: val });
                       }}
                     >
@@ -914,12 +1040,13 @@ export default function Orders() {
                         order.status === "Completed" ? "text-emerald-400" :
                         order.status === "Paid Out" ? "text-cyan-400" :
                         order.status === "Cancelled" ? "text-red-400" :
+                        order.status === "Refunded" ? "text-orange-400" :
                         "text-muted-foreground"
                       }`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {["Open", "Assigned", "In Progress", "Completed", "Paid Out", "Need Replacement", "Cancelled", "Bidding Closed"].map(s => (
+                        {["Open", "Assigned", "In Progress", "Completed", "Paid Out", "Need Replacement", "Refunded", "Cancelled", "Bidding Closed"].map(s => (
                           <SelectItem key={s} value={s}>{s}</SelectItem>
                         ))}
                       </SelectContent>
@@ -985,7 +1112,8 @@ export default function Orders() {
                   No orders yet. Orders are auto-imported from MGT Bot.
                 </TableCell>
               </TableRow>
-            )}
+            )
+            })()}
           </TableBody>
         </Table>
         </div>
@@ -1316,6 +1444,118 @@ export default function Orders() {
               {deleteRequestMutation.isPending ? "Submitting..." : "Submit Delete Request"}
             </Button>
             <p className="text-xs text-muted-foreground text-center">An owner must approve this request before the order is deleted.</p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    <Dialog open={!!refundOrder} onOpenChange={(open) => { if (!open) { setRefundOrder(null); setRefundCustomer(""); setRefundGrinder(""); setRefundCompany(""); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-orange-400" />
+            Process Refund
+          </DialogTitle>
+        </DialogHeader>
+        {refundOrder && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+              <p className="text-sm font-medium">{refundOrder.displayId || refundOrder.id}</p>
+              <p className="text-xs text-muted-foreground">
+                {services?.find(s => s.id === refundOrder.serviceId)?.name || refundOrder.serviceId}
+                {refundOrder.customerPrice && <span className="ml-2 text-emerald-400">${Number(refundOrder.customerPrice).toFixed(2)}</span>}
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-1 block">Refund to Customer</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={refundCustomer}
+                  onChange={(e) => setRefundCustomer(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-7 bg-background/50 border-white/10"
+                  data-testid="input-refund-customer"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Amount refunded back to the customer (deducted from company profit)</p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-1 block">Deducted from Grinder</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={refundGrinder}
+                  onChange={(e) => setRefundGrinder(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-7 bg-background/50 border-white/10"
+                  data-testid="input-refund-grinder"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Amount deducted from grinder's payout</p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-1 block">Absorbed by Company</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={refundCompany}
+                  onChange={(e) => setRefundCompany(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-7 bg-background/50 border-white/10"
+                  data-testid="input-refund-company"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Company's share of the refund cost</p>
+            </div>
+
+            {(Number(refundCustomer) > 0 || Number(refundGrinder) > 0 || Number(refundCompany) > 0) && (
+              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Customer Refund</span>
+                  <span className="text-orange-400">${Number(refundCustomer || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Grinder Deduction</span>
+                  <span className="text-red-400">${Number(refundGrinder || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Company Absorbs</span>
+                  <span className="text-amber-400">${Number(refundCompany || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between border-t border-white/[0.06] pt-1 font-medium">
+                  <span className="text-muted-foreground">Adjusted Profit</span>
+                  <span className={Number(refundCompany || 0) - Number(refundCustomer || 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                    ${(Number(refundCompany || 0) - Number(refundCustomer || 0)).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <Button
+              className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white shadow-lg shadow-orange-500/20"
+              disabled={refundMutation.isPending || (Number(refundCustomer || 0) === 0 && Number(refundGrinder || 0) === 0 && Number(refundCompany || 0) === 0)}
+              onClick={() => refundMutation.mutate({
+                id: refundOrder.id,
+                refundToCustomer: refundCustomer,
+                refundToGrinder: refundGrinder,
+                refundToCompany: refundCompany,
+              })}
+              data-testid="button-confirm-refund"
+            >
+              {refundMutation.isPending ? "Processing..." : "Confirm Refund"}
+            </Button>
           </div>
         )}
       </DialogContent>

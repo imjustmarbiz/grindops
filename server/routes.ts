@@ -1170,6 +1170,42 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/orders/:id/refund", requireStaff, async (req, res) => {
+    try {
+      const { refundToCustomer, refundToGrinder, refundToCompany } = req.body;
+      const order = await storage.getOrder(req.params.id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      const custRefund = parseFloat(refundToCustomer || "0");
+      const grinderRefund = parseFloat(refundToGrinder || "0");
+      const companyRefund = parseFloat(refundToCompany || "0");
+
+      const adjustedProfit = companyRefund - custRefund;
+
+      await storage.updateOrder(req.params.id, {
+        status: "Refunded",
+        completedAt: order.completedAt || new Date(),
+        refundToCustomer: String(custRefund.toFixed(2)),
+        refundToGrinder: String(grinderRefund.toFixed(2)),
+        refundToCompany: String(companyRefund.toFixed(2)),
+        companyProfit: String(adjustedProfit.toFixed(2)),
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order",
+        entityId: req.params.id,
+        action: "order_refunded",
+        actor: getActorName(req),
+        details: JSON.stringify({ refundToCustomer: custRefund, refundToGrinder: grinderRefund, refundToCompany: companyRefund, adjustedProfit }),
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.get(api.orders.suggestions.path, requireStaff, async (req, res) => {
     const suggestions = await storage.getSuggestionsForOrder(req.params.id);
     res.json(suggestions);
@@ -5937,6 +5973,21 @@ export async function registerRoutes(
           if (order && grinderPayNum > 0) {
             await storage.updateOrder(resolvedOrderId, { companyProfit: String(profit.toFixed(2)) });
           }
+
+          const repairBidId = `BID-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4)}`;
+          const repairBidDisplay = await generateBidDisplayId(resolvedOrderId);
+          await storage.createBid({
+            id: repairBidId,
+            displayId: repairBidDisplay,
+            orderId: resolvedOrderId,
+            grinderId: claim.grinderId,
+            bidAmount: grinderPay,
+            status: "Accepted",
+            proposalId: `repair-${claim.id}`,
+            proposalLink: null,
+            message: `Auto-created from ${repairType} repair (${claim.displayId || claim.id})`,
+          });
+          await storage.updateOrder(resolvedOrderId, { acceptedBidId: repairBidId });
 
           if (claim.grinderAmount && (isAddCompleted || claim.completedDateTime)) {
             const existingPayouts = (await storage.getPayoutRequests(claim.grinderId))

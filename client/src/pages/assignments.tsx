@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent, RefreshCw, ShieldCheck } from "lucide-react";
+import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, UserMinus, ArrowRight, Repeat, Percent, RefreshCw, ShieldCheck, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -156,6 +156,46 @@ export default function Assignments() {
 
   const { sortedItems: sortedAssignments, sortKey, sortDir, toggleSort } = useTableSort<Assignment>(assignments || []);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [grinderFilter, setGrinderFilter] = useState("all");
+
+  const filteredAssignments = useMemo(() => {
+    return sortedAssignments.filter((a) => {
+      if (statusFilter !== "all") {
+        if (statusFilter === "replaced") {
+          if (!a.wasReassigned) return false;
+        } else if (statusFilter === "active") {
+          if (a.status !== "Active") return false;
+        } else if (statusFilter === "completed") {
+          if (a.status !== "Completed") return false;
+        }
+      }
+
+      if (grinderFilter !== "all" && a.grinderId !== grinderFilter) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const grinder = (grinders || []).find((g) => g.id === a.grinderId);
+        const order = (orders || []).find((o) => o.id === a.orderId);
+        const grinderName = grinder?.name?.toLowerCase() || "";
+        const assignmentId = a.id.toLowerCase();
+        const orderId = a.orderId.toLowerCase();
+        const orderRef = order?.mgtOrderNumber?.toString().toLowerCase() || "";
+        if (
+          !assignmentId.includes(q) &&
+          !orderId.includes(q) &&
+          !grinderName.includes(q) &&
+          !orderRef.includes(q)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [sortedAssignments, searchQuery, statusFilter, grinderFilter, grinders, orders]);
+
   const availableGrinders = (grinders || []).filter(g => {
     if (!selectedAssignment) return true;
     return g.id !== selectedAssignment.grinderId && g.activeOrders < g.capacity;
@@ -202,6 +242,48 @@ export default function Assignments() {
       </FadeInUp>
 
       <FadeInUp>
+      <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by ID, order, grinder..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-background/50 border-white/10"
+              data-testid="input-search-assignments"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] bg-background/50 border-white/10" data-testid="select-status-filter">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="replaced">Replaced</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={grinderFilter} onValueChange={setGrinderFilter}>
+            <SelectTrigger className="w-[180px] bg-background/50 border-white/10" data-testid="select-grinder-filter">
+              <SelectValue placeholder="Grinder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Grinders</SelectItem>
+              {(grinders || []).map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground whitespace-nowrap" data-testid="text-showing-count">
+            Showing {filteredAssignments.length} of {(assignments || []).length} assignments
+          </span>
+        </div>
+      </Card>
+      </FadeInUp>
+
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1400px]">
@@ -225,7 +307,7 @@ export default function Assignments() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={13} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : sortedAssignments && sortedAssignments.length > 0 ? sortedAssignments.map((a: Assignment) => {
+            ) : filteredAssignments && filteredAssignments.length > 0 ? filteredAssignments.map((a: Assignment) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === a.grinderId);
               const originalGrinder = a.originalGrinderId ? (grinders || []).find((g: Grinder) => g.id === a.originalGrinderId) : null;
               const order = (orders || []).find((o: Order) => o.id === a.orderId);

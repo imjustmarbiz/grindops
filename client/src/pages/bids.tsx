@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2, AlertTriangle } from "lucide-react";
+import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2, AlertTriangle, Search } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { Bid, Order, Grinder, Service } from "@shared/schema";
 
@@ -34,6 +34,9 @@ export default function Bids() {
   const serviceNameMap = new Map((services || []).map(s => [s.id, s.name]));
 
   const [filterOrderId, setFilterOrderId] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterGrinderId, setFilterGrinderId] = useState<string>("all");
   const [editingBid, setEditingBid] = useState<Bid | null>(null);
   const [editForm, setEditForm] = useState({ bidAmount: "", timeline: "", canStart: "", notes: "" });
   const [addBidOpen, setAddBidOpen] = useState(false);
@@ -227,7 +230,35 @@ export default function Bids() {
     }
   };
 
-  const filteredBids = filterOrderId === "all" ? bids : bids?.filter(b => b.orderId === filterOrderId);
+  const filteredBids = useMemo(() => {
+    let result = bids || [];
+    if (filterOrderId !== "all") {
+      result = result.filter(b => b.orderId === filterOrderId);
+    }
+    if (filterStatus !== "all") {
+      result = result.filter(b => {
+        if (filterStatus === "Rejected") return b.status === "Rejected" || b.status === "Denied";
+        return b.status === filterStatus;
+      });
+    }
+    if (filterGrinderId !== "all") {
+      result = result.filter(b => b.grinderId === filterGrinderId);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(b => {
+        const grinder = (grinders || []).find((g: Grinder) => g.id === b.grinderId);
+        const order = (orders || []).find((o: Order) => o.id === b.orderId);
+        const grinderName = grinder?.name?.toLowerCase() || "";
+        const grinderUsername = grinder?.discordUsername?.toLowerCase() || "";
+        const orderDisplay = order?.mgtOrderNumber?.toString().toLowerCase() || "";
+        const bidDisplay = b.mgtProposalId?.toString().toLowerCase() || b.id.toLowerCase();
+        const bidMessage = b.notes?.toLowerCase() || "";
+        return grinderName.includes(q) || grinderUsername.includes(q) || orderDisplay.includes(q) || bidDisplay.includes(q) || bidMessage.includes(q);
+      });
+    }
+    return result;
+  }, [bids, filterOrderId, filterStatus, filterGrinderId, searchQuery, grinders, orders]);
   const { sortedItems: sortedBids, sortKey, sortDir, toggleSort } = useTableSort<Bid>(filteredBids || []);
   const pendingCount = bids?.filter(b => b.status === "Pending").length || 0;
   const acceptedCount = bids?.filter(b => b.status === "Accepted").length || 0;
@@ -304,38 +335,76 @@ export default function Bids() {
       </div>
       </FadeInUp>
 
-      {ordersWithBids.length > 1 && (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
             <Filter className="w-4 h-4" />
-            <span>Filter by Order:</span>
+            <span>Filters:</span>
           </div>
-          <Select value={filterOrderId} onValueChange={setFilterOrderId}>
-            <SelectTrigger className="w-56 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-order">
-              <SelectValue placeholder="All Orders" />
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search grinder, order, bid, message..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-64 bg-white/[0.03] border-white/[0.08]"
+              data-testid="input-search-bids"
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-40 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-status">
+              <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
-              <SelectItem value="all" data-testid="select-filter-all">All Orders ({bids?.length || 0} bids)</SelectItem>
-              {ordersWithBids.map(o => (
-                <SelectItem key={o.orderId} value={o.orderId} data-testid={`select-filter-order-${o.orderId}`}>
-                  Order {o.label} ({o.bidCount} {o.bidCount === 1 ? "bid" : "bids"})
-                </SelectItem>
-              ))}
+              <SelectItem value="all" data-testid="select-filter-status-all">All Statuses</SelectItem>
+              <SelectItem value="Pending" data-testid="select-filter-status-pending">Pending</SelectItem>
+              <SelectItem value="Accepted" data-testid="select-filter-status-accepted">Accepted</SelectItem>
+              <SelectItem value="Rejected" data-testid="select-filter-status-rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
-          {filterOrderId !== "all" && (
-            <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-foreground"
-              onClick={() => setFilterOrderId("all")} data-testid="button-clear-filter">
-              Clear
+          <Select value={filterGrinderId} onValueChange={setFilterGrinderId}>
+            <SelectTrigger className="w-48 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-grinder">
+              <SelectValue placeholder="All Grinders" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+              <SelectItem value="all" data-testid="select-filter-grinder-all">All Grinders</SelectItem>
+              {Array.from(new Set(bids?.map(b => b.grinderId) || [])).map(gId => {
+                const g = (grinders || []).find((gr: Grinder) => gr.id === gId);
+                return (
+                  <SelectItem key={gId} value={gId} data-testid={`select-filter-grinder-${gId}`}>
+                    {g?.name || gId}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+          {ordersWithBids.length > 1 && (
+            <Select value={filterOrderId} onValueChange={setFilterOrderId}>
+              <SelectTrigger className="w-56 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-order">
+                <SelectValue placeholder="All Orders" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0a0a0f] border-white/[0.08]">
+                <SelectItem value="all" data-testid="select-filter-all">All Orders ({bids?.length || 0} bids)</SelectItem>
+                {ordersWithBids.map(o => (
+                  <SelectItem key={o.orderId} value={o.orderId} data-testid={`select-filter-order-${o.orderId}`}>
+                    Order {o.label} ({o.bidCount} {o.bidCount === 1 ? "bid" : "bids"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {(filterOrderId !== "all" || filterStatus !== "all" || filterGrinderId !== "all" || searchQuery.trim()) && (
+            <Button variant="ghost" size="sm" className="text-muted-foreground"
+              onClick={() => { setFilterOrderId("all"); setFilterStatus("all"); setFilterGrinderId("all"); setSearchQuery(""); }}
+              data-testid="button-clear-filter">
+              Clear All
             </Button>
           )}
-          {filterOrderId !== "all" && (
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1">
+          {(filteredBids?.length || 0) !== (bids?.length || 0) && (
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1" data-testid="badge-filter-count">
               Showing {filteredBids?.length || 0} of {bids?.length || 0} bids
             </Badge>
           )}
-        </div>
-      )}
+      </div>
 
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-200px)]">

@@ -332,7 +332,20 @@ export default function StaffOrderClaims() {
     refetchInterval: 15000,
   });
 
-  const getStaffField = (claimId: string): StaffFields => staffFields[claimId] || { customerPrice: "", platform: "", gamertag: "", serviceId: "", enableDailyCompliance: false };
+  const getStaffField = (claimId: string): StaffFields => {
+    if (staffFields[claimId]) return staffFields[claimId];
+    const claim = claims.find(c => c.id === claimId);
+    if (!claim) return { customerPrice: "", platform: "", gamertag: "", serviceId: "", enableDailyCompliance: false };
+    let fixData: Record<string, any> = {};
+    try { fixData = JSON.parse(claim.fixFields || "{}"); } catch {}
+    return {
+      customerPrice: fixData.customerPrice || (claim as any).customerPrice || "",
+      platform: fixData.platform || "",
+      gamertag: fixData.gamertag || "",
+      serviceId: claim.serviceId || "",
+      enableDailyCompliance: false,
+    };
+  };
   const setStaffField = (claimId: string, field: keyof StaffFields, value: string | boolean) => {
     setStaffFields(prev => ({
       ...prev,
@@ -584,7 +597,7 @@ export default function StaffOrderClaims() {
                         <div className="flex flex-col gap-2 shrink-0 w-full sm:w-72">
                           {rt !== "fix_order" && (
                             <div className="border border-white/[0.06] rounded-lg p-3 bg-white/[0.02] space-y-2">
-                              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Staff Fill-In</p>
+                              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-medium">{getStaffField(claim.id).customerPrice || getStaffField(claim.id).platform || getStaffField(claim.id).gamertag ? "Staff Review (Pre-filled)" : "Staff Fill-In"}</p>
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
                                   <label className="text-[10px] text-muted-foreground mb-0.5 block">Customer Price</label>

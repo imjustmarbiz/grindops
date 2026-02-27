@@ -132,9 +132,15 @@ export default function BusinessPerformance() {
   const normalGrinderCost = normalAssignments.reduce((s, a) => s + parseFloat(a.grinderEarnings || "0"), 0);
   const totalGrinderCost = normalGrinderCost + replacementOverhead;
 
-  const totalCompanyProfit = totalRevenue - totalGrinderCost;
+  const refundedOrders = filteredOrders.filter(o => o.status === "Refunded");
+  const totalRefundToCustomer = refundedOrders.reduce((s, o) => s + parseFloat((o as any).refundToCustomer || "0"), 0);
+  const totalRefundToGrinder = refundedOrders.reduce((s, o) => s + parseFloat((o as any).refundToGrinder || "0"), 0);
+  const totalRefundToCompany = refundedOrders.reduce((s, o) => s + parseFloat((o as any).refundToCompany || "0"), 0);
+  const totalRefunds = totalRefundToCustomer;
+
+  const totalCompanyProfit = totalRevenue - totalGrinderCost - totalRefundToCustomer;
   const avgMarginPct = totalRevenue > 0 ? (totalCompanyProfit / totalRevenue) * 100 : 0;
-  const completedOrders = filteredOrders.filter(o => o.status === "Completed" || o.status === "Paid Out").length;
+  const completedOrders = filteredOrders.filter(o => o.status === "Completed" || o.status === "Paid Out" || o.status === "Refunded").length;
   const completionRate = filteredOrders.length > 0 ? (completedOrders / filteredOrders.length) * 100 : 0;
   const avgOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
   const avgGrinderPay = filteredAssignments.length > 0 ? totalGrinderCost / filteredAssignments.length : 0;
@@ -390,6 +396,10 @@ export default function BusinessPerformance() {
               subtitle={`Avg pay: ${formatCurrency(avgGrinderPay)}`} />
             <KpiCard title="Paid Out" value={formatCurrency(totalPaidOut)} icon={Wallet} iconColor="bg-pink-500/20 text-pink-400"
               subtitle={`${formatCurrency(totalPending)} pending${totalDisputed > 0 ? ` · ${formatCurrency(totalDisputed)} disputed` : ""}`} />
+            {totalRefunds > 0 && (
+              <KpiCard title="Refunds" value={formatCurrency(totalRefunds)} icon={ArrowDownRight} iconColor="bg-orange-500/20 text-orange-400"
+                subtitle={`${refundedOrders.length} order${refundedOrders.length !== 1 ? "s" : ""} refunded`} />
+            )}
           </div>
         </FadeInUp>
 
