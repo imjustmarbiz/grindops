@@ -35,9 +35,9 @@ const severityIconColors: Record<string, string> = {
 
 const notifTypeToRoute: Record<string, string> = {
   new_order: "/grinder/orders",
-  bid_accepted: "/grinder/orders",
-  bid_rejected: "/grinder/orders",
-  order_assigned: "/grinder/orders",
+  bid_accepted: "/grinder/assignments",
+  bid_rejected: "/grinder/bids",
+  order_assigned: "/grinder/assignments",
   order_update: "/grinder/orders",
   payout_approved: "/grinder/payouts",
   payout_rejected: "/grinder/payouts",

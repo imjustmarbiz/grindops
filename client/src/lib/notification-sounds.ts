@@ -74,6 +74,9 @@ function silentWav(): string {
 
 const soundDefs: Record<string, { freqs: number[]; durs: number[]; delays: number[]; vol: number }> = {
   new_order: { freqs: [880, 1108.73, 1318.51], durs: [0.15, 0.15, 0.25], delays: [0, 0.12, 0.24], vol: 0.45 },
+  bid_accepted: { freqs: [523.25, 659.25, 783.99, 1046.5, 1318.51], durs: [0.1, 0.1, 0.1, 0.12, 0.25], delays: [0, 0.08, 0.16, 0.24, 0.34], vol: 0.5 },
+  bid_denied: { freqs: [440, 349.23, 293.66], durs: [0.2, 0.2, 0.35], delays: [0, 0.18, 0.36], vol: 0.4 },
+  bid_rejected: { freqs: [440, 349.23, 293.66], durs: [0.2, 0.2, 0.35], delays: [0, 0.18, 0.36], vol: 0.4 },
   strike: { freqs: [330, 277.18, 220], durs: [0.3, 0.3, 0.5], delays: [0, 0.25, 0.5], vol: 0.35 },
   payout: { freqs: [523.25, 659.25, 783.99, 1046.5], durs: [0.12, 0.12, 0.12, 0.2], delays: [0, 0.1, 0.2, 0.3], vol: 0.4 },
   alert: { freqs: [800, 600, 800], durs: [0.15, 0.15, 0.2], delays: [0, 0.18, 0.36], vol: 0.4 },
