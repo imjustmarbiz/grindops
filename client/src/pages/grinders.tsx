@@ -342,6 +342,31 @@ function ScorecardContent({ grinder, handleStrikeChange, onUpdate }: { grinder: 
                 <span className="text-sm">@{grinder.discordUsername}</span>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-16 shrink-0">Status</span>
+              <Badge variant="outline" className={`text-xs ${
+                grinder.availabilityStatus === "available" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
+                grinder.availabilityStatus === "busy" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
+                grinder.availabilityStatus === "away" ? "border-orange-500/30 text-orange-400 bg-orange-500/10" :
+                grinder.availabilityStatus === "offline" ? "border-white/10 text-white/40 bg-white/5" :
+                grinder.availabilityStatus === "removed" ? "border-red-500/30 text-red-400 bg-red-500/10" :
+                "border-white/10 text-white/40"
+              }`} data-testid="badge-availability-status">
+                {(grinder.availabilityStatus || "unknown").charAt(0).toUpperCase() + (grinder.availabilityStatus || "unknown").slice(1)}
+              </Badge>
+              {grinder.capacity != null && (grinder as any).activeOrders >= grinder.capacity && (
+                <Badge variant="outline" className="text-[10px] border-red-500/20 text-red-400 bg-red-500/10">At Limit</Badge>
+              )}
+              {(grinder as any).availabilityUpdatedAt && (
+                <span className="text-[10px] text-white/25">{new Date((grinder as any).availabilityUpdatedAt).toLocaleDateString()}</span>
+              )}
+            </div>
+            {(grinder as any).availabilityNote && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-16 shrink-0"></span>
+                <span className="text-xs text-white/40 italic" data-testid="text-availability-note">{(grinder as any).availabilityNote}</span>
+              </div>
+            )}
             <div className="flex items-start gap-2 pt-1 border-t border-white/[0.06]">
               <span className="text-xs text-muted-foreground w-16 shrink-0 mt-0.5">Notes</span>
               {grinder.notes ? (
@@ -874,7 +899,17 @@ export default function Grinders() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      {categoryIcon(g.displayRole || g.category || "Grinder")}
+                      <div className="relative">
+                        {categoryIcon(g.displayRole || g.category || "Grinder")}
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-background ${
+                          g.availabilityStatus === "available" ? "bg-emerald-400" :
+                          g.availabilityStatus === "busy" ? "bg-amber-400" :
+                          g.availabilityStatus === "away" ? "bg-orange-400" :
+                          g.availabilityStatus === "offline" ? "bg-zinc-500" :
+                          g.availabilityStatus === "removed" ? "bg-red-400" :
+                          "bg-white/20"
+                        }`} />
+                      </div>
                       <div className="min-w-0">
                         <span className="font-medium text-sm block truncate" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
                         {g.discordUsername && <p className="text-[10px] text-muted-foreground truncate">@{g.discordUsername}</p>}
@@ -945,7 +980,17 @@ export default function Grinders() {
                   <TableRow key={g.id} className={`${rowBgColor(g.displayRole || g.category || "Grinder")} cursor-pointer border-white/[0.04] transition-colors`} onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {categoryIcon(g.displayRole || g.category || "Grinder")}
+                        <div className="relative">
+                          {categoryIcon(g.displayRole || g.category || "Grinder")}
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-background ${
+                            g.availabilityStatus === "available" ? "bg-emerald-400" :
+                            g.availabilityStatus === "busy" ? "bg-amber-400" :
+                            g.availabilityStatus === "away" ? "bg-orange-400" :
+                            g.availabilityStatus === "offline" ? "bg-zinc-500" :
+                            g.availabilityStatus === "removed" ? "bg-red-400" :
+                            "bg-white/20"
+                          }`} />
+                        </div>
                         <div>
                           <span className="font-medium" data-testid={`text-grinder-name-${g.id}`}>{g.name}</span>
                           {g.discordUsername && <p className="text-xs text-muted-foreground">@{g.discordUsername}</p>}

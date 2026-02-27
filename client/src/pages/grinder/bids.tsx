@@ -140,7 +140,7 @@ export default function GrinderBids() {
                           <span className="font-medium text-white/60">Bid: ${b.bidAmount}</span>
                           {b.platform && <span>• {b.platform}</span>}
                           {b.complexity && <span>• Complexity: {b.complexity}</span>}
-                          {b.timeline && <span>• Timeline: {b.timeline}h</span>}
+                          {b.timeline && <span>• Timeline: {b.timeline}</span>}
                           {b.canStart && <span>• Start: {b.canStart}</span>}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-white/25 mt-0.5 flex-wrap">
