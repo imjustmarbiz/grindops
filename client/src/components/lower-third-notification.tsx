@@ -181,6 +181,7 @@ export function LowerThirdNotifications() {
                 </p>
                 <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-1">
                   <p>🔔 New Order — rising ding</p>
+                  <p>✅ Assigned — triumphant chime</p>
                   <p>⚠️ Strike — descending warning</p>
                   <p>💰 Payout — ascending chime</p>
                   <p>📨 Message — soft pop</p>
