@@ -191,7 +191,7 @@ export default function GrinderBids() {
                               data-testid={`button-join-ticket-${b.id}`}
                             >
                               <a href={b.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-3 h-3" /> Join Ticket
+                                <ExternalLink className="w-3 h-3" /> Discord Ticket
                               </a>
                             </Button>
                           )}

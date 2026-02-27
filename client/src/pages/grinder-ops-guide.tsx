@@ -292,7 +292,7 @@ const slides: Slide[] = [
       "Use the status filter tabs to find specific bids",
       "For pending bids: click the edit icon to adjust your offer",
       "When a bid is accepted: enter the Discord ticket channel ID when prompted",
-      "For accepted bids: click 'Join Ticket' to open the Discord channel",
+      "For accepted bids: click 'Discord Ticket' to open the Discord channel",
       "Review lost bids to learn from competitive pricing patterns",
     ],
     tip: "When your bid is accepted, the ticket link prompt appears automatically. Have the Discord channel ID ready for a smooth workflow.",
@@ -307,7 +307,7 @@ const slides: Slide[] = [
       {
         heading: "Assignment Card Actions (In Order)",
         points: [
-          "1. Join Ticket \u2014 Open the Discord ticket channel",
+          "1. Discord Ticket \u2014 Open the Discord ticket channel",
           "2. Start Order \u2014 Marks the order as 'In Progress' (requires login first)",
           "3. Log In \u2014 Click when starting a gaming session (shows platform icon)",
           "4. Log Off \u2014 Click when ending a session",
@@ -338,7 +338,7 @@ const slides: Slide[] = [
     steps: [
       "Open 'My Orders' from the sidebar",
       "Filter by status: In Progress, Needs Payout, Payout Pending, Paid Out",
-      "For a new assignment: Join Ticket > Accept Ticket > Log In > Start Order",
+      "For a new assignment: Discord Ticket > Accept Ticket > Log In > Start Order",
       "While working: submit regular updates and log in/off for each session",
       "When done: click 'Mark Complete', upload proof video, enter payout info",
       "After completion: track your payout status on the Payouts page",

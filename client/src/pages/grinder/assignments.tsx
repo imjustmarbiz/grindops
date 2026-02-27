@@ -291,7 +291,7 @@ export default function GrinderAssignments() {
                         disabled={!a.hasTicketAck}
                       >
                         <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-3 h-3" /> Join Ticket
+                          <ExternalLink className="w-3 h-3" /> Discord Ticket
                         </a>
                       </Button>
                     )}
