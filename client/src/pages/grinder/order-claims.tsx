@@ -17,6 +17,13 @@ import {
 
 type RepairType = "fix_order" | "claim_missing" | "add_completed";
 
+function localDateTimeToISO(val: string): string {
+  if (!val) return val;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  return d.toISOString();
+}
+
 function statusBadge(status: string) {
   if (status === "pending") return <Badge className="bg-amber-500/20 text-amber-400 border-0">Pending</Badge>;
   if (status === "approved") return <Badge className="bg-emerald-500/20 text-emerald-400 border-0">Approved</Badge>;
@@ -95,7 +102,7 @@ export default function GrinderOrderClaims() {
         return;
       }
       const fixFields: any = { description: fixDescription.trim() };
-      if (fixDueDate) fixFields.dueDate = fixDueDate;
+      if (fixDueDate) fixFields.dueDate = localDateTimeToISO(fixDueDate);
       if (fixGrinderAmount) fixFields.grinderAmount = fixGrinderAmount;
       if (fixServiceId) fixFields.serviceId = fixServiceId;
       submitMutation.mutate({
@@ -124,9 +131,9 @@ export default function GrinderOrderClaims() {
         serviceId: serviceId || undefined,
         proofLinks: links,
         proofNotes: proofNotes.trim() || undefined,
-        dueDate: dueDate || undefined,
-        startDateTime: startDateTime || undefined,
-        completedDateTime: completedDateTime || undefined,
+        dueDate: dueDate ? localDateTimeToISO(dueDate) : undefined,
+        startDateTime: startDateTime ? localDateTimeToISO(startDateTime) : undefined,
+        completedDateTime: completedDateTime ? localDateTimeToISO(completedDateTime) : undefined,
         grinderAmount: grinderAmount || undefined,
         payoutPlatform: payoutPlatform || undefined,
         payoutDetails: payoutDetails || undefined,

@@ -19,6 +19,13 @@ import { usePlatforms } from "@/hooks/use-platforms";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
+function localDateTimeToISO(val: string): string {
+  if (!val) return val;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  return d.toISOString();
+}
+
 function statusBadge(status: string) {
   if (status === "pending") return <Badge className="bg-amber-500/20 text-amber-400 border-0">Pending</Badge>;
   if (status === "approved") return <Badge className="bg-emerald-500/20 text-emerald-400 border-0">Approved</Badge>;
@@ -177,9 +184,9 @@ function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[
       customerPrice: customerPrice || undefined,
       platform: platform || undefined,
       gamertag: gamertag || undefined,
-      completedDateTime: completedDateTime || undefined,
-      startDateTime: startDateTime || undefined,
-      dueDate: dueDate || undefined,
+      completedDateTime: completedDateTime ? localDateTimeToISO(completedDateTime) : undefined,
+      startDateTime: startDateTime ? localDateTimeToISO(startDateTime) : undefined,
+      dueDate: dueDate ? localDateTimeToISO(dueDate) : undefined,
       payoutDate: payoutDate || undefined,
       proofNotes: proofNotes || undefined,
     });

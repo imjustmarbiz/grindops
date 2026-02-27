@@ -6055,7 +6055,7 @@ export async function registerRoutes(
                 ? `A completed order has been backlogged to your profile. Order: ${resolvedOrderId}. Earnings: $${parseFloat(claim.grinderAmount || "0").toFixed(2)}. Your stats have been updated.`
                 : `A missing order (${resolvedOrderId}) has been claimed and linked to your profile.`,
               type: "success",
-              roleScope: null,
+              roleScope: "all",
               userId: repairGrinder.discordUserId,
               readBy: [],
             });
