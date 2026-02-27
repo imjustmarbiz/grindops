@@ -9,10 +9,10 @@ import { useLocation } from "wouter";
 
 function inferLinkUrl(title: string, body: string): string | null {
   const text = `${title} ${body}`.toLowerCase();
-  if (text.includes("order") && (text.includes("available") || text.includes("open") || text.includes("bidding"))) return "/grinder/orders";
-  if (text.includes("bid") && (text.includes("accepted") || text.includes("won"))) return "/grinder/assignments";
-  if (text.includes("bid")) return "/grinder/bids";
+  if (text.includes("bid") && (text.includes("accepted") || text.includes("won") || text.includes("assigned"))) return "/grinder/assignments";
   if (text.includes("assignment") || text.includes("assigned")) return "/grinder/assignments";
+  if (text.includes("order") && (text.includes("available") || text.includes("open") || text.includes("bidding"))) return "/grinder/orders";
+  if (text.includes("bid")) return "/grinder/bids";
   if (text.includes("payout") || text.includes("payment")) return "/grinder/payouts";
   if (text.includes("strike") || text.includes("warning")) return "/grinder/strikes";
   if (text.includes("review")) return "/grinder/reviews";
