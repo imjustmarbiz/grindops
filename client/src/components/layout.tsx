@@ -2,7 +2,8 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
+import { Moon, Sun, LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -253,9 +254,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return !readBy.includes(userId);
   }).length;
 
+  const { theme, setTheme } = useTheme();
+
   return (
     <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30">
+      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30 text-foreground">
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full relative">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
@@ -263,7 +266,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
           
           <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-6 backdrop-blur-md bg-background/50 relative z-10">
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-2 sm:gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="hover-elevate hover:bg-white/10"
+                data-testid="button-toggle-theme"
+              >
+                {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"

@@ -6,9 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
-import { useEffect } from "react";
-import { Construction, ShieldAlert } from "lucide-react";
+import { Construction, ShieldAlert, Loader2 } from "lucide-react";
 import { GRINDER_ROLES } from "@shared/schema";
+import { ThemeProvider } from "@/hooks/use-theme";
 
 import AuthPage from "@/pages/auth";
 import StaffOverview from "@/pages/staff/overview";
@@ -60,7 +60,6 @@ import StaffOverviewPage from "@/pages/staff/staff-overview";
 import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
 import StaffOrderUpdates from "@/pages/staff/order-updates";
-import { Loader2 } from "lucide-react";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 
@@ -277,17 +276,15 @@ function Router() {
 }
 
 function App() {
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="grindops-theme">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
