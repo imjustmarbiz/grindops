@@ -337,7 +337,7 @@ export default function GrinderOrderClaims() {
                     data-testid="input-claim-proof-links"
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className={`grid grid-cols-1 gap-3 ${repairType === "add_completed" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                   <div>
                     <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
                       <CalendarDays className="w-3.5 h-3.5 text-orange-400" />
@@ -364,19 +364,21 @@ export default function GrinderOrderClaims() {
                       data-testid="input-claim-start-date"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      Completed Date/Time {repairType === "add_completed" && <span className="text-red-400">*</span>}
-                    </label>
-                    <Input
-                      type="datetime-local"
-                      value={completedDateTime}
-                      onChange={(e) => setCompletedDateTime(e.target.value)}
-                      className="bg-white/[0.03] border-white/10"
-                      data-testid="input-claim-completed-date"
-                    />
-                  </div>
+                  {repairType === "add_completed" && (
+                    <div>
+                      <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        Completed Date/Time <span className="text-red-400">*</span>
+                      </label>
+                      <Input
+                        type="datetime-local"
+                        value={completedDateTime}
+                        onChange={(e) => setCompletedDateTime(e.target.value)}
+                        className="bg-white/[0.03] border-white/10"
+                        data-testid="input-claim-completed-date"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="border-t border-white/[0.06] pt-4">
                   <h4 className={`text-xs font-medium uppercase tracking-wider mb-3 flex items-center gap-1.5 ${isElite ? "text-cyan-400" : "text-amber-400"}`}>

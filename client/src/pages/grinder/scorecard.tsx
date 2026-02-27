@@ -92,6 +92,7 @@ export default function GrinderScorecard() {
   const strikeLogs: any[] = scorecardData?.strikeLogs || [];
   const payoutSummary = scorecardData?.payoutSummary || {};
   const orderHistory: any[] = scorecardData?.orderHistory || [];
+  const tierThresholds: any[] = scorecardData?.tierThresholds || [];
 
   const qualityScore = freshGrinder.avgQualityRating != null ? Number(freshGrinder.avgQualityRating) : 0;
   const onTimeRate = freshGrinder.onTimeRate != null ? Number(freshGrinder.onTimeRate) : 0;
@@ -102,7 +103,8 @@ export default function GrinderScorecard() {
   const activeOrders = freshGrinder.activeOrders || 0;
   const capacity = freshGrinder.capacity || 0;
   const totalEarnings = freshGrinder.totalEarnings != null ? Number(freshGrinder.totalEarnings) : 0;
-  const tier = freshGrinder.tier || "Bronze";
+  const completedOrders = freshGrinder.completedOrders || 0;
+  const tier = freshGrinder.tier || "New";
 
   const grade = getGradeLetter(qualityScore);
 
@@ -116,6 +118,15 @@ export default function GrinderScorecard() {
   const tierIndex = TIER_ORDER.indexOf(tier);
   const nextTier = tierIndex < TIER_ORDER.length - 1 ? TIER_ORDER[tierIndex + 1] : null;
   const tierProgress = tierIndex >= 0 ? Math.min(((tierIndex) / (TIER_ORDER.length - 1)) * 100, 100) : 0;
+
+  const nextTierReqs = nextTier ? tierThresholds.find((t: any) => t.tier === nextTier) : null;
+  const tierProgressMetrics = nextTierReqs ? [
+    { label: "Completed Orders", current: completedOrders, required: nextTierReqs.minCompleted, unit: "" },
+    { label: "Quality Score", current: Math.round(qualityScore), required: nextTierReqs.minQuality, unit: "%" },
+    { label: "Win Rate", current: Math.round(winRate), required: nextTierReqs.minWinRate, unit: "%" },
+    { label: "On-Time Rate", current: Math.round(onTimeRate), required: nextTierReqs.minOnTime, unit: "%" },
+    { label: "Total Earnings", current: totalEarnings, required: nextTierReqs.minEarnings, unit: "$", isCurrency: true },
+  ] : [];
 
   const totalPaidOut = payoutSummary.totalPaidOut || 0;
   const totalPending = payoutSummary.totalPending || 0;
@@ -238,6 +249,56 @@ export default function GrinderScorecard() {
                   <span className={`text-[9px] font-medium ${tierIndex === i ? getTierColor(t) : "text-white/40"}`}>{t}</span>
                 </div>
               ))}
+            </div>
+
+            {nextTierReqs && tierProgressMetrics.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                <p className="text-xs font-medium text-white/50 mb-2.5">Requirements for <span className={getTierColor(nextTier!)}>{nextTier}</span></p>
+                <div className="space-y-2">
+                  {tierProgressMetrics.map((m, i) => {
+                    const met = m.current >= m.required;
+                    const pct = Math.min((m.current / m.required) * 100, 100);
+                    const displayCurrent = (m as any).isCurrency ? `$${m.current.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `${m.current}${m.unit}`;
+                    const displayRequired = (m as any).isCurrency ? `$${m.required.toLocaleString()}` : `${m.required}${m.unit}`;
+                    return (
+                      <div key={i} className="flex items-center gap-3" data-testid={`tier-req-${i}`}>
+                        <div className="w-2.5 h-2.5 shrink-0">
+                          {met ? <CheckCircle className="w-2.5 h-2.5 text-emerald-400" /> : <div className="w-2.5 h-2.5 rounded-full border border-white/20" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[11px] text-white/50">{m.label}</span>
+                            <span className={`text-[11px] font-medium ${met ? "text-emerald-400" : "text-white/70"}`}>
+                              {displayCurrent} / {displayRequired}
+                            </span>
+                          </div>
+                          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${met ? "bg-emerald-500" : "bg-white/20"}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-white/30 mt-2.5">
+                  Meet all 5 requirements to advance. {tierProgressMetrics.filter(m => m.current >= m.required).length}/{tierProgressMetrics.length} met
+                </p>
+              </div>
+            )}
+
+            {tier === "Elite" && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                <p className="text-xs text-cyan-400/80 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  You've reached the highest tier. Keep up the great work!
+                </p>
+              </div>
+            )}
+
+            <div className="mt-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-[10px] text-white/30 leading-relaxed">
+                <span className="text-white/50 font-medium">Tier vs. Grinder Role:</span> Your <span className="text-white/50">tier</span> (New through Elite) is earned automatically based on performance metrics like completed orders, quality score, win rate, on-time delivery, and earnings. Your <span className="text-white/50">grinder role</span> (shown in your profile) is a tag assigned by staff based on your specialization or team role — it doesn't affect tier progress.
+              </p>
             </div>
           </div>
         </CardContent>

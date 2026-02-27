@@ -699,7 +699,11 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Service</label>
-              <Select value={manualOrderService} onValueChange={setManualOrderService}>
+              <Select value={manualOrderService} onValueChange={(val) => {
+                setManualOrderService(val);
+                const svc = allServices.find(s => s.id === val);
+                if (svc?.defaultComplexity) setManualOrderComplexity(String(svc.defaultComplexity));
+              }}>
                 <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-manual-service">
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>

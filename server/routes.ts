@@ -586,6 +586,9 @@ export async function registerRoutes(
       if (!input.orderBrief && !input.discordMessageId) {
         const allServices = await storage.getServices();
         const svc = allServices.find((s: any) => s.id === input.serviceId);
+        if (svc?.defaultComplexity && (!input.complexity || input.complexity === 1)) {
+          (input as any).complexity = svc.defaultComplexity;
+        }
         const briefLines: string[] = [];
         if (svc) briefLines.push(`**Service:** ${svc.name.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}`);
         if (input.platform) briefLines.push(`**Platform:** ${input.platform}`);
@@ -4334,8 +4337,17 @@ export async function registerRoutes(
         return order && (order.status === "Completed" || order.status === "Paid Out");
       });
 
+      const tierThresholds = [
+        { tier: "Elite",   minCompleted: 75, minQuality: 90, minWinRate: 65, minOnTime: 90, minEarnings: 5000 },
+        { tier: "Diamond", minCompleted: 50, minQuality: 85, minWinRate: 55, minOnTime: 85, minEarnings: 2500 },
+        { tier: "Gold",    minCompleted: 25, minQuality: 75, minWinRate: 45, minOnTime: 75, minEarnings: 1000 },
+        { tier: "Silver",  minCompleted: 10, minQuality: 65, minWinRate: 35, minOnTime: 65, minEarnings: 300 },
+        { tier: "Bronze",  minCompleted: 3,  minQuality: 50, minWinRate: 20, minOnTime: 50, minEarnings: 50 },
+      ];
+
       res.json({
         grinder: myGrinder,
+        tierThresholds,
         recentReports: approvedReports,
         checkpointCompliance,
         orderLogs: enrichedLogs,
