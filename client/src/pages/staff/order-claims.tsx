@@ -125,6 +125,7 @@ type StaffFields = {
   platform: string;
   gamertag: string;
   serviceId: string;
+  enableDailyCompliance: boolean;
 };
 
 function StaffRepairForm({ services, grinders, onSuccess }: { services: Service[]; grinders: Grinder[]; onSuccess: () => void }) {
@@ -331,8 +332,8 @@ export default function StaffOrderClaims() {
     refetchInterval: 15000,
   });
 
-  const getStaffField = (claimId: string): StaffFields => staffFields[claimId] || { customerPrice: "", platform: "", gamertag: "", serviceId: "" };
-  const setStaffField = (claimId: string, field: keyof StaffFields, value: string) => {
+  const getStaffField = (claimId: string): StaffFields => staffFields[claimId] || { customerPrice: "", platform: "", gamertag: "", serviceId: "", enableDailyCompliance: false };
+  const setStaffField = (claimId: string, field: keyof StaffFields, value: string | boolean) => {
     setStaffFields(prev => ({
       ...prev,
       [claimId]: { ...getStaffField(claimId), [field]: value },
@@ -340,8 +341,8 @@ export default function StaffOrderClaims() {
   };
 
   const decideMutation = useMutation({
-    mutationFn: async ({ id, status, decisionNote, customerPrice, platform, gamertag, serviceId }: { id: string; status: "approved" | "rejected"; decisionNote?: string; customerPrice?: string; platform?: string; gamertag?: string; serviceId?: string }) => {
-      const res = await apiRequest("PATCH", `/api/order-claims/${id}`, { status, decisionNote, customerPrice, platform, gamertag, serviceId });
+    mutationFn: async ({ id, status, decisionNote, customerPrice, platform, gamertag, serviceId, enableDailyCompliance }: { id: string; status: "approved" | "rejected"; decisionNote?: string; customerPrice?: string; platform?: string; gamertag?: string; serviceId?: string; enableDailyCompliance?: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/order-claims/${id}`, { status, decisionNote, customerPrice, platform, gamertag, serviceId, enableDailyCompliance });
       return res.json();
     },
     onSuccess: () => {
@@ -363,6 +364,7 @@ export default function StaffOrderClaims() {
       platform: fields.platform || undefined,
       gamertag: fields.gamertag || undefined,
       serviceId: fields.serviceId || undefined,
+      enableDailyCompliance: fields.enableDailyCompliance || undefined,
     });
   };
 
@@ -642,6 +644,24 @@ export default function StaffOrderClaims() {
                                 </div>
                               )}
                             </div>
+                          )}
+                          {claim.repairType === "claim_missing" && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                              <input
+                                type="checkbox"
+                                id={`compliance-${claim.id}`}
+                                checked={getStaffField(claim.id).enableDailyCompliance}
+                                onChange={(e) => setStaffField(claim.id, "enableDailyCompliance", e.target.checked)}
+                                className="w-4 h-4 rounded accent-primary"
+                                data-testid={`checkbox-compliance-${claim.id}`}
+                              />
+                              <Label htmlFor={`compliance-${claim.id}`} className="text-xs text-white/60 cursor-pointer">
+                                Enable daily compliance tracking for this order
+                              </Label>
+                            </div>
+                          )}
+                          {claim.repairType === "add_completed" && (
+                            <p className="text-[10px] text-white/30 italic">Completed order repairs are automatically exempt from daily compliance tracking.</p>
                           )}
                           <Input
                             placeholder="Decision note (optional)"

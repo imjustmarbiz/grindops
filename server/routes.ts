@@ -4006,6 +4006,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/staff/tier-overview", requireStaff, async (req, res) => {
+    try {
+      const grinders = await storage.getGrinders();
+      const results = [];
+      for (const g of grinders) {
+        const recalc = await recalcGrinderStats(g.id);
+        const fresh = await storage.getGrinder(g.id);
+        if (!fresh) continue;
+        results.push({
+          id: fresh.id,
+          name: fresh.name,
+          tier: fresh.tier || "New",
+          completedOrders: fresh.completedOrders || 0,
+          avgQualityRating: Number(fresh.avgQualityRating) || 0,
+          winRate: Number(fresh.winRate) || 0,
+          onTimeRate: Number(fresh.onTimeRate) || 0,
+          totalEarnings: Number(fresh.totalEarnings) || 0,
+          windowStats: recalc?.windowStats || { completedL30D: 0, completedL90D: 0, onTimeL30D: 0, tenureDays: 0 },
+        });
+      }
+      res.json({ grinders: results, tierThresholds: TIER_THRESHOLDS });
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
   app.get("/api/staff/grinder-scorecard/:grinderId", requireStaff, async (req, res) => {
     try {
       const { grinderId } = req.params;
@@ -5223,7 +5249,7 @@ export async function registerRoutes(
   app.patch('/api/order-claims/:id', requireStaff, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { status, decisionNote, customerPrice, platform, gamertag, serviceId: staffServiceId } = req.body;
+      const { status, decisionNote, customerPrice, platform, gamertag, serviceId: staffServiceId, enableDailyCompliance } = req.body;
       if (!status) return res.status(400).json({ error: "Status required" });
 
       const claim = await storage.getOrderClaimRequest(req.params.id);
@@ -5354,6 +5380,8 @@ export async function registerRoutes(
           const profit = orderPriceNum - totalGrinderCost;
           const marginPct = orderPriceNum > 0 ? (profit / orderPriceNum) * 100 : 0;
 
+          const complianceExempt = isAddCompleted ? true : (enableDailyCompliance === true ? false : true);
+
           if (existingAssignments.length === 0) {
             const newAssignmentId = `A-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
             await storage.createAssignment({
@@ -5372,6 +5400,7 @@ export async function registerRoutes(
               isOnTime: claim.completedDateTime && claim.dueDate
                 ? new Date(claim.completedDateTime) <= new Date(claim.dueDate)
                 : null,
+              exemptFromCompliance: complianceExempt,
             });
             existingAssignments = [{ id: newAssignmentId } as any];
           } else {
@@ -5384,6 +5413,7 @@ export async function registerRoutes(
               companyProfit: String(profit.toFixed(2)),
               margin: String(profit.toFixed(2)),
               marginPct: String(marginPct.toFixed(1)),
+              exemptFromCompliance: complianceExempt,
             };
             if (isCompleted) {
               assignUpdate.deliveredDateTime = claim.completedDateTime || new Date();

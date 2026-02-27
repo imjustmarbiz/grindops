@@ -145,9 +145,12 @@ export async function recalcGrinderStats(grinderId: string) {
   const totalEarnings = completed.reduce((sum: number, a: any) => sum + (Number(a.grinderEarnings) || Number(a.bidAmount) || 0), 0)
     + active.reduce((sum: number, a: any) => sum + (Number(a.grinderEarnings) || Number(a.bidAmount) || 0), 0);
 
+  const exemptOrderIds = new Set(myAssignments.filter((a: any) => a.exemptFromCompliance).map((a: any) => a.orderId));
+  const complianceAssignments = myAssignments.filter((a: any) => !a.exemptFromCompliance);
+
   const allCheckpoints = await storage.getActivityCheckpoints(undefined, grinderId);
-  const missedUpdates = allCheckpoints.filter((c: any) => c.type === "missed_update").length;
-  const totalCheckpointDays = myAssignments.reduce((sum: number, a: any) => {
+  const missedUpdates = allCheckpoints.filter((c: any) => c.type === "missed_update" && !exemptOrderIds.has(c.orderId)).length;
+  const totalCheckpointDays = complianceAssignments.reduce((sum: number, a: any) => {
     if (!a.assignedDateTime) return sum;
     const start = new Date(a.assignedDateTime);
     const end = a.deliveredDateTime ? new Date(a.deliveredDateTime) : new Date();

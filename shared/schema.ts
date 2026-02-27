@@ -169,6 +169,7 @@ export const assignments = pgTable("assignments", {
   replacementReason: text("replacement_reason"),
   notes: text("notes"),
   startedAt: timestamp("started_at"),
+  exemptFromCompliance: boolean("exempt_from_compliance").notNull().default(false),
 });
 
 export const queueConfig = pgTable("queue_config", {
