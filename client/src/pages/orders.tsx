@@ -37,6 +37,8 @@ const formSchema = z.object({
   complexity: z.coerce.number().min(1).max(5),
   isRush: z.boolean().default(false),
   isEmergency: z.boolean().default(false),
+  platform: z.string().nullable().optional(),
+  gamertag: z.string().nullable().optional(),
 });
 
 function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
@@ -540,6 +542,28 @@ export default function Orders() {
                       <FormLabel>Due Date</FormLabel>
                       <FormControl><Input type="datetime-local" {...field} value={value instanceof Date ? value.toISOString().slice(0, 16) : (value || "")} className="bg-background/50 border-white/10" data-testid="input-due-date" /></FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="platform" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Platform</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-order-platform"><SelectValue placeholder="Select platform" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="gamertag" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gamertag</FormLabel>
+                      <FormControl><Input placeholder="Customer gamertag" {...field} value={field.value || ""} className="bg-background/50 border-white/10" data-testid="input-order-gamertag" /></FormControl>
                     </FormItem>
                   )} />
                 </div>

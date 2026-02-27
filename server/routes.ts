@@ -1105,8 +1105,50 @@ export async function registerRoutes(
         }
       }
 
+      if (input.mgtOrderNumber !== undefined) {
+        const newNum = input.mgtOrderNumber;
+        if (newNum !== null && newNum !== undefined) {
+          const p = newNum >= 100 ? String(newNum) : String(newNum).padStart(2, "0");
+          updateData.displayId = `ORD-${p}`;
+        } else {
+          updateData.displayId = null;
+        }
+      }
+
       const result = await storage.updateOrder(req.params.id, updateData);
       if (!result) return res.status(404).json({ message: "Order not found" });
+
+      if (input.mgtOrderNumber !== undefined && input.mgtOrderNumber !== null) {
+        const newNum = input.mgtOrderNumber;
+        const p = newNum >= 100 ? String(newNum) : String(newNum).padStart(2, "0");
+        const orderId = req.params.id;
+
+        const orderBids = await storage.getBidsForOrder(orderId);
+        for (let i = 0; i < orderBids.length; i++) {
+          await storage.updateBid(orderBids[i].id, { displayId: `BID-${p}-${i + 1}` } as any);
+        }
+
+        const orderAssignments = (await storage.getAssignments()).filter((a: any) => a.orderId === orderId);
+        for (let i = 0; i < orderAssignments.length; i++) {
+          await storage.updateAssignment(orderAssignments[i].id, { displayId: `ASN-${p}-${String(i + 1).padStart(2, "0")}` });
+        }
+
+        const orderUpdatesArr = await storage.getOrderUpdates(orderId);
+        for (let i = 0; i < orderUpdatesArr.length; i++) {
+          await storage.updateOrderUpdate(orderUpdatesArr[i].id, { displayId: `UPD-${p}-${String(i + 1).padStart(2, "0")}` });
+        }
+
+        const allGrinders = await storage.getGrinders();
+        const payoutReqs: any[] = [];
+        for (const g of allGrinders) {
+          const gPayouts = await storage.getPayoutRequests(g.id);
+          payoutReqs.push(...gPayouts.filter((pr: any) => pr.orderId === orderId));
+        }
+        for (let i = 0; i < payoutReqs.length; i++) {
+          await storage.updatePayoutRequest(payoutReqs[i].id, { displayId: `PAY-${p}-${String(i + 1).padStart(2, "0")}` });
+        }
+      }
+
       if (input.customerPrice !== undefined) {
         await recalcMarginsForOrder(req.params.id, Number(input.customerPrice));
       }

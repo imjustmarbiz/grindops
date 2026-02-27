@@ -271,7 +271,12 @@ export default function GrinderAssignments() {
                         {a.platform && <span>• {a.platform}</span>}
                         {a.gamertag && <span>• {a.gamertag}</span>}
                         {a.complexity && a.complexity > 1 && <span>• Complexity {a.complexity}/5</span>}
-                        {a.customerDiscordUsername && <span>• Customer: @{a.customerDiscordUsername}</span>}
+                        {a.customerDiscordId && (
+                          <span>
+                            • Customer: <span className="font-mono text-[10px] text-blue-400/80">{a.customerDiscordId}</span>
+                            {a.customerDiscordUsername && ` (@${a.customerDiscordUsername})`}
+                          </span>
+                        )}
                         {a.location && <span>• {a.location}</span>}
                       </div>
                     )}
@@ -279,7 +284,7 @@ export default function GrinderAssignments() {
                 </div>
                 {a.status === "Active" && (
                   <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 sm:flex-wrap">
-                    {a.hasTicket && a.ticketChannelUrl && (
+                    {a.hasTicket && a.ticketChannelId && (
                       <Button size="sm" variant="outline" asChild
                         className="gap-1 text-[11px] sm:text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 h-8"
                         data-testid={`button-join-ticket-${a.id}`}

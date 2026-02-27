@@ -77,9 +77,13 @@ export async function sendCustomerUpdate(options: {
       return false;
     }
 
-    const channel = await client.channels.fetch(channelId).catch(() => null);
+    const channel = await client.channels.fetch(channelId).catch((err) => {
+      console.error(`[customer-updates] Failed to fetch channel ${channelId}:`, err.message);
+      return null;
+    });
+    
     if (!channel || !(channel instanceof TextChannel)) {
-      console.log(`[customer-updates] Channel ${channelId} not accessible`);
+      console.log(`[customer-updates] Channel ${channelId} not accessible or not a text channel`);
       return false;
     }
 
