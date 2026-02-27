@@ -93,7 +93,6 @@ export default function GrinderAssignments() {
   const [replacementDialog, setReplacementDialog] = useState<any>(null);
   const [replacementReason, setReplacementReason] = useState("");
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<string | null>(null);
-  const [joiningTicket, setJoiningTicket] = useState<string | null>(null);
   const [ticketConfirm, setTicketConfirm] = useState<{ assignmentId: string; orderId: string; action: "accept" | "decline" } | null>(null);
   const [briefDialog, setBriefDialog] = useState<{ orderId: string; brief: string } | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -280,30 +279,15 @@ export default function GrinderAssignments() {
                 </div>
                 {a.status === "Active" && (
                   <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 sm:flex-wrap">
-                    {a.hasTicket && (
-                      <Button size="sm" variant="outline"
+                    {a.hasTicket && a.ticketChannelUrl && (
+                      <Button size="sm" variant="outline" asChild
                         className="gap-1 text-[11px] sm:text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 h-8"
                         data-testid={`button-join-ticket-${a.id}`}
-                        disabled={joiningTicket === a.orderId || !a.hasTicketAck}
-                        onClick={async () => {
-                          setJoiningTicket(a.orderId);
-                          try {
-                            const res = await apiRequest("POST", `/api/orders/${a.orderId}/ticket-invite`);
-                            const data = await res.json();
-                            if (data.inviteUrl) {
-                              window.open(data.inviteUrl, '_blank');
-                            } else if (data.channelUrl) {
-                              window.open(data.channelUrl, '_blank');
-                            }
-                            toast({ title: "Ticket opened", description: "Opening the Discord ticket channel." });
-                          } catch (err: any) {
-                            toast({ title: "Could not join ticket", description: err.message || "The bot may not have access to that channel.", variant: "destructive" });
-                          } finally {
-                            setJoiningTicket(null);
-                          }
-                        }}
+                        disabled={!a.hasTicketAck}
                       >
-                        {joiningTicket === a.orderId ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} Join Ticket
+                        <a href={a.ticketChannelUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3 h-3" /> Join Ticket
+                        </a>
                       </Button>
                     )}
                     {a.orderBrief && (

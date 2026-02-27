@@ -1158,7 +1158,6 @@ export async function registerRoutes(
   });
 
   app.post(api.orders.ticketInvite.path, isAuthenticated, async (req, res) => {
-    console.log("[ticket-invite] Handler entered for order", req.params.id);
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) return res.status(404).json({ message: "Order not found" });
@@ -2021,6 +2020,7 @@ export async function registerRoutes(
           bidAmount: a.bidAmount,
           grinderId: a.grinderId,
           hasTicket: !!(order?.discordTicketChannelId),
+          ticketChannelId: order?.discordTicketChannelId || null,
           hasTicketAck,
           ticketAckResponse,
           orderBrief: order?.orderBrief || null,
@@ -2044,12 +2044,13 @@ export async function registerRoutes(
         };
       }));
 
+    let resolvedGuildId: string | null = null;
     try {
-      const customerIds = [...new Set(assignmentsData.filter((a: any) => a.customerDiscordId).map((a: any) => a.customerDiscordId))];
-      if (customerIds.length > 0) {
-        const { getDiscordBotClient } = await import("./discord/bot");
-        const botClient = getDiscordBotClient();
-        if (botClient) {
+      const { getDiscordBotClient } = await import("./discord/bot");
+      const botClient = getDiscordBotClient();
+      if (botClient) {
+        const customerIds = [...new Set(assignmentsData.filter((a: any) => a.customerDiscordId).map((a: any) => a.customerDiscordId))];
+        if (customerIds.length > 0) {
           const usernameMap: Record<string, string> = {};
           for (const cId of customerIds) {
             try {
@@ -2063,8 +2064,20 @@ export async function registerRoutes(
             }
           }
         }
+        const firstGuild = botClient.guilds?.cache?.first();
+        if (firstGuild) resolvedGuildId = firstGuild.id;
       }
     } catch {}
+
+    for (const a of assignmentsData) {
+      if (a.ticketChannelId) {
+        a.ticketChannelUrl = resolvedGuildId
+          ? `https://discord.com/channels/${resolvedGuildId}/${a.ticketChannelId}`
+          : `https://discord.com/channels/@me/${a.ticketChannelId}`;
+      } else {
+        a.ticketChannelUrl = null;
+      }
+    }
 
     res.json({
       grinder: safeGrinder,
