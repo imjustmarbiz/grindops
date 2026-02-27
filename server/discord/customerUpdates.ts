@@ -28,7 +28,7 @@ const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; 
 };
 
 const BRAND_FOOTER = "GrindOps by Service Plug LLC";
-const BRAND_ICON = "https://cdn.discordapp.com/embed/avatars/0.png";
+const BRAND_ICON = "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
 
 function getAppBaseUrl(): string | null {
   const domains = process.env.REPLIT_DOMAINS;
