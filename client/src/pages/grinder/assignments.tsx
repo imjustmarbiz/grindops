@@ -309,7 +309,8 @@ export default function GrinderAssignments() {
                       <CalendarClock className="w-3 h-3" /> Deadline
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 col-span-2 sm:col-span-1 h-8" data-testid={`button-complete-${a.id}`}
-                      disabled={!a.hasTicketAck}
+                      disabled={!a.hasTicketAck || !a.hasLoggedIn || !a.hasStarted || !a.hasLoggedOff || !a.hasUpdated}
+                      title={!a.hasTicketAck ? "Accept order first" : !a.hasLoggedIn ? "Log in first" : !a.hasStarted ? "Start order first" : !a.hasLoggedOff ? "Log off first" : !a.hasUpdated ? "Submit at least one update first" : ""}
                       onClick={() => {
                         setCompleteDialog(a);
                         const defaultMethod = payoutMethods?.find((m: any) => m.isDefault) || payoutMethods?.[0];

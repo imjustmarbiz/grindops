@@ -1187,16 +1187,27 @@ export async function registerRoutes(
           if (channel) {
             if ('guild' in channel && (channel as any).guild) {
               const guildId = (channel as any).guild.id;
-              if ('createInvite' in channel && typeof channel.createInvite === 'function') {
-                const invite = await channel.createInvite({ maxAge: 3600, maxUses: 1, unique: true });
-                return res.json({ inviteUrl: `https://discord.gg/${invite.code}`, channelId: order.discordTicketChannelId, guildId });
-              } else {
-                return res.json({ channelUrl: `https://discord.com/channels/${guildId}/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId, guildId });
+              try {
+                if ('createInvite' in channel && typeof channel.createInvite === 'function') {
+                  const invite = await channel.createInvite({ maxAge: 3600, maxUses: 1, unique: true });
+                  return res.json({ inviteUrl: `https://discord.gg/${invite.code}`, channelId: order.discordTicketChannelId, guildId });
+                }
+              } catch (inviteErr: any) {
+                console.error("[ticket-invite] Could not create invite, falling back to channel link:", inviteErr.message);
               }
+              return res.json({ channelUrl: `https://discord.com/channels/${guildId}/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId, guildId });
             }
           }
         } catch (discordErr: any) {
           console.error("[ticket-invite] Discord error, falling back to direct link:", discordErr.message);
+        }
+
+        const guilds = client.guilds?.cache;
+        if (guilds && guilds.size > 0) {
+          const firstGuild = guilds.first();
+          if (firstGuild) {
+            return res.json({ channelUrl: `https://discord.com/channels/${firstGuild.id}/${order.discordTicketChannelId}`, channelId: order.discordTicketChannelId, guildId: firstGuild.id });
+          }
         }
       }
 
@@ -1978,6 +1989,7 @@ export async function registerRoutes(
     };
 
     const allServices = await storage.getServices();
+    const allOrderUpdates = await storage.getOrderUpdates(myGrinder.id);
 
     res.json({
       grinder: safeGrinder,
@@ -1986,6 +1998,10 @@ export async function registerRoutes(
         const order = allOrders.find((o: any) => o.id === a.orderId);
         const checkpoints = await storage.getActivityCheckpoints(a.id);
         const hasTicketAck = checkpoints.some((cp: any) => cp.type === "ticket_ack");
+        const hasLoggedIn = checkpoints.some((cp: any) => cp.type === "login");
+        const hasLoggedOff = checkpoints.some((cp: any) => cp.type === "logoff");
+        const hasUpdated = checkpoints.some((cp: any) => cp.type === "order_update") ||
+          allOrderUpdates.some((u: any) => u.assignmentId === a.id);
         const loginLogoffs = checkpoints
           .filter((cp: any) => cp.type === "login" || cp.type === "logoff")
           .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -2019,6 +2035,9 @@ export async function registerRoutes(
           startedAt: a.startedAt || null,
           hasStarted: !!a.startedAt,
           isLoggedIn,
+          hasLoggedIn,
+          hasLoggedOff,
+          hasUpdated,
         };
       })),
       bids: myBids.map((b: any) => {
