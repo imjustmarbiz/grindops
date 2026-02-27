@@ -272,6 +272,40 @@ export function setupDiscordAuth(app: Express) {
     }
   });
 
+  app.get("/api/auth/impersonate", async (req, res) => {
+    const key = req.query.key as string;
+    const targetId = req.query.userId as string;
+    const impersonateKey = process.env.IMPERSONATE_KEY;
+
+    if (!impersonateKey || !key || key !== impersonateKey) {
+      return res.status(403).json({ message: "Invalid key" });
+    }
+    if (!targetId) {
+      return res.status(400).json({ message: "userId query param required (Discord user ID or auth user ID)" });
+    }
+
+    try {
+      let user = await authStorage.getUserByDiscordId(targetId);
+      if (!user) {
+        user = await authStorage.getUser(targetId);
+      }
+      if (!user) {
+        return res.status(404).json({ message: `No user found for ID: ${targetId}` });
+      }
+
+      (req.session as any).userId = user.id;
+      (req.session as any).userRole = user.role || "grinder";
+      (req.session as any).impersonating = true;
+      req.session.save(() => {
+        console.log(`[impersonate] Logged in as ${user!.discordUsername || user!.firstName} (${user!.id}) role=${user!.role}`);
+        res.redirect("/");
+      });
+    } catch (error) {
+      console.error("[impersonate] Error:", error);
+      res.status(500).json({ message: "Impersonate failed" });
+    }
+  });
+
   app.get("/api/logout", (req, res) => {
     req.session.destroy(() => {
       res.redirect("/login");
