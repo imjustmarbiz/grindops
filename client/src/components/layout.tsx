@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,7 @@ const staffNavItems = [
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Orders", url: "/orders", icon: ListOrdered },
   { title: "Order Assignments", url: "/assignments", icon: FileCheck },
+  { title: "Order Updates", url: "/order-updates", icon: MessageSquare },
   { title: "Order Repairs", url: "/order-claims", icon: Wrench },
   { title: "Grinder Payouts", url: "/payouts", icon: DollarSign },
   { title: "AI Queue", url: "/queue", icon: Brain },

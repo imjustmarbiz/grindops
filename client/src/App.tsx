@@ -59,6 +59,7 @@ import StaffBadges from "@/pages/staff/badges";
 import StaffOverviewPage from "@/pages/staff/staff-overview";
 import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
+import StaffOrderUpdates from "@/pages/staff/order-updates";
 import { Loader2 } from "lucide-react";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
@@ -233,6 +234,7 @@ function Router() {
       <Route path="/tier-progress" component={() => <ProtectedRoute component={TierProgress} staffOnly />} />
       <Route path="/bids" component={() => <ProtectedRoute component={Bids} staffOnly />} />
       <Route path="/assignments" component={() => <ProtectedRoute component={Assignments} staffOnly />} />
+      <Route path="/order-updates" component={() => <ProtectedRoute component={StaffOrderUpdates} staffOnly />} />
       <Route path="/reports" component={() => <ProtectedRoute component={StaffReports} staffOnly />} />
       <Route path="/streams" component={() => <ProtectedRoute component={StaffStreams} staffOnly />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLogPage} staffOnly />} />

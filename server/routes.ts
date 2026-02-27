@@ -1923,31 +1923,110 @@ export async function registerRoutes(
     const totalEarned = completedAssignments.reduce((sum: number, a: any) => sum + (Number(a.grinderEarnings) || Number(a.bidAmount) || 0), 0);
     const activeEarnings = myAssignments.filter((a: any) => a.status === "Active").reduce((sum: number, a: any) => sum + (Number(a.grinderEarnings) || Number(a.bidAmount) || 0), 0);
 
-    const aiTips: string[] = [];
     const acceptedBids = myBids.filter((b: any) => b.status === "Accepted").length;
     const totalBidsCount = myBids.length;
     const winRate = totalBidsCount > 0 ? acceptedBids / totalBidsCount : 0;
-    
-    if (winRate < 0.3 && totalBidsCount >= 3) {
-      aiTips.push("Your bid acceptance rate is below 30%. Try highlighting your experience and availability in proposals.");
+
+    const aiTips: string[] = [];
+    const completed = myGrinder.completedOrders || 0;
+    const quality = Number(myGrinder.avgQualityRating) || 0;
+    const onTime = Number(myGrinder.onTimeRate) || 0;
+    const completionRate = Number(myGrinder.completionRate) || 0;
+    const turnaround = Number(myGrinder.avgTurnaroundDays) || 0;
+    const strikes = myGrinder.strikes || 0;
+    const tier = myGrinder.tier || "New";
+    const activeCount = myAssignments.filter((a: any) => a.status === "Active").length;
+    const capacity = myGrinder.capacity || 3;
+    const winRatePct = Math.round(winRate * 100);
+
+    if (completed === 0 && totalBidsCount === 0) {
+      aiTips.push("Welcome! Start by placing your first bid on an available order. Check the Available Orders page for open jobs matching your skills.");
+    } else if (completed === 0 && totalBidsCount > 0) {
+      aiTips.push("You have bids placed — great start! Focus on competitive pricing and fast turnaround times to win your first order.");
     }
-    if (myGrinder.completedOrders === 0) {
-      aiTips.push("Complete your first order to build reputation. Consider bidding on simpler tasks to get started.");
+
+    if (completed >= 1 && completed < 5) {
+      aiTips.push(`You've completed ${completed} order${completed > 1 ? "s" : ""}. Reach 5 completed orders to start unlocking badges and improving your tier ranking.`);
     }
-    if (Number(myGrinder.onTimeRate || 100) < 80 && myGrinder.completedOrders > 0) {
-      aiTips.push("Focus on meeting deadlines. Your on-time rate could use improvement - consider requesting more time if needed.");
+
+    if (winRatePct < 30 && totalBidsCount >= 5) {
+      aiTips.push(`Your bid win rate is ${winRatePct}%. Try bidding on orders that match your expertise and include details about your experience in the bid message.`);
+    } else if (winRatePct >= 30 && winRatePct < 60 && totalBidsCount >= 5) {
+      aiTips.push(`Win rate at ${winRatePct}%. Solid, but there's room to improve — prioritize orders with fewer competing bids and highlight past successes.`);
+    } else if (winRatePct >= 80 && totalBidsCount >= 5) {
+      aiTips.push(`${winRatePct}% win rate — exceptional! Your reputation is attracting attention. Keep maintaining quality to stay on top.`);
     }
-    if (myGrinder.activeOrders >= myGrinder.capacity - 1 && myGrinder.capacity > 1) {
-      aiTips.push("You're near capacity. Focus on completing current orders before taking new ones.");
+
+    if (onTime < 70 && completed >= 3) {
+      aiTips.push(`Your on-time delivery rate is ${onTime.toFixed(0)}%. Consider requesting realistic deadlines and communicating early if you need extensions.`);
+    } else if (onTime >= 70 && onTime < 90 && completed >= 3) {
+      aiTips.push(`On-time rate at ${onTime.toFixed(0)}%. Good, but pushing this above 90% will significantly boost your queue position and tier progress.`);
+    } else if (onTime >= 95 && completed >= 5) {
+      aiTips.push(`${onTime.toFixed(0)}% on-time delivery — outstanding consistency! This is a major factor in your high queue ranking.`);
     }
-    if (lostBids.length > 2) {
-      aiTips.push("You've lost several recent bids. Try offering faster delivery times or better quality guarantees.");
+
+    if (quality > 0 && quality < 60 && completed >= 2) {
+      aiTips.push(`Quality score is ${(quality / 20).toFixed(1)}/5. Upload detailed proof with each update and double-check your work before marking orders complete.`);
+    } else if (quality >= 60 && quality < 80 && completed >= 3) {
+      aiTips.push(`Quality at ${(quality / 20).toFixed(1)}/5 — decent but improvable. Pay close attention to order briefs and ask staff for clarity on requirements.`);
+    } else if (quality >= 90 && completed >= 5) {
+      aiTips.push(`Quality score ${(quality / 20).toFixed(1)}/5 — top-tier quality! This makes you a preferred grinder for high-value orders.`);
     }
-    if (myGrinder.avgQualityRating && Number(myGrinder.avgQualityRating) < 70) {
-      aiTips.push("Your quality score could be higher. Ask for feedback on completed orders and focus on thoroughness.");
+
+    if (completionRate > 0 && completionRate < 80 && completed >= 3) {
+      aiTips.push(`Completion rate at ${completionRate.toFixed(0)}%. Abandoned or failed orders hurt your ranking — only bid on orders you're confident you can finish.`);
     }
-    if (completedAssignments.length >= 5 && winRate > 0.5) {
-      aiTips.push("Great track record! You're eligible for Elite status - keep up the consistency.");
+
+    if (activeCount >= capacity) {
+      aiTips.push("You're at full capacity. Focus on completing current orders before bidding on new ones to maintain quality.");
+    } else if (activeCount >= capacity - 1 && capacity > 1) {
+      aiTips.push(`Almost at capacity (${activeCount}/${capacity}). Prioritize finishing active orders to free up slots for new opportunities.`);
+    } else if (activeCount === 0 && completed >= 1) {
+      aiTips.push("No active orders — browse Available Orders and place some bids to keep your queue position strong and earnings flowing.");
+    }
+
+    if (strikes > 0 && strikes < 3) {
+      aiTips.push(`You have ${strikes} strike${strikes > 1 ? "s" : ""}. Review the Strikes page for details and focus on avoiding further violations to protect your standing.`);
+    } else if (strikes >= 3) {
+      aiTips.push(`${strikes} strikes on your record. This seriously impacts your queue ranking. Review guidelines carefully and maintain clean performance going forward.`);
+    }
+
+    if (lostBids.length > 3) {
+      aiTips.push(`${lostBids.length} recent lost bids. Try differentiating your proposals — mention your platform expertise, turnaround speed, or relevant completed orders.`);
+    }
+
+    if (turnaround > 5 && completed >= 3) {
+      aiTips.push(`Average turnaround is ${turnaround.toFixed(1)} days. Faster completion times improve your queue position — aim for under 3 days when possible.`);
+    } else if (turnaround > 0 && turnaround <= 2 && completed >= 3) {
+      aiTips.push(`${turnaround.toFixed(1)}-day average turnaround — blazing fast! This speed is a competitive advantage for earning repeat assignments.`);
+    }
+
+    if (tier === "New" && completed >= 3) {
+      aiTips.push("Ready to move up from New tier! Keep completing orders on time with high quality ratings to progress to Bronze.");
+    } else if (tier === "Bronze" && completed >= 8) {
+      aiTips.push("Climbing from Bronze — maintain a win rate above 50% and quality above 3.5/5 to progress toward Silver tier.");
+    } else if (tier === "Silver" && completed >= 15) {
+      aiTips.push("Silver tier — you're in the mid-range. Consistent on-time delivery and 4+ quality will push you toward Gold.");
+    } else if (tier === "Gold" && completed >= 25) {
+      aiTips.push("Gold tier grinder! You're close to Diamond. Keep your metrics strong across all categories for the final push.");
+    }
+
+    if (isElite) {
+      if (quality >= 90 && onTime >= 95 && winRatePct >= 70) {
+        aiTips.push("Elite performance is top-notch across all metrics. You're setting the standard for other grinders.");
+      } else {
+        const weakAreas: string[] = [];
+        if (quality < 80) weakAreas.push("quality");
+        if (onTime < 90) weakAreas.push("on-time delivery");
+        if (winRatePct < 50) weakAreas.push("win rate");
+        if (weakAreas.length > 0) {
+          aiTips.push(`As an Elite, focus on improving your ${weakAreas.join(" and ")} to maintain your position and set an example.`);
+        }
+      }
+    }
+
+    if (aiTips.length === 0) {
+      aiTips.push("You're performing well! Keep up the great work and maintain consistency across your metrics.");
     }
 
     const eliteGrinders = allGrinders.filter((g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder" || (g.roles && g.roles.includes("Elite Grinder")));
