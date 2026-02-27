@@ -387,6 +387,20 @@ export default function StaffOverview() {
         </CardContent>
       </Card>
 
+      <FadeInUp>
+      <Card className="border-blue-500/20 bg-gradient-to-r from-blue-500/[0.06] to-blue-600/[0.03] overflow-hidden" data-testid="card-customer-pipeline-info">
+        <CardContent className="p-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+            <MessageSquare className="w-4 h-4 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-blue-300 mb-0.5">Customer Updates Pipeline</p>
+            <p className="text-xs text-white/40 leading-relaxed">Orders with linked customer Discord IDs receive automated updates throughout the lifecycle. Customers approve completion via Discord before payouts are created. Force-approve available for unresponsive customers. Toggle in Admin &gt; System.</p>
+          </div>
+        </CardContent>
+      </Card>
+      </FadeInUp>
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
         <FadeInUp className="h-full">
         <Card className="border-white/[0.06] bg-white/[0.02] h-full flex flex-col">

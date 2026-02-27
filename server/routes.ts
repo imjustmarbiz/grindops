@@ -1991,10 +1991,7 @@ export async function registerRoutes(
     const allServices = await storage.getServices();
     const allOrderUpdates = await storage.getOrderUpdates(myGrinder.id);
 
-    res.json({
-      grinder: safeGrinder,
-      isElite,
-      assignments: await Promise.all(myAssignments.map(async (a: any) => {
+    const assignmentsData = await Promise.all(myAssignments.map(async (a: any) => {
         const order = allOrders.find((o: any) => o.id === a.orderId);
         const checkpoints = await storage.getActivityCheckpoints(a.id);
         const ticketAckCheckpoint = checkpoints.find((cp: any) => cp.type === "ticket_ack");
@@ -2041,8 +2038,37 @@ export async function registerRoutes(
           hasLoggedIn,
           hasLoggedOff,
           hasUpdated,
+          customerDiscordId: order?.customerDiscordId || null,
+          customerDiscordUsername: null as string | null,
         };
-      })),
+      }));
+
+    try {
+      const customerIds = [...new Set(assignmentsData.filter((a: any) => a.customerDiscordId).map((a: any) => a.customerDiscordId))];
+      if (customerIds.length > 0) {
+        const { getDiscordBotClient } = await import("./discord/bot");
+        const botClient = getDiscordBotClient();
+        if (botClient) {
+          const usernameMap: Record<string, string> = {};
+          for (const cId of customerIds) {
+            try {
+              const user = await botClient.users.fetch(cId);
+              if (user) usernameMap[cId] = user.username;
+            } catch {}
+          }
+          for (const a of assignmentsData) {
+            if (a.customerDiscordId && usernameMap[a.customerDiscordId]) {
+              a.customerDiscordUsername = usernameMap[a.customerDiscordId];
+            }
+          }
+        }
+      }
+    } catch {}
+
+    res.json({
+      grinder: safeGrinder,
+      isElite,
+      assignments: assignmentsData,
       bids: myBids.map((b: any) => {
         const order = allOrders.find((o: any) => o.id === b.orderId);
         return {
