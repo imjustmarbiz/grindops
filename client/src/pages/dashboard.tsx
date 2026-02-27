@@ -135,6 +135,19 @@ export default function Dashboard() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/staff/elite-requests"] }); toast({ title: "Elite request updated" }); },
   });
 
+  const deadlineReviewMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: "approved" | "denied" }) => {
+      const res = await apiRequest("PATCH", `/api/staff/order-updates/${id}/deadline-review`, { action });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/order-updates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({ title: "Deadline request reviewed" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const strikeMutation = useMutation({
     mutationFn: async (data: { grinderId: string; action: string; reason: string }) => {
       const res = await apiRequest("POST", "/api/staff/strikes", { ...data, createdBy: "staff" });
@@ -1225,23 +1238,27 @@ export default function Dashboard() {
       </div>
       </FadeInUp>
 
-      <FadeInUp>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {(grinderUpdates && grinderUpdates.length > 0) && (
-          <Card className="border-blue-500/20">
+      {(grinderUpdates && grinderUpdates.length > 0) && (
+        <FadeInUp>
+          <Card className="border-blue-500/20" data-testid="card-grinder-updates">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-blue-400" />
                 Grinder Order Updates
+                {grinderUpdates.some((u: any) => u.deadlineStatus === "pending") && (
+                  <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[10px]">
+                    {grinderUpdates.filter((u: any) => u.deadlineStatus === "pending").length} deadline{grinderUpdates.filter((u: any) => u.deadlineStatus === "pending").length !== 1 ? "s" : ""} pending
+                  </Badge>
+                )}
                 <Badge className="bg-blue-500/20 text-blue-400 ml-auto">{grinderUpdates.length}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {grinderUpdates.slice(0, 15).map((u: any) => {
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {grinderUpdates.slice(0, 20).map((u: any) => {
                   const grinder = (grindersList || []).find(g => g.id === u.grinderId);
                   return (
-                    <div key={u.id} className="p-3 rounded-lg bg-white/5 border border-white/10" data-testid={`card-grinder-update-${u.id}`}>
+                    <div key={u.id} className={`p-3 rounded-lg border ${u.deadlineStatus === "pending" ? "bg-amber-500/[0.04] border-amber-500/20" : "bg-white/5 border-white/10"}`} data-testid={`card-grinder-update-${u.id}`}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-blue-400">{grinder?.name || u.grinderId}</span>
@@ -1250,15 +1267,45 @@ export default function Dashboard() {
                         <span className="text-[10px] text-muted-foreground">{new Date(u.createdAt).toLocaleString()}</span>
                       </div>
                       <p className="text-sm text-muted-foreground">Order {u.orderId}: {u.message}</p>
-                      {u.newDeadline && <p className="text-xs text-yellow-400 mt-1">New deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>}
+                      {u.newDeadline && (
+                        <div className="mt-1.5">
+                          <p className="text-xs text-yellow-400">Requested deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>
+                          {u.deadlineStatus === "pending" && (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[10px]">Pending Approval</Badge>
+                              <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                                data-testid={`button-approve-deadline-${u.id}`}
+                                disabled={deadlineReviewMutation.isPending}
+                                onClick={() => deadlineReviewMutation.mutate({ id: u.id, action: "approved" })}>
+                                Approve
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                                data-testid={`button-deny-deadline-${u.id}`}
+                                disabled={deadlineReviewMutation.isPending}
+                                onClick={() => deadlineReviewMutation.mutate({ id: u.id, action: "denied" })}>
+                                Deny
+                              </Button>
+                            </div>
+                          )}
+                          {u.deadlineStatus === "approved" && (
+                            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px] mt-1">Approved{u.deadlineReviewedBy ? ` by ${u.deadlineReviewedBy}` : ""}</Badge>
+                          )}
+                          {u.deadlineStatus === "denied" && (
+                            <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[10px] mt-1">Denied{u.deadlineReviewedBy ? ` by ${u.deadlineReviewedBy}` : ""}</Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </CardContent>
           </Card>
-        )}
+        </FadeInUp>
+      )}
 
+      <FadeInUp>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {(payoutReqs && payoutReqs.length > 0) && (
           <Card className="border-green-500/20">
             <CardHeader className="pb-3">

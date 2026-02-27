@@ -2288,12 +2288,9 @@ export async function registerRoutes(
       updateType: updateType || "progress",
       message,
       newDeadline: newDeadline ? new Date(newDeadline) : null,
+      deadlineStatus: newDeadline ? "pending" : null,
       proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : [],
     });
-
-    if (newDeadline) {
-      await storage.updateAssignment(assignmentId, { dueDateTime: new Date(newDeadline) });
-    }
 
     await storage.createAuditLog({
       id: `AL-${Date.now().toString(36)}`,
@@ -2304,15 +2301,17 @@ export async function registerRoutes(
       details: JSON.stringify({ orderId, assignmentId, updateType, message }),
     });
 
-    const customerUpdateType = newDeadline ? "deadline_change" : (updateType === "issue" ? "issue_reported" : "progress");
-    sendCustomerUpdate({
-      orderId,
-      updateType: customerUpdateType as any,
-      message,
-      proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
-      grinderName: myGrinder.name,
-      assignmentId,
-    }).catch(err => console.error("[customer-updates] Error:", err));
+    if (!newDeadline) {
+      const customerUpdateType = updateType === "issue" ? "issue_reported" : "progress";
+      sendCustomerUpdate({
+        orderId,
+        updateType: customerUpdateType as any,
+        message,
+        proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
+        grinderName: myGrinder.name,
+        assignmentId,
+      }).catch(err => console.error("[customer-updates] Error:", err));
+    }
 
     res.status(201).json(update);
   });
@@ -4197,6 +4196,58 @@ export async function registerRoutes(
         acknowledgedAt: new Date(),
       });
       if (!updated) return res.status(404).json({ message: "Order update not found" });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.patch("/api/staff/order-updates/:id/deadline-review", requireStaff, async (req, res) => {
+    try {
+      const { action } = req.body;
+      if (!action || !["approved", "denied"].includes(action)) {
+        return res.status(400).json({ message: "action must be 'approved' or 'denied'" });
+      }
+      const userId = (req as any).userId;
+      const authUser = await authStorage.getUser(userId);
+      const reviewerName = authUser?.discordUsername || authUser?.firstName || "Staff";
+
+      const allUpdates = await storage.getOrderUpdates();
+      const update = allUpdates.find((u: any) => u.id === req.params.id);
+      if (!update) return res.status(404).json({ message: "Order update not found" });
+      if (!update.newDeadline) return res.status(400).json({ message: "This update has no deadline change" });
+
+      const updated = await storage.updateOrderUpdate(req.params.id, {
+        deadlineStatus: action,
+        deadlineReviewedBy: reviewerName,
+        deadlineReviewedAt: new Date(),
+      });
+
+      if (action === "approved") {
+        await storage.updateAssignment(update.assignmentId, { dueDateTime: new Date(update.newDeadline) });
+        const order = await storage.getOrder(update.orderId);
+        if (order) {
+          await storage.updateOrder(update.orderId, { orderDueDate: new Date(update.newDeadline) });
+        }
+
+        sendCustomerUpdate({
+          orderId: update.orderId,
+          updateType: "deadline_change" as any,
+          message: `Deadline extended to ${new Date(update.newDeadline).toLocaleDateString()}. Reason: ${update.message}`,
+          grinderName: update.grinderId,
+          assignmentId: update.assignmentId,
+        }).catch(err => console.error("[customer-updates] Deadline approval notification error:", err));
+      }
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "order_update",
+        entityId: update.id,
+        action: `deadline_${action}`,
+        actor: reviewerName,
+        details: JSON.stringify({ orderId: update.orderId, newDeadline: update.newDeadline, action }),
+      });
+
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: String(err) });

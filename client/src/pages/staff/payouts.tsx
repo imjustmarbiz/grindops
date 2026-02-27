@@ -605,42 +605,6 @@ export default function StaffPayouts() {
       </Card>
       </FadeInUp>
 
-      {grinderUpdates && grinderUpdates.length > 0 && (
-        <FadeInUp>
-        <Card className="border-0 bg-gradient-to-br from-blue-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-grinder-updates">
-          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-blue-500/[0.03] -translate-y-12 translate-x-12" />
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                <MessageSquare className="w-4 h-4 text-blue-400" />
-              </div>
-              Grinder Order Updates
-              <Badge className="bg-blue-500/15 text-blue-400 border border-blue-500/20 ml-auto text-xs">{grinderUpdates.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {grinderUpdates.slice(0, 15).map((u: any) => {
-                const grinder = allGrinders.find((g: any) => g.id === u.grinderId);
-                return (
-                  <div key={u.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]" data-testid={`card-grinder-update-${u.id}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-blue-400">{grinder?.name || u.grinderId}</span>
-                        <Badge variant="outline" className="text-[10px] bg-white/[0.03]">{u.updateType}</Badge>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">{new Date(u.createdAt).toLocaleString()}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Order {u.orderId}: {u.message}</p>
-                    {u.newDeadline && <p className="text-xs text-yellow-400 mt-1">New deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-        </FadeInUp>
-      )}
 
       <Dialog open={!!markPaidDialog} onOpenChange={(open) => { if (!open) { setMarkPaidDialog(null); setProofUrl(""); setPaidAtDate(""); } }}>
         <DialogContent className="sm:max-w-md">

@@ -322,7 +322,7 @@ export default function GrinderAssignments() {
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs h-8" data-testid={`button-deadline-${a.id}`}
                       disabled={!a.hasTicketAck}
-                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
+                      onClick={() => { setUpdateDialog(a); setUpdateType("deadline"); setUpdateMessage(""); setNewDeadline(a.dueDateTime ? new Date(a.dueDateTime).toISOString().split("T")[0] : ""); setUpdateProofFiles([]); setUpdateProofUrls([]); }}>
                       <CalendarClock className="w-3 h-3" /> Deadline
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-[11px] sm:text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 col-span-2 sm:col-span-1 h-8" data-testid={`button-complete-${a.id}`}
@@ -475,7 +475,14 @@ export default function GrinderAssignments() {
                     <span className="text-xs text-white/30">{new Date(u.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="text-sm text-white/50">{u.message}</p>
-                  {u.newDeadline && <p className="text-xs text-yellow-400 mt-1">New deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>}
+                  {u.newDeadline && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-yellow-400">Requested deadline: {new Date(u.newDeadline).toLocaleDateString()}</p>
+                      {u.deadlineStatus === "pending" && <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[10px]">Pending</Badge>}
+                      {u.deadlineStatus === "approved" && <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">Approved</Badge>}
+                      {u.deadlineStatus === "denied" && <Badge className="bg-red-500/15 text-red-400 border border-red-500/20 text-[10px]">Denied</Badge>}
+                    </div>
+                  )}
                   {u.proofUrls && Array.isArray(u.proofUrls) && u.proofUrls.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                       {u.proofUrls.map((url: string, idx: number) => (
@@ -516,9 +523,10 @@ export default function GrinderAssignments() {
               />
             </div>
             {updateType === "deadline" && (
-              <div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium mb-1 block">New Deadline</label>
                 <Input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} data-testid="input-new-deadline" />
+                <p className="text-[11px] text-amber-400/80 bg-amber-500/[0.06] p-2 rounded border border-amber-500/10">Deadline changes require staff approval. You'll be notified once reviewed.</p>
               </div>
             )}
             {updateType === "progress" && (
