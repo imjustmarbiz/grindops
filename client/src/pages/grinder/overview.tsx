@@ -412,22 +412,6 @@ export default function GrinderOverview() {
       </div>
       </FadeInUp>
 
-      {assignments && assignments.length > 0 && (
-        <FadeInUp>
-        <Card className="border-blue-500/20 bg-gradient-to-r from-blue-500/[0.06] to-blue-600/[0.03] overflow-hidden" data-testid="card-customer-updates-info">
-          <CardContent className="p-4 flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
-              <MessageSquare className="w-4 h-4 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-blue-300 mb-0.5">Customer Updates Active</p>
-              <p className="text-xs text-white/40 leading-relaxed">Your daily updates and proof uploads are automatically sent to customers via Discord. When you complete an order, the customer approves your work before payout.</p>
-            </div>
-          </CardContent>
-        </Card>
-        </FadeInUp>
-      )}
-
       <FadeInUp>
       <BiddingCountdownPanel variant="compact" />
       </FadeInUp>
