@@ -518,9 +518,10 @@ export default function GrinderOverview() {
                 {assignments.slice(0, 5).map((a: any) => (
                   <Link key={a.id} href="/grinder/assignments">
                     <div className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] ${isElite ? "hover:border-cyan-500/20" : "hover:border-[#5865F2]/20"} hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer transition-all duration-200 group`} data-testid={`card-assignment-${a.id}`}>
-                      <div>
-                        <p className="text-sm font-medium">Order {a.orderId}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : a.orderId}</p>
                         <p className="text-xs text-white/40">
+                          {a.serviceName && <span>{a.serviceName.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()} • </span>}
                           Due: {a.dueDateTime ? new Date(a.dueDateTime).toLocaleDateString() : "TBD"}
                           {a.grinderEarnings && <span className="text-emerald-400 ml-2">${Number(a.grinderEarnings).toFixed(2)}</span>}
                         </p>

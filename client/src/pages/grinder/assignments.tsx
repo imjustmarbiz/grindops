@@ -228,10 +228,17 @@ export default function GrinderAssignments() {
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-base sm:text-lg">Order {a.orderId}</span>
-                      <Badge className={`shrink-0 ${a.status === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" : a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" : "bg-white/[0.06] text-white/40 border-0"}`}>
-                        {a.status}
+                      <span className="font-bold text-base sm:text-lg">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : a.orderId}</span>
+                      <Badge className={`shrink-0 ${
+                        (a.orderStatus || a.status) === "Active" ? "bg-emerald-500/20 text-emerald-400 border-0" :
+                        (a.orderStatus || a.status) === "Paid Out" ? "bg-cyan-500/20 text-cyan-400 border-0" :
+                        (a.orderStatus || a.status) === "Completed" || a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" :
+                        "bg-white/[0.06] text-white/40 border-0"
+                      }`}>
+                        {a.orderStatus || a.status}
                       </Badge>
+                      {a.isRush && <Badge className="border-0 bg-orange-500/20 text-orange-400 text-[10px]">Rush</Badge>}
+                      {a.isEmergency && <Badge className="border-0 bg-red-500/20 text-red-400 text-[10px]">Emergency</Badge>}
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-white/40 flex-wrap">
                       <span>Assigned: {new Date(a.assignedDateTime).toLocaleDateString()}</span>
@@ -239,6 +246,15 @@ export default function GrinderAssignments() {
                       {a.deliveredDateTime && <span>Done: {new Date(a.deliveredDateTime).toLocaleDateString()}</span>}
                       {a.grinderEarnings && <span className="text-emerald-400 font-medium">${Number(a.grinderEarnings).toFixed(2)}</span>}
                     </div>
+                    {(a.serviceName || a.platform || a.gamertag) && (
+                      <div className="flex items-center gap-2 sm:gap-3 mt-1.5 text-xs text-white/30 flex-wrap">
+                        {a.serviceName && <span>{a.serviceName.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}</span>}
+                        {a.platform && <span>• {a.platform}</span>}
+                        {a.gamertag && <span>• {a.gamertag}</span>}
+                        {a.complexity && a.complexity > 1 && <span>• Complexity {a.complexity}/5</span>}
+                        {a.location && <span>• {a.location}</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {a.status === "Active" && (
@@ -381,11 +397,15 @@ export default function GrinderAssignments() {
                         <Banknote className="w-3 h-3" /> Request Payout
                       </Button>
                     )}
-                    {payoutRequests?.find((p: any) => p.assignmentId === a.id) && (
-                      <Badge className="ml-auto bg-yellow-500/20 text-yellow-400">
-                        Payout {payoutRequests.find((p: any) => p.assignmentId === a.id)?.status}
-                      </Badge>
-                    )}
+                    {payoutRequests?.find((p: any) => p.assignmentId === a.id) && (() => {
+                      const pr = payoutRequests.find((p: any) => p.assignmentId === a.id);
+                      const isPaid = pr?.status === "Paid";
+                      return (
+                        <Badge className={`ml-auto ${isPaid ? "bg-amber-600/20 text-amber-400 border border-amber-600/20" : "bg-yellow-500/20 text-yellow-400"}`}>
+                          {isPaid ? "Payout Paid" : `Payout ${pr?.status}`}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 )}
               </CardContent>

@@ -479,23 +479,39 @@ export default function GrinderScorecard() {
           <CardContent>
             <div className="space-y-2">
               {orderHistory.map((order: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`order-history-${idx}`}>
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${order.isOnTime === true ? "bg-emerald-500/15" : order.isOnTime === false ? "bg-red-500/15" : "bg-white/[0.06]"}`}>
-                      {order.isOnTime === true ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : order.isOnTime === false ? <Clock className="w-4 h-4 text-red-400" /> : <Package className="w-4 h-4 text-white/30" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{order.orderId}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {order.serviceName && <span className="text-[10px] text-white/30">{order.serviceName}</span>}
-                        {order.deliveredAt && <span className="text-[10px] text-white/30">{new Date(order.deliveredAt).toLocaleDateString()}</span>}
+                <div key={idx} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`order-history-${idx}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${order.isOnTime === true ? "bg-emerald-500/15" : order.isOnTime === false ? "bg-red-500/15" : "bg-white/[0.06]"}`}>
+                        {order.isOnTime === true ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : order.isOnTime === false ? <Clock className="w-4 h-4 text-red-400" /> : <Package className="w-4 h-4 text-white/30" />}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium truncate">Order {order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : order.orderId}</p>
+                          <Badge className={`border-0 text-[10px] ${
+                            order.orderStatus === "Paid Out" ? "bg-cyan-500/20 text-cyan-400" :
+                            order.orderStatus === "Completed" ? "bg-blue-500/20 text-blue-400" :
+                            "bg-white/[0.06] text-white/40"
+                          }`}>
+                            {order.orderStatus || "Completed"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {order.serviceName && <span className="text-[10px] text-white/30">{order.serviceName.replace(/\s*[🔥🛠️🏆🃏🏟️🎁🎫➕⚡🎖️🪙]/g, "").trim()}</span>}
+                          {order.platform && <span className="text-[10px] text-white/30">• {order.platform}</span>}
+                          {order.gamertag && <span className="text-[10px] text-white/30">• {order.gamertag}</span>}
+                          {order.deliveredAt && <span className="text-[10px] text-white/30">• {new Date(order.deliveredAt).toLocaleDateString()}</span>}
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-medium text-emerald-400">${parseFloat(order.earnings || "0").toFixed(2)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-medium text-emerald-400">${parseFloat(order.earnings || "0").toFixed(2)}</span>
+                  <div className="flex items-center gap-1.5 mt-2 ml-11 flex-wrap">
                     {order.isOnTime === true && <Badge className="border-0 text-[10px] bg-emerald-500/15 text-emerald-400">On Time</Badge>}
                     {order.isOnTime === false && <Badge className="border-0 text-[10px] bg-red-500/15 text-red-400">Late</Badge>}
+                    {order.qualityRating && <Badge className="border-0 text-[10px] bg-white/[0.06] text-white/50">{order.qualityRating}/5 Quality</Badge>}
                   </div>
                 </div>
               ))}

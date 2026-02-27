@@ -1937,6 +1937,8 @@ export async function registerRoutes(
       eliteSince: myGrinder.eliteSince,
     };
 
+    const allServices = await storage.getServices();
+
     res.json({
       grinder: safeGrinder,
       isElite,
@@ -1948,6 +1950,7 @@ export async function registerRoutes(
           .filter((cp: any) => cp.type === "login" || cp.type === "logoff")
           .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const isLoggedIn = loginLogoffs.length > 0 && loginLogoffs[0].type === "login";
+        const svc = allServices.find((s: any) => s.id === order?.serviceId);
         return {
           id: a.id,
           orderId: a.orderId,
@@ -1965,6 +1968,14 @@ export async function registerRoutes(
           hasTicketAck,
           orderBrief: order?.orderBrief || null,
           platform: order?.platform || null,
+          gamertag: order?.gamertag || null,
+          serviceName: svc?.name || order?.serviceId || null,
+          complexity: order?.complexity || null,
+          location: order?.location || null,
+          notes: order?.notes || null,
+          isRush: order?.isRush || false,
+          isEmergency: order?.isEmergency || false,
+          mgtOrderNumber: order?.mgtOrderNumber || null,
           startedAt: a.startedAt || null,
           hasStarted: !!a.startedAt,
           isLoggedIn,
@@ -4273,6 +4284,8 @@ export async function registerRoutes(
 
       const orders = await storage.getOrders();
       const orderMap = new Map(orders.map((o: any) => [o.id, o]));
+      const scServices = await storage.getServices();
+      const scServiceMap = new Map(scServices.map((s: any) => [s.id, s]));
 
       const enrichedLogs = orderUpdateLogs.map((log: any) => {
         const order = orderMap.get(log.orderId);
@@ -4348,14 +4361,18 @@ export async function registerRoutes(
         },
         orderHistory: completedAssignments.slice(0, 20).map((a: any) => {
           const order = orderMap.get(a.orderId);
+          const svc = scServiceMap.get(order?.serviceId);
           return {
             orderId: a.orderId,
+            mgtOrderNumber: order?.mgtOrderNumber || null,
             earnings: a.grinderEarnings || a.bidAmount || "0",
             deliveredAt: a.deliveredDateTime,
             isOnTime: a.isOnTime,
             qualityRating: a.qualityRating,
             orderStatus: order?.status,
-            serviceName: order?.serviceId,
+            serviceName: svc?.name || order?.serviceId || null,
+            platform: order?.platform || null,
+            gamertag: order?.gamertag || null,
           };
         }),
       });
