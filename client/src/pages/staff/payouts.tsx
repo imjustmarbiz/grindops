@@ -23,8 +23,9 @@ export default function StaffPayouts() {
   const queryClient = useQueryClient();
   const { payoutReqs, grinders, grinderUpdates, analyticsLoading } = useStaffData();
 
-  const [markPaidDialog, setMarkPaidDialog] = useState<{ id: string; grinder: string; amount: number } | null>(null);
+  const [markPaidDialog, setMarkPaidDialog] = useState<{ id: string; grinder: string; amount: number; existingPaidAt?: string } | null>(null);
   const [proofUrl, setProofUrl] = useState<string>("");
+  const [paidAtDate, setPaidAtDate] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<string>("");
@@ -32,9 +33,9 @@ export default function StaffPayouts() {
   const { data: wallets = [] } = useQuery<any[]>({ queryKey: ["/api/wallets"] });
 
   const payoutMutation = useMutation({
-    mutationFn: async ({ id, status, paymentProofUrl, walletId }: { id: string; status: string; paymentProofUrl?: string; walletId?: string }) => {
+    mutationFn: async ({ id, status, paymentProofUrl, walletId, paidAt }: { id: string; status: string; paymentProofUrl?: string; walletId?: string; paidAt?: string }) => {
       const reviewedBy = (user as any)?.username || user?.discordUsername || "staff";
-      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy, paymentProofUrl, walletId });
+      const res = await apiRequest("PATCH", `/api/staff/payout-requests/${id}`, { status, reviewedBy, paymentProofUrl, walletId, paidAt });
       return res.json();
     },
     onSuccess: () => {
@@ -582,7 +583,7 @@ export default function StaffPayouts() {
                         <ImageIcon className="w-2.5 h-2.5" /> Proof
                       </a>
                     )}
-                    {p.paidAt && <span className="text-xs text-muted-foreground ml-auto">{new Date(p.paidAt).toLocaleDateString()}</span>}
+                    {p.paidAt && <button className="text-xs text-muted-foreground ml-auto hover:text-blue-400 hover:underline transition-colors cursor-pointer" title="Click to edit payout date" onClick={() => { setMarkPaidDialog({ id: p.id, grinder: grinder?.name || p.grinderId, amount: Number(p.amount), existingPaidAt: p.paidAt }); setPaidAtDate(new Date(p.paidAt).toISOString().split("T")[0]); }} data-testid={`button-edit-paid-date-${p.id}`}>{new Date(p.paidAt).toLocaleDateString()}</button>}
                   </div>
                 );
               })}
@@ -629,7 +630,7 @@ export default function StaffPayouts() {
         </FadeInUp>
       )}
 
-      <Dialog open={!!markPaidDialog} onOpenChange={(open) => { if (!open) { setMarkPaidDialog(null); setProofUrl(""); } }}>
+      <Dialog open={!!markPaidDialog} onOpenChange={(open) => { if (!open) { setMarkPaidDialog(null); setProofUrl(""); setPaidAtDate(""); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -641,8 +642,13 @@ export default function StaffPayouts() {
             <div className="space-y-4">
               <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                 <p className="text-sm">
-                  Mark <span className="font-semibold text-white">{markPaidDialog.grinder}</span>'s payout of{" "}
-                  <span className="text-emerald-400 font-bold">{formatCurrency(markPaidDialog.amount)}</span> as paid?
+                  {markPaidDialog.existingPaidAt ? (
+                    <>Edit payout date for <span className="font-semibold text-white">{markPaidDialog.grinder}</span>'s payout of{" "}
+                    <span className="text-emerald-400 font-bold">{formatCurrency(markPaidDialog.amount)}</span></>
+                  ) : (
+                    <>Mark <span className="font-semibold text-white">{markPaidDialog.grinder}</span>'s payout of{" "}
+                    <span className="text-emerald-400 font-bold">{formatCurrency(markPaidDialog.amount)}</span> as paid?</>
+                  )}
                 </p>
               </div>
 
@@ -712,6 +718,18 @@ export default function StaffPayouts() {
                 )}
                 <p className="text-[10px] text-muted-foreground">Accepts images (JPG, PNG, GIF, WebP) and PDF files up to 25MB</p>
               </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payout Date (optional)</p>
+                <Input
+                  type="date"
+                  value={paidAtDate}
+                  onChange={e => setPaidAtDate(e.target.value)}
+                  className="bg-white/[0.03] border-white/10 text-xs"
+                  data-testid="input-payout-date"
+                />
+                <p className="text-[10px] text-muted-foreground">Leave blank to use today's date</p>
+              </div>
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">
@@ -719,7 +737,7 @@ export default function StaffPayouts() {
               variant="outline"
               size="sm"
               className="text-xs border-white/10"
-              onClick={() => { setMarkPaidDialog(null); setProofUrl(""); }}
+              onClick={() => { setMarkPaidDialog(null); setProofUrl(""); setPaidAtDate(""); }}
               data-testid="button-cancel-mark-paid"
             >
               Cancel
@@ -735,6 +753,7 @@ export default function StaffPayouts() {
                     status: "Paid",
                     paymentProofUrl: proofUrl || undefined,
                     walletId: selectedWalletId || undefined,
+                    paidAt: paidAtDate || undefined,
                   });
                 }
               }}

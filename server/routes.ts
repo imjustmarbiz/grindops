@@ -2619,14 +2619,18 @@ export async function registerRoutes(
   });
 
   app.patch("/api/staff/payout-requests/:id", requireStaff, async (req, res) => {
-    const { status, reviewedBy, paymentProofUrl, walletId } = req.body;
+    const { status, reviewedBy, paymentProofUrl, walletId, paidAt } = req.body;
     const updateData: any = {
       status,
       reviewedBy: reviewedBy || "staff",
       reviewedAt: new Date(),
     };
     if (status === "Paid") {
-      updateData.paidAt = new Date();
+      updateData.paidAt = paidAt ? new Date(paidAt) : new Date();
+    }
+    if (paidAt && !status) {
+      updateData.paidAt = new Date(paidAt);
+      delete updateData.status;
     }
     if (paymentProofUrl) {
       updateData.paymentProofUrl = paymentProofUrl;
