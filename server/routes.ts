@@ -1158,6 +1158,7 @@ export async function registerRoutes(
   });
 
   app.post(api.orders.ticketInvite.path, isAuthenticated, async (req, res) => {
+    console.log("[ticket-invite] Handler entered for order", req.params.id);
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) return res.status(404).json({ message: "Order not found" });
