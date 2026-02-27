@@ -3655,38 +3655,44 @@ export async function registerRoutes(
 
   app.get("/api/staff/elite-vs-grinder-metrics", requireStaff, async (req, res) => {
     const allGrinders = await storage.getGrinders();
-    const isEliteGrinder = (g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder" || (g.roles && g.roles.includes("Elite Grinder"));
-    const eliteGrinders = allGrinders.filter(isEliteGrinder);
-    const regularGrinders = allGrinders.filter((g: any) => !isEliteGrinder(g));
+    const allUsers = await db.select().from(users);
+    const ownerStaffIds = new Set(
+      allUsers.filter(u => u.role === "owner" || u.role === "staff").map(u => u.id)
+    );
+    const activeGrinders = allGrinders.filter(g => !ownerStaffIds.has(g.discordUserId) && !g.isRemoved && !g.isSuspended);
 
-    const computeAvg = (arr: any[], field: string) => {
-      const vals = arr.map(g => Number(g[field]) || 0);
-      return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+    const isEliteGrinder = (g: any) => g.discordRoleId === "1466370965016412316" || g.tier === "Elite" || g.category === "Elite Grinder" || (g.roles && g.roles.includes("Elite Grinder"));
+    const eliteGrinders = activeGrinders.filter(isEliteGrinder);
+    const regularGrinders = activeGrinders.filter((g: any) => !isEliteGrinder(g));
+
+    const computeAvg = (arr: any[], field: string, onlyWithData = false) => {
+      let vals = arr.map(g => {
+        const raw = g[field];
+        return raw === null || raw === undefined ? null : Number(raw);
+      });
+      if (onlyWithData) {
+        vals = vals.filter(v => v !== null && v !== 0);
+      } else {
+        vals = vals.filter(v => v !== null);
+      }
+      return vals.length > 0 ? (vals as number[]).reduce((s, v) => s + v, 0) / vals.length : 0;
     };
 
+    const buildMetrics = (grp: any[]) => ({
+      count: grp.length,
+      avgWinRate: computeAvg(grp, "winRate"),
+      avgQuality: computeAvg(grp, "avgQualityRating"),
+      avgOnTime: computeAvg(grp, "onTimeRate"),
+      avgCompletion: computeAvg(grp, "completionRate"),
+      avgTurnaround: computeAvg(grp, "avgTurnaroundDays", true),
+      avgCompletedOrders: computeAvg(grp, "completedOrders"),
+      avgStrikes: computeAvg(grp, "strikes"),
+      totalEarnings: grp.reduce((s: number, g: any) => s + (Number(g.totalEarnings) || 0), 0),
+    });
+
     res.json({
-      elite: {
-        count: eliteGrinders.length,
-        avgWinRate: computeAvg(eliteGrinders, "winRate"),
-        avgQuality: computeAvg(eliteGrinders, "avgQualityRating"),
-        avgOnTime: computeAvg(eliteGrinders, "onTimeRate"),
-        avgCompletion: computeAvg(eliteGrinders, "completionRate"),
-        avgTurnaround: computeAvg(eliteGrinders, "avgTurnaroundDays"),
-        avgCompletedOrders: computeAvg(eliteGrinders, "completedOrders"),
-        avgStrikes: computeAvg(eliteGrinders, "strikes"),
-        totalEarnings: eliteGrinders.reduce((s: number, g: any) => s + (Number(g.totalEarnings) || 0), 0),
-      },
-      grinders: {
-        count: regularGrinders.length,
-        avgWinRate: computeAvg(regularGrinders, "winRate"),
-        avgQuality: computeAvg(regularGrinders, "avgQualityRating"),
-        avgOnTime: computeAvg(regularGrinders, "onTimeRate"),
-        avgCompletion: computeAvg(regularGrinders, "completionRate"),
-        avgTurnaround: computeAvg(regularGrinders, "avgTurnaroundDays"),
-        avgCompletedOrders: computeAvg(regularGrinders, "completedOrders"),
-        avgStrikes: computeAvg(regularGrinders, "strikes"),
-        totalEarnings: regularGrinders.reduce((s: number, g: any) => s + (Number(g.totalEarnings) || 0), 0),
-      },
+      elite: buildMetrics(eliteGrinders),
+      grinders: buildMetrics(regularGrinders),
     });
   });
 
