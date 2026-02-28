@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const staffNavItems = [
+export const staffNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "To-Do List", url: "/todo", icon: ClipboardList },
@@ -57,7 +57,17 @@ const staffNavItems = [
   { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
 ];
 
-const grinderNavItems = [
+export function getFilteredStaffNavItems(isOwner: boolean, userId: string) {
+  const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
+  const canSeeBusiness = isOwner && !BUSINESS_BLOCKED_IDS.includes(userId);
+  return staffNavItems.filter(item => {
+    if (item.url === "/business") return canSeeBusiness;
+    if (item.url === "/staff-overview") return isOwner;
+    return true;
+  });
+}
+
+export const grinderNavItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Notifications", url: "/grinder/notifications", icon: Bell },
   { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
@@ -142,6 +152,7 @@ function AppSidebar() {
                       <Link 
                         href={item.url} 
                         data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                        data-nav-url={item.url}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           isActive 
                             ? "font-medium" 
