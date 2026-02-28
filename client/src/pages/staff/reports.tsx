@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,8 +20,35 @@ import {
 import {
   FileText, Activity, MessageSquare, Loader2, CheckCircle, Filter,
   Plus, Clock, AlertTriangle, Eye, Trash2, Pencil, FileBarChart,
+  Search, ArrowUpDown, ArrowUp, ArrowDown, X, Users,
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+
+type SortDir = "asc" | "desc";
+type ReportSortKey = "date" | "grinder" | "grade" | "status";
+type CheckpointSortKey = "date" | "grinder" | "type";
+type UpdateSortKey = "date" | "grinder" | "type";
+
+function SortButton({ label, active, direction, onClick, testId }: {
+  label: string; active: boolean; direction: SortDir; onClick: () => void; testId: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+        active ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+      }`}
+      data-testid={testId}
+    >
+      {label}
+      {active ? (
+        direction === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+      ) : (
+        <ArrowUpDown className="w-3 h-3 opacity-40" />
+      )}
+    </button>
+  );
+}
 
 export default function StaffReports() {
   const { toast } = useToast();
@@ -45,6 +72,23 @@ export default function StaffReports() {
   const [staffNotesMap, setStaffNotesMap] = useState<Record<string, string>>({});
 
   const [checkpointFilter, setCheckpointFilter] = useState("all");
+
+  const [reportSearch, setReportSearch] = useState("");
+  const [reportStatusFilter, setReportStatusFilter] = useState("all");
+  const [reportGrinderFilter, setReportGrinderFilter] = useState("all");
+  const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("date");
+  const [reportSortDir, setReportSortDir] = useState<SortDir>("desc");
+
+  const [checkpointGrinderFilter, setCheckpointGrinderFilter] = useState("all");
+  const [checkpointSearch, setCheckpointSearch] = useState("");
+  const [checkpointSortKey, setCheckpointSortKey] = useState<CheckpointSortKey>("date");
+  const [checkpointSortDir, setCheckpointSortDir] = useState<SortDir>("desc");
+
+  const [updateSearch, setUpdateSearch] = useState("");
+  const [updateGrinderFilter, setUpdateGrinderFilter] = useState("all");
+  const [updateAckFilter, setUpdateAckFilter] = useState("all");
+  const [updateSortKey, setUpdateSortKey] = useState<UpdateSortKey>("date");
+  const [updateSortDir, setUpdateSortDir] = useState<SortDir>("desc");
 
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolveCheckpointId, setResolveCheckpointId] = useState("");
@@ -163,14 +207,118 @@ export default function StaffReports() {
   const checkpointsList = checkpoints.data || [];
   const updatesList = orderUpdates.data || [];
 
-  const filteredCheckpoints = checkpointFilter === "all"
-    ? checkpointsList
-    : checkpointsList.filter((c: any) => c.type === checkpointFilter);
+  const uniqueGrinders = useMemo(() => {
+    const ids = new Set<string>();
+    [...reportsList, ...checkpointsList, ...updatesList].forEach((item: any) => {
+      if (item.grinderId) ids.add(item.grinderId);
+    });
+    return Array.from(ids).map(id => ({ id, name: getGrinderName(id) })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [reportsList, checkpointsList, updatesList, allGrinders]);
+
+  const toggleSort = <K extends string>(
+    currentKey: K, currentDir: SortDir, key: K,
+    setKey: (k: K) => void, setDir: (d: SortDir) => void
+  ) => {
+    if (currentKey === key) {
+      setDir(currentDir === "desc" ? "asc" : "desc");
+    } else {
+      setKey(key);
+      setDir("desc");
+    }
+  };
+
+  const gradeOrder: Record<string, number> = { "S": 6, "A": 5, "B": 4, "C": 3, "D": 2, "F": 1 };
+
+  const filteredReports = useMemo(() => {
+    let list = [...reportsList];
+    if (reportGrinderFilter !== "all") list = list.filter((r: any) => r.grinderId === reportGrinderFilter);
+    if (reportStatusFilter !== "all") list = list.filter((r: any) => r.status === reportStatusFilter);
+    if (reportSearch.trim()) {
+      const q = reportSearch.toLowerCase();
+      list = list.filter((r: any) => {
+        const name = getGrinderName(r.grinderId).toLowerCase();
+        return name.includes(q) || r.assignmentId?.toLowerCase().includes(q) || r.id?.toLowerCase().includes(q);
+      });
+    }
+    list.sort((a: any, b: any) => {
+      let cmp = 0;
+      if (reportSortKey === "date") {
+        cmp = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      } else if (reportSortKey === "grinder") {
+        cmp = getGrinderName(a.grinderId).localeCompare(getGrinderName(b.grinderId));
+      } else if (reportSortKey === "grade") {
+        cmp = (gradeOrder[a.overallGrade] || 0) - (gradeOrder[b.overallGrade] || 0);
+      } else if (reportSortKey === "status") {
+        cmp = (a.status || "").localeCompare(b.status || "");
+      }
+      return reportSortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [reportsList, reportGrinderFilter, reportStatusFilter, reportSearch, reportSortKey, reportSortDir, allGrinders]);
+
+  const filteredCheckpoints = useMemo(() => {
+    let list = [...checkpointsList];
+    if (checkpointFilter !== "all") list = list.filter((c: any) => c.type === checkpointFilter);
+    if (checkpointGrinderFilter !== "all") list = list.filter((c: any) => c.grinderId === checkpointGrinderFilter);
+    if (checkpointSearch.trim()) {
+      const q = checkpointSearch.toLowerCase();
+      list = list.filter((c: any) => {
+        const name = getGrinderName(c.grinderId).toLowerCase();
+        return name.includes(q) || c.assignmentId?.toLowerCase().includes(q) || c.note?.toLowerCase().includes(q) || c.response?.toLowerCase().includes(q);
+      });
+    }
+    list.sort((a: any, b: any) => {
+      let cmp = 0;
+      if (checkpointSortKey === "date") {
+        cmp = new Date(a.timestamp || a.createdAt || 0).getTime() - new Date(b.timestamp || b.createdAt || 0).getTime();
+      } else if (checkpointSortKey === "grinder") {
+        cmp = getGrinderName(a.grinderId).localeCompare(getGrinderName(b.grinderId));
+      } else if (checkpointSortKey === "type") {
+        cmp = (a.type || "").localeCompare(b.type || "");
+      }
+      return checkpointSortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [checkpointsList, checkpointFilter, checkpointGrinderFilter, checkpointSearch, checkpointSortKey, checkpointSortDir, allGrinders]);
+
+  const filteredUpdates = useMemo(() => {
+    let list = [...updatesList];
+    if (updateGrinderFilter !== "all") list = list.filter((u: any) => u.grinderId === updateGrinderFilter);
+    if (updateAckFilter === "acknowledged") list = list.filter((u: any) => !!u.acknowledgedAt || !!u.acknowledgedBy);
+    if (updateAckFilter === "unacknowledged") list = list.filter((u: any) => !u.acknowledgedAt && !u.acknowledgedBy);
+    if (updateSearch.trim()) {
+      const q = updateSearch.toLowerCase();
+      list = list.filter((u: any) => {
+        const name = getGrinderName(u.grinderId).toLowerCase();
+        return name.includes(q) || u.assignmentId?.toLowerCase().includes(q) || u.message?.toLowerCase().includes(q);
+      });
+    }
+    list.sort((a: any, b: any) => {
+      let cmp = 0;
+      if (updateSortKey === "date") {
+        cmp = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      } else if (updateSortKey === "grinder") {
+        cmp = getGrinderName(a.grinderId).localeCompare(getGrinderName(b.grinderId));
+      } else if (updateSortKey === "type") {
+        cmp = (a.type || "").localeCompare(b.type || "");
+      }
+      return updateSortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [updatesList, updateGrinderFilter, updateAckFilter, updateSearch, updateSortKey, updateSortDir, allGrinders]);
+
+  const hasActiveReportFilters = reportSearch || reportStatusFilter !== "all" || reportGrinderFilter !== "all";
+  const hasActiveCheckpointFilters = checkpointSearch || checkpointFilter !== "all" || checkpointGrinderFilter !== "all";
+  const hasActiveUpdateFilters = updateSearch || updateGrinderFilter !== "all" || updateAckFilter !== "all";
+
+  const clearReportFilters = () => { setReportSearch(""); setReportStatusFilter("all"); setReportGrinderFilter("all"); };
+  const clearCheckpointFilters = () => { setCheckpointSearch(""); setCheckpointFilter("all"); setCheckpointGrinderFilter("all"); };
+  const clearUpdateFilters = () => { setUpdateSearch(""); setUpdateGrinderFilter("all"); setUpdateAckFilter("all"); };
 
   const tabs = [
-    { id: "reports" as const, label: "Performance Reports", icon: FileText, count: reportsList.length },
-    { id: "checkpoints" as const, label: "Activity Checkpoints", icon: Activity, count: checkpointsList.length },
-    { id: "updates" as const, label: "Order Updates", icon: MessageSquare, count: updatesList.length },
+    { id: "reports" as const, label: "Performance Reports", icon: FileText, count: filteredReports.length },
+    { id: "checkpoints" as const, label: "Activity Checkpoints", icon: Activity, count: filteredCheckpoints.length },
+    { id: "updates" as const, label: "Order Updates", icon: MessageSquare, count: filteredUpdates.length },
   ];
 
   return (
@@ -235,19 +383,80 @@ export default function StaffReports() {
             </Button>
           </div>
 
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search grinder, order #..."
+                  value={reportSearch}
+                  onChange={(e) => setReportSearch(e.target.value)}
+                  className="pl-9 bg-white/[0.03] border-white/[0.08] h-9 text-sm"
+                  data-testid="input-report-search"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={reportGrinderFilter} onValueChange={setReportGrinderFilter}>
+                  <SelectTrigger className="w-full sm:w-40 bg-white/[0.03] border-white/[0.08] h-9 text-xs" data-testid="select-report-grinder">
+                    <Users className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                    <SelectValue placeholder="All Grinders" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grinders</SelectItem>
+                    {uniqueGrinders.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={reportStatusFilter} onValueChange={setReportStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-36 bg-white/[0.03] border-white/[0.08] h-9 text-xs" data-testid="select-report-status">
+                    <Filter className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Sort:</span>
+                <SortButton label="Date" active={reportSortKey === "date"} direction={reportSortDir} testId="sort-report-date"
+                  onClick={() => toggleSort(reportSortKey, reportSortDir, "date", setReportSortKey, setReportSortDir)} />
+                <SortButton label="Grinder" active={reportSortKey === "grinder"} direction={reportSortDir} testId="sort-report-grinder"
+                  onClick={() => toggleSort(reportSortKey, reportSortDir, "grinder", setReportSortKey, setReportSortDir)} />
+                <SortButton label="Grade" active={reportSortKey === "grade"} direction={reportSortDir} testId="sort-report-grade"
+                  onClick={() => toggleSort(reportSortKey, reportSortDir, "grade", setReportSortKey, setReportSortDir)} />
+                <SortButton label="Status" active={reportSortKey === "status"} direction={reportSortDir} testId="sort-report-status"
+                  onClick={() => toggleSort(reportSortKey, reportSortDir, "status", setReportSortKey, setReportSortDir)} />
+              </div>
+              {hasActiveReportFilters && (
+                <button onClick={clearReportFilters} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="button-clear-report-filters">
+                  <X className="w-3 h-3" /> Clear filters
+                </button>
+              )}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Showing {filteredReports.length} of {reportsList.length} reports
+            </div>
+          </div>
+
           {reports.isLoading && (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           )}
 
-          {!reports.isLoading && reportsList.length === 0 && (
+          {!reports.isLoading && filteredReports.length === 0 && (
             <div className="p-8 text-center text-muted-foreground text-sm rounded-xl bg-white/[0.02]">
-              No performance reports yet. Generate one to get started.
+              {hasActiveReportFilters ? "No reports match your filters." : "No performance reports yet. Generate one to get started."}
             </div>
           )}
 
-          {reportsList.map((report: any) => {
+          {filteredReports.map((report: any) => {
             const currentNotes = staffNotesMap[report.id] ?? (report.staffNotes || "");
             const metrics = report.metricsSnapshot || {};
             const checkpointSummary = report.checkpointSummary || {};
@@ -409,26 +618,72 @@ export default function StaffReports() {
       {activeTab === "checkpoints" && (
         <FadeInUp>
         <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Activity Checkpoints</span>
-            <Select value={checkpointFilter} onValueChange={setCheckpointFilter}>
-              <SelectTrigger className="w-44 bg-background/50 border-white/10" data-testid="select-checkpoint-filter">
-                <Filter className="w-3 h-3 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="ticket_ack">Ticket Ask</SelectItem>
-                <SelectItem value="login">Login</SelectItem>
-                <SelectItem value="logoff">Logoff</SelectItem>
-                <SelectItem value="start_order">Start Order</SelectItem>
-                <SelectItem value="issue">Issue</SelectItem>
-                <SelectItem value="order_update">Order Update</SelectItem>
-                <SelectItem value="missed_update">Missed Update</SelectItem>
-                <SelectItem value="stream_live">Stream Live</SelectItem>
-                <SelectItem value="stream_offline">Stream Offline</SelectItem>
-              </SelectContent>
-            </Select>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Activity Checkpoints</span>
+
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search grinder, order #, notes..."
+                  value={checkpointSearch}
+                  onChange={(e) => setCheckpointSearch(e.target.value)}
+                  className="pl-9 bg-white/[0.03] border-white/[0.08] h-9 text-sm"
+                  data-testid="input-checkpoint-search"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={checkpointGrinderFilter} onValueChange={setCheckpointGrinderFilter}>
+                  <SelectTrigger className="w-full sm:w-40 bg-white/[0.03] border-white/[0.08] h-9 text-xs" data-testid="select-checkpoint-grinder">
+                    <Users className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                    <SelectValue placeholder="All Grinders" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grinders</SelectItem>
+                    {uniqueGrinders.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={checkpointFilter} onValueChange={setCheckpointFilter}>
+                  <SelectTrigger className="w-full sm:w-40 bg-white/[0.03] border-white/[0.08] h-9 text-xs" data-testid="select-checkpoint-filter">
+                    <Filter className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="ticket_ack">Ticket Ask</SelectItem>
+                    <SelectItem value="login">Login</SelectItem>
+                    <SelectItem value="logoff">Logoff</SelectItem>
+                    <SelectItem value="start_order">Start Order</SelectItem>
+                    <SelectItem value="issue">Issue</SelectItem>
+                    <SelectItem value="order_update">Order Update</SelectItem>
+                    <SelectItem value="missed_update">Missed Update</SelectItem>
+                    <SelectItem value="stream_live">Stream Live</SelectItem>
+                    <SelectItem value="stream_offline">Stream Offline</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Sort:</span>
+                <SortButton label="Date" active={checkpointSortKey === "date"} direction={checkpointSortDir} testId="sort-checkpoint-date"
+                  onClick={() => toggleSort(checkpointSortKey, checkpointSortDir, "date", setCheckpointSortKey, setCheckpointSortDir)} />
+                <SortButton label="Grinder" active={checkpointSortKey === "grinder"} direction={checkpointSortDir} testId="sort-checkpoint-grinder"
+                  onClick={() => toggleSort(checkpointSortKey, checkpointSortDir, "grinder", setCheckpointSortKey, setCheckpointSortDir)} />
+                <SortButton label="Type" active={checkpointSortKey === "type"} direction={checkpointSortDir} testId="sort-checkpoint-type"
+                  onClick={() => toggleSort(checkpointSortKey, checkpointSortDir, "type", setCheckpointSortKey, setCheckpointSortDir)} />
+              </div>
+              {hasActiveCheckpointFilters && (
+                <button onClick={clearCheckpointFilters} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="button-clear-checkpoint-filters">
+                  <X className="w-3 h-3" /> Clear filters
+                </button>
+              )}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Showing {filteredCheckpoints.length} of {checkpointsList.length} checkpoints
+            </div>
           </div>
 
           {checkpoints.isLoading && (
@@ -439,7 +694,7 @@ export default function StaffReports() {
 
           {!checkpoints.isLoading && filteredCheckpoints.length === 0 && (
             <div className="p-8 text-center text-muted-foreground text-sm rounded-xl bg-white/[0.02]">
-              No checkpoints found.
+              {hasActiveCheckpointFilters ? "No checkpoints match your filters." : "No checkpoints found."}
             </div>
           )}
 
@@ -600,20 +855,79 @@ export default function StaffReports() {
         <div className="space-y-4">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Order Updates</span>
 
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search grinder, order #, message..."
+                  value={updateSearch}
+                  onChange={(e) => setUpdateSearch(e.target.value)}
+                  className="pl-9 bg-white/[0.03] border-white/[0.08] h-9 text-sm"
+                  data-testid="input-update-search"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={updateGrinderFilter} onValueChange={setUpdateGrinderFilter}>
+                  <SelectTrigger className="w-full sm:w-40 bg-white/[0.03] border-white/[0.08] h-9 text-xs" data-testid="select-update-grinder">
+                    <Users className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                    <SelectValue placeholder="All Grinders" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grinders</SelectItem>
+                    {uniqueGrinders.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={updateAckFilter} onValueChange={setUpdateAckFilter}>
+                  <SelectTrigger className="w-full sm:w-44 bg-white/[0.03] border-white/[0.08] h-9 text-xs" data-testid="select-update-ack">
+                    <Eye className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                    <SelectValue placeholder="All Updates" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Updates</SelectItem>
+                    <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                    <SelectItem value="unacknowledged">Unacknowledged</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Sort:</span>
+                <SortButton label="Date" active={updateSortKey === "date"} direction={updateSortDir} testId="sort-update-date"
+                  onClick={() => toggleSort(updateSortKey, updateSortDir, "date", setUpdateSortKey, setUpdateSortDir)} />
+                <SortButton label="Grinder" active={updateSortKey === "grinder"} direction={updateSortDir} testId="sort-update-grinder"
+                  onClick={() => toggleSort(updateSortKey, updateSortDir, "grinder", setUpdateSortKey, setUpdateSortDir)} />
+                <SortButton label="Type" active={updateSortKey === "type"} direction={updateSortDir} testId="sort-update-type"
+                  onClick={() => toggleSort(updateSortKey, updateSortDir, "type", setUpdateSortKey, setUpdateSortDir)} />
+              </div>
+              {hasActiveUpdateFilters && (
+                <button onClick={clearUpdateFilters} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="button-clear-update-filters">
+                  <X className="w-3 h-3" /> Clear filters
+                </button>
+              )}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Showing {filteredUpdates.length} of {updatesList.length} updates
+            </div>
+          </div>
+
           {orderUpdates.isLoading && (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           )}
 
-          {!orderUpdates.isLoading && updatesList.length === 0 && (
+          {!orderUpdates.isLoading && filteredUpdates.length === 0 && (
             <div className="p-8 text-center text-muted-foreground text-sm rounded-xl bg-white/[0.02]">
-              No order updates yet.
+              {hasActiveUpdateFilters ? "No updates match your filters." : "No order updates yet."}
             </div>
           )}
 
           <div className="space-y-2">
-            {updatesList.map((upd: any) => {
+            {filteredUpdates.map((upd: any) => {
               const isAcknowledged = !!upd.acknowledgedAt || !!upd.acknowledgedBy;
 
               return (
