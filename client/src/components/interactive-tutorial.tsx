@@ -1628,7 +1628,7 @@ export function InteractiveTutorial() {
                     role="tab"
                     aria-selected={i === currentStep}
                     aria-label={`Go to step ${i + 1}`}
-                    onClick={() => wrappedSetStep(i)}
+                    onClick={() => { setCurrentStep(i); setTutorialSession(true, i); }}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       i === currentStep ? "bg-primary w-4" : i < currentStep ? "bg-primary/40 w-1.5" : "bg-white/10 w-1.5"
                     }`}
