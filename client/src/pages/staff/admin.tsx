@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -259,7 +259,7 @@ export default function StaffAdmin() {
     enabled: isOwner,
   });
 
-  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
+  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean; holidayTheme?: string }>({
     queryKey: ["/api/config/maintenance"],
   });
 
@@ -309,6 +309,30 @@ export default function StaffAdmin() {
       toast({ title: enabled ? "Elite access mode enabled — only Elite Grinders can access" : "Elite access mode disabled — all grinders can access" });
     },
     onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
+  const HOLIDAY_THEMES = [
+    { value: "none", label: "Default (No Holiday)", color: "text-muted-foreground", emoji: "" },
+    { value: "christmas", label: "Christmas", color: "text-red-400", emoji: "🎄" },
+    { value: "thanksgiving", label: "Thanksgiving", color: "text-amber-400", emoji: "🦃" },
+    { value: "4th-of-july", label: "4th of July", color: "text-blue-400", emoji: "🇺🇸" },
+    { value: "halloween", label: "Halloween", color: "text-orange-400", emoji: "🎃" },
+    { value: "valentines", label: "Valentine's Day", color: "text-pink-400", emoji: "💝" },
+    { value: "new-years", label: "New Year's Eve", color: "text-purple-400", emoji: "🎆" },
+    { value: "st-patricks", label: "St. Patrick's Day", color: "text-emerald-400", emoji: "☘️" },
+  ];
+
+  const setHolidayThemeMutation = useMutation({
+    mutationFn: async (theme: string) => {
+      const res = await apiRequest("PATCH", "/api/config/holiday-theme", { theme });
+      return res.json();
+    },
+    onSuccess: (_, theme) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
+      const label = HOLIDAY_THEMES.find(t => t.value === theme)?.label || theme;
+      toast({ title: theme === "none" ? "Holiday theme disabled" : `Holiday theme set to ${label}` });
+    },
+    onError: () => toast({ title: "Failed to update holiday theme", variant: "destructive" }),
   });
 
   const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
@@ -1751,6 +1775,59 @@ export default function StaffAdmin() {
               </Card>
             </FadeInUp>
 
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-pink-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-holiday-theme">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-pink-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-pink-500/15 flex items-center justify-center">
+                      <Palette className="w-4 h-4 text-pink-400" />
+                    </div>
+                    Holiday Theme
+                    <Badge className={`ml-auto text-xs ${maintenanceConfig?.holidayTheme && maintenanceConfig.holidayTheme !== "none" ? "bg-pink-500/15 text-pink-400 border border-pink-500/20" : "bg-white/[0.06] text-muted-foreground border border-white/[0.08]"}`}>
+                      {maintenanceConfig?.holidayTheme && maintenanceConfig.holidayTheme !== "none"
+                        ? HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.label || maintenanceConfig.holidayTheme
+                        : "Off"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">Apply a seasonal dark theme variation for US holidays. This changes the site's background tones and accent colors for all users.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {HOLIDAY_THEMES.map((theme) => {
+                      const isActive = (maintenanceConfig?.holidayTheme || "none") === theme.value;
+                      return (
+                        <button
+                          key={theme.value}
+                          onClick={() => setHolidayThemeMutation.mutate(theme.value)}
+                          disabled={setHolidayThemeMutation.isPending}
+                          className={`p-3 rounded-xl border text-left transition-all ${
+                            isActive
+                              ? "border-pink-500/40 bg-pink-500/10 ring-1 ring-pink-500/20"
+                              : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
+                          }`}
+                          data-testid={`button-holiday-${theme.value}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {theme.emoji && <span className="text-lg">{theme.emoji}</span>}
+                            <span className={`text-xs font-medium ${isActive ? theme.color : "text-white/70"}`}>
+                              {theme.label}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {maintenanceConfig?.holidayTheme && maintenanceConfig.holidayTheme !== "none" && (
+                    <p className="text-[10px] text-muted-foreground px-1">
+                      Currently active: {HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.emoji}{" "}
+                      {HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.label}. All users will see this theme.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </FadeInUp>
 
             <FadeInUp>
               <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-early-access">

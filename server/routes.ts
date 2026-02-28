@@ -7044,6 +7044,7 @@ export async function registerRoutes(
         maintenanceMode: config?.maintenanceMode || false,
         maintenanceModeSetBy: config?.maintenanceModeSetBy || null,
         earlyAccessMode: config?.earlyAccessMode || false,
+        holidayTheme: config?.holidayTheme || "none",
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch maintenance config" });
@@ -7207,6 +7208,33 @@ export async function registerRoutes(
       res.json({ success: true, enabled });
     } catch (error) {
       res.status(500).json({ error: "Failed to update early access config" });
+    }
+  });
+
+  const VALID_HOLIDAY_THEMES = ["none", "christmas", "thanksgiving", "4th-of-july", "halloween", "valentines", "new-years", "st-patricks"];
+
+  app.patch("/api/config/holiday-theme", requireOwner, async (req, res) => {
+    try {
+      const { theme } = req.body;
+      if (typeof theme !== "string" || !VALID_HOLIDAY_THEMES.includes(theme)) {
+        return res.status(400).json({ error: `Invalid theme. Must be one of: ${VALID_HOLIDAY_THEMES.join(", ")}` });
+      }
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, holidayTheme: theme });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: theme === "none" ? "holiday_theme_disabled" : "holiday_theme_changed",
+        entityType: "config",
+        entityId: "holiday_theme",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: theme === "none" ? `Holiday theme disabled by ${actorName}` : `Holiday theme changed to "${theme}" by ${actorName}`,
+      });
+      res.json({ success: true, theme });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update holiday theme" });
     }
   });
 

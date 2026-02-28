@@ -106,6 +106,132 @@
     --sidebar-accent-foreground: 187 80% 55%;
   }
 
+  .holiday-christmas {
+    --background: 150 15% 4%;
+    --card: 150 15% 6%;
+    --card-border: 150 20% 14%;
+    --border: 150 15% 12%;
+    --input: 150 15% 12%;
+    --muted: 150 15% 12%;
+    --secondary: 150 15% 12%;
+    --sidebar-background: 150 18% 5%;
+    --sidebar-border: 150 15% 12%;
+    --sidebar-accent: 150 20% 10%;
+    --accent: 0 85% 55%;
+    --accent-foreground: 210 40% 98%;
+    --elevate-1: rgba(0, 200, 83, 0.04);
+    --elevate-2: rgba(0, 200, 83, 0.08);
+    scrollbar-color: hsl(150 20% 24%) hsl(150 15% 8%);
+  }
+
+  .holiday-thanksgiving {
+    --background: 25 20% 4%;
+    --card: 25 20% 7%;
+    --card-border: 25 25% 15%;
+    --border: 25 20% 13%;
+    --input: 25 20% 13%;
+    --muted: 25 20% 13%;
+    --secondary: 25 20% 13%;
+    --sidebar-background: 25 22% 5%;
+    --sidebar-border: 25 20% 13%;
+    --sidebar-accent: 25 25% 10%;
+    --accent: 30 90% 50%;
+    --accent-foreground: 240 10% 4%;
+    --elevate-1: rgba(200, 120, 20, 0.04);
+    --elevate-2: rgba(200, 120, 20, 0.08);
+    scrollbar-color: hsl(25 25% 24%) hsl(25 20% 8%);
+  }
+
+  .holiday-4th-of-july {
+    --background: 220 20% 4%;
+    --card: 220 20% 7%;
+    --card-border: 220 25% 15%;
+    --border: 220 20% 13%;
+    --input: 220 20% 13%;
+    --muted: 220 20% 13%;
+    --secondary: 220 20% 13%;
+    --sidebar-background: 220 22% 5%;
+    --sidebar-border: 220 20% 13%;
+    --sidebar-accent: 220 25% 10%;
+    --accent: 0 85% 55%;
+    --accent-foreground: 210 40% 98%;
+    --elevate-1: rgba(30, 60, 180, 0.04);
+    --elevate-2: rgba(30, 60, 180, 0.08);
+    scrollbar-color: hsl(220 25% 24%) hsl(220 20% 8%);
+  }
+
+  .holiday-halloween {
+    --background: 25 30% 3%;
+    --card: 25 30% 6%;
+    --card-border: 25 40% 14%;
+    --border: 25 30% 12%;
+    --input: 25 30% 12%;
+    --muted: 25 30% 12%;
+    --secondary: 25 30% 12%;
+    --sidebar-background: 25 35% 4%;
+    --sidebar-border: 25 30% 12%;
+    --sidebar-accent: 25 35% 10%;
+    --accent: 33 100% 50%;
+    --accent-foreground: 240 10% 4%;
+    --elevate-1: rgba(255, 140, 0, 0.04);
+    --elevate-2: rgba(255, 140, 0, 0.08);
+    scrollbar-color: hsl(25 30% 24%) hsl(25 30% 6%);
+  }
+
+  .holiday-valentines {
+    --background: 340 20% 4%;
+    --card: 340 20% 7%;
+    --card-border: 340 25% 15%;
+    --border: 340 20% 13%;
+    --input: 340 20% 13%;
+    --muted: 340 20% 13%;
+    --secondary: 340 20% 13%;
+    --sidebar-background: 340 22% 5%;
+    --sidebar-border: 340 20% 13%;
+    --sidebar-accent: 340 25% 10%;
+    --accent: 340 80% 60%;
+    --accent-foreground: 210 40% 98%;
+    --elevate-1: rgba(220, 50, 100, 0.04);
+    --elevate-2: rgba(220, 50, 100, 0.08);
+    scrollbar-color: hsl(340 25% 24%) hsl(340 20% 8%);
+  }
+
+  .holiday-new-years {
+    --background: 260 15% 4%;
+    --card: 260 15% 7%;
+    --card-border: 260 20% 15%;
+    --border: 260 15% 13%;
+    --input: 260 15% 13%;
+    --muted: 260 15% 13%;
+    --secondary: 260 15% 13%;
+    --sidebar-background: 260 18% 5%;
+    --sidebar-border: 260 15% 13%;
+    --sidebar-accent: 260 20% 10%;
+    --accent: 45 100% 55%;
+    --accent-foreground: 240 10% 4%;
+    --elevate-1: rgba(200, 170, 50, 0.04);
+    --elevate-2: rgba(200, 170, 50, 0.08);
+    scrollbar-color: hsl(260 20% 24%) hsl(260 15% 8%);
+  }
+
+  .holiday-st-patricks {
+    --background: 140 20% 4%;
+    --card: 140 20% 6%;
+    --card-border: 140 25% 14%;
+    --border: 140 20% 12%;
+    --input: 140 20% 12%;
+    --muted: 140 20% 12%;
+    --secondary: 140 20% 12%;
+    --sidebar-background: 140 22% 5%;
+    --sidebar-border: 140 20% 12%;
+    --sidebar-accent: 140 25% 10%;
+    --accent: 140 80% 45%;
+    --accent-foreground: 210 40% 98%;
+    --elevate-1: rgba(0, 180, 60, 0.04);
+    --elevate-2: rgba(0, 180, 60, 0.08);
+    scrollbar-color: hsl(140 25% 24%) hsl(140 20% 8%);
+  }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-family: var(--font-sans);

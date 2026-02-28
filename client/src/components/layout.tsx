@@ -234,12 +234,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isEliteGrinder = !isStaffOrOwner && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : isEliteGrinder ? "theme-elite" : "theme-grinder";
 
+  const { data: siteConfig } = useQuery<{ holidayTheme?: string }>({
+    queryKey: ["/api/config/maintenance"],
+    refetchInterval: 60000,
+  });
+  const holidayTheme = siteConfig?.holidayTheme && siteConfig.holidayTheme !== "none" ? `holiday-${siteConfig.holidayTheme}` : null;
+
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove("theme-owner", "theme-staff", "theme-grinder", "theme-elite");
     root.classList.add(themeClass);
     return () => root.classList.remove(themeClass);
   }, [themeClass]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const allHolidays = ["holiday-christmas", "holiday-thanksgiving", "holiday-4th-of-july", "holiday-halloween", "holiday-valentines", "holiday-new-years", "holiday-st-patricks"];
+    allHolidays.forEach(c => root.classList.remove(c));
+    if (holidayTheme) root.classList.add(holidayTheme);
+    return () => { allHolidays.forEach(c => root.classList.remove(c)); };
+  }, [holidayTheme]);
 
   const sidebarStyle = {
     "--sidebar-width": "18rem",
