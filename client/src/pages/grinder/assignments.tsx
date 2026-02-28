@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { apiRequest } from "@/lib/queryClient";
@@ -300,7 +301,7 @@ export default function GrinderAssignments() {
                     )}
                   </div>
                 </div>
-                {a.status === "Active" && (
+                {a.status === "Active" ? (
                   <div className="flex flex-col gap-2">
                     <div className="grid grid-cols-2 gap-1.5">
                       {a.hasTicket && a.ticketChannelId && (
@@ -359,6 +360,51 @@ export default function GrinderAssignments() {
                       }}>
                       <CheckCircle className="w-5 h-5" /> Mark Complete
                     </Button>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <Button size="sm" variant="outline" asChild
+                        className="w-full gap-2 text-xs font-semibold bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06] h-9"
+                        data-testid={`button-order-history-${a.id}`}>
+                        <Link href="/my-scorecard">
+                          <Clock className="w-4 h-4" /> Order History
+                        </Link>
+                      </Button>
+                      <Button size="sm" variant="outline"
+                        className="w-full gap-2 text-xs font-semibold bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06] h-9"
+                        data-testid={`button-view-brief-alt-${a.id}`}
+                        onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
+                        <FileText className="w-4 h-4" /> Brief
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
+                        <CheckCircle className="w-4 h-4" />
+                        {a.status === "Completed" ? "Completed & Pending Payout" : a.status}
+                      </div>
+                      <Button size="sm" variant="outline" className="h-8 gap-2 text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20" data-testid={`button-staff-alert-done-${a.id}`}
+                        onClick={() => { setStaffAlertModal(a); setStaffAlertMessage(""); }}>
+                        <BellRing className="w-3 h-3" /> Alert Staff
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" asChild
+                        className="w-full gap-2 text-xs font-semibold bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06] h-9"
+                        data-testid={`button-order-history-done-${a.id}`}>
+                        <Link href="/my-scorecard">
+                          <Clock className="w-4 h-4" /> Order History
+                        </Link>
+                      </Button>
+                      {a.orderBrief && (
+                        <Button size="sm" variant="outline"
+                          className="w-full gap-2 text-xs font-semibold bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06] h-9"
+                          data-testid={`button-view-brief-done-${a.id}`}
+                          onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
+                          <FileText className="w-4 h-4" /> Brief
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
                 {a.status === "Active" && (
@@ -449,6 +495,7 @@ export default function GrinderAssignments() {
               <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
               <p className="text-[11px] text-amber-400/80 leading-relaxed">
                 Use this for internal concerns, password issues, or anything sensitive. 
+                These alerts are sent to the staff to-do list and internal channels. 
                 Customers cannot see these alerts.
               </p>
             </div>

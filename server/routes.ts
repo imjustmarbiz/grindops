@@ -4174,7 +4174,7 @@ export async function registerRoutes(
 
       const grinder = await storage.getGrinderByDiscordId(grinderId);
       const order = await storage.getOrder(orderId);
-      const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : orderId.slice(0, 10);
+      const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : (orderId ? orderId.slice(0, 10) : "General");
 
       await storage.createStaffAlert({
         id: `SAL-${Date.now().toString(36)}`,
@@ -4186,41 +4186,20 @@ export async function registerRoutes(
         createdBy: grinderId,
       });
 
-      await storage.createAuditLog({
-        id: `AL-${Date.now().toString(36)}`,
-        entityType: "assignment",
-        entityId: assignmentId,
-        action: "staff_alert_sent",
-        actor: grinder?.name || "Grinder",
-        details: JSON.stringify({ message, orderId }),
-      });
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("[staff-alert] Error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/grinder/me/staff-alert", requireGrinderOrStaff, async (req, res) => {
-    try {
-      const { assignmentId, orderId, message } = req.body;
-      const grinderId = (req as any).user?.discordId || (req as any).user?.id || "";
-      if (!grinderId || !message) return res.status(400).json({ error: "Grinder ID and message are required" });
-
-      const grinder = await storage.getGrinderByDiscordId(grinderId);
-      const order = await storage.getOrder(orderId);
-      const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : orderId.slice(0, 10);
-
-      await storage.createStaffAlert({
-        id: `SAL-${Date.now().toString(36)}`,
-        targetType: "all",
-        grinderId: grinder?.id || null,
-        title: `Internal Alert: Order ${orderLabel}`,
-        message: `**From ${grinder?.name || "Grinder"}:** ${message}`,
-        severity: "warning",
-        createdBy: grinderId,
-      });
+      if (grinder) {
+        await storage.createStaffTask({
+          id: `ST-${Date.now().toString(36)}`,
+          title: `Internal Alert: Order ${orderLabel}`,
+          description: `**From Grinder:** ${grinder.name}\n\n${message}`,
+          status: "pending",
+          priority: "high",
+          category: "alert",
+          assignedTo: null,
+          createdBy: grinder.id,
+          createdByName: grinder.name,
+          orderId: orderId || null,
+        });
+      }
 
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
@@ -4230,6 +4209,17 @@ export async function registerRoutes(
         actor: grinder?.name || "Grinder",
         details: JSON.stringify({ message, orderId }),
       });
+
+      const staffUsers = await db.select().from(users).where(or(eq(users.role, "staff"), eq(users.role, "owner")));
+      for (const staff of staffUsers) {
+        await createSystemNotification({
+          userId: staff.discordId || staff.id,
+          type: "alert",
+          title: `Internal Alert: Order ${orderLabel}`,
+          body: `**From Grinder:** ${grinder?.name || "Grinder"}\n${message.substring(0, 100)}${message.length > 100 ? "..." : ""}`,
+          severity: "warning",
+        });
+      }
 
       res.json({ success: true });
     } catch (error: any) {
