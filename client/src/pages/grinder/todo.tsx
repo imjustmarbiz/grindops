@@ -30,6 +30,15 @@ export default function GrinderTodoList() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedGuide, setExpandedGuide] = useState(false);
+  const [tutorialCompleted, setTutorialCompleted] = useState(localStorage.getItem(`grindops-tutorial-grinder-v2-completed`) === "true");
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setTutorialCompleted(localStorage.getItem(`grindops-tutorial-grinder-v2-completed`) === "true");
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const { data: customTasks = [], isLoading: tasksLoading } = useQuery<any[]>({
     queryKey: ["/api/grinder/me/tasks"],
@@ -118,16 +127,6 @@ export default function GrinderTodoList() {
     const hasQueueGuide = (customTasks || []).some((t: any) => t.id === "req-review-queue" && t.status === "completed");
     const hasAcceptedRules = !!grinder?.rulesAccepted;
     const hasCompletedTutorial = localStorage.getItem(`grindops-tutorial-grinder-v2-completed`) === "true";
-
-    const [tutorialCompleted, setTutorialCompleted] = useState(hasCompletedTutorial);
-
-    useEffect(() => {
-      const handleStorageChange = () => {
-        setTutorialCompleted(localStorage.getItem(`grindops-tutorial-grinder-v2-completed`) === "true");
-      };
-      window.addEventListener("storage", handleStorageChange);
-      return () => window.removeEventListener("storage", handleStorageChange);
-    }, []);
 
     if (!hasLinkedTwitch) {
       todos.push({
