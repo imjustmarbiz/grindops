@@ -3,7 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
-  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks, staffActionDismissals,
+  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffBadges, staffTasks, staffActionDismissals,
   deletionRequests, finePayments, businessWallets, walletTransactions, businessPayouts, walletTransfers, orderPaymentLinks,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
@@ -33,6 +33,7 @@ import {
   type ReviewAccessCode, type InsertReviewAccessCode,
   type GrinderTask, type InsertGrinderTask,
   type GrinderBadge, type InsertGrinderBadge,
+  type StaffBadge, type InsertStaffBadge,
   type StaffTask, type InsertStaffTask, type StaffActionDismissal,
   type DeletionRequest, type InsertDeletionRequest,
   type FinePayment, type InsertFinePayment,
@@ -190,6 +191,10 @@ export interface IStorage {
   getGrinderBadges(grinderId?: string): Promise<GrinderBadge[]>;
   createGrinderBadge(badge: InsertGrinderBadge): Promise<GrinderBadge>;
   deleteGrinderBadge(id: string): Promise<boolean>;
+
+  getStaffBadges(userId?: string): Promise<StaffBadge[]>;
+  createStaffBadge(badge: InsertStaffBadge): Promise<StaffBadge>;
+  deleteStaffBadge(id: string): Promise<boolean>;
 
   getStaffTasks(assignedTo?: string): Promise<StaffTask[]>;
   createStaffTask(task: InsertStaffTask): Promise<StaffTask>;
@@ -1454,6 +1459,23 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGrinderBadge(id: string): Promise<boolean> {
     const result = await db.delete(grinderBadges).where(eq(grinderBadges.id, id));
+    return (result?.rowCount ?? 0) > 0;
+  }
+
+  async getStaffBadges(userId?: string): Promise<StaffBadge[]> {
+    if (userId) {
+      return await db.select().from(staffBadges).where(eq(staffBadges.userId, userId)).orderBy(desc(staffBadges.createdAt));
+    }
+    return await db.select().from(staffBadges).orderBy(desc(staffBadges.createdAt));
+  }
+
+  async createStaffBadge(badge: InsertStaffBadge): Promise<StaffBadge> {
+    const [created] = await db.insert(staffBadges).values(badge).returning();
+    return created;
+  }
+
+  async deleteStaffBadge(id: string): Promise<boolean> {
+    const result = await db.delete(staffBadges).where(eq(staffBadges.id, id));
     return (result?.rowCount ?? 0) > 0;
   }
 

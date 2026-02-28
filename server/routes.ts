@@ -308,10 +308,10 @@ export async function registerRoutes(
         "notifications", "audit_logs", "activity_checkpoints", "strike_logs",
         "customer_reviews", "messages", "message_threads", "thread_participants",
         "events", "patch_notes", "performance_reports", "staff_tasks",
-        "grinder_badges", "strike_appeals",
+        "grinder_badges", "staff_badges", "strike_appeals",
       ];
       const safeOrder = [
-        "grinder_badges", "strike_logs", "staff_tasks", "activity_checkpoints",
+        "staff_badges", "grinder_badges", "strike_logs", "staff_tasks", "activity_checkpoints",
         "payout_requests", "customer_reviews", "notifications", "messages",
         "thread_participants", "message_threads", "events", "patch_notes",
         "performance_reports", "strike_appeals", "audit_logs",
@@ -5506,6 +5506,127 @@ export async function registerRoutes(
     }
 
     res.json({ success: true });
+  });
+
+  app.get("/api/owner/staff-badges", requireOwner, async (req, res) => {
+    const userId = req.query.userId as string | undefined;
+    const badges = await storage.getStaffBadges(userId || undefined);
+    res.json(badges);
+  });
+
+  app.get("/api/owner/staff-badges/:userId", requireOwner, async (req, res) => {
+    const badges = await storage.getStaffBadges(req.params.userId);
+    res.json(badges);
+  });
+
+  app.post("/api/owner/staff-badges", requireOwner, async (req, res) => {
+    const user = (req as any).user;
+    const actorDiscordId = user.discordId || user.id || "";
+    if (actorDiscordId === "872820240139046952") {
+      return res.status(403).json({ error: "You do not have permission to award staff badges" });
+    }
+
+    const { userId, badgeId, note } = req.body;
+    if (!userId || !badgeId) return res.status(400).json({ error: "userId and badgeId are required" });
+
+    const existing = await storage.getStaffBadges(userId);
+    if (existing.some(b => b.badgeId === badgeId)) {
+      return res.status(409).json({ error: "Badge already assigned to this staff member" });
+    }
+
+    const badge = await storage.createStaffBadge({
+      id: `SBDG-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      userId,
+      badgeId,
+      awardedBy: user.id,
+      awardedByName: user.firstName || user.discordUsername || "Owner",
+      note: note || null,
+    });
+
+    await storage.createAuditLog({
+      id: `AUD-${Date.now().toString(36)}`,
+      entityType: "staff_badge",
+      entityId: badge.id,
+      action: "staff_badge_awarded",
+      actor: user.discordUsername || user.firstName || user.id,
+      details: { userId, badgeId, note },
+    });
+
+    res.json(badge);
+  });
+
+  app.delete("/api/owner/staff-badges/:id", requireOwner, async (req, res) => {
+    const user = (req as any).user;
+    const actorDiscordId = user.discordId || user.id || "";
+    if (actorDiscordId === "872820240139046952") {
+      return res.status(403).json({ error: "You do not have permission to remove staff badges" });
+    }
+
+    const allBadges = await storage.getStaffBadges();
+    const badge = allBadges.find(b => b.id === req.params.id);
+
+    const deleted = await storage.deleteStaffBadge(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Badge not found" });
+
+    if (badge) {
+      await storage.createAuditLog({
+        id: `AUD-${Date.now().toString(36)}`,
+        entityType: "staff_badge",
+        entityId: req.params.id,
+        action: "staff_badge_removed",
+        actor: user.discordUsername || user.firstName || user.id,
+        details: { userId: badge.userId, badgeId: badge.badgeId },
+      });
+    }
+
+    res.json({ success: true });
+  });
+
+  app.get("/api/staff/my-badges", requireStaff, async (req, res) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    const badges = await storage.getStaffBadges(user.id);
+    res.json(badges);
+  });
+
+  app.get("/api/owner/staff-badge-stats", requireOwner, async (req, res) => {
+    try {
+      const allOrders = await storage.getOrders();
+      const allBids = await storage.getBids();
+      const allAssignments = await storage.getAssignments();
+      const allPayouts = await storage.getPayoutRequests();
+      const allGrinders = await storage.getGrinders();
+      const allAlerts = await storage.getStaffAlerts();
+      const allStrikeLogs = await storage.getStrikeLogs();
+      const allEvents = await storage.getEvents();
+      const allAuditLogs = await storage.getAuditLogs();
+      const allReviews = await storage.getCustomerReviews();
+
+      const totalRevenue = allOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0);
+      const activeGrinders = allGrinders.filter(g => !g.isRemoved).length;
+
+      res.json({
+        totalOrders: allOrders.length,
+        totalBids: allBids.length,
+        totalAssignments: allAssignments.length,
+        totalPayouts: allPayouts.length,
+        totalGrinders: activeGrinders,
+        totalAlerts: allAlerts.length,
+        totalStrikes: allStrikeLogs.length,
+        totalEvents: allEvents.length,
+        totalAuditLogs: allAuditLogs.length,
+        totalReviews: allReviews.length,
+        totalRevenue,
+        reviewedBids: allBids.filter(b => b.status === "Accepted" || b.status === "Rejected" || b.status === "Denied").length,
+        processedPayouts: allPayouts.filter(p => p.status === "Approved" || p.status === "Paid").length,
+      });
+    } catch (err) {
+      res.json({
+        totalOrders: 0, totalBids: 0, totalAssignments: 0, totalPayouts: 0,
+        totalGrinders: 0, totalAlerts: 0, totalStrikes: 0, totalEvents: 0,
+        totalAuditLogs: 0, totalReviews: 0, totalRevenue: 0, reviewedBids: 0, processedPayouts: 0,
+      });
+    }
   });
 
   app.get("/api/grinder/me/badges", async (req, res) => {

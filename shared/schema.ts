@@ -538,6 +538,20 @@ export const insertGrinderBadgeSchema = createInsertSchema(grinderBadges).omit({
 export type InsertGrinderBadge = z.infer<typeof insertGrinderBadgeSchema>;
 export type GrinderBadge = typeof grinderBadges.$inferSelect;
 
+export const staffBadges = pgTable("staff_badges", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  badgeId: varchar("badge_id").notNull(),
+  awardedBy: varchar("awarded_by"),
+  awardedByName: text("awarded_by_name"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStaffBadgeSchema = createInsertSchema(staffBadges).omit({ createdAt: true });
+export type InsertStaffBadge = z.infer<typeof insertStaffBadgeSchema>;
+export type StaffBadge = typeof staffBadges.$inferSelect;
+
 export const deletionRequests = pgTable("deletion_requests", {
   id: varchar("id").primaryKey(),
   entityType: text("entity_type").notNull(),
