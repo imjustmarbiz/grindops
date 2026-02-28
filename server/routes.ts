@@ -155,15 +155,28 @@ export async function registerRoutes(
   });
 
   app.get('/uploads/{*splat}', async (req, res) => {
+    // 1. Try standard /storage/uploads/ path
     const objectPath = req.path.replace(/^\/uploads\//, '/storage/uploads/');
     const served = await streamFromObjectStorage(objectPath, res);
+    
     if (!served) {
-      const localPath = path.join(process.cwd(), req.path.replace(/^\//, ""));
-      if (fs.existsSync(localPath)) {
-        res.set('Access-Control-Allow-Origin', '*');
-        res.sendFile(localPath);
-      } else {
-        res.status(404).json({ error: "File not found" });
+      // 2. Try with /storage/ prefix (some older uploads might be here)
+      const altPath = req.path.replace(/^\/uploads\//, '/storage/');
+      const altServed = await streamFromObjectStorage(altPath, res);
+      
+      if (!altServed) {
+        // 3. Check for specific subfolders in /storage/ (like update-proofs)
+        const subfolderPath = req.path.replace(/^\/uploads\//, '/storage/uploads/');
+        // The first attempt already tried this, but let's be explicit about the full path
+        // in case of double-slashes or other prefix issues.
+        
+        const localPath = path.join(process.cwd(), req.path.replace(/^\//, ""));
+        if (fs.existsSync(localPath)) {
+          res.set('Access-Control-Allow-Origin', '*');
+          res.sendFile(localPath);
+        } else {
+          res.status(404).json({ error: "File not found" });
+        }
       }
     }
   });

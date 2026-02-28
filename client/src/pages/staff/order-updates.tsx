@@ -100,6 +100,8 @@ export default function StaffOrderUpdates() {
     queryKey: ["/api/services"],
   });
 
+  const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
+
   const acknowledgeMutation = useMutation({
     mutationFn: async ({ id, acknowledgedBy }: { id: string; acknowledgedBy: string }) => {
       const res = await apiRequest("PATCH", `/api/staff/order-updates/${id}/acknowledge`, { acknowledgedBy });
