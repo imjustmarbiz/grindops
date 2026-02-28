@@ -1,3 +1,4 @@
+import confetti from "canvas-confetti";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useGrinderData } from "@/hooks/use-grinder-data";
 import { useQuery } from "@tanstack/react-query";
@@ -132,6 +133,7 @@ export default function GrinderOverview() {
     if (!grinder) return [] as BadgeId[];
     const ids = new Set<BadgeId>();
     const completed = grinder.completedOrders || 0;
+    const streak = grinder.completionStreak || 0;
     const totalOrders = grinder.totalOrders || 0;
     const quality = Number(grinder.avgQualityRating) || 0;
     const winRate = Number(grinder.winRate) || 0;
@@ -194,6 +196,31 @@ export default function GrinderOverview() {
 
     return Array.from(ids);
   }, [grinder, stats, isElite, manualBadges]);
+
+  // Handle badge celebration
+  const prevBadgesRef = useRef<string[]>([]);
+  useEffect(() => {
+    if (allBadgeIds.length > prevBadgesRef.current.length && prevBadgesRef.current.length > 0) {
+      const newBadges = allBadgeIds.filter(id => !prevBadgesRef.current.includes(id));
+      if (newBadges.length > 0) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: isElite ? ["#06b6d4", "#ffffff", "#0891b2"] : ["#5865f2", "#ffffff", "#4752c4"],
+          zIndex: 10000,
+        });
+        
+        const badgeNames = newBadges.map(id => BADGE_META[id]?.label || id).join(", ");
+        toast({
+          title: "New Achievement Unlocked!",
+          description: `You've earned: ${badgeNames}`,
+          variant: "default",
+        });
+      }
+    }
+    prevBadgesRef.current = allBadgeIds;
+  }, [allBadgeIds, isElite, toast]);
 
   if (isLoading) {
     return (
