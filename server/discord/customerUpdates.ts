@@ -28,9 +28,18 @@ const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; 
 };
 
 const BRAND_FOOTER = "GrindOps by Service Plug LLC";
-function getBrandIconUrl(): string {
-  const host = getAppBaseUrl();
-  return host ? `${host}/embed-logo.png` : "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
+async function getBrandIconUrl(): Promise<string> {
+  try {
+    const host = getAppBaseUrl();
+    if (!host) return "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
+    const config = await storage.getQueueConfig();
+    if (config?.embedThumbnailUrl) {
+      return resolveUrl(config.embedThumbnailUrl, host) || `${host}/embed-logo.png`;
+    }
+    return `${host}/embed-logo.png`;
+  } catch {
+    return "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
+  }
 }
 
 function getAppBaseUrl(): string | null {
@@ -173,10 +182,11 @@ export async function sendCustomerUpdate(options: {
     const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id;
 
     const thumbnailUrl = await getEmbedThumbnailUrl(order.serviceId);
+    const brandIcon = await getBrandIconUrl();
 
     const embed = new EmbedBuilder()
       .setColor(config.color)
-      .setAuthor({ name: BRAND_FOOTER, iconURL: getBrandIconUrl() })
+      .setAuthor({ name: BRAND_FOOTER, iconURL: brandIcon })
       .setTitle(`${config.emoji}  ${config.title}`)
       .setDescription(message)
       .addFields(
@@ -245,10 +255,11 @@ export async function sendCompletionApprovalRequest(options: {
     const grinderInfo = await resolveGrinderInfo(options.grinderName, assignmentId);
     const grinderTag = grinderMention(grinderInfo.discordId, grinderInfo.name);
     const thumbnailUrl = await getEmbedThumbnailUrl(order.serviceId);
+    const brandIcon = await getBrandIconUrl();
 
     const embed = new EmbedBuilder()
       .setColor(0x22C55E)
-      .setAuthor({ name: BRAND_FOOTER, iconURL: getBrandIconUrl() })
+      .setAuthor({ name: BRAND_FOOTER, iconURL: brandIcon })
       .setTitle("✅  Order Completed — Approval Required")
       .setDescription(
         `Your order has been completed by ${grinderTag}!\n\n` +
