@@ -889,13 +889,13 @@ export default function Grinders() {
 
     return (
       <>
-        <div className="sm:hidden space-y-2">
+        <div className="md:hidden space-y-2">
           {sortedItems.map(g => {
             const winRateNum = g.completedOrders > 0 && g.winRate != null && g.winRate !== "" ? Number(g.winRate) : null;
             const lastInfo = daysAgo(g.lastAssigned);
             const lastColor = lastInfo.days === null ? "text-muted-foreground" : lastInfo.days <= 3 ? "text-green-400" : lastInfo.days <= 7 ? "text-yellow-400" : "text-red-400";
             return (
-              <Card key={g.id} className={`border-0 ${rowBgColor(g.displayRole || g.category || "Grinder")} active:brightness-125 transition-colors cursor-pointer`} onClick={() => setSelectedGrinder(g)} data-testid={`row-grinder-${g.id}`}>
+              <Card key={g.id} className={`border border-white/[0.06] bg-white/[0.02] active:brightness-125 transition-colors cursor-pointer`} onClick={() => setSelectedGrinder(g)} data-testid={`card-grinder-mobile-${g.id}`}>
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -957,7 +957,7 @@ export default function Grinders() {
           })}
         </div>
 
-        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden hidden sm:block">
+        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden hidden md:block">
           <div className="overflow-x-auto">
           <Table className="min-w-[900px]">
             <TableHeader className="bg-white/[0.03]">

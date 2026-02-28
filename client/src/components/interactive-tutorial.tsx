@@ -653,48 +653,48 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/notifications": {
-    description: "Your notification hub — bid results, order updates, system alerts, and team announcements all in one feed. Filter by type and mark as read.",
+    description: "Your notification hub — bid results, order updates, system alerts, and team announcements. Sound alerts for important events, read/unread toggle, and filter by notification type.",
     demoSteps: [
-      { label: "New bid submitted on Order #42", icon: Gavel, color: "text-purple-400" },
-      { label: "Grinder completed assignment", icon: CheckCircle2, color: "text-emerald-400" },
-      { label: "Payout request needs approval", icon: Banknote, color: "text-yellow-400" },
-      { label: "Mark all as read in one click", icon: Eye, color: "text-blue-400" },
+      { label: "Sound alerts for urgent notifications", icon: Bell, color: "text-yellow-400" },
+      { label: "Toggle read/unread on each notification", icon: Eye, color: "text-blue-400" },
+      { label: "Filter by type: bids, orders, payouts", icon: Gavel, color: "text-purple-400" },
+      { label: "Mark all as read in one click", icon: CheckCircle2, color: "text-emerald-400" },
     ],
   },
   "/todo": {
-    description: "Your task dashboard — pending approvals, unreviewed bids, orders needing attention, and administrative duties organized by priority.",
+    description: "Your task dashboard — tasks organized by priority levels, task completion tracking, and staff-assigned duties. Pending approvals, unreviewed bids, and orders needing attention.",
     demoSteps: [
-      { label: "3 payout requests pending review", icon: Banknote, color: "text-yellow-400" },
-      { label: "2 bids awaiting acceptance", icon: Gavel, color: "text-purple-400" },
-      { label: "1 order repair needs resolution", icon: Wrench, color: "text-orange-400" },
-      { label: "Check off tasks as you go", icon: CheckCircle2, color: "text-emerald-400" },
+      { label: "Priority levels: urgent, high, normal", icon: AlertTriangle, color: "text-red-400" },
+      { label: "Track task completion progress", icon: CheckCircle2, color: "text-emerald-400" },
+      { label: "Staff-assigned tasks with deadlines", icon: ClipboardList, color: "text-blue-400" },
+      { label: "Pending approvals and reviews queued", icon: Gavel, color: "text-purple-400" },
     ],
   },
   "/staff-overview": {
-    description: "Owner-only view of your entire staff team — activity metrics, actions per day, and individual performance breakdowns. Click any team member to open their Performance Card.",
+    description: "Owner's staff roster view — compare staff performance side-by-side, view individual performance cards, and monitor team activity. Track who's most active and productive.",
     demoSteps: [
-      { label: "Total staff actions today & 7-day trends", icon: UserCheck, color: "text-blue-400" },
+      { label: "Side-by-side staff performance comparison", icon: UserCheck, color: "text-blue-400" },
       { label: "Click any member → Performance Card dialog", icon: BarChart3, color: "text-cyan-400" },
-      { label: "Staff audit log by action type", icon: ScrollText, color: "text-purple-400" },
-      { label: "Compare team member contributions", icon: Users, color: "text-green-400" },
+      { label: "Monitor team activity & action trends", icon: Activity, color: "text-purple-400" },
+      { label: "Track most active and productive staff", icon: Users, color: "text-green-400" },
     ],
   },
   "/my-performance": {
-    description: "Your personal performance dashboard — KPI stats, action breakdown, achievement badges, recent activity feed, and task tracking all in one view.",
+    description: "Your personal performance dashboard — KPI cards showing all-time actions, recent activity, orders created, bids reviewed, assignments made, and payouts processed. Includes action breakdown chart, activity feed, badges, and task tracking.",
     demoSteps: [
-      { label: "8 KPI cards: orders, bids, payouts & more", icon: BarChart3, color: "text-blue-400" },
+      { label: "KPI cards: orders, bids, assignments, payouts", icon: BarChart3, color: "text-blue-400" },
       { label: "Action breakdown chart by category", icon: TrendingUp, color: "text-cyan-400" },
       { label: "Achievement badges with role auto-badge", icon: Award, color: "text-yellow-400" },
       { label: "Recent activity feed & task tracker", icon: ClipboardCheck, color: "text-green-400" },
     ],
   },
   "/admin": {
-    description: "System configuration hub with 3 tabs — Operations (order management, alerts), Management (elite requests, strikes, profiles), and System (bot, maintenance, services).",
+    description: "System administration — maintenance mode toggle, site-wide alerts, system configuration, user management, and operational settings.",
     demoSteps: [
-      { label: "Operations: override orders & alerts", icon: Settings, color: "text-blue-400" },
-      { label: "Management: strikes, limits, profiles", icon: Shield, color: "text-orange-400" },
-      { label: "System: bot toggle, maintenance mode", icon: Wrench, color: "text-red-400" },
-      { label: "Service toggles affect entire platform", icon: Package, color: "text-cyan-400" },
+      { label: "Maintenance mode toggle & site alerts", icon: Settings, color: "text-blue-400" },
+      { label: "User management: strikes, limits, profiles", icon: Shield, color: "text-orange-400" },
+      { label: "System config: bot toggle, service settings", icon: Wrench, color: "text-red-400" },
+      { label: "Operational settings affect entire platform", icon: Package, color: "text-cyan-400" },
     ],
   },
   "/wallets": {
@@ -725,12 +725,12 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinders": {
-    description: "Your grinder roster — view all grinders with availability status, performance stats, tier levels, and management tools. Colored dots show who's online.",
+    description: "Your grinder roster — availability status dots (green/red/amber), tier level badges, scorecard access, and bulk management tools. View performance stats and manage the entire fleet.",
     demoSteps: [
-      { label: "Green dot = available for orders", icon: CheckCircle2, color: "text-green-400" },
-      { label: "View scorecard, bids, and history", icon: ClipboardCheck, color: "text-blue-400" },
-      { label: "Manage roles, strikes, and limits", icon: Shield, color: "text-orange-400" },
-      { label: "Edit grinder profiles and tiers", icon: Settings, color: "text-cyan-400" },
+      { label: "Availability dots: green/amber/red status", icon: CircleDot, color: "text-green-400" },
+      { label: "Tier badges: New, Regular, Veteran, Elite", icon: Crown, color: "text-yellow-400" },
+      { label: "Click any grinder to open scorecard", icon: ClipboardCheck, color: "text-blue-400" },
+      { label: "Bulk management: roles, strikes, limits", icon: Shield, color: "text-orange-400" },
     ],
   },
   "/tier-progress": {
@@ -903,13 +903,13 @@ const staffPageDescriptions: Record<string, PageMeta> = {
 
 const grinderPageDescriptions: Record<string, PageMeta> = {
   "/": {
-    description: "Your personal dashboard — active orders, stats, availability toggle, and performance overview.",
+    description: "Your personal dashboard — availability toggle, active assignments widget, earnings stats, achievement badges, and performance overview all in one view.",
     mockupId: "grinder-dashboard",
     demoSteps: [
-      { label: "Active orders, completed, pending bids", icon: LayoutDashboard, color: "text-blue-400" },
-      { label: "Toggle availability: Online/Busy/Away", icon: CheckCircle2, color: "text-green-400" },
-      { label: "Total earned and win rate tracked", icon: DollarSign, color: "text-emerald-400" },
-      { label: "Quality score progress bar updates", icon: BarChart3, color: "text-cyan-400" },
+      { label: "Availability toggle: Online/Busy/Away", icon: CircleDot, color: "text-green-400" },
+      { label: "Active assignments & pending bids widget", icon: FileCheck, color: "text-blue-400" },
+      { label: "Earnings stats and win rate tracking", icon: DollarSign, color: "text-emerald-400" },
+      { label: "Achievement badges & performance overview", icon: Award, color: "text-yellow-400" },
     ],
   },
   "/grinder/notifications": {
@@ -922,12 +922,12 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/todo": {
-    description: "Your action items — orders needing attention, bids to submit, proofs to upload, and tasks assigned by staff. Stay on top of your work.",
+    description: "Your action items — priority levels (urgent/high/normal), task completion tracking, and staff-assigned tasks. Orders needing attention, bids to submit, and proofs to upload.",
     demoSteps: [
-      { label: "Start Order #42 — assigned yesterday", icon: Play, color: "text-cyan-400" },
-      { label: "Upload proof for completed order", icon: Upload, color: "text-blue-400" },
-      { label: "Submit bid before timer expires", icon: Gavel, color: "text-purple-400" },
-      { label: "Check off tasks as you complete them", icon: CheckCircle2, color: "text-emerald-400" },
+      { label: "Priority levels: urgent, high, normal", icon: AlertTriangle, color: "text-red-400" },
+      { label: "Track task completion as you work", icon: CheckCircle2, color: "text-emerald-400" },
+      { label: "Staff-assigned tasks with deadlines", icon: ClipboardList, color: "text-blue-400" },
+      { label: "Submit bids and upload proofs on time", icon: Upload, color: "text-purple-400" },
     ],
   },
   "/grinder/orders": {
@@ -960,23 +960,23 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/bids": {
-    description: "Track your bids — see pending, AI-ranked, accepted, and rejected bids with full details.",
+    description: "Track your bids — status color coding (blue=Pending, green=Accepted, red=Rejected, amber=Countered), margin preview, and bid source badges showing Discord or Dashboard origin.",
     mockupId: "grinder-bids",
     demoSteps: [
-      { label: "You submit your bid amount", icon: Gavel, color: "text-purple-400" },
-      { label: "AI Queue scores your bid...", icon: Brain, color: "text-cyan-400" },
-      { label: "Your scorecard boosts priority", icon: ClipboardCheck, color: "text-green-400" },
-      { label: "Bid accepted! Order assigned to you", icon: CheckCircle2, color: "text-emerald-400" },
+      { label: "Color-coded status: blue/green/red/amber", icon: Gavel, color: "text-purple-400" },
+      { label: "Margin preview shows potential earnings", icon: DollarSign, color: "text-green-400" },
+      { label: "Source badges: Discord or Dashboard bid", icon: Hash, color: "text-cyan-400" },
+      { label: "AI Queue ranks your bid by scorecard", icon: Brain, color: "text-blue-400" },
     ],
   },
   "/grinder/scorecard": {
-    description: "Your performance metrics — quality, speed, reliability, communication scores, with tier progress.",
+    description: "Your performance scorecard — quality factors breakdown, tier progress bar, order history, and checkpoint compliance tracking. See exactly how each factor affects your ranking.",
     mockupId: "grinder-scorecard",
     demoSteps: [
-      { label: "Quality Score: 92% — Excellent", icon: Star, color: "text-yellow-400" },
-      { label: "Reliability: 15/15 on-time deliveries", icon: CheckCircle2, color: "text-emerald-400" },
-      { label: "Speed: avg 1.2 days per order", icon: Zap, color: "text-cyan-400" },
-      { label: "Tier Progress: 80% to Veteran", icon: TrendingUp, color: "text-blue-400" },
+      { label: "Quality factors breakdown by category", icon: Star, color: "text-yellow-400" },
+      { label: "Tier progress bar toward next level", icon: TrendingUp, color: "text-blue-400" },
+      { label: "Order history with completion stats", icon: ListOrdered, color: "text-cyan-400" },
+      { label: "Checkpoint compliance tracking record", icon: CheckCircle2, color: "text-emerald-400" },
     ],
   },
   "/grinder/queue": {

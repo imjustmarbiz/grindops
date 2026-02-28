@@ -413,7 +413,26 @@ export default function StaffWallets() {
               <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" />Wallet KPIs</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-auto">
+              <div className="space-y-2 md:hidden">
+                {summary.perWalletStats.map((s: any) => (
+                  <div key={s.walletId} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium truncate">{s.name}</p>
+                        <Badge variant="outline" className="text-[10px] shrink-0">{s.type}</Badge>
+                        <Badge className={`text-[10px] shrink-0 ${s.scope === "company" ? "bg-primary/15 text-primary" : "bg-blue-500/15 text-blue-400"}`}>{titleCase(s.scope)}</Badge>
+                      </div>
+                      <p className="text-sm font-bold text-emerald-400 shrink-0">{formatCurrency(s.balance)}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/[0.06]">
+                      <div><p className="text-[10px] text-muted-foreground">In</p><p className="text-xs font-medium text-green-400">{formatCurrency(s.totalIn)}</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Out</p><p className="text-xs font-medium text-red-400">{formatCurrency(s.totalOut)}</p></div>
+                      <div><p className="text-[10px] text-muted-foreground">Net</p><p className={`text-xs font-medium ${s.totalIn - s.totalOut >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatCurrency(s.totalIn - s.totalOut)}</p></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="overflow-auto hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -494,7 +513,37 @@ export default function StaffWallets() {
                 </Button>
               )}
             </div>
-            <div className="rounded-lg border border-white/[0.06] overflow-auto">
+            <div className="space-y-2 md:hidden">
+              {transactions.length === 0 && <p className="text-center text-muted-foreground py-8">No transactions found</p>}
+              {transactions.map((tx: any) => {
+                const isPositive = ["deposit", "transfer_in", "order_income", "fine_received"].includes(tx.type);
+                return (
+                  <div key={tx.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-2" data-testid={`card-txn-mobile-${tx.id}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${isPositive ? "bg-emerald-500/15" : "bg-red-500/15"}`}>
+                          {isPositive ? <ArrowUpRight className={`w-3.5 h-3.5 text-emerald-400`} /> : <ArrowDownRight className={`w-3.5 h-3.5 text-red-400`} />}
+                        </div>
+                        <div className="min-w-0">
+                          <Badge className="text-[10px] capitalize">{titleCase(tx.type || "")}</Badge>
+                        </div>
+                      </div>
+                      <p className={`text-sm font-bold ${isPositive ? "text-emerald-400" : "text-red-400"}`} data-testid={`text-tx-amount-mobile-${tx.id}`}>
+                        {isPositive ? "+" : "-"}{formatCurrency(Math.abs(Number(tx.amount || 0)))}
+                      </p>
+                    </div>
+                    {tx.description && <p className="text-xs text-muted-foreground truncate">{tx.description}</p>}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                      <span>{fmtDate(tx.createdAt)}</span>
+                      <span>{walletsMap.get(tx.walletId)?.name || tx.walletId}</span>
+                      {tx.category && <span className="capitalize">{titleCase(tx.category)}</span>}
+                      {tx.relatedOrderId && <span>Order: {tx.relatedOrderId}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="rounded-lg border border-white/[0.06] overflow-auto hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -564,7 +613,50 @@ export default function StaffWallets() {
                 </Button>
               )}
             </div>
-            <div className="rounded-lg border border-white/[0.06] overflow-auto">
+            <div className="space-y-2 md:hidden">
+              {payouts.length === 0 && <p className="text-center text-muted-foreground py-8">No payouts found</p>}
+              {payouts.map((p: any) => (
+                <div key={p.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-2" data-testid={`card-txn-mobile-${p.id}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{p.recipientName}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <Badge className="text-[10px] capitalize">{p.recipientRole}</Badge>
+                        {statusBadge(p.status)}
+                      </div>
+                    </div>
+                    <p className="text-sm font-bold text-red-400 shrink-0" data-testid={`text-payout-amount-mobile-${p.id}`}>{formatCurrency(Number(p.amount || 0))}</p>
+                  </div>
+                  {p.description && <p className="text-xs text-muted-foreground truncate">{p.description}</p>}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                    <span>{fmtDate(p.createdAt)}</span>
+                    {p.category && <span className="capitalize">{p.category}</span>}
+                    {p.walletId && <span>{walletsMap.get(p.walletId)?.name || p.walletId}</span>}
+                    {p.proofUrl && <a href={p.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline" data-testid={`link-payout-proof-mobile-${p.id}`}><Eye className="w-3 h-3 inline mr-0.5" />Proof</a>}
+                  </div>
+                  {isOwner && (p.status === "pending" || p.status === "approved") && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {p.status === "pending" && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => approvePayoutMut.mutate(p.id)} disabled={approvePayoutMut.isPending} data-testid={`button-approve-payout-mobile-${p.id}`}>
+                            <CheckCircle className="w-3 h-3 mr-1" />Approve
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => rejectPayoutMut.mutate(p.id)} disabled={rejectPayoutMut.isPending} data-testid={`button-reject-payout-mobile-${p.id}`}>
+                            <Ban className="w-3 h-3 mr-1" />Reject
+                          </Button>
+                        </>
+                      )}
+                      {p.status === "approved" && (
+                        <Button size="sm" variant="outline" onClick={() => { setMarkPaidOpen(p); setMarkPaidWalletId(""); }} data-testid={`button-mark-paid-mobile-${p.id}`}>
+                          <DollarSign className="w-3 h-3 mr-1" />Mark Paid
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-white/[0.06] overflow-auto hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -622,7 +714,41 @@ export default function StaffWallets() {
           </TabsContent>
 
           <TabsContent value="transfers" className="space-y-4 mt-4">
-            <div className="rounded-lg border border-white/[0.06] overflow-auto">
+            <div className="space-y-2 md:hidden">
+              {transfers.length === 0 && <p className="text-center text-muted-foreground py-8">No transfers found</p>}
+              {transfers.map((t: any) => (
+                <div key={t.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-2" data-testid={`card-txn-mobile-${t.id}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-md bg-blue-500/15 flex items-center justify-center shrink-0">
+                        <ArrowLeftRight className="w-3.5 h-3.5 text-blue-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs truncate">{walletsMap.get(t.fromWalletId)?.name || t.fromWalletId}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">to {walletsMap.get(t.toWalletId)?.name || t.toWalletId}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm font-bold text-blue-400 shrink-0" data-testid={`text-transfer-amount-mobile-${t.id}`}>{formatCurrency(Number(t.amount || 0))}</p>
+                  </div>
+                  {t.description && <p className="text-xs text-muted-foreground truncate">{t.description}</p>}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                    <span>{fmtDate(t.createdAt)}</span>
+                    {statusBadge(t.status)}
+                    {Number(t.transferFee || 0) > 0 && <span>Fee: {formatCurrency(Number(t.transferFee))}</span>}
+                    {t.performedByName && <span>By: {t.performedByName}</span>}
+                    {t.proofUrl && <a href={t.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline" data-testid={`link-transfer-proof-mobile-${t.id}`}><Eye className="w-3 h-3 inline mr-0.5" />Proof</a>}
+                  </div>
+                  {isOwner && t.status === "pending" && (
+                    <div className="pt-1">
+                      <Button size="sm" variant="outline" onClick={() => approveTransferMut.mutate(t.id)} disabled={approveTransferMut.isPending} data-testid={`button-approve-transfer-mobile-${t.id}`}>
+                        <CheckCircle className="w-3 h-3 mr-1" />Approve
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-white/[0.06] overflow-auto hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -670,7 +796,28 @@ export default function StaffWallets() {
           </TabsContent>
 
           <TabsContent value="order-payments" className="space-y-4 mt-4">
-            <div className="rounded-lg border border-white/[0.06] overflow-auto">
+            <div className="space-y-2 md:hidden">
+              {paymentLinks.length === 0 && <p className="text-center text-muted-foreground py-8">No order payments linked yet</p>}
+              {paymentLinks.map((l: any) => (
+                <div key={l.id} className={`rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-2 ${l.transferStatus === "pending_transfer" ? "border-amber-500/20" : ""}`} data-testid={`card-txn-mobile-${l.id}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">Order: {l.orderId}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{walletsMap.get(l.receivedByWalletId)?.name || l.receivedByWalletId}</p>
+                    </div>
+                    <p className="text-sm font-bold text-emerald-400 shrink-0">{formatCurrency(Number(l.amount || 0))}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                    <span>{fmtDate(l.createdAt)}</span>
+                    {statusBadge(l.transferStatus)}
+                    {l.createdByName && <span>By: {l.createdByName}</span>}
+                    {l.proofUrl && <a href={l.proofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline" data-testid={`link-opl-proof-mobile-${l.id}`}><Eye className="w-3 h-3 inline mr-0.5" />Proof</a>}
+                  </div>
+                  {l.notes && <p className="text-xs text-muted-foreground truncate">{l.notes}</p>}
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-white/[0.06] overflow-auto hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>

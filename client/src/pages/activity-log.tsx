@@ -61,11 +61,11 @@ export default function ActivityLogPage() {
   }, [allLogs]);
 
   const uniqueCategories = useMemo(() => {
-    return [...new Set(allLogs.map(l => l.category))].sort();
+    return Array.from(new Set(allLogs.map(l => l.category))).sort();
   }, [allLogs]);
 
   const uniqueActions = useMemo(() => {
-    return [...new Set(allLogs.map(l => l.action))].sort();
+    return Array.from(new Set(allLogs.map(l => l.action))).sort();
   }, [allLogs]);
 
   const filtered = useMemo(() => {
@@ -212,75 +212,125 @@ export default function ActivityLogPage() {
                   <p className="text-xs">User actions will appear here as they happen</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-white/[0.06] hover:bg-transparent">
-                        <SortableHeader label="Time" sortKey="createdAt" currentKey={sortKey} direction={sortDir} onSort={toggleSort} />
-                        <SortableHeader label="User" sortKey="userName" currentKey={sortKey} direction={sortDir} onSort={toggleSort} />
-                        <TableHead className="text-xs">Role</TableHead>
-                        <SortableHeader label="Action" sortKey="action" currentKey={sortKey} direction={sortDir} onSort={toggleSort} />
-                        <SortableHeader label="Category" sortKey="category" currentKey={sortKey} direction={sortDir} onSort={toggleSort} />
-                        <TableHead className="text-xs">Target</TableHead>
-                        <TableHead className="text-xs">Details</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedItems.map((log) => {
-                        const IconComponent = actionIcons[log.action] || Activity;
-                        const meta = log.metadata ? (() => { try { return JSON.parse(log.metadata); } catch { return null; } })() : null;
-                        return (
-                          <TableRow key={log.id} className="border-white/[0.06]" data-testid={`row-activity-${log.id}`}>
-                            <TableCell className="text-xs whitespace-nowrap">
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                {formatTimeAgo(new Date(log.createdAt))}
-                              </div>
-                              <div className="text-[10px] text-muted-foreground/60 mt-0.5">
-                                {new Date(log.createdAt).toLocaleString()}
-                              </div>
-                            </TableCell>
-                            <TableCell>
+                <>
+                  <div className="md:hidden space-y-3 p-4">
+                    {sortedItems.map((log) => {
+                      const IconComponent = actionIcons[log.action] || Activity;
+                      const meta = log.metadata ? (() => { try { return JSON.parse(log.metadata); } catch { return null; } })() : null;
+                      const detailText = meta?.url || (meta?.role ? `Role: ${meta.role}` : (log.metadata ? log.metadata.slice(0, 80) : ""));
+                      return (
+                        <Card
+                          key={log.id}
+                          className="border-white/[0.06] bg-white/[0.02]"
+                          data-testid={`card-activity-mobile-${log.id}`}
+                        >
+                          <CardContent className="p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
                               <div className="flex items-center gap-2">
-                                <User className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-sm font-medium" data-testid={`text-user-${log.id}`}>{log.userName}</span>
+                                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-sm font-medium" data-testid={`text-user-mobile-${log.id}`}>{log.userName}</span>
+                                <Badge variant="outline" className={`text-[10px] ${roleColor(log.userRole)}`}>
+                                  {log.userRole}
+                                </Badge>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={`text-[10px] ${roleColor(log.userRole)}`} data-testid={`badge-role-${log.id}`}>
-                                {log.userRole}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                {formatTimeAgo(new Date(log.createdAt))}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
                               <div className="flex items-center gap-1.5">
                                 <IconComponent className="w-3 h-3 text-muted-foreground" />
                                 <span className="text-xs">{log.action.replace(/_/g, " ")}</span>
                               </div>
-                            </TableCell>
-                            <TableCell>
                               <Badge variant="outline" className={`text-[10px] ${categoryColors[log.category] || "bg-white/[0.05] text-muted-foreground border-white/10"}`}>
                                 {log.category}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-xs">
-                              {log.targetName && (
-                                <span className="text-muted-foreground">{log.targetName}</span>
-                              )}
-                              {log.targetId && !log.targetName && (
-                                <code className="text-[10px] bg-white/[0.05] px-1 rounded">{log.targetId}</code>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                              {meta?.url && <span>{meta.url}</span>}
-                              {meta?.role && !meta.url && <span>Role: {meta.role}</span>}
-                              {!meta && log.metadata && <span className="text-[10px]">{log.metadata.slice(0, 60)}</span>}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                            </div>
+                            {(log.targetName || log.targetId) && (
+                              <div className="text-xs text-muted-foreground">
+                                {log.targetName || (
+                                  <code className="text-[10px] bg-white/[0.05] px-1 rounded">{log.targetId}</code>
+                                )}
+                              </div>
+                            )}
+                            {detailText && (
+                              <p className="text-[10px] text-muted-foreground truncate">{detailText}</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-white/[0.06] hover:bg-transparent">
+                          <SortableHeader label="Time" sortKey="createdAt" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                          <SortableHeader label="User" sortKey="userName" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                          <TableHead className="text-xs">Role</TableHead>
+                          <SortableHeader label="Action" sortKey="action" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                          <SortableHeader label="Category" sortKey="category" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                          <TableHead className="text-xs">Target</TableHead>
+                          <TableHead className="text-xs">Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedItems.map((log) => {
+                          const IconComponent = actionIcons[log.action] || Activity;
+                          const meta = log.metadata ? (() => { try { return JSON.parse(log.metadata); } catch { return null; } })() : null;
+                          return (
+                            <TableRow key={log.id} className="border-white/[0.06]" data-testid={`row-activity-${log.id}`}>
+                              <TableCell className="text-xs whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Clock className="w-3 h-3" />
+                                  {formatTimeAgo(new Date(log.createdAt))}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground/60 mt-0.5">
+                                  {new Date(log.createdAt).toLocaleString()}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <User className="w-3.5 h-3.5 text-muted-foreground" />
+                                  <span className="text-sm font-medium" data-testid={`text-user-${log.id}`}>{log.userName}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] ${roleColor(log.userRole)}`} data-testid={`badge-role-${log.id}`}>
+                                  {log.userRole}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                  <IconComponent className="w-3 h-3 text-muted-foreground" />
+                                  <span className="text-xs">{log.action.replace(/_/g, " ")}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] ${categoryColors[log.category] || "bg-white/[0.05] text-muted-foreground border-white/10"}`}>
+                                  {log.category}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {log.targetName && (
+                                  <span className="text-muted-foreground">{log.targetName}</span>
+                                )}
+                                {log.targetId && !log.targetName && (
+                                  <code className="text-[10px] bg-white/[0.05] px-1 rounded">{log.targetId}</code>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                                {meta?.url && <span>{meta.url}</span>}
+                                {meta?.role && !meta.url && <span>Role: {meta.role}</span>}
+                                {!meta && log.metadata && <span className="text-[10px]">{log.metadata.slice(0, 60)}</span>}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

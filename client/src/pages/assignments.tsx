@@ -289,54 +289,128 @@ export default function Assignments() {
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
         <div className="md:hidden space-y-3 p-4">
-          {filteredAssignments.map((a: Assignment) => {
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          ) : filteredAssignments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileCheck className="w-8 h-8 mx-auto mb-2 opacity-20" />
+              No assignments yet.
+            </div>
+          ) : filteredAssignments.map((a: Assignment) => {
             const grinder = (grinders || []).find((g: Grinder) => g.id === a.grinderId);
+            const originalGrinder = a.originalGrinderId ? (grinders || []).find((g: Grinder) => g.id === a.originalGrinderId) : null;
             const order = (orders || []).find((o: Order) => o.id === a.orderId);
             const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId;
             const grinderPay = Number(a.grinderEarnings || a.bidAmount || 0);
+            const statusClass = a.status === "Active"
+              ? "bg-blue-500/15 text-blue-400 border-blue-500/20"
+              : a.status === "Completed"
+              ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+              : a.status === "Cancelled"
+              ? "bg-red-500/15 text-red-400 border-red-500/20"
+              : "bg-white/[0.03] text-muted-foreground border-white/10";
             
             return (
-              <Card key={a.id} className="bg-white/[0.02] border-white/[0.06] p-4 space-y-3" data-testid={`card-assignment-${a.id}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-primary">{orderRef}</h3>
-                    <p className="text-[10px] font-mono text-muted-foreground">{a.id}</p>
+              <Card key={a.id} className="bg-white/[0.02] border-white/[0.06] p-4 space-y-3" data-testid={`card-assignment-mobile-${a.id}`}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-primary" data-testid={`text-order-ref-mobile-${a.id}`}>{orderRef}</h3>
+                    <p className="text-[10px] font-mono text-muted-foreground truncate">{a.id}</p>
                   </div>
-                  <Badge variant="outline" className={`border ${a.status === "Active" ? "bg-primary/15 text-primary border-primary/20" : "bg-white/[0.03]"}`}>
-                    {a.status}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Badge variant="outline" className={`border ${statusClass}`} data-testid={`badge-status-mobile-${a.id}`}>
+                      {a.status}
+                    </Badge>
+                    {a.wasReassigned && (
+                      <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 gap-0.5">
+                        <Repeat className="w-2 h-2" /> Replaced
+                      </Badge>
+                    )}
+                    {a.status === "Completed" && !a.customerApproved && !a.customerIssueReported && order?.customerDiscordId && (
+                      <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 gap-0.5">
+                        <Clock className="w-2.5 h-2.5" /> Awaiting Customer
+                      </Badge>
+                    )}
+                    {a.status === "Completed" && !a.customerApproved && a.customerIssueReported && order?.customerDiscordId && (
+                      <Badge variant="outline" className="text-[10px] border-red-500/20 text-red-400 bg-red-500/10 gap-0.5">
+                        <AlertTriangle className="w-2.5 h-2.5" /> Issue
+                      </Badge>
+                    )}
+                    {a.customerApproved && (
+                      <Badge variant="outline" className="text-[10px] border-emerald-500/20 text-emerald-400 bg-emerald-500/10">
+                        <CheckCircle className="w-2.5 h-2.5 mr-0.5" /> Approved
+                      </Badge>
+                    )}
+                    {a.status === "Cancelled" && (orders || []).find(o => o.id === a.orderId)?.status === "Need Replacement" && (
+                      <Badge variant="outline" className="text-[10px] border-orange-500/20 text-orange-400 bg-orange-500/10 gap-0.5">
+                        <RefreshCw className="w-2 h-2" /> Needs Replacement
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="space-y-1">
                     <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Grinder</p>
-                    <p className="font-medium">{grinder?.name || "Unknown"}</p>
+                    <p className="font-medium" data-testid={`text-grinder-mobile-${a.id}`}>{grinder?.name || "Unknown"}</p>
                     <p className="text-[10px] text-muted-foreground">{grinder?.category}</p>
+                    {a.wasReassigned && originalGrinder && (
+                      <p className="text-[10px] text-amber-400">Replaced {originalGrinder.name}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Pay</p>
-                    <p className="font-medium text-blue-400">{formatCurrency(grinderPay)}</p>
+                    <p className="font-medium text-blue-400" data-testid={`text-pay-mobile-${a.id}`}>{formatCurrency(grinderPay)}</p>
+                    {a.wasReassigned && a.originalGrinderPay && Number(a.originalGrinderPay) > 0 && (
+                      <p className="text-[10px] text-amber-400">+${a.originalGrinderPay} orig</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Due</p>
                     <p className="text-orange-400">{format(new Date(a.dueDateTime), "MMM d, h:mm a")}</p>
+                    {a.deliveredDateTime && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">Del: {format(new Date(a.deliveredDateTime), "MMM d, h:mm a")}</p>
+                        {a.isOnTime !== null && a.isOnTime !== undefined && (
+                          <Badge variant="outline" className={`text-[9px] mt-0.5 border ${a.isOnTime ? "border-emerald-500/20 text-emerald-400 bg-emerald-500/10" : "border-red-500/20 text-red-400 bg-red-500/10"}`}>
+                            {a.isOnTime ? "On Time" : "Late"}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Profit</p>
-                    <p className={`font-bold ${moneyColorClass(a.companyProfit)}`}>{a.companyProfit ? `$${a.companyProfit}` : "-"}</p>
+                    <p className={`font-bold ${moneyColorClass(a.companyProfit)}`} data-testid={`text-profit-mobile-${a.id}`}>{a.companyProfit ? `$${a.companyProfit}` : "-"}</p>
+                    {a.qualityRating && (
+                      <div className="flex items-center gap-0.5">
+                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                        <span className="text-[10px] font-medium text-yellow-400">{a.qualityRating}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/[0.04] flex justify-between items-center">
-                   <div className="flex gap-2">
+                <div className="pt-2 border-t border-white/[0.04] flex flex-wrap justify-between items-center gap-2">
+                   <div className="flex flex-wrap gap-2">
                     {a.status === "Active" && (
-                      <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-white/10" onClick={() => openReplaceDialog(a)} data-testid={`button-replace-mobile-${a.id}`}>
+                      <Button size="sm" variant="outline" className="text-xs gap-1 border-white/10" onClick={() => openReplaceDialog(a)} data-testid={`button-replace-mobile-${a.id}`}>
                         <Repeat className="w-3 h-3" /> Replace
+                      </Button>
+                    )}
+                    {a.status === "Completed" && !a.customerApproved && order?.customerDiscordId && (
+                      <Button size="sm" variant="outline" className="text-xs gap-1 border-white/10" onClick={() => forceApproveMutation.mutate(a.id)} disabled={forceApproveMutation.isPending} data-testid={`button-force-approve-mobile-${a.id}`}>
+                        <ShieldCheck className="w-3 h-3" /> Force Approve
+                      </Button>
+                    )}
+                    {a.status === "Cancelled" && (orders || []).find(o => o.id === a.orderId)?.status === "Need Replacement" && (
+                      <Button size="sm" variant="outline" className="text-xs gap-1 border-white/10" onClick={() => openReassignDialog(a)} data-testid={`button-reassign-mobile-${a.id}`}>
+                        <RefreshCw className="w-3 h-3" /> Reassign
                       </Button>
                     )}
                    </div>
                    <Link href={`/orders`}>
-                    <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground">Details</Button>
+                    <Button size="sm" variant="ghost" className="text-xs text-muted-foreground" data-testid={`button-details-mobile-${a.id}`}>Details</Button>
                    </Link>
                 </div>
               </Card>

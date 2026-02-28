@@ -41,7 +41,8 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - **User Activity Log:** Owner-only admin page for tracking user sessions, page visits, and actions across the platform with filtering capabilities.
 - **Staff Auto To-Do List:** System-generated action items based on order and assignment statuses, grouped by category and sortable by priority, with staff dismissal functionality.
 - **Internal Staff Alerts:** Grinders can send internal, staff-only alerts for specific orders without customer notification.
-- **Interactive Tutorial:** An auto-discovering guided tour for new users, generating steps from navigation items and supporting rich descriptions and animated demos.
+- **Interactive Tutorial:** An auto-discovering guided tour for new users, generating steps from navigation items and supporting rich descriptions and animated demos. Descriptions updated across all staff and grinder dashboards to reflect current features.
+- **Mobile Optimization:** All pages with wide tables have mobile card views using `md:hidden` / `hidden md:block` pattern. Mobile-optimized pages include: bids, assignments, grinders, audit-log, activity-log, and staff wallets (transactions, payouts, transfers, order payments). Dark theme card styling: `border-white/[0.06] bg-white/[0.02]`.
 
 ## External Dependencies
 - **PostgreSQL:** Primary database.

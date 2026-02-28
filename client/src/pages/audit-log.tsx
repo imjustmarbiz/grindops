@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollText, Search, Filter, History, User, Package, Shield, Gavel } from "lucide-react";
+import { ScrollText, Search, Filter, History, User, Package, Shield, Gavel, Loader2 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import type { AuditLog } from "@shared/schema";
 
@@ -27,7 +27,7 @@ export default function AuditLogPage() {
         log.actor.toLowerCase().includes(q) ||
         log.action.toLowerCase().includes(q) ||
         log.entityId.toLowerCase().includes(q) ||
-        log.message.toLowerCase().includes(q)
+        String(log.details || "").toLowerCase().includes(q)
       );
     }
     return true;
@@ -97,15 +97,81 @@ export default function AuditLogPage() {
       </FadeInUp>
 
       <FadeInUp>
-        <Card className="border-0 bg-white/[0.02] overflow-hidden">
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredLogs.length > 0 ? (
+            filteredLogs.map((log) => {
+              let details: Record<string, any> = {};
+              try { details = typeof log.details === "string" ? JSON.parse(log.details) : (log.details || {}); } catch { details = {}; }
+              const actionDotColor = log.action.includes("create") || log.action.includes("add")
+                ? "bg-emerald-500"
+                : log.action.includes("delete") || log.action.includes("remove")
+                  ? "bg-red-500"
+                  : log.action.includes("update") || log.action.includes("edit")
+                    ? "bg-blue-500"
+                    : "bg-amber-500";
+              return (
+                <Card
+                  key={log.id}
+                  className="border-white/[0.06] bg-white/[0.02]"
+                  data-testid={`card-audit-mobile-${log.id}`}
+                >
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${actionDotColor}`} />
+                        <Badge variant="outline" className={`text-[10px] shrink-0 ${actionColor(log.action)}`}>
+                          {formatLabel(log.action)}
+                        </Badge>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        {format(new Date(log.createdAt), "MMM d, h:mm a")}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="font-medium">{log.actor}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {entityIcon(log.entityType)}
+                      <span>{formatLabel(log.entityType)}</span>
+                      <code className="text-[10px] bg-white/[0.05] px-1.5 py-0.5 rounded">{log.entityId}</code>
+                    </div>
+                    {Object.keys(details).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(details).slice(0, 3).map(([k, v]) => (
+                          <span key={k} className="text-[10px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">
+                            <span className="text-muted-foreground">{formatLabel(k)}:</span> {String(v)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : log.details ? (
+                      <p className="text-xs text-muted-foreground">{log.details}</p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <ScrollText className="w-10 h-10 mb-3 opacity-10" />
+              <p className="text-sm">No logs found.</p>
+            </div>
+          )}
+        </div>
+
+        <Card className="hidden md:block border-0 bg-white/[0.02] overflow-hidden">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-white/[0.08]">
                   <TableHead className="w-[180px]">Timestamp</TableHead>
-                  <TableHead className="hidden md:table-cell">Entity ID</TableHead>
+                  <TableHead>Entity ID</TableHead>
                   <TableHead>Action</TableHead>
-                  <TableHead className="hidden sm:table-cell">Actor</TableHead>
+                  <TableHead>Actor</TableHead>
                   <TableHead>Details</TableHead>
                 </TableRow>
               </TableHeader>
@@ -118,31 +184,26 @@ export default function AuditLogPage() {
                   </TableRow>
                 ) : filteredLogs.length > 0 ? (
                   filteredLogs.map((log) => {
-                    const details = typeof log.details === "string" ? JSON.parse(log.details) : (log.details || {});
+                    let details: Record<string, any> = {};
+                    try { details = typeof log.details === "string" ? JSON.parse(log.details) : (log.details || {}); } catch { details = {}; }
                     return (
                       <TableRow key={log.id} className="hover:bg-white/[0.02] border-white/[0.04]">
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">{format(new Date(log.timestamp), "MMM d, yyyy")}</span>
-                            <span className="text-[10px] text-muted-foreground">{format(new Date(log.timestamp), "h:mm:ss a")}</span>
+                            <span className="text-sm font-medium">{format(new Date(log.createdAt), "MMM d, yyyy")}</span>
+                            <span className="text-[10px] text-muted-foreground">{format(new Date(log.createdAt), "h:mm:ss a")}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell font-mono text-[10px] text-muted-foreground">
+                        <TableCell className="font-mono text-[10px] text-muted-foreground">
                           {log.entityId}
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <Badge variant="outline" className={`text-[10px] w-fit ${actionColor(log.action)}`}>
-                              {formatLabel(log.action)}
-                            </Badge>
-                            <div className="sm:hidden flex items-center gap-1 text-[10px] text-muted-foreground">
-                              {entityIcon(log.entityType)}
-                              {formatLabel(log.entityType)}
-                            </div>
-                          </div>
+                          <Badge variant="outline" className={`text-[10px] w-fit ${actionColor(log.action)}`}>
+                            {formatLabel(log.action)}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm">{log.actor}</TableCell>
-                        <TableCell className="max-w-[200px] sm:max-w-md">
+                        <TableCell className="text-sm">{log.actor}</TableCell>
+                        <TableCell className="max-w-md">
                           <div className="flex flex-col gap-1">
                             {Object.keys(details).length > 0 ? (
                               <div className="flex flex-wrap gap-1">
@@ -153,9 +214,8 @@ export default function AuditLogPage() {
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">{log.message}</span>
+                              <span className="text-xs text-muted-foreground">{log.details}</span>
                             )}
-                            <span className="sm:hidden text-[10px] opacity-50">By {log.actor}</span>
                           </div>
                         </TableCell>
                       </TableRow>
