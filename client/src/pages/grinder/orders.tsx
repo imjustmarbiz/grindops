@@ -217,7 +217,7 @@ export default function GrinderOrders() {
                       }}
                     >
                       <ExternalLink className="w-3 h-3" />
-                      Discord
+                      View on Discord
                     </Button>
                   ) : null}
                 </div>
@@ -687,17 +687,19 @@ export default function GrinderOrders() {
                 <span>{placeBidDialog?.complexity}/5</span>
               </div>
               {(placeBidDialog?.discordMessageId || placeBidDialog?.discordBidLink) ? (
-                <Badge className="bg-indigo-500/20 text-indigo-400 mt-1">Discord + Dashboard</Badge>
+                <Badge className="bg-indigo-500/20 text-indigo-400 mt-1">Bid via Discord or Dashboard</Badge>
               ) : (
-                <Badge className="bg-amber-500/20 text-amber-400 mt-1">Dashboard Order</Badge>
+                <Badge className="bg-amber-500/20 text-amber-400 mt-1">Dashboard Only</Badge>
               )}
             </div>
-            <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-300/90">Submitting duplicate bids for the same order on both Discord and the dashboard is not allowed. The system will automatically block the second bid. Violations are subject to a strike penalty.</p>
+            {(placeBidDialog?.discordMessageId || placeBidDialog?.discordBidLink) && (
+              <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-300/90">This order is also available on Discord. You can bid here <span className="font-semibold">or</span> on Discord — but not both. Choose one platform to submit your bid. If a bid is detected on both, the duplicate will be automatically blocked and may result in a strike.</p>
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <label className="text-sm font-medium mb-1 block">Your Bid Amount ($)</label>
               <Input type="number" step="0.01" min="0" value={placeBidAmount} onChange={(e) => setPlaceBidAmount(e.target.value)} placeholder="Enter your price" data-testid="input-place-bid-amount" />
