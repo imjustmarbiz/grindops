@@ -223,7 +223,7 @@ function Router() {
       <Route path="/todo" component={() => <ProtectedRoute component={StaffTodo} staffOnly />} />
       <Route path="/staff-overview" component={() => <ProtectedRoute component={StaffOverviewPage} ownerOnly />} />
       <Route path="/operations" component={() => <Redirect to="/admin" />} />
-      <Route path="/analytics" component={() => <ProtectedRoute component={StaffAnalytics} staffOnly />} />
+      <Route path="/analytics" component={() => <ProtectedRoute component={StaffAnalytics} ownerOnly />} />
       <Route path="/payouts" component={() => <ProtectedRoute component={StaffPayouts} staffOnly />} />
       <Route path="/admin" component={() => <ProtectedRoute component={StaffAdmin} staffOnly />} />
       <Route path="/queue" component={() => <ProtectedRoute component={Queue} staffOnly />} />

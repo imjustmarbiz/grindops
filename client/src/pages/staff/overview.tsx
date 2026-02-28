@@ -8,13 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } from "@/lib/animations";
+import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
-  Shield, Calendar
+  Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList
 } from "lucide-react";
 
 
@@ -68,20 +68,24 @@ export default function StaffOverview() {
     analytics, analyticsLoading,
     analyticsUpdatedAt, grindersUpdatedAt, auditLogsUpdatedAt,
     assignmentsUpdatedAt, ordersUpdatedAt, bidsUpdatedAt,
+    ordersLoading, grindersLoading, bidsLoading,
     grinders: allGrinders,
     auditLogs,
     assignments: allAssignments,
     orders: allOrders,
     bids: allBids,
     services: allServices,
+    payoutReqs,
   } = useStaffData();
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const latestUpdate = Math.max(analyticsUpdatedAt || 0, grindersUpdatedAt || 0, auditLogsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0);
+  const latestUpdate = Math.max(grindersUpdatedAt || 0, auditLogsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0, analyticsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
 
-  if (analyticsLoading) {
+  const dataLoading = isOwner ? analyticsLoading : (ordersLoading || grindersLoading || bidsLoading);
+
+  if (dataLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -100,23 +104,25 @@ export default function StaffOverview() {
   const rushOrders = allOrders.filter(o => o.isRush && (o.status === "Open" || o.status === "Assigned" || o.status === "In Progress")).length;
   const emergencyOrders = allOrders.filter(o => o.isEmergency && (o.status === "Open" || o.status === "Assigned" || o.status === "In Progress")).length;
 
+  const activeOrders = allOrders.filter(o => o.status === "Open" || o.status === "Assigned" || o.status === "In Progress").length;
+  const pendingBids = allBids.filter(b => b.status === "Pending").length;
+  const acceptedBids = allBids.filter(b => b.status === "Accepted").length;
+  const availableGrinders = allGrinders.filter(g => g.activeOrders < g.capacity && !g.suspended).length;
+  const suspendedGrinders = allGrinders.filter(g => g.suspended);
+  const atCapacity = allGrinders.filter(g => g.activeOrders >= g.capacity).length;
+  const totalCapacity = allGrinders.reduce((s, g) => s + g.capacity, 0);
+  const totalActive = allGrinders.reduce((s, g) => s + g.activeOrders, 0);
+  const fleetUtilization = totalCapacity > 0 ? (totalActive / totalCapacity) * 100 : 0;
+  const grindersWithStrikes = allGrinders.filter(g => g.strikes > 0).sort((a, b) => b.strikes - a.strikes);
+
+  const pendingPayouts = payoutReqs.filter((p: any) => p.status === "Pending" || p.status === "pending").length;
+
   const revenue = analytics?.totalRevenue || 0;
   const payouts = analytics?.totalGrinderPayouts || 0;
   const profit = analytics?.totalCompanyProfit || 0;
   const profitMarginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
   const nonCancelledOrders = allOrders.filter(o => o.status !== "Cancelled");
   const avgOrderValue = nonCancelledOrders.length > 0 ? nonCancelledOrders.reduce((s, o) => s + Number(o.customerPrice || 0), 0) / nonCancelledOrders.length : 0;
-
-  const grindersWithStrikes = allGrinders.filter(g => g.strikes > 0).sort((a, b) => b.strikes - a.strikes);
-  const suspendedGrinders = allGrinders.filter(g => g.suspended);
-  const atCapacity = allGrinders.filter(g => g.activeOrders >= g.capacity).length;
-  const availableGrinders = allGrinders.filter(g => g.activeOrders < g.capacity && !g.suspended).length;
-  const totalCapacity = allGrinders.reduce((s, g) => s + g.capacity, 0);
-  const totalActive = allGrinders.reduce((s, g) => s + g.activeOrders, 0);
-  const fleetUtilization = totalCapacity > 0 ? (totalActive / totalCapacity) * 100 : 0;
-
-  const pendingBids = allBids.filter(b => b.status === "Pending").length;
-  const acceptedBids = allBids.filter(b => b.status === "Accepted").length;
 
   const pipelineData = [
     { label: "Open", count: openOrders, icon: Clock, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", ring: "bg-blue-500" },
@@ -153,7 +159,7 @@ export default function StaffOverview() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
-                  {isOwner ? "Owner Command Center" : "Staff Command Center"}
+                  {isOwner ? "Owner Command Center" : "Operations Hub"}
                 </h1>
                 <Badge className={`gap-1 ${
                   isOwner 
@@ -185,7 +191,7 @@ export default function StaffOverview() {
               <p className="mt-3 text-sm opacity-70 max-w-2xl">
                 {isOwner 
                   ? "Full authority over operations, analytics, and team management." 
-                  : "Real-time analytics and operations overview."}
+                  : "Order management, grinder operations, and daily workflow at a glance."}
               </p>
             </div>
           </div>
@@ -304,14 +310,29 @@ export default function StaffOverview() {
 
       <FadeInUp>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
-          gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
-        <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${allGrinders.length} grinders`} icon={Users}
-          gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
-        <StatCard label="Company Profit" value={formatCurrency(profit)} subtitle={`${profitMarginPct.toFixed(1)}% margin`} icon={TrendingUp}
-          gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400" />
-        <StatCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} subtitle={`avg margin ${(analytics?.avgMargin || 0).toFixed(1)}%`} icon={BarChart3}
-          gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
+        {isOwner ? (
+          <>
+            <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
+              gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
+            <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${allGrinders.length} grinders`} icon={Users}
+              gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+            <StatCard label="Company Profit" value={formatCurrency(profit)} subtitle={`${profitMarginPct.toFixed(1)}% margin`} icon={TrendingUp}
+              gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400" />
+            <StatCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} subtitle={`avg margin ${(analytics?.avgMargin || 0).toFixed(1)}%`} icon={BarChart3}
+              gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
+          </>
+        ) : (
+          <>
+            <StatCard label="Active Orders" value={String(activeOrders)} subtitle={`${openOrders} open, ${inProgressOrders} in progress`} icon={ListOrdered}
+              gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+            <StatCard label="Pending Bids" value={String(pendingBids)} subtitle={`${acceptedBids} accepted total`} icon={Gavel}
+              gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
+            <StatCard label="Grinder Availability" value={`${availableGrinders}/${allGrinders.length}`} subtitle={`${atCapacity} at capacity`} icon={Users}
+              gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
+            <StatCard label="Pending Payouts" value={String(pendingPayouts)} subtitle={`${suspendedGrinders.length} suspended grinders`} icon={ClipboardList}
+              gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400" />
+          </>
+        )}
       </div>
       </FadeInUp>
 
@@ -352,6 +373,49 @@ export default function StaffOverview() {
               <div>
                 <p className="text-sm font-medium">Business Wallet</p>
                 <p className="text-[10px] text-muted-foreground">Wallets & payouts</p>
+              </div>
+            </div>
+          </div>
+        </FadeInUp>
+      )}
+
+      {!isOwner && (
+        <FadeInUp>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div onClick={() => navigate("/orders")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-900/5 border border-blue-500/15 cursor-pointer hover:border-blue-500/30 transition-all group" data-testid="quick-action-orders">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ListOrdered className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Orders</p>
+                <p className="text-[10px] text-muted-foreground">Manage & assign</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/bids")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-900/5 border border-amber-500/15 cursor-pointer hover:border-amber-500/30 transition-all group" data-testid="quick-action-bids">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Gavel className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Bids</p>
+                <p className="text-[10px] text-muted-foreground">Review & approve</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/grinders")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-900/5 border border-emerald-500/15 cursor-pointer hover:border-emerald-500/30 transition-all group" data-testid="quick-action-grinders">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Grinders</p>
+                <p className="text-[10px] text-muted-foreground">Team & roster</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/payouts")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-payouts">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <DollarSign className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Payouts</p>
+                <p className="text-[10px] text-muted-foreground">Grinder payments</p>
               </div>
             </div>
           </div>

@@ -3926,7 +3926,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/staff/elite-vs-grinder-metrics", requireStaff, async (req, res) => {
+  app.get("/api/staff/elite-vs-grinder-metrics", requireOwner, async (req, res) => {
     const allGrinders = await storage.getGrinders();
     const allUsers = await db.select().from(users);
     const ownerStaffIds = new Set(
@@ -3969,7 +3969,7 @@ export async function registerRoutes(
     });
   });
 
-  app.get(api.analytics.summary.path, requireStaff, async (req, res) => {
+  app.get(api.analytics.summary.path, requireOwner, async (req, res) => {
     const summary = await storage.getAnalyticsSummary();
     res.json(summary);
   });

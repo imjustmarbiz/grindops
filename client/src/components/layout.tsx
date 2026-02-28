@@ -65,6 +65,7 @@ export function getFilteredStaffNavItems(isOwner: boolean, userId: string) {
     if (item.url === "/business") return canSeeBusiness;
     if (item.url === "/staff-overview") return isOwner;
     if (item.url === "/activity-log") return isOwner;
+    if (item.url === "/analytics") return isOwner;
     return true;
   });
 }
