@@ -1421,7 +1421,6 @@ export function InteractiveTutorial() {
   const [location, navigate] = useLocation();
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const dialogRef = useRef<HTMLDivElement>(null);
-  const hasNavigatedRef = useRef(false);
 
   const userId = (user as any)?.discordId || user?.id || "";
   const isOwner = user?.role === "owner";
@@ -1488,31 +1487,16 @@ export function InteractiveTutorial() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showReplayLabel]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const step = steps[currentStep];
-    
-    // Explicitly check if the step is different from current page
-    if (step?.pageUrl && location !== step.pageUrl && !hasNavigatedRef.current) {
-      hasNavigatedRef.current = true;
-      navigate(step.pageUrl);
-    }
-  }, [isOpen, currentStep, steps, location, navigate]);
+  // No page navigation during tutorial - stay on current page to avoid glitches
 
   const handleClose = useCallback(() => {
-    const session = getTutorialSession();
-    const returnPath = session?.returnPath ?? "/";
     setIsOpen(false);
     setCurrentStep(0);
     clearTutorialSession();
     localStorage.setItem(storageKey, "true"); 
     window.dispatchEvent(new Event("storage"));
     setHasSeenTutorial(true);
-    if (hasNavigatedRef.current) {
-      hasNavigatedRef.current = false;
-      navigate(returnPath);
-    }
-  }, [storageKey, navigate]);
+  }, [storageKey]);
 
   const handleStartTutorial = useCallback(() => {
     setTutorialSession(true, 0, window.location.pathname);
@@ -1524,46 +1508,20 @@ export function InteractiveTutorial() {
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
       const next = currentStep + 1;
-      const nextStep = steps[next];
-      
-      if (nextStep?.pageUrl && location !== nextStep.pageUrl) {
-        hasNavigatedRef.current = true;
-        setTutorialSession(true, next, location);
-        navigate(nextStep.pageUrl);
-        
-        setTimeout(() => {
-          setCurrentStep(next);
-          hasNavigatedRef.current = false;
-        }, 800);
-      } else {
-        setCurrentStep(next);
-        setTutorialSession(true, next, location);
-      }
+      setCurrentStep(next);
+      setTutorialSession(true, next);
     } else {
       handleClose();
     }
-  }, [currentStep, steps, location, navigate, handleClose]);
+  }, [currentStep, steps.length, handleClose]);
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
       const prev = currentStep - 1;
-      const prevStep = steps[prev];
-      
-      if (prevStep?.pageUrl && location !== prevStep.pageUrl) {
-        hasNavigatedRef.current = true;
-        setTutorialSession(true, prev, location);
-        navigate(prevStep.pageUrl);
-        
-        setTimeout(() => {
-          setCurrentStep(prev);
-          hasNavigatedRef.current = false;
-        }, 800);
-      } else {
-        setCurrentStep(prev);
-        setTutorialSession(true, prev, location);
-      }
+      setCurrentStep(prev);
+      setTutorialSession(true, prev);
     }
-  }, [currentStep, steps, location, navigate]);
+  }, [currentStep]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isOpen) return;
