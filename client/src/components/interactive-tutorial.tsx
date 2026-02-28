@@ -1423,24 +1423,42 @@ export function InteractiveTutorial() {
     }
   }, [isOpen, currentStep, steps, location, navigate]);
 
+  const handleClose = useCallback(() => {
+    const session = getTutorialSession();
+    const returnPath = session?.returnPath ?? "/";
+    setIsOpen(false);
+    setCurrentStep(0);
+    clearTutorialSession();
+    localStorage.setItem(storageKey, "true"); 
+    window.dispatchEvent(new Event("storage"));
+    setHasSeenTutorial(true);
+    if (hasNavigatedRef.current) {
+      hasNavigatedRef.current = false;
+      navigate(returnPath);
+    }
+  }, [storageKey, navigate]);
+
+  const handleStartTutorial = useCallback(() => {
+    setTutorialSession(true, 0, window.location.pathname);
+    setIsOpen(true);
+    setCurrentStep(0);
+    setShowReplayLabel(false);
+  }, []);
+
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
       const next = currentStep + 1;
       const nextStep = steps[next];
       
       if (nextStep?.pageUrl && location !== nextStep.pageUrl) {
-        // Prepare for navigation
         hasNavigatedRef.current = true;
         setTutorialSession(true, next, location);
-        
-        // Use a single state transition to avoid intermediate renders
         navigate(nextStep.pageUrl);
         
-        // Wait for page transition to complete before showing next step
         setTimeout(() => {
           setCurrentStep(next);
           hasNavigatedRef.current = false;
-        }, 800); // Increased from 400ms to 800ms for even more stability
+        }, 800);
       } else {
         setCurrentStep(next);
         setTutorialSession(true, next, location);
@@ -1463,7 +1481,7 @@ export function InteractiveTutorial() {
         setTimeout(() => {
           setCurrentStep(prev);
           hasNavigatedRef.current = false;
-        }, 800); // Increased from 400ms to 800ms for even more stability
+        }, 800);
       } else {
         setCurrentStep(prev);
         setTutorialSession(true, prev, location);
