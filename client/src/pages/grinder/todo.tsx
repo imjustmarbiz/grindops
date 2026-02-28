@@ -12,7 +12,7 @@ import {
   Video, PlayCircle, Loader2, ChevronDown, ChevronRight, Flag, Send, Clock
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 type AutoTodo = {
   id: string;
