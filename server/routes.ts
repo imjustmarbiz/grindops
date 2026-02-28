@@ -617,12 +617,12 @@ export async function registerRoutes(
       });
       createSystemNotification({
         roleScope: "grinder",
-        type: "new_order",
-        title: "New Order Available",
-        body: `A new order (#${result.mgtOrderNumber || result.id}) is now open for bidding.`,
+        type: input.isEmergency ? "emergency_order" : "new_order",
+        title: input.isEmergency ? "Emergency Order!" : "New Order Available",
+        body: `A new ${input.isEmergency ? "EMERGENCY " : ""}order (#${result.mgtOrderNumber || result.id}) is now open for bidding.`,
         linkUrl: "/grinder/orders",
-        icon: "package",
-        severity: "info",
+        icon: input.isEmergency ? "alert-triangle" : "package",
+        severity: input.isEmergency ? "urgent" : "info",
       });
       res.status(201).json(result);
     } catch (err) {

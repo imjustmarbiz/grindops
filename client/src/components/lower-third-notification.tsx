@@ -180,11 +180,16 @@ export function LowerThirdNotifications() {
                   Audio alerts for new orders, strikes, payouts, messages, and other updates. Each event type has a unique tone.
                 </p>
                 <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-1">
-                  <p>🔔 New Order — rising ding</p>
-                  <p>✅ Assigned — triumphant chime</p>
-                  <p>⚠️ Strike — descending warning</p>
-                  <p>💰 Payout — ascending chime</p>
-                  <p>📨 Message — soft pop</p>
+                  <p>🔔 New Order — urgent double-beep</p>
+                  <p>🚨 Emergency — siren alert</p>
+                  <p>✅ Assigned — success fanfare</p>
+                  <p>📋 Update — soft chime</p>
+                  <p>👍 Bid Accepted — ascending confirm</p>
+                  <p>👎 Bid Denied — descending buzz</p>
+                  <p>⚠️ Strike — heavy warning</p>
+                  <p>💰 Payout — cash register</p>
+                  <p>📨 Message — bubble pop</p>
+                  <p>🔊 Alert — alarm beep</p>
                   <p>ℹ️ Info — gentle ding</p>
                 </div>
                 <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground space-y-1">

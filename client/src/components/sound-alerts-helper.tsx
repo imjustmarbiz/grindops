@@ -16,20 +16,23 @@ import {
 } from "@/lib/notification-sounds";
 
 const ALERTS = [
-  { id: "new_order", label: "New Order" },
-  { id: "order_assigned", label: "Order Assigned" },
-  { id: "bid_accepted", label: "Bid Accepted" },
-  { id: "bid_denied", label: "Bid Denied" },
-  { id: "strike", label: "Strike Received" },
-  { id: "payout", label: "Payout Processed" },
-  { id: "message", label: "New Message" },
-  { id: "alert", label: "System Alert" },
-  { id: "info", label: "General Info" },
+  { id: "new_order", label: "New Order", desc: "Urgent double-beep" },
+  { id: "emergency_order", label: "Emergency Order", desc: "Siren alert" },
+  { id: "order_assigned", label: "Order Assigned", desc: "Success fanfare" },
+  { id: "order_update", label: "Order Update", desc: "Soft chime" },
+  { id: "bid_accepted", label: "Bid Accepted", desc: "Ascending confirm" },
+  { id: "bid_denied", label: "Bid Denied", desc: "Descending buzz" },
+  { id: "strike", label: "Strike Received", desc: "Heavy warning" },
+  { id: "payout", label: "Payout / Income", desc: "Cash register" },
+  { id: "message", label: "New Message", desc: "Bubble pop" },
+  { id: "alert", label: "System Alert", desc: "Alarm beep" },
+  { id: "info", label: "General Info", desc: "Gentle ding" },
 ];
 
 export function SoundAlertsHelper() {
   const [volume, setVolumeState] = useState(getVolume() * 100);
   const [unlocked, setUnlocked] = useState(isAudioUnlocked());
+  const [playing, setPlaying] = useState<string | null>(null);
 
   const handleVolumeChange = (value: number[]) => {
     const newVol = value[0];
@@ -40,6 +43,12 @@ export function SoundAlertsHelper() {
   const handleUnlock = () => {
     unlockMobileAudio();
     setUnlocked(true);
+  };
+
+  const handlePlay = (id: string) => {
+    setPlaying(id);
+    playNotificationSound(id);
+    setTimeout(() => setPlaying(null), 1200);
   };
 
   return (
@@ -97,23 +106,27 @@ export function SoundAlertsHelper() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
             {ALERTS.map((alert) => (
               <Button
                 key={alert.id}
                 variant="outline"
                 size="sm"
-                className="justify-start gap-2 h-8 text-[11px] border-white/5 bg-white/5 hover:bg-white/10 transition-all group"
-                onClick={() => playNotificationSound(alert.id)}
+                className={`w-full justify-between h-9 text-[11px] border-white/5 bg-white/5 hover:bg-white/10 transition-all group ${playing === alert.id ? "border-primary/40 bg-primary/10" : ""}`}
+                onClick={() => handlePlay(alert.id)}
+                data-testid={`button-play-${alert.id}`}
               >
-                <Play className="w-3 h-3 text-primary group-hover:scale-110 transition-transform" />
-                <span className="truncate">{alert.label}</span>
+                <div className="flex items-center gap-2">
+                  <Play className={`w-3 h-3 text-primary shrink-0 transition-transform ${playing === alert.id ? "scale-125" : "group-hover:scale-110"}`} />
+                  <span className="truncate">{alert.label}</span>
+                </div>
+                <span className="text-[9px] text-muted-foreground/70 ml-2 truncate">{alert.desc}</span>
               </Button>
             ))}
           </div>
           
           <p className="text-[10px] text-center text-muted-foreground italic">
-            Tap a sound to test. Sounds play automatically for events.
+            Each alert has a unique sound tailored to its type.
           </p>
         </div>
       </PopoverContent>

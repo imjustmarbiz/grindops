@@ -18,21 +18,70 @@ export function setVolume(vol: number): void {
   }
 }
 
-function generateWav(frequencies: number[], durations: number[], delays: number[], volume: number = 0.4): string {
+type WaveType = "sine" | "square" | "sawtooth" | "triangle" | "noise";
+
+interface ToneSegment {
+  freq: number;
+  dur: number;
+  delay: number;
+  wave?: WaveType;
+  vol?: number;
+  fadeIn?: number;
+  fadeOut?: number;
+  vibrato?: number;
+  vibratoDepth?: number;
+}
+
+function oscillator(wave: WaveType, phase: number): number {
+  const p = phase % (2 * Math.PI);
+  switch (wave) {
+    case "square":
+      return p < Math.PI ? 1 : -1;
+    case "sawtooth":
+      return (p / Math.PI) - 1;
+    case "triangle":
+      return p < Math.PI ? (2 * p / Math.PI) - 1 : 3 - (2 * p / Math.PI);
+    case "noise":
+      return Math.random() * 2 - 1;
+    case "sine":
+    default:
+      return Math.sin(phase);
+  }
+}
+
+function generateAdvancedWav(segments: ToneSegment[], masterVol: number = 0.4): string {
   let totalLength = 0;
-  for (let i = 0; i < frequencies.length; i++) {
-    totalLength = Math.max(totalLength, delays[i] + durations[i]);
+  for (const seg of segments) {
+    totalLength = Math.max(totalLength, seg.delay + seg.dur);
   }
   const numSamples = Math.ceil(SAMPLE_RATE * (totalLength + 0.05));
   const buffer = new Float32Array(numSamples);
 
-  for (let i = 0; i < frequencies.length; i++) {
-    const startSample = Math.floor(SAMPLE_RATE * delays[i]);
-    const durSamples = Math.floor(SAMPLE_RATE * durations[i]);
+  for (const seg of segments) {
+    const startSample = Math.floor(SAMPLE_RATE * seg.delay);
+    const durSamples = Math.floor(SAMPLE_RATE * seg.dur);
+    const vol = seg.vol ?? 1.0;
+    const wave = seg.wave ?? "sine";
+    const fadeIn = seg.fadeIn ?? 0;
+    const fadeOut = seg.fadeOut ?? seg.dur;
+
     for (let s = 0; s < durSamples && (startSample + s) < numSamples; s++) {
       const t = s / SAMPLE_RATE;
-      const envelope = Math.max(0, 1 - (t / durations[i]) * 1.5);
-      buffer[startSample + s] += Math.sin(2 * Math.PI * frequencies[i] * t) * volume * envelope;
+      let freq = seg.freq;
+      if (seg.vibrato && seg.vibratoDepth) {
+        freq += Math.sin(2 * Math.PI * seg.vibrato * t) * seg.vibratoDepth;
+      }
+      const phase = 2 * Math.PI * freq * t;
+      const sample = oscillator(wave, phase);
+
+      let envelope = 1;
+      if (fadeIn > 0 && t < fadeIn) envelope *= t / fadeIn;
+      if (fadeOut < seg.dur && t > (seg.dur - fadeOut)) envelope *= (seg.dur - t) / fadeOut;
+      envelope = Math.max(0, Math.min(1, envelope));
+      const decay = Math.max(0, 1 - (t / seg.dur) * 0.8);
+      envelope *= decay;
+
+      buffer[startSample + s] += sample * vol * masterVol * envelope;
     }
   }
 
@@ -69,21 +118,155 @@ function generateWav(frequencies: number[], durations: number[], delays: number[
 }
 
 function silentWav(): string {
-  return generateWav([0], [0.01], [0], 0);
+  return generateAdvancedWav([{ freq: 0, dur: 0.01, delay: 0, vol: 0 }], 0);
 }
 
-const soundDefs: Record<string, { freqs: number[]; durs: number[]; delays: number[]; vol: number }> = {
-  new_order: { freqs: [880, 1108.73, 1318.51], durs: [0.15, 0.15, 0.25], delays: [0, 0.12, 0.24], vol: 0.45 },
-  order_assigned: { freqs: [523.25, 659.25, 783.99, 1046.5, 1318.51], durs: [0.1, 0.1, 0.1, 0.12, 0.25], delays: [0, 0.08, 0.16, 0.24, 0.34], vol: 0.5 },
-  bid_accepted: { freqs: [523.25, 659.25, 783.99, 1046.5, 1318.51], durs: [0.1, 0.1, 0.1, 0.12, 0.25], delays: [0, 0.08, 0.16, 0.24, 0.34], vol: 0.5 },
-  bid_denied: { freqs: [440, 349.23, 293.66], durs: [0.2, 0.2, 0.35], delays: [0, 0.18, 0.36], vol: 0.4 },
-  bid_rejected: { freqs: [440, 349.23, 293.66], durs: [0.2, 0.2, 0.35], delays: [0, 0.18, 0.36], vol: 0.4 },
-  strike: { freqs: [330, 277.18, 220], durs: [0.3, 0.3, 0.5], delays: [0, 0.25, 0.5], vol: 0.35 },
-  payout: { freqs: [523.25, 659.25, 783.99, 1046.5], durs: [0.12, 0.12, 0.12, 0.2], delays: [0, 0.1, 0.2, 0.3], vol: 0.4 },
-  alert: { freqs: [800, 600, 800], durs: [0.15, 0.15, 0.2], delays: [0, 0.18, 0.36], vol: 0.4 },
-  message: { freqs: [660, 880], durs: [0.1, 0.15], delays: [0, 0.08], vol: 0.35 },
-  chat: { freqs: [660, 880], durs: [0.1, 0.15], delays: [0, 0.08], vol: 0.35 },
-  info: { freqs: [587.33, 784], durs: [0.12, 0.18], delays: [0, 0.1], vol: 0.35 },
+type SoundDef = { segments: ToneSegment[]; masterVol: number };
+
+const soundDefs: Record<string, SoundDef> = {
+  new_order: {
+    masterVol: 0.5,
+    segments: [
+      { freq: 1200, dur: 0.08, delay: 0, wave: "square", vol: 0.6 },
+      { freq: 1600, dur: 0.08, delay: 0.1, wave: "square", vol: 0.7 },
+      { freq: 1200, dur: 0.08, delay: 0.25, wave: "square", vol: 0.6 },
+      { freq: 1600, dur: 0.08, delay: 0.35, wave: "square", vol: 0.7 },
+      { freq: 2000, dur: 0.15, delay: 0.45, wave: "sine", vol: 0.5, fadeOut: 0.1 },
+    ],
+  },
+
+  emergency_order: {
+    masterVol: 0.55,
+    segments: [
+      { freq: 880, dur: 0.15, delay: 0, wave: "sawtooth", vol: 0.7, vibrato: 8, vibratoDepth: 40 },
+      { freq: 1320, dur: 0.15, delay: 0.15, wave: "sawtooth", vol: 0.7, vibrato: 8, vibratoDepth: 40 },
+      { freq: 880, dur: 0.15, delay: 0.30, wave: "sawtooth", vol: 0.7, vibrato: 8, vibratoDepth: 40 },
+      { freq: 1320, dur: 0.15, delay: 0.45, wave: "sawtooth", vol: 0.7, vibrato: 8, vibratoDepth: 40 },
+      { freq: 880, dur: 0.15, delay: 0.60, wave: "sawtooth", vol: 0.6, vibrato: 8, vibratoDepth: 40 },
+      { freq: 1320, dur: 0.2, delay: 0.75, wave: "sawtooth", vol: 0.6, vibrato: 8, vibratoDepth: 40 },
+    ],
+  },
+
+  order_assigned: {
+    masterVol: 0.45,
+    segments: [
+      { freq: 523, dur: 0.1, delay: 0, wave: "triangle", vol: 0.6 },
+      { freq: 659, dur: 0.1, delay: 0.08, wave: "triangle", vol: 0.65 },
+      { freq: 784, dur: 0.1, delay: 0.16, wave: "triangle", vol: 0.7 },
+      { freq: 1047, dur: 0.2, delay: 0.24, wave: "sine", vol: 0.8, fadeOut: 0.15 },
+    ],
+  },
+
+  order_update: {
+    masterVol: 0.4,
+    segments: [
+      { freq: 740, dur: 0.1, delay: 0, wave: "triangle", vol: 0.5 },
+      { freq: 880, dur: 0.15, delay: 0.12, wave: "sine", vol: 0.6, fadeOut: 0.1 },
+    ],
+  },
+
+  bid_accepted: {
+    masterVol: 0.45,
+    segments: [
+      { freq: 660, dur: 0.08, delay: 0, wave: "sine", vol: 0.5 },
+      { freq: 880, dur: 0.08, delay: 0.06, wave: "sine", vol: 0.6 },
+      { freq: 1100, dur: 0.08, delay: 0.12, wave: "sine", vol: 0.7 },
+      { freq: 1320, dur: 0.2, delay: 0.18, wave: "triangle", vol: 0.8, fadeOut: 0.15 },
+      { freq: 660, dur: 0.2, delay: 0.18, wave: "sine", vol: 0.3, fadeOut: 0.15 },
+    ],
+  },
+
+  bid_denied: {
+    masterVol: 0.4,
+    segments: [
+      { freq: 400, dur: 0.2, delay: 0, wave: "square", vol: 0.5 },
+      { freq: 300, dur: 0.25, delay: 0.2, wave: "square", vol: 0.45 },
+      { freq: 200, dur: 0.35, delay: 0.4, wave: "square", vol: 0.4, fadeOut: 0.2 },
+    ],
+  },
+
+  bid_rejected: {
+    masterVol: 0.4,
+    segments: [
+      { freq: 400, dur: 0.2, delay: 0, wave: "square", vol: 0.5 },
+      { freq: 300, dur: 0.25, delay: 0.2, wave: "square", vol: 0.45 },
+      { freq: 200, dur: 0.35, delay: 0.4, wave: "square", vol: 0.4, fadeOut: 0.2 },
+    ],
+  },
+
+  strike: {
+    masterVol: 0.45,
+    segments: [
+      { freq: 200, dur: 0.4, delay: 0, wave: "sawtooth", vol: 0.6, vibrato: 6, vibratoDepth: 15 },
+      { freq: 150, dur: 0.5, delay: 0.3, wave: "square", vol: 0.4, fadeOut: 0.3 },
+      { freq: 100, dur: 0.4, delay: 0.6, wave: "sawtooth", vol: 0.3, fadeOut: 0.25 },
+      { freq: 80, dur: 0.05, delay: 0, wave: "noise", vol: 0.3 },
+      { freq: 80, dur: 0.05, delay: 0.3, wave: "noise", vol: 0.25 },
+    ],
+  },
+
+  payout: {
+    masterVol: 0.45,
+    segments: [
+      { freq: 2200, dur: 0.04, delay: 0, wave: "sine", vol: 0.5 },
+      { freq: 2600, dur: 0.04, delay: 0.03, wave: "sine", vol: 0.6 },
+      { freq: 3200, dur: 0.06, delay: 0.06, wave: "sine", vol: 0.7 },
+      { freq: 3800, dur: 0.04, delay: 0.1, wave: "sine", vol: 0.5 },
+      { freq: 2000, dur: 0.03, delay: 0.12, wave: "noise", vol: 0.3 },
+      { freq: 3200, dur: 0.15, delay: 0.15, wave: "triangle", vol: 0.6, fadeOut: 0.12 },
+      { freq: 1600, dur: 0.15, delay: 0.15, wave: "sine", vol: 0.3, fadeOut: 0.12 },
+    ],
+  },
+
+  order_income: {
+    masterVol: 0.45,
+    segments: [
+      { freq: 2200, dur: 0.04, delay: 0, wave: "sine", vol: 0.5 },
+      { freq: 2600, dur: 0.04, delay: 0.03, wave: "sine", vol: 0.6 },
+      { freq: 3200, dur: 0.06, delay: 0.06, wave: "sine", vol: 0.7 },
+      { freq: 3800, dur: 0.04, delay: 0.1, wave: "sine", vol: 0.5 },
+      { freq: 2000, dur: 0.03, delay: 0.12, wave: "noise", vol: 0.3 },
+      { freq: 3200, dur: 0.15, delay: 0.15, wave: "triangle", vol: 0.6, fadeOut: 0.12 },
+      { freq: 1600, dur: 0.15, delay: 0.15, wave: "sine", vol: 0.3, fadeOut: 0.12 },
+    ],
+  },
+
+  alert: {
+    masterVol: 0.45,
+    segments: [
+      { freq: 900, dur: 0.12, delay: 0, wave: "square", vol: 0.5 },
+      { freq: 900, dur: 0.12, delay: 0.2, wave: "square", vol: 0.5 },
+      { freq: 900, dur: 0.12, delay: 0.4, wave: "square", vol: 0.5 },
+      { freq: 700, dur: 0.08, delay: 0.08, wave: "sine", vol: 0.3 },
+      { freq: 700, dur: 0.08, delay: 0.28, wave: "sine", vol: 0.3 },
+    ],
+  },
+
+  message: {
+    masterVol: 0.35,
+    segments: [
+      { freq: 800, dur: 0.06, delay: 0, wave: "sine", vol: 0.4 },
+      { freq: 1000, dur: 0.08, delay: 0.05, wave: "sine", vol: 0.5, fadeOut: 0.06 },
+      { freq: 500, dur: 0.06, delay: 0, wave: "triangle", vol: 0.2 },
+    ],
+  },
+
+  chat: {
+    masterVol: 0.35,
+    segments: [
+      { freq: 800, dur: 0.06, delay: 0, wave: "sine", vol: 0.4 },
+      { freq: 1000, dur: 0.08, delay: 0.05, wave: "sine", vol: 0.5, fadeOut: 0.06 },
+      { freq: 500, dur: 0.06, delay: 0, wave: "triangle", vol: 0.2 },
+    ],
+  },
+
+  info: {
+    masterVol: 0.3,
+    segments: [
+      { freq: 600, dur: 0.15, delay: 0, wave: "sine", vol: 0.5, fadeOut: 0.12 },
+      { freq: 300, dur: 0.15, delay: 0, wave: "triangle", vol: 0.2, fadeOut: 0.12 },
+    ],
+  },
 };
 
 const wavCache: Record<string, string> = {};
@@ -91,7 +274,7 @@ const wavCache: Record<string, string> = {};
 function getWavUrl(type: string): string {
   if (wavCache[type]) return wavCache[type];
   const def = soundDefs[type] || soundDefs.info;
-  const url = generateWav(def.freqs, def.durs, def.delays, def.vol);
+  const url = generateAdvancedWav(def.segments, def.masterVol);
   wavCache[type] = url;
   return url;
 }
