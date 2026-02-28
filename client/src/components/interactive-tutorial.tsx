@@ -1516,12 +1516,12 @@ export function InteractiveTutorial() {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-24 right-4 z-[100] flex items-center gap-3" ref={containerRef}>
+      <div className="fixed bottom-24 right-4 z-[100] flex items-center gap-3 group/container" ref={containerRef}>
         <button
           onClick={handleStartTutorial}
           className={`bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-xl transition-all duration-300 ${
-            showReplayLabel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 pointer-events-none"
-          }`}
+            showReplayLabel ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 translate-x-4 pointer-events-none"
+          } group-hover/container:opacity-100 group-hover/container:translate-x-0 group-hover/container:pointer-events-auto`}
           data-testid="button-replay-tutorial-confirm"
         >
           {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
@@ -1535,9 +1535,6 @@ export function InteractiveTutorial() {
           <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <span className="absolute right-14 top-1/2 -translate-y-1/2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity md:pointer-events-none shadow-xl pointer-events-none" aria-hidden="true">
-            {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
-          </span>
         </button>
       </div>
     );
