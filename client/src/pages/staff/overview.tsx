@@ -18,7 +18,6 @@ import {
   Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList
 } from "lucide-react";
 import { type StaffBadgeId } from "@/components/staff-achievement-badges";
-import { StaffPerformanceDialog } from "@/components/staff-scorecard";
 import { StaffBadgeGrid } from "@/components/staff-badge-grid";
 import type { StaffBadge as StaffBadgeType } from "@shared/schema";
 
@@ -84,14 +83,6 @@ export default function StaffOverview() {
   } = useStaffData();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [scorecardUserId, setScorecardUserId] = useState<string | null>(null);
-  const [scorecardOpen, setScorecardOpen] = useState(false);
-
-  const { data: staffMembers = [] } = useQuery<any[]>({
-    queryKey: ["/api/owner/staff-members"],
-    enabled: isOwner,
-    refetchInterval: 60000,
-  });
 
   const latestUpdate = Math.max(grindersUpdatedAt || 0, auditLogsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0, analyticsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
@@ -205,7 +196,7 @@ export default function StaffOverview() {
                 </div>
                 
                 <p className={`text-sm mt-1 font-medium ${isOwner ? "text-red-400/70" : "text-primary/70"}`}>
-                  {isOwner ? "Owner Command Center" : "Operations Hub"}
+                  GrindOps by Service Plug LLC — Command Center
                 </p>
                 
                 <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -215,6 +206,19 @@ export default function StaffOverview() {
                   </p>
                   <span className="hidden sm:inline opacity-20">|</span>
                   <LastUpdated date={lastUpdatedDate} />
+                  <span className="hidden sm:inline opacity-20">|</span>
+                  <button
+                    onClick={() => navigate("/my-performance")}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      isOwner
+                        ? "bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20"
+                        : "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
+                    }`}
+                    data-testid="button-my-performance"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    Performance
+                  </button>
                 </div>
               </div>
             </div>
@@ -622,79 +626,6 @@ export default function StaffOverview() {
         </FadeInUp>
       </div>
 
-      {isOwner && staffMembers.length > 0 && (
-        <FadeInUp>
-          <Card className="border-white/[0.06] bg-white/[0.02]">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="w-5 h-5 text-teal-400" />
-                  Staff Team ({staffMembers.length})
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {staffMembers.map((member: any) => {
-                  const memberIsOwner = member.role === "owner";
-                  const accent = memberIsOwner ? "text-red-400" : "text-teal-400";
-                  const accentBg = memberIsOwner ? "bg-red-500/10" : "bg-teal-500/10";
-                  const accentBorder = memberIsOwner ? "border-red-500/20" : "border-teal-500/20";
-                  return (
-                    <div
-                      key={member.id}
-                      onClick={() => { setScorecardUserId(member.id); setScorecardOpen(true); }}
-                      className={`relative p-4 rounded-xl ${accentBg} border ${accentBorder} cursor-pointer hover:bg-white/[0.06] transition-colors group`}
-                      data-testid={`card-staff-${member.id}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Avatar className={`h-10 w-10 border ${accentBorder}`}>
-                            <AvatarImage src={member.avatarUrl || undefined} />
-                            <AvatarFallback className={`${accentBg} ${accent} text-sm font-bold`}>
-                              {(member.name || "?").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          {memberIsOwner && (
-                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center">
-                              <Crown className="w-2.5 h-2.5 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate group-hover:text-primary transition-colors" data-testid={`text-staff-name-${member.id}`}>{member.name}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {memberIsOwner ? "Owner" : "Staff"} · {member.totalActions} actions
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 mt-3">
-                        <div className="text-center p-1.5 rounded-lg bg-white/[0.03]">
-                          <p className="text-sm font-bold text-emerald-400">{member.actionsLast24h}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-muted-foreground">24h</p>
-                        </div>
-                        <div className="text-center p-1.5 rounded-lg bg-white/[0.03]">
-                          <p className="text-sm font-bold text-blue-400">{member.actionsLast7d}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-muted-foreground">7d</p>
-                        </div>
-                        <div className="text-center p-1.5 rounded-lg bg-white/[0.03]">
-                          <p className="text-sm font-bold">{member.completedTasks}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Tasks</p>
-                        </div>
-                      </div>
-                      {member.lastAction && (
-                        <p className="text-[9px] text-muted-foreground mt-2 truncate">
-                          Last active: {new Date(member.lastAction).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </FadeInUp>
-      )}
 
       <FadeInUp>
       <Card className="border-white/[0.06] bg-white/[0.02]">
@@ -774,12 +705,6 @@ export default function StaffOverview() {
         </CardContent>
       </Card>
       </FadeInUp>
-
-      <StaffPerformanceDialog
-        userId={scorecardUserId}
-        open={scorecardOpen}
-        onClose={() => { setScorecardOpen(false); setScorecardUserId(null); }}
-      />
 
     </AnimatedPage>
     </TooltipProvider>

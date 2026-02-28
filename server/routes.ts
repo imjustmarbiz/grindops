@@ -5508,21 +5508,102 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  async function checkAndAwardAutoBadges(userId: string) {
+    const targetUser = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
+    if (!targetUser || (targetUser.role !== "staff" && targetUser.role !== "owner")) return;
+
+    const existing = await storage.getStaffBadges(userId);
+    const hasBadge = (id: string) => existing.some(b => b.badgeId === id);
+
+    const allLogs = await storage.getAuditLogs();
+    const discordId = targetUser.discordId || targetUser.id;
+    const username = (targetUser.discordUsername || "").toLowerCase();
+    const staffLogs = allLogs.filter(l => {
+      const actor = l.actor?.toLowerCase() || "";
+      return actor === username || actor === discordId;
+    });
+
+    const actionCounts: Record<string, number> = {};
+    staffLogs.forEach(l => {
+      const a = l.action || "unknown";
+      actionCounts[a] = (actionCounts[a] || 0) + 1;
+    });
+
+    const totalActions = staffLogs.length;
+    const ordersManaged = (actionCounts["order_created"] || 0) + (actionCounts["order_updated"] || 0) + (actionCounts["order_status_changed"] || 0);
+    const bidsReviewed = (actionCounts["bid_accepted"] || 0) + (actionCounts["bid_denied"] || 0) + (actionCounts["bid_rejected"] || 0);
+    const assignmentsMade = (actionCounts["grinder_assigned"] || 0) + (actionCounts["order_assigned"] || 0);
+    const payoutsProcessed = (actionCounts["payout_approved"] || 0) + (actionCounts["payout_paid"] || 0) + (actionCounts["payout_denied"] || 0);
+    const alertsSent = (actionCounts["alert_sent"] || 0) + (actionCounts["staff_alert_created"] || 0);
+    const strikesIssued = (actionCounts["strike_added"] || 0) + (actionCounts["strike_issued"] || 0);
+    const reviewsDone = (actionCounts["order_reviewed"] || 0) + (actionCounts["proof_reviewed"] || 0) + (actionCounts["quality_review"] || 0);
+    const eventsCreated = actionCounts["event_created"] || 0;
+
+    const allOrders = await storage.getOrders();
+    const totalRevenue = allOrders.filter(o => o.status !== "Cancelled").reduce((s, o) => s + Number(o.customerPrice || 0), 0);
+
+    const joinedAt = targetUser.createdAt ? new Date(targetUser.createdAt).getTime() : Date.now();
+    const daysSinceJoin = Math.floor((Date.now() - joinedAt) / 86400000);
+
+    const allGrinders = await storage.getGrinders();
+    const activeGrinders = allGrinders.filter(g => g.activeOrders > 0 && !g.suspended).length;
+
+    const autoChecks: Array<{ id: string; condition: boolean }> = [
+      { id: "staff-first-action", condition: totalActions >= 1 },
+      { id: "staff-order-5", condition: ordersManaged >= 5 },
+      { id: "staff-bid-10", condition: bidsReviewed >= 10 },
+      { id: "staff-payout-1", condition: payoutsProcessed >= 1 },
+      { id: "staff-assign-5", condition: assignmentsMade >= 5 },
+      { id: "staff-alert-1", condition: alertsSent >= 1 },
+      { id: "staff-strike-1", condition: strikesIssued >= 1 },
+      { id: "staff-review-5", condition: reviewsDone >= 5 },
+      { id: "staff-7d", condition: daysSinceJoin >= 7 },
+      { id: "staff-event-1", condition: eventsCreated >= 1 },
+      { id: "staff-order-25", condition: ordersManaged >= 25 },
+      { id: "staff-order-50", condition: ordersManaged >= 50 },
+      { id: "staff-assign-25", condition: assignmentsMade >= 25 },
+      { id: "staff-bid-50", condition: bidsReviewed >= 50 },
+      { id: "staff-payout-10", condition: payoutsProcessed >= 10 },
+      { id: "staff-rev-5k", condition: totalRevenue >= 5000 },
+      { id: "staff-rev-10k", condition: totalRevenue >= 10000 },
+      { id: "staff-30d", condition: daysSinceJoin >= 30 },
+      { id: "staff-90d", condition: daysSinceJoin >= 90 },
+      { id: "staff-grinder-mgr", condition: activeGrinders >= 10 },
+      { id: "staff-order-100", condition: ordersManaged >= 100 },
+      { id: "staff-order-250", condition: ordersManaged >= 250 },
+      { id: "staff-order-500", condition: ordersManaged >= 500 },
+      { id: "staff-order-1000", condition: ordersManaged >= 1000 },
+      { id: "staff-rev-25k", condition: totalRevenue >= 25000 },
+      { id: "staff-rev-50k", condition: totalRevenue >= 50000 },
+      { id: "staff-rev-100k", condition: totalRevenue >= 100000 },
+      { id: "staff-180d", condition: daysSinceJoin >= 180 },
+      { id: "staff-365d", condition: daysSinceJoin >= 365 },
+      { id: "staff-730d", condition: daysSinceJoin >= 730 },
+    ];
+
+    const roleBadgeId = targetUser.role === "owner" ? "staff-owner-role" : "staff-staff-role";
+    autoChecks.push({ id: roleBadgeId, condition: true });
+
+    for (const check of autoChecks) {
+      if (check.condition && !hasBadge(check.id)) {
+        try {
+          await storage.createStaffBadge({
+            id: `auto-${check.id}-${userId}-${Date.now()}`,
+            userId,
+            badgeId: check.id,
+            awardedBy: "system",
+            awardedByName: "Auto-Earned",
+            note: "Automatically awarded by the system",
+          });
+        } catch (_e) {}
+      }
+    }
+  }
+
   app.get("/api/staff/my-badges", requireStaff, async (req, res) => {
     const user = (req as any).user;
+    try { await checkAndAwardAutoBadges(user.id); } catch (_e) {}
     const badges = await storage.getStaffBadges(user.id);
-    const roleBadgeId = user.role === "owner" ? "staff-owner-role" : "staff-staff-role";
-    const hasRoleBadge = badges.some((b: any) => b.badgeId === roleBadgeId);
-    if (!hasRoleBadge) {
-      badges.unshift({
-        id: `auto-role-${user.id}`,
-        userId: user.id,
-        badgeId: roleBadgeId,
-        awardedBy: "system",
-        note: "Auto-assigned based on role",
-        createdAt: user.createdAt || new Date().toISOString(),
-      });
-    }
     res.json(badges);
   });
 

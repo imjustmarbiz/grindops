@@ -147,7 +147,7 @@ export default function MyPerformance() {
                 </div>
 
                 <p className={`text-sm mt-1 font-medium ${isOwner ? "text-red-400/70" : "text-primary/70"}`}>
-                  My Performance
+                  GrindOps by Service Plug LLC — Command Center
                 </p>
 
                 <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

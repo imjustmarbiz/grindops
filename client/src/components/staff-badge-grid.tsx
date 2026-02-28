@@ -81,11 +81,17 @@ function StaffBadgeItem({ badgeId, onSelect, sizeClasses, prefix, isDesktop }: {
     setAnchorEl(null);
   }, []);
 
+  const handleClick = useCallback(() => {
+    if (!isDesktop) {
+      onSelect(badgeId);
+    }
+  }, [isDesktop, badgeId, onSelect]);
+
   return (
     <div className="relative" data-testid={`${prefix}-badge-wrapper-${badgeId}`}>
       <button
         ref={btnRef}
-        onClick={() => onSelect(badgeId)}
+        onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="flex flex-col items-center gap-1 transition-transform active:scale-95"
