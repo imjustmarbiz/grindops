@@ -15,7 +15,7 @@ import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
-  Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList
+  Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList, Settings, Layers
 } from "lucide-react";
 import { type StaffBadgeId } from "@/components/staff-achievement-badges";
 import { StaffBadgeGrid } from "@/components/staff-badge-grid";
@@ -137,6 +137,8 @@ export default function StaffOverview() {
   const grindersWithStrikes = allGrinders.filter(g => g.strikes > 0).sort((a, b) => b.strikes - a.strikes);
 
   const pendingPayouts = payoutReqs.filter((p: any) => p.status === "Pending" || p.status === "pending").length;
+  const completedPayoutsCount = payoutReqs.filter((p: any) => p.status === "Approved" || p.status === "approved" || p.status === "Completed" || p.status === "completed" || p.status === "Paid" || p.status === "paid").length;
+  const payoutGrinderIds = new Set(payoutReqs.filter((p: any) => p.status !== "Denied" && p.status !== "denied" && p.status !== "Cancelled" && p.status !== "cancelled").map((p: any) => p.grinderId));
 
   const revenue = analytics?.totalRevenue || 0;
   const payouts = analytics?.totalGrinderPayouts || 0;
@@ -363,16 +365,16 @@ export default function StaffOverview() {
           <>
             <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
               gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400"
-              onClick={() => navigate("/business")} linkLabel="Business" />
-            <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${allGrinders.length} grinders`} icon={Users}
+              onClick={() => navigate("/business")} linkLabel="Business Performance" />
+            <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${completedPayoutsCount} paid to ${payoutGrinderIds.size} grinders`} icon={Users}
               gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400"
-              onClick={() => navigate("/payouts")} linkLabel="Payouts" />
+              onClick={() => navigate("/grinders")} linkLabel="Grinders" />
             <StatCard label="Company Profit" value={formatCurrency(profit)} subtitle={`${profitMarginPct.toFixed(1)}% margin`} icon={TrendingUp}
               gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400"
-              onClick={() => navigate("/business")} linkLabel="Business" />
+              onClick={() => navigate("/wallets")} linkLabel="Business Wallet" />
             <StatCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} subtitle={`avg margin ${(analytics?.avgMargin || 0).toFixed(1)}%`} icon={BarChart3}
               gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400"
-              onClick={() => navigate("/orders")} linkLabel="Orders" />
+              onClick={() => navigate("/services")} linkLabel="Services" />
           </>
         ) : (
           <>
@@ -396,40 +398,40 @@ export default function StaffOverview() {
       {isOwner && (
         <FadeInUp>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div onClick={() => navigate("/business")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-900/5 border border-amber-500/15 cursor-pointer hover:border-amber-500/30 transition-all group" data-testid="quick-action-business">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <DollarSign className="w-4 h-4 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Business</p>
-                <p className="text-[10px] text-muted-foreground">Revenue & margins</p>
-              </div>
-            </div>
-            <div onClick={() => navigate("/payouts")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-900/5 border border-emerald-500/15 cursor-pointer hover:border-emerald-500/30 transition-all group" data-testid="quick-action-payouts">
+            <div onClick={() => navigate("/orders")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-900/5 border border-emerald-500/15 cursor-pointer hover:border-emerald-500/30 transition-all group" data-testid="quick-action-orders">
               <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <Package className="w-4 h-4 text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm font-medium">Grinder Payouts</p>
-                <p className="text-[10px] text-muted-foreground">Pending approvals</p>
+                <p className="text-sm font-medium">Orders</p>
+                <p className="text-[10px] text-muted-foreground">Manage orders</p>
               </div>
             </div>
-            <div onClick={() => navigate("/admin")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-900/5 border border-blue-500/15 cursor-pointer hover:border-blue-500/30 transition-all group" data-testid="quick-action-admin">
+            <div onClick={() => navigate("/grinders")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-900/5 border border-blue-500/15 cursor-pointer hover:border-blue-500/30 transition-all group" data-testid="quick-action-grinders">
               <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Users className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium">Admin</p>
-                <p className="text-[10px] text-muted-foreground">Team & settings</p>
+                <p className="text-sm font-medium">Grinders</p>
+                <p className="text-[10px] text-muted-foreground">Roster & profiles</p>
               </div>
             </div>
-            <div onClick={() => navigate("/wallets")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-wallets">
+            <div onClick={() => navigate("/assignments")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-900/5 border border-purple-500/15 cursor-pointer hover:border-purple-500/30 transition-all group" data-testid="quick-action-assignments">
               <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Wallet className="w-4 h-4 text-purple-400" />
+                <ClipboardList className="w-4 h-4 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium">Business Wallet</p>
-                <p className="text-[10px] text-muted-foreground">Wallets & payouts</p>
+                <p className="text-sm font-medium">Order Assignments</p>
+                <p className="text-[10px] text-muted-foreground">Assign & track</p>
+              </div>
+            </div>
+            <div onClick={() => navigate("/admin")} className="flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-900/5 border border-amber-500/15 cursor-pointer hover:border-amber-500/30 transition-all group" data-testid="quick-action-admin">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Settings className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Admin</p>
+                <p className="text-[10px] text-muted-foreground">Team & settings</p>
               </div>
             </div>
           </div>
