@@ -2537,16 +2537,21 @@ export async function registerRoutes(
     const customerUpdateType = newDeadline
       ? "deadline_change"
       : updateType === "issue" ? "issue_reported" : "progress";
-    sendCustomerUpdate({
-      orderId,
-      updateType: customerUpdateType as any,
-      message,
-      proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
-      grinderName: myGrinder.name,
-      assignmentId,
-    }).catch(err => console.error("[customer-updates] Error:", err));
+    let discordSent = false;
+    try {
+      discordSent = await sendCustomerUpdate({
+        orderId,
+        updateType: customerUpdateType as any,
+        message,
+        proofUrls: Array.isArray(proofUrls) ? proofUrls.filter(Boolean) : undefined,
+        grinderName: myGrinder.name,
+        assignmentId,
+      });
+    } catch (err) {
+      console.error("[customer-updates] Error:", err);
+    }
 
-    res.status(201).json(update);
+    res.status(201).json({ ...update, discordSent });
   });
 
   app.post("/api/grinder/me/payout-requests", async (req, res) => {

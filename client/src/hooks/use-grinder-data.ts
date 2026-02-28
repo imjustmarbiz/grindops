@@ -65,9 +65,12 @@ export function useGrinderData() {
       const res = await apiRequest("POST", "/api/grinder/me/order-updates", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       invalidate();
-      toast({ title: "Update submitted", description: "Staff has been notified." });
+      const discordMsg = data?.discordSent
+        ? "Update sent to staff and Discord ticket channel."
+        : "Update sent to staff.";
+      toast({ title: "Update submitted", description: discordMsg });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

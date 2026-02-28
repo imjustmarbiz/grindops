@@ -28,7 +28,10 @@ const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; 
 };
 
 const BRAND_FOOTER = "GrindOps by Service Plug LLC";
-const BRAND_ICON = "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
+function getBrandIconUrl(): string {
+  const host = getAppBaseUrl();
+  return host ? `${host}/embed-logo.png` : "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
+}
 
 function getAppBaseUrl(): string | null {
   const domains = process.env.REPLIT_DOMAINS;
@@ -173,7 +176,7 @@ export async function sendCustomerUpdate(options: {
 
     const embed = new EmbedBuilder()
       .setColor(config.color)
-      .setAuthor({ name: BRAND_FOOTER, iconURL: BRAND_ICON })
+      .setAuthor({ name: BRAND_FOOTER, iconURL: getBrandIconUrl() })
       .setTitle(`${config.emoji}  ${config.title}`)
       .setDescription(message)
       .addFields(
@@ -187,10 +190,12 @@ export async function sendCustomerUpdate(options: {
     if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
 
     if (proofUrls && proofUrls.length > 0) {
-      const proofList = proofUrls.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
+      const host = getAppBaseUrl();
+      const resolvedProofs = proofUrls.map(url => resolveUrl(url, host) || url);
+      const proofList = resolvedProofs.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
       embed.addFields({ name: "📎 Attached Proof", value: proofList });
-      if (proofUrls[0].match(/\.(png|jpg|jpeg|gif|webp)(\?|$)/i)) {
-        embed.setImage(proofUrls[0]);
+      if (resolvedProofs[0].match(/\.(png|jpg|jpeg|gif|webp)(\?|$)/i)) {
+        embed.setImage(resolvedProofs[0]);
       }
     }
 
@@ -243,7 +248,7 @@ export async function sendCompletionApprovalRequest(options: {
 
     const embed = new EmbedBuilder()
       .setColor(0x22C55E)
-      .setAuthor({ name: BRAND_FOOTER, iconURL: BRAND_ICON })
+      .setAuthor({ name: BRAND_FOOTER, iconURL: getBrandIconUrl() })
       .setTitle("✅  Order Completed — Approval Required")
       .setDescription(
         `Your order has been completed by ${grinderTag}!\n\n` +
@@ -265,10 +270,12 @@ export async function sendCompletionApprovalRequest(options: {
     ].filter(Boolean);
 
     if (allProofs.length > 0) {
-      const proofList = allProofs.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
+      const host = getAppBaseUrl();
+      const resolvedProofs = allProofs.map(url => resolveUrl(url, host) || url);
+      const proofList = resolvedProofs.map((url, i) => `[Proof ${i + 1}](${url})`).join(" • ");
       embed.addFields({ name: "📎 Completion Proof", value: proofList });
-      if (allProofs[0].match(/\.(png|jpg|jpeg|gif|webp)(\?|$)/i)) {
-        embed.setImage(allProofs[0]);
+      if (resolvedProofs[0].match(/\.(png|jpg|jpeg|gif|webp)(\?|$)/i)) {
+        embed.setImage(resolvedProofs[0]);
       }
     }
 
