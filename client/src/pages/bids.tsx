@@ -177,7 +177,7 @@ export default function Bids() {
         </FadeInUp>
 
         <FadeInUp>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {[
               { label: "Total", value: bids?.length || 0, icon: Gavel, gradient: "from-purple-500/[0.08] via-background to-purple-900/[0.04]", iconBg: "bg-purple-500/15", color: "text-purple-400" },
               { label: "Pending", value: pendingCount, icon: Clock, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
@@ -186,14 +186,14 @@ export default function Bids() {
               { label: "Avg Margin", value: avgMargin, icon: Percent, gradient: "from-amber-500/[0.06] via-background to-amber-900/[0.03]", iconBg: "bg-amber-500/15", color: "text-amber-400" },
             ].map(s => (
               <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
-                <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-white/[0.02] -translate-y-5 translate-x-5" />
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />
                 <CardContent className="p-4 flex items-center gap-3 relative">
-                  <div className={`w-9 h-9 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
-                    <s.icon className={`w-4 h-4 ${s.color}`} />
+                  <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+                    <s.icon className={`w-5 h-5 ${s.color}`} />
                   </div>
                   <div>
-                    <p className={`text-lg font-bold ${s.color} truncate`} data-testid={`text-${s.label.toLowerCase().replace(/\s+/g, "-")}`}>{s.value}</p>
-                    <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                    <p className={`text-xl font-bold ${s.color}`} data-testid={`text-${s.label.toLowerCase().replace(/\s+/g, "-")}`}>{s.value}</p>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -202,7 +202,7 @@ export default function Bids() {
         </FadeInUp>
 
         <FadeInUp>
-          <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] p-4">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -210,12 +210,12 @@ export default function Bids() {
                   placeholder="Search by ID, order, grinder..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-background/50 border-white/10"
+                  className="pl-9 bg-white/[0.03] border-white/[0.08]"
                   data-testid="input-search-bids"
                 />
               </div>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[150px] bg-background/50 border-white/10" data-testid="select-status-filter">
+                <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-status-filter">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -227,7 +227,7 @@ export default function Bids() {
                 </SelectContent>
               </Select>
               <Select value={filterGrinderId} onValueChange={setFilterGrinderId}>
-                <SelectTrigger className="w-[180px] bg-background/50 border-white/10" data-testid="select-grinder-filter">
+                <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-grinder-filter">
                   <SelectValue placeholder="Grinder" />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,11 +237,11 @@ export default function Bids() {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground whitespace-nowrap" data-testid="text-showing-count">
-                Showing {filteredBids.length} of {(bids || []).length} bids
-              </span>
             </div>
-          </Card>
+            <p className="text-xs text-muted-foreground mt-3" data-testid="text-showing-count">
+              Showing {filteredBids.length} of {(bids || []).length} bids
+            </p>
+          </div>
         </FadeInUp>
 
         <FadeInUp>
