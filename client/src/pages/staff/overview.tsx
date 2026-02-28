@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { formatCurrency, formatCompact, AnimatedRing, LastUpdated, categoryIcon, pluralize, formatLabel } from "@/lib/staff-utils";
@@ -16,6 +17,10 @@ import {
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
   Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList
 } from "lucide-react";
+import {
+  STAFF_BADGE_COMPONENTS, STAFF_BADGE_META, type StaffBadgeId,
+} from "@/components/staff-achievement-badges";
+import type { StaffBadge as StaffBadgeType } from "@shared/schema";
 
 
 function SparkBar({ segments, height = 6 }: { segments: { value: number; color: string; label: string }[]; height?: number }) {
@@ -83,6 +88,11 @@ export default function StaffOverview() {
   const latestUpdate = Math.max(grindersUpdatedAt || 0, auditLogsUpdatedAt || 0, assignmentsUpdatedAt || 0, ordersUpdatedAt || 0, bidsUpdatedAt || 0, analyticsUpdatedAt || 0);
   const lastUpdatedDate = latestUpdate > 0 ? new Date(latestUpdate) : null;
 
+  const { data: myBadges = [] } = useQuery<StaffBadgeType[]>({
+    queryKey: ["/api/staff/my-badges"],
+    refetchInterval: 60000,
+  });
+
   const dataLoading = isOwner ? analyticsLoading : (ordersLoading || grindersLoading || bidsLoading);
 
   if (dataLoading) {
@@ -137,7 +147,7 @@ export default function StaffOverview() {
     <TooltipProvider>
     <AnimatedPage className="space-y-6">
       <FadeInUp>
-        <div className={`relative overflow-hidden rounded-2xl border p-6 sm:p-8 ${
+        <div className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 ${
           isOwner 
             ? "border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30" 
             : "border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5"
@@ -146,54 +156,90 @@ export default function StaffOverview() {
             isOwner ? "bg-red-500/[0.06]" : "bg-primary/[0.04]"
           }`} />
           
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <Avatar className={`h-20 w-20 border-2 shadow-lg ${
-              isOwner ? "border-red-500/40" : "border-primary/40"
-            }`}>
-              <AvatarImage src={user?.profileImageUrl || undefined} />
-              <AvatarFallback className={`${isOwner ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"} text-2xl font-bold`}>
-                {(user?.firstName || user?.discordUsername || "U").charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
-                  {isOwner ? "Owner Command Center" : "Operations Hub"}
-                </h1>
-                <Badge className={`gap-1 ${
-                  isOwner 
-                    ? "bg-red-500/20 text-red-400 border-red-500/30" 
-                    : "bg-primary/20 text-primary border-primary/30"
+          <div className="relative">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+              <div className="relative">
+                <Avatar className={`h-14 w-14 sm:h-20 sm:w-20 border-2 shadow-lg ${
+                  isOwner ? "border-red-500/40" : "border-primary/40"
                 }`}>
-                  {isOwner ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
-                  {isOwner ? "Owner" : "Staff"}
-                </Badge>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                  <AvatarImage src={user?.profileImageUrl || undefined} />
+                  <AvatarFallback className={`${isOwner ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"} text-2xl font-bold`}>
+                    {(user?.firstName || user?.discordUsername || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {isOwner && (
+                  <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center shadow-lg">
+                    <Crown className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <h1 className="text-xl sm:text-3xl font-bold font-display tracking-tight" data-testid="text-page-title">
+                    {user?.firstName || user?.discordUsername || "User"}
+                  </h1>
+                  {user?.discordUsername && user?.firstName && user.firstName !== user.discordUsername && (
+                    <span className="text-base sm:text-lg text-muted-foreground font-medium" data-testid="text-discord-username">(@{user.discordUsername})</span>
+                  )}
+                  <Badge className={`gap-1 ${
+                    isOwner 
+                      ? "bg-red-500/20 text-red-400 border-red-500/30" 
+                      : "bg-primary/20 text-primary border-primary/30"
+                  }`}>
+                    {isOwner ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                    {isOwner ? "Owner" : "Staff"}
+                  </Badge>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                  </div>
+                </div>
+                
+                <p className={`text-sm mt-1 font-medium ${isOwner ? "text-red-400/70" : "text-primary/70"}`}>
+                  {isOwner ? "Owner Command Center" : "Operations Hub"}
+                </p>
+                
+                <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Joined {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                  </p>
+                  <span className="hidden sm:inline opacity-20">|</span>
+                  <LastUpdated date={lastUpdatedDate} />
                 </div>
               </div>
-              
-              <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                <p className="flex items-center gap-1">
-                  Welcome back, <span className="text-foreground font-medium">{user?.firstName || user?.discordUsername}</span>
-                </p>
-                <span className="hidden sm:inline opacity-20">|</span>
-                <p className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Joined {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
-                </p>
-                <span className="hidden sm:inline opacity-20">|</span>
-                <LastUpdated date={lastUpdatedDate} />
-              </div>
-              
-              <p className="mt-3 text-sm opacity-70 max-w-2xl">
-                {isOwner 
-                  ? "Full authority over operations, analytics, and team management." 
-                  : "Order management, grinder operations, and daily workflow at a glance."}
-              </p>
             </div>
+
+            {myBadges.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
+                  {myBadges.map((b) => {
+                    const BadgeComp = STAFF_BADGE_COMPONENTS[b.badgeId as StaffBadgeId];
+                    const meta = STAFF_BADGE_META[b.badgeId as StaffBadgeId];
+                    if (!BadgeComp || !meta) return null;
+                    return (
+                      <TooltipProvider key={b.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex flex-col items-center gap-1 cursor-default" data-testid={`profile-badge-${b.badgeId}`}>
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center [&_svg]:w-10 [&_svg]:h-10 sm:[&_svg]:w-12 sm:[&_svg]:h-12 [&>div]:!w-10 [&>div]:!h-10 sm:[&>div]:!w-12 sm:[&>div]:!h-12">
+                                <BadgeComp />
+                              </div>
+                              <span className="text-[9px] sm:text-[10px] text-muted-foreground text-center leading-tight max-w-[56px] sm:max-w-[72px] truncate">{meta.label}</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-[200px]">
+                            <p className="text-xs font-medium">{meta.label}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{meta.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </FadeInUp>

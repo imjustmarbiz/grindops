@@ -5508,6 +5508,12 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.get("/api/staff/my-badges", requireStaff, async (req, res) => {
+    const user = (req as any).user;
+    const badges = await storage.getStaffBadges(user.id);
+    res.json(badges);
+  });
+
   app.get("/api/owner/staff-badges", requireOwner, async (req, res) => {
     const userId = req.query.userId as string | undefined;
     const badges = await storage.getStaffBadges(userId || undefined);
