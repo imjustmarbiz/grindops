@@ -10,7 +10,7 @@ import { ChatDrawer } from "@/components/chat-drawer";
 import { SoundAlertsHelper } from "@/components/sound-alerts-helper";
 import { LowerThirdNotifications } from "@/components/lower-third-notification";
 import { SiteAlertTicker } from "@/components/site-alert-ticker";
-import { InteractiveTutorial } from "@/components/interactive-tutorial";
+import { InteractiveTutorial, TutorialTrigger } from "@/components/interactive-tutorial";
 import { useLoginTracker } from "@/hooks/use-activity-tracker";
 import type { MessageThread, Notification, ThreadParticipant } from "@shared/schema";
 import { 
@@ -319,6 +319,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <LowerThirdNotifications />
       <SiteAlertTicker />
       <InteractiveTutorial />
+      <TutorialTrigger />
     </SidebarProvider>
   );
 }

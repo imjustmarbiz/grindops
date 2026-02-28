@@ -1353,6 +1353,68 @@ function clearTutorialSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
+export function TutorialTrigger() {
+  const { user } = useAuth();
+  const isStaff = user?.role === "staff" || user?.role === "owner";
+  const storageKey = `grindops-tutorial-${isStaff ? "staff" : "grinder"}-v2-completed`;
+  
+  const [showReplayLabel, setShowReplayLabel] = useState(false);
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const seen = localStorage.getItem(storageKey);
+    setHasSeenTutorial(!!seen);
+    
+    const handleStorage = () => {
+      const updatedSeen = localStorage.getItem(storageKey);
+      setHasSeenTutorial(!!updatedSeen);
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [storageKey]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showReplayLabel && containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowReplayLabel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showReplayLabel]);
+
+  const handleStartTutorial = () => {
+    setTutorialSession(true, 0, window.location.pathname);
+    window.dispatchEvent(new Event("storage"));
+    setShowReplayLabel(false);
+  };
+
+  return (
+    <div className="fixed bottom-24 right-4 z-[50] flex items-center gap-3 group/container" ref={containerRef}>
+      <button
+        onClick={handleStartTutorial}
+        className={`bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-xl transition-all duration-300 ${
+          showReplayLabel ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 translate-x-4 pointer-events-none"
+        } group-hover/container:opacity-100 group-hover/container:translate-x-0 group-hover/container:pointer-events-auto`}
+        data-testid="button-replay-tutorial-confirm"
+      >
+        {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
+      </button>
+      <button
+        onClick={() => setShowReplayLabel(!showReplayLabel)}
+        className="group relative"
+        data-testid="button-start-tutorial"
+        aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
+      >
+        <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
+          <GraduationCap className="w-5 h-5 text-white" />
+        </div>
+      </button>
+    </div>
+  );
+}
+
 export function InteractiveTutorial() {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
@@ -1524,29 +1586,7 @@ export function InteractiveTutorial() {
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   if (!isOpen) {
-    return (
-      <div className="fixed bottom-24 right-4 z-[100] flex items-center gap-3 group/container" ref={containerRef}>
-        <button
-          onClick={handleStartTutorial}
-          className={`bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-xl transition-all duration-300 ${
-            showReplayLabel ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 translate-x-4 pointer-events-none"
-          } group-hover/container:opacity-100 group-hover/container:translate-x-0 group-hover/container:pointer-events-auto`}
-          data-testid="button-replay-tutorial-confirm"
-        >
-          {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
-        </button>
-        <button
-          onClick={() => setShowReplayLabel(!showReplayLabel)}
-          className="group relative"
-          data-testid="button-start-tutorial"
-          aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
-        >
-          <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
-            <GraduationCap className="w-5 h-5 text-white" />
-          </div>
-        </button>
-      </div>
-    );
+    return null;
   }
 
   const hasMockup = !!step.mockupId;
