@@ -6967,6 +6967,258 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/staff/action-items", requireStaff, async (req, res) => {
+    try {
+      const allOrders = await storage.getOrders();
+      const allAssignments = await storage.getAssignments();
+      const allPayouts = await storage.getPayoutRequests();
+      const allBids = await storage.getBids();
+      const allGrinders = await storage.getGrinders();
+      const dismissals = await storage.getStaffActionDismissals();
+      const dismissedKeys = new Set(dismissals.map(d => d.actionKey));
+      const services = await storage.getServices();
+
+      const items: Array<{
+        key: string;
+        category: string;
+        priority: string;
+        title: string;
+        description: string;
+        orderId?: string;
+        linkUrl?: string;
+        dismissedBy?: string;
+        dismissedByName?: string;
+        dismissedAt?: string;
+      }> = [];
+
+      const activeStatuses = ["Open", "Assigned", "In Progress", "Completed", "Need Replacement"];
+
+      for (const order of allOrders) {
+        if (!activeStatuses.includes(order.status)) continue;
+        const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id.slice(0, 10);
+        const serviceName = services.find(s => s.id === order.serviceId)?.name || "Unknown";
+
+        if ((!order.customerPrice || order.customerPrice === "0") && order.status !== "Cancelled") {
+          items.push({
+            key: `set-price-${order.id}`,
+            category: "Order Setup",
+            priority: "high",
+            title: `Set price for ${orderLabel}`,
+            description: `${serviceName} order needs a customer price set.`,
+            orderId: order.id,
+            linkUrl: "/orders",
+          });
+        }
+
+        if (order.status === "Open" && !order.assignedGrinderId) {
+          const orderBids = allBids.filter(b => b.orderId === order.id && b.status === "Pending");
+          if (orderBids.length > 0) {
+            items.push({
+              key: `assign-grinder-${order.id}`,
+              category: "Order Assignment",
+              priority: "high",
+              title: `Assign grinder for ${orderLabel}`,
+              description: `${orderBids.length} pending bid(s) — ${serviceName}. Review and assign a grinder.`,
+              orderId: order.id,
+              linkUrl: "/orders",
+            });
+          }
+
+          if (order.biddingClosesAt && new Date(order.biddingClosesAt) < new Date() && orderBids.length === 0) {
+            items.push({
+              key: `stalled-bidding-${order.id}`,
+              category: "Stalled Orders",
+              priority: "urgent",
+              title: `Bidding closed with no bids — ${orderLabel}`,
+              description: `${serviceName} order has no bids and bidding has closed. Re-open or manually assign.`,
+              orderId: order.id,
+              linkUrl: "/orders",
+            });
+          }
+
+          if (orderBids.length === 0 && (!order.biddingClosesAt || new Date(order.biddingClosesAt) >= new Date())) {
+            const createdAt = order.createdAt ? new Date(order.createdAt) : new Date();
+            const ageHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+            if (ageHours > 24) {
+              items.push({
+                key: `unassigned-no-bids-${order.id}`,
+                category: "Order Assignment",
+                priority: "normal",
+                title: `No bids yet — ${orderLabel}`,
+                description: `${serviceName} order has been open ${Math.floor(ageHours / 24)}d with no bids. Consider reaching out to grinders.`,
+                orderId: order.id,
+                linkUrl: "/orders",
+              });
+            }
+          }
+        }
+
+        if (!order.discordTicketChannelId && order.status !== "Open" && order.status !== "Cancelled") {
+          items.push({
+            key: `link-ticket-${order.id}`,
+            category: "Discord Setup",
+            priority: "normal",
+            title: `Link Discord ticket for ${orderLabel}`,
+            description: `${serviceName} order is ${order.status} but has no Discord ticket channel linked.`,
+            orderId: order.id,
+            linkUrl: "/orders",
+          });
+        }
+
+        if (order.status === "Need Replacement") {
+          items.push({
+            key: `replacement-${order.id}`,
+            category: "Urgent Actions",
+            priority: "urgent",
+            title: `Assign replacement grinder — ${orderLabel}`,
+            description: `${serviceName} order needs a replacement grinder immediately.`,
+            orderId: order.id,
+            linkUrl: "/orders",
+          });
+        }
+
+        if (order.status === "In Progress" && order.orderDueDate) {
+          const due = new Date(order.orderDueDate);
+          const now = new Date();
+          if (due < now) {
+            items.push({
+              key: `overdue-${order.id}`,
+              category: "Overdue Orders",
+              priority: "urgent",
+              title: `Overdue — ${orderLabel}`,
+              description: `${serviceName} order was due ${due.toLocaleDateString()} and is still in progress.`,
+              orderId: order.id,
+              linkUrl: "/orders",
+            });
+          }
+        }
+      }
+
+      const pendingPayouts = allPayouts.filter(p => p.status === "Pending");
+      for (const payout of pendingPayouts) {
+        const grinder = allGrinders.find(g => g.id === payout.grinderId);
+        const order = allOrders.find(o => o.id === payout.orderId);
+        const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : (payout.orderId || "").slice(0, 10);
+        items.push({
+          key: `review-payout-${payout.id}`,
+          category: "Pending Payouts",
+          priority: "high",
+          title: `Review payout — ${grinder?.name || "Unknown"} ($${Number(payout.amount).toFixed(2)})`,
+          description: `${orderLabel} — ${payout.payoutPlatform || "No platform"}: ${payout.payoutDetails || "N/A"}`,
+          orderId: payout.orderId || undefined,
+          linkUrl: "/payouts",
+        });
+      }
+
+      const disputedPayouts = allPayouts.filter(p => p.status === "Grinder Disputed");
+      for (const payout of disputedPayouts) {
+        const grinder = allGrinders.find(g => g.id === payout.grinderId);
+        items.push({
+          key: `disputed-payout-${payout.id}`,
+          category: "Disputes",
+          priority: "urgent",
+          title: `Payout dispute — ${grinder?.name || "Unknown"}`,
+          description: `Grinder disputed a payout of $${Number(payout.amount).toFixed(2)}. Requires resolution.`,
+          orderId: payout.orderId || undefined,
+          linkUrl: "/payouts",
+        });
+      }
+
+      const awaitingCustomer = allAssignments.filter(a =>
+        a.status === "Completed" && !a.customerApproved && a.customerIssueReported
+      );
+      for (const assignment of awaitingCustomer) {
+        const order = allOrders.find(o => o.id === assignment.orderId);
+        if (!order?.customerDiscordId) continue;
+        const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : assignment.orderId.slice(0, 10);
+        items.push({
+          key: `customer-issue-${assignment.id}`,
+          category: "Customer Issues",
+          priority: "urgent",
+          title: `Customer issue — ${orderLabel}`,
+          description: `Customer reported an issue with the completed order. Review the ticket channel.`,
+          orderId: assignment.orderId,
+          linkUrl: "/assignments",
+        });
+      }
+
+      const completedNoPayout = allAssignments.filter(a => {
+        if (a.status !== "Completed") return false;
+        const order = allOrders.find(o => o.id === a.orderId);
+        if (!order || order.status === "Paid Out" || order.status === "Cancelled") return false;
+        const hasPayout = allPayouts.some(p => p.assignmentId === a.id || p.orderId === a.orderId);
+        return !hasPayout;
+      });
+      for (const assignment of completedNoPayout) {
+        const order = allOrders.find(o => o.id === assignment.orderId);
+        const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : assignment.orderId.slice(0, 10);
+        const grinder = allGrinders.find(g => g.id === assignment.grinderId);
+        items.push({
+          key: `no-payout-${assignment.id}`,
+          category: "Missing Payouts",
+          priority: "high",
+          title: `Create payout for ${orderLabel}`,
+          description: `${grinder?.name || "Unknown"} completed this order but no payout request exists.`,
+          orderId: assignment.orderId,
+          linkUrl: "/payouts",
+        });
+      }
+
+      const result = items.map(item => {
+        const dismissal = dismissals.find(d => d.actionKey === item.key);
+        if (dismissal) {
+          return { ...item, dismissed: true, dismissedBy: dismissal.dismissedBy, dismissedByName: dismissal.dismissedByName || undefined, dismissedAt: dismissal.dismissedAt?.toISOString() };
+        }
+        return { ...item, dismissed: false };
+      });
+
+      const priorityOrder: Record<string, number> = { urgent: 0, high: 1, normal: 2 };
+      result.sort((a, b) => {
+        if (a.dismissed !== b.dismissed) return a.dismissed ? 1 : -1;
+        return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("[action-items] Error:", err);
+      res.status(500).json({ message: "Failed to generate action items" });
+    }
+  });
+
+  app.post("/api/staff/action-items/:key/dismiss", requireStaff, async (req, res) => {
+    try {
+      const actionKey = req.params.key;
+      const userId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const userName = (req.user as any)?.firstName || (req.user as any)?.discordUsername || "Staff";
+
+      const existing = await storage.getStaffActionDismissals();
+      if (existing.some(d => d.actionKey === actionKey)) {
+        return res.json({ success: true, message: "Already dismissed" });
+      }
+
+      await storage.createStaffActionDismissal({
+        id: `SAD-${Date.now().toString(36)}`,
+        actionKey,
+        dismissedBy: userId,
+        dismissedByName: userName,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "action_item",
+        entityId: actionKey,
+        action: "dismissed",
+        actor: userName,
+        details: JSON.stringify({ actionKey }),
+      });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[action-items] Dismiss error:", err);
+      res.status(500).json({ message: "Failed to dismiss action item" });
+    }
+  });
+
   app.get("/api/staff/tasks", requireStaff, async (req, res) => {
     try {
       const discordId = (req.user as any)?.discordId || (req.user as any)?.id || "";

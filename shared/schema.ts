@@ -775,6 +775,18 @@ export const insertStaffTaskSchema = createInsertSchema(staffTasks).omit({ compl
 export type InsertStaffTask = z.infer<typeof insertStaffTaskSchema>;
 export type StaffTask = typeof staffTasks.$inferSelect;
 
+export const staffActionDismissals = pgTable("staff_action_dismissals", {
+  id: varchar("id").primaryKey(),
+  actionKey: varchar("action_key").notNull(),
+  dismissedBy: varchar("dismissed_by").notNull(),
+  dismissedByName: varchar("dismissed_by_name"),
+  dismissedAt: timestamp("dismissed_at").defaultNow(),
+});
+
+export const insertStaffActionDismissalSchema = createInsertSchema(staffActionDismissals).omit({ dismissedAt: true });
+export type InsertStaffActionDismissal = z.infer<typeof insertStaffActionDismissalSchema>;
+export type StaffActionDismissal = typeof staffActionDismissals.$inferSelect;
+
 export type FinePayment = typeof finePayments.$inferSelect;
 export type InsertFinePayment = z.infer<typeof insertFinePaymentSchema>;
 

@@ -3,7 +3,7 @@ import {
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
-  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks,
+  patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffTasks, staffActionDismissals,
   deletionRequests, finePayments, businessWallets, walletTransactions, businessPayouts, walletTransfers, orderPaymentLinks,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
@@ -33,7 +33,7 @@ import {
   type ReviewAccessCode, type InsertReviewAccessCode,
   type GrinderTask, type InsertGrinderTask,
   type GrinderBadge, type InsertGrinderBadge,
-  type StaffTask, type InsertStaffTask,
+  type StaffTask, type InsertStaffTask, type StaffActionDismissal,
   type DeletionRequest, type InsertDeletionRequest,
   type FinePayment, type InsertFinePayment,
   type BusinessWallet, type InsertBusinessWallet,
@@ -194,6 +194,8 @@ export interface IStorage {
   getStaffTasks(assignedTo?: string): Promise<StaffTask[]>;
   createStaffTask(task: InsertStaffTask): Promise<StaffTask>;
   updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined>;
+  getStaffActionDismissals(): Promise<StaffActionDismissal[]>;
+  createStaffActionDismissal(data: { id: string; actionKey: string; dismissedBy: string; dismissedByName?: string }): Promise<StaffActionDismissal>;
 
   getDeletionRequests(status?: string): Promise<DeletionRequest[]>;
   createDeletionRequest(request: InsertDeletionRequest): Promise<DeletionRequest>;
@@ -1470,6 +1472,15 @@ export class DatabaseStorage implements IStorage {
   async updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined> {
     const [updated] = await db.update(staffTasks).set(data).where(eq(staffTasks.id, id)).returning();
     return updated;
+  }
+
+  async getStaffActionDismissals(): Promise<StaffActionDismissal[]> {
+    return await db.select().from(staffActionDismissals);
+  }
+
+  async createStaffActionDismissal(data: { id: string; actionKey: string; dismissedBy: string; dismissedByName?: string }): Promise<StaffActionDismissal> {
+    const [created] = await db.insert(staffActionDismissals).values(data).returning();
+    return created;
   }
 
   async getDeletionRequests(status?: string): Promise<DeletionRequest[]> {

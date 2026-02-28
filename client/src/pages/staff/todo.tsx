@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   ClipboardList, CheckCircle2, Circle, Flag, Clock, Loader2,
-  Plus, ChevronDown, ChevronRight, User, ExternalLink
+  Plus, ChevronDown, ChevronRight, User, ExternalLink, AlertTriangle,
+  Zap, Eye, EyeOff, X
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -23,6 +24,20 @@ type StaffMember = {
   role: string;
   avatarUrl: string | null;
   type: string;
+};
+
+type ActionItem = {
+  key: string;
+  category: string;
+  priority: string;
+  title: string;
+  description: string;
+  orderId?: string;
+  linkUrl?: string;
+  dismissed: boolean;
+  dismissedBy?: string;
+  dismissedByName?: string;
+  dismissedAt?: string;
 };
 
 export default function StaffTodo() {
@@ -36,6 +51,12 @@ export default function StaffTodo() {
   const [priority, setPriority] = useState("normal");
   const [orderId, setOrderId] = useState("");
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [showDismissed, setShowDismissed] = useState(false);
+
+  const { data: actionItems = [], isLoading: actionItemsLoading } = useQuery<ActionItem[]>({
+    queryKey: ["/api/staff/action-items"],
+    refetchInterval: 30000,
+  });
 
   const { data: myTasks = [], isLoading: tasksLoading } = useQuery<any[]>({
     queryKey: ["/api/staff/tasks"],
@@ -50,6 +71,18 @@ export default function StaffTodo() {
   });
 
   const staffMembers = chatMembers.filter((m) => m.type === "staff");
+
+  const dismissMutation = useMutation({
+    mutationFn: async (actionKey: string) => {
+      const res = await apiRequest("POST", `/api/staff/action-items/${encodeURIComponent(actionKey)}/dismiss`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/action-items"] });
+      toast({ title: "Dismissed", description: "Action item dismissed." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; assignedTo: string; priority: string; orderId: string }) => {
@@ -108,7 +141,29 @@ export default function StaffTodo() {
 
   const pendingCreated = tasksICreated.filter((t: any) => t.status === "pending");
 
-  if (tasksLoading) {
+  const activeActionItems = actionItems.filter(i => !i.dismissed);
+  const dismissedActionItems = actionItems.filter(i => i.dismissed);
+
+  const groupedActions = activeActionItems.reduce<Record<string, ActionItem[]>>((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {});
+
+  const categoryOrder = [
+    "Urgent Actions", "Disputes", "Customer Issues", "Overdue Orders", "Stalled Orders",
+    "Pending Payouts", "Order Assignment", "Order Setup", "Missing Payouts", "Discord Setup"
+  ];
+
+  const sortedCategories = Object.keys(groupedActions).sort((a, b) => {
+    const ai = categoryOrder.indexOf(a);
+    const bi = categoryOrder.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  const isLoading = tasksLoading || actionItemsLoading;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -122,6 +177,14 @@ export default function StaffTodo() {
     return null;
   };
 
+  const categoryIcon = (category: string) => {
+    if (category === "Urgent Actions" || category === "Disputes" || category === "Customer Issues" || category === "Overdue Orders")
+      return <AlertTriangle className="w-3.5 h-3.5 text-red-400" />;
+    if (category === "Stalled Orders" || category === "Pending Payouts" || category === "Missing Payouts")
+      return <Clock className="w-3.5 h-3.5 text-amber-400" />;
+    return <Zap className="w-3.5 h-3.5 text-blue-400" />;
+  };
+
   return (
     <AnimatedPage>
       <div className="space-y-6">
@@ -130,12 +193,198 @@ export default function StaffTodo() {
             <ClipboardList className="w-7 h-7 text-primary" />
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">To-Do List</h1>
-              <p className="text-sm text-muted-foreground mt-1">Assign and manage tasks between staff and owners</p>
+              <p className="text-sm text-muted-foreground mt-1">System-generated action items and manual staff tasks</p>
             </div>
+            {activeActionItems.length > 0 && (
+              <Badge variant="outline" className="ml-auto border-red-500/30 text-red-400 bg-red-500/10" data-testid="badge-action-count">
+                {activeActionItems.length} action{activeActionItems.length !== 1 ? "s" : ""} needed
+              </Badge>
+            )}
           </div>
         </FadeInUp>
 
-        <FadeInUp delay={0.05}>
+        {activeActionItems.length > 0 && (
+          <FadeInUp delay={0.05}>
+            <Card data-testid="card-action-items">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  Action Items
+                  <Badge variant="outline" className="ml-auto border-amber-500/30 text-amber-400 bg-amber-500/10">
+                    {activeActionItems.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {sortedCategories.map(category => (
+                  <div key={category} className="space-y-1.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      {categoryIcon(category)}
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{groupedActions[category].length}</Badge>
+                    </div>
+                    {groupedActions[category].map(item => (
+                      <div
+                        key={item.key}
+                        className="flex items-start gap-3 p-3 rounded-md bg-muted/30 border group"
+                        data-testid={`action-item-${item.key}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{item.title}</p>
+                            {priorityBadge(item.priority)}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.linkUrl && (
+                            <Link href={item.linkUrl}>
+                              <Button size="sm" variant="outline" className="h-7 text-xs" data-testid={`link-action-${item.key}`}>
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                            </Link>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs opacity-40 group-hover:opacity-100 transition-opacity"
+                            onClick={() => dismissMutation.mutate(item.key)}
+                            disabled={dismissMutation.isPending}
+                            data-testid={`dismiss-action-${item.key}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        )}
+
+        {dismissedActionItems.length > 0 && (
+          <FadeInUp delay={0.08}>
+            <Collapsible open={showDismissed} onOpenChange={setShowDismissed}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1.5 h-7" data-testid="button-toggle-dismissed">
+                  {showDismissed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {dismissedActionItems.length} dismissed item{dismissedActionItems.length !== 1 ? "s" : ""}
+                  {showDismissed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <Card className="mt-2 opacity-60" data-testid="card-dismissed-items">
+                  <CardContent className="pt-4 space-y-1.5">
+                    {dismissedActionItems.map(item => (
+                      <div
+                        key={item.key}
+                        className="flex items-center gap-3 p-2.5 rounded-md bg-muted/20 border"
+                        data-testid={`dismissed-item-${item.key}`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <p className="text-xs line-through flex-1">{item.title}</p>
+                        {item.dismissedByName && (
+                          <span className="text-[10px] text-muted-foreground">by {item.dismissedByName}</span>
+                        )}
+                        {item.dismissedAt && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(item.dismissedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </CollapsibleContent>
+            </Collapsible>
+          </FadeInUp>
+        )}
+
+        {activeActionItems.length === 0 && sortedPending.length === 0 && pendingCreated.length === 0 && completedTasks.length === 0 && (
+          <FadeInUp delay={0.1}>
+            <Card data-testid="card-all-clear">
+              <CardContent className="py-12 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                  <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                </div>
+                <h3 className="font-semibold text-lg">All clear!</h3>
+                <p className="text-sm text-muted-foreground text-center max-w-sm">
+                  No action items or pending tasks. Everything is on track.
+                </p>
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        )}
+
+        {sortedPending.length > 0 && (
+          <FadeInUp delay={0.1}>
+            <Card data-testid="card-my-tasks">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Circle className="w-4 h-4 text-amber-400" />
+                  My Pending Tasks
+                  <Badge variant="outline" className="ml-auto border-amber-500/30 text-amber-400 bg-amber-500/10">
+                    {sortedPending.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {sortedPending.map((task: any) => (
+                  <div
+                    key={task.id}
+                    className="flex items-start gap-3 p-3 rounded-md bg-muted/30 border"
+                    data-testid={`task-pending-${task.id}`}
+                  >
+                    <div className="mt-0.5">
+                      <Circle className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{task.title}</p>
+                        {priorityBadge(task.priority)}
+                      </div>
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {task.assignedByName && (
+                          <span className="text-[10px] text-muted-foreground">From: {task.assignedByName}</span>
+                        )}
+                        {task.orderId && (
+                          <Link href={`/orders`} data-testid={`link-order-${task.id}`}>
+                            <Badge variant="outline" className="text-[10px] cursor-pointer px-1.5 py-0">
+                              <ExternalLink className="w-2.5 h-2.5 mr-1" />
+                              Order {task.orderId}
+                            </Badge>
+                          </Link>
+                        )}
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          {new Date(task.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => completeTaskMutation.mutate(task.id)}
+                      disabled={completeTaskMutation.isPending}
+                      data-testid={`button-complete-${task.id}`}
+                    >
+                      {completeTaskMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+                      Done
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        )}
+
+        <FadeInUp delay={0.15}>
           <Card data-testid="card-create-task">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -219,89 +468,8 @@ export default function StaffTodo() {
           </Card>
         </FadeInUp>
 
-        {sortedPending.length > 0 && (
-          <FadeInUp delay={0.1}>
-            <Card data-testid="card-my-tasks">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Circle className="w-4 h-4 text-amber-400" />
-                  My Pending Tasks
-                  <Badge variant="outline" className="ml-auto border-amber-500/30 text-amber-400 bg-amber-500/10">
-                    {sortedPending.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {sortedPending.map((task: any) => (
-                  <div
-                    key={task.id}
-                    className="flex items-start gap-3 p-3 rounded-md bg-muted/30 border"
-                    data-testid={`task-pending-${task.id}`}
-                  >
-                    <div className="mt-0.5">
-                      <Circle className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{task.title}</p>
-                        {priorityBadge(task.priority)}
-                      </div>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {task.assignedByName && (
-                          <span className="text-[10px] text-muted-foreground">From: {task.assignedByName}</span>
-                        )}
-                        {task.orderId && (
-                          <Link href={`/orders`} data-testid={`link-order-${task.id}`}>
-                            <Badge variant="outline" className="text-[10px] cursor-pointer px-1.5 py-0">
-                              <ExternalLink className="w-2.5 h-2.5 mr-1" />
-                              Order {task.orderId}
-                            </Badge>
-                          </Link>
-                        )}
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5" />
-                          {new Date(task.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => completeTaskMutation.mutate(task.id)}
-                      disabled={completeTaskMutation.isPending}
-                      data-testid={`button-complete-${task.id}`}
-                    >
-                      {completeTaskMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
-                      Done
-                    </Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </FadeInUp>
-        )}
-
-        {sortedPending.length === 0 && completedTasks.length === 0 && (
-          <FadeInUp delay={0.1}>
-            <Card data-testid="card-all-clear">
-              <CardContent className="py-12 flex flex-col items-center gap-3">
-                <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                  <CheckCircle2 className="w-7 h-7 text-emerald-400" />
-                </div>
-                <h3 className="font-semibold text-lg">All clear!</h3>
-                <p className="text-sm text-muted-foreground text-center max-w-sm">
-                  You have no pending tasks. When someone assigns you a task, it will appear here.
-                </p>
-              </CardContent>
-            </Card>
-          </FadeInUp>
-        )}
-
         {pendingCreated.length > 0 && (
-          <FadeInUp delay={0.15}>
+          <FadeInUp delay={0.2}>
             <Card data-testid="card-tasks-i-assigned">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -352,7 +520,7 @@ export default function StaffTodo() {
         )}
 
         {completedTasks.length > 0 && (
-          <FadeInUp delay={0.2}>
+          <FadeInUp delay={0.25}>
             <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
               <Card data-testid="card-completed-tasks">
                 <CollapsibleTrigger asChild>
