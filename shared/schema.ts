@@ -209,6 +209,7 @@ export const queueConfig = pgTable("queue_config", {
   customPayoutCategories: jsonb("custom_payout_categories"),
   platforms: jsonb("platforms").$type<string[]>().default(["Xbox", "PS5"]),
   holidayTheme: varchar("holiday_theme").default("none"),
+  gameTheme: varchar("game_theme").default("none"),
 });
 
 export const orderUpdates = pgTable("order_updates", {

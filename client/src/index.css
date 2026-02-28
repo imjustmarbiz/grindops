@@ -232,6 +232,24 @@
     scrollbar-color: hsl(140 25% 24%) hsl(140 20% 8%);
   }
 
+  .game-nba2k {
+    --background: 20 25% 4%;
+    --card: 20 25% 7%;
+    --card-border: 20 35% 15%;
+    --border: 20 25% 13%;
+    --input: 20 25% 13%;
+    --muted: 20 25% 13%;
+    --secondary: 20 25% 13%;
+    --sidebar-background: 20 28% 5%;
+    --sidebar-border: 20 25% 13%;
+    --sidebar-accent: 20 30% 10%;
+    --accent: 24 95% 53%;
+    --accent-foreground: 240 10% 4%;
+    --elevate-1: rgba(230, 120, 20, 0.05);
+    --elevate-2: rgba(230, 120, 20, 0.10);
+    scrollbar-color: hsl(20 30% 24%) hsl(20 25% 8%);
+  }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-family: var(--font-sans);
@@ -325,6 +343,51 @@
 
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
   background: hsl(240 10% 36%);
+}
+
+@keyframes theme-fall {
+  0% {
+    transform: translateY(-20px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--particle-opacity, 0.2);
+  }
+  90% {
+    opacity: var(--particle-opacity, 0.2);
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--drift, 30px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.theme-particle {
+  position: absolute;
+  top: -30px;
+  animation: theme-fall linear infinite;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+@keyframes theme-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.8); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.theme-twinkle {
+  animation: theme-twinkle 1.5s ease-in-out infinite;
+}
+
+@keyframes theme-firework {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.theme-firework {
+  animation: theme-firework 3s ease-out infinite;
 }
 
 

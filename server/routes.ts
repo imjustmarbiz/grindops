@@ -7045,6 +7045,7 @@ export async function registerRoutes(
         maintenanceModeSetBy: config?.maintenanceModeSetBy || null,
         earlyAccessMode: config?.earlyAccessMode || false,
         holidayTheme: config?.holidayTheme || "none",
+        gameTheme: config?.gameTheme || "none",
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch maintenance config" });
@@ -7235,6 +7236,33 @@ export async function registerRoutes(
       res.json({ success: true, theme });
     } catch (error) {
       res.status(500).json({ error: "Failed to update holiday theme" });
+    }
+  });
+
+  const VALID_GAME_THEMES = ["none", "nba2k"];
+
+  app.patch("/api/config/game-theme", requireOwner, async (req, res) => {
+    try {
+      const { theme } = req.body;
+      if (typeof theme !== "string" || !VALID_GAME_THEMES.includes(theme)) {
+        return res.status(400).json({ error: `Invalid game theme. Must be one of: ${VALID_GAME_THEMES.join(", ")}` });
+      }
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, gameTheme: theme });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: theme === "none" ? "game_theme_disabled" : "game_theme_changed",
+        entityType: "config",
+        entityId: "game_theme",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: theme === "none" ? `Game theme disabled by ${actorName}` : `Game theme changed to "${theme}" by ${actorName}`,
+      });
+      res.json({ success: true, theme });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update game theme" });
     }
   });
 

@@ -10,6 +10,7 @@ import { ChatDrawer } from "@/components/chat-drawer";
 import { SoundAlertsHelper } from "@/components/sound-alerts-helper";
 import { LowerThirdNotifications } from "@/components/lower-third-notification";
 import { SiteAlertTicker } from "@/components/site-alert-ticker";
+import { ThemeDecorations } from "@/components/theme-decorations";
 import { InteractiveTutorial, TutorialTrigger } from "@/components/interactive-tutorial";
 import { useLoginTracker } from "@/hooks/use-activity-tracker";
 import type { MessageThread, Notification, ThreadParticipant } from "@shared/schema";
@@ -234,11 +235,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isEliteGrinder = !isStaffOrOwner && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : isEliteGrinder ? "theme-elite" : "theme-grinder";
 
-  const { data: siteConfig } = useQuery<{ holidayTheme?: string }>({
+  const { data: siteConfig } = useQuery<{ holidayTheme?: string; gameTheme?: string }>({
     queryKey: ["/api/config/maintenance"],
     refetchInterval: 60000,
   });
-  const holidayTheme = siteConfig?.holidayTheme && siteConfig.holidayTheme !== "none" ? `holiday-${siteConfig.holidayTheme}` : null;
+  const holidayThemeValue = siteConfig?.holidayTheme && siteConfig.holidayTheme !== "none" ? siteConfig.holidayTheme : null;
+  const gameThemeValue = siteConfig?.gameTheme && siteConfig.gameTheme !== "none" ? siteConfig.gameTheme : null;
+  const holidayThemeClass = holidayThemeValue ? `holiday-${holidayThemeValue}` : null;
+  const gameThemeClass = gameThemeValue ? `game-${gameThemeValue}` : null;
+  const activeDecoration = holidayThemeValue || gameThemeValue || null;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -249,11 +254,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    const allHolidays = ["holiday-christmas", "holiday-thanksgiving", "holiday-4th-of-july", "holiday-halloween", "holiday-valentines", "holiday-new-years", "holiday-st-patricks"];
-    allHolidays.forEach(c => root.classList.remove(c));
-    if (holidayTheme) root.classList.add(holidayTheme);
-    return () => { allHolidays.forEach(c => root.classList.remove(c)); };
-  }, [holidayTheme]);
+    const allOverlays = ["holiday-christmas", "holiday-thanksgiving", "holiday-4th-of-july", "holiday-halloween", "holiday-valentines", "holiday-new-years", "holiday-st-patricks", "game-nba2k"];
+    allOverlays.forEach(c => root.classList.remove(c));
+    if (holidayThemeClass) root.classList.add(holidayThemeClass);
+    if (gameThemeClass) root.classList.add(gameThemeClass);
+    return () => { allOverlays.forEach(c => root.classList.remove(c)); };
+  }, [holidayThemeClass, gameThemeClass]);
 
   const sidebarStyle = {
     "--sidebar-width": "18rem",
@@ -329,6 +335,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <ThemeDecorations theme={activeDecoration} />
       <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
       <LowerThirdNotifications />
       <SiteAlertTicker />
