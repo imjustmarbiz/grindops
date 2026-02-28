@@ -1355,6 +1355,8 @@ export function InteractiveTutorial() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(true);
+  const [showReplayLabel, setShowReplayLabel] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const session = getTutorialSession();
@@ -1377,6 +1379,16 @@ export function InteractiveTutorial() {
       return () => clearTimeout(timer);
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showReplayLabel && containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowReplayLabel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showReplayLabel]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1418,6 +1430,13 @@ export function InteractiveTutorial() {
       navigate(returnPath);
     }
   }, [storageKey, navigate]);
+
+  const handleStartTutorial = useCallback(() => {
+    setTutorialSession(true, 0, window.location.pathname);
+    setIsOpen(true);
+    setCurrentStep(0);
+    setShowReplayLabel(false);
+  }, []);
 
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -1476,19 +1495,30 @@ export function InteractiveTutorial() {
 
   if (!isOpen) {
     return (
-      <button
-        onClick={() => { setTutorialSession(true, 0, window.location.pathname); setIsOpen(true); setCurrentStep(0); }}
-        className="fixed bottom-24 right-4 z-[100] group"
-        data-testid="button-start-tutorial"
-        aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
-      >
-        <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
-          <GraduationCap className="w-5 h-5 text-white" />
-        </div>
-        <span className="absolute right-14 top-1/2 -translate-y-1/2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity md:pointer-events-none shadow-xl" aria-hidden="true">
+      <div className="fixed bottom-24 right-4 z-[100] flex items-center gap-3" ref={containerRef}>
+        <button
+          onClick={handleStartTutorial}
+          className={`bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-xl transition-all duration-300 ${
+            showReplayLabel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 pointer-events-none"
+          }`}
+          data-testid="button-replay-tutorial-confirm"
+        >
           {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
-        </span>
-      </button>
+        </button>
+        <button
+          onClick={() => setShowReplayLabel(!showReplayLabel)}
+          className="group relative"
+          data-testid="button-start-tutorial"
+          aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
+        >
+          <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
+            <GraduationCap className="w-5 h-5 text-white" />
+          </div>
+          <span className="absolute right-14 top-1/2 -translate-y-1/2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity md:pointer-events-none shadow-xl pointer-events-none" aria-hidden="true">
+            {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
+          </span>
+        </button>
+      </div>
     );
   }
 
