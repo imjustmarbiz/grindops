@@ -60,6 +60,7 @@ import StaffOverviewPage from "@/pages/staff/staff-overview";
 import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
 import StaffOrderUpdates from "@/pages/staff/order-updates";
+import ActivityLogPage from "@/pages/activity-log";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 
@@ -237,6 +238,7 @@ function Router() {
       <Route path="/reports" component={() => <ProtectedRoute component={StaffReports} staffOnly />} />
       <Route path="/streams" component={() => <ProtectedRoute component={StaffStreams} staffOnly />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLogPage} staffOnly />} />
+      <Route path="/activity-log" component={() => <ProtectedRoute component={ActivityLogPage} ownerOnly />} />
       <Route path="/events" component={() => <ProtectedRoute component={StaffEvents} staffOnly />} />
       <Route path="/patch-notes" component={() => <ProtectedRoute component={StaffPatchNotes} staffOnly />} />
       <Route path="/reviews" component={() => <ProtectedRoute component={StaffReviews} staffOnly />} />

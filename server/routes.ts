@@ -4048,6 +4048,54 @@ export async function registerRoutes(
     res.json(logs);
   });
 
+  app.get(api.userActivityLogs.list.path, requireOwner, async (req, res) => {
+    const filters: { userId?: string; category?: string; action?: string; limit?: number } = {};
+    if (req.query.userId) filters.userId = req.query.userId as string;
+    if (req.query.category) filters.category = req.query.category as string;
+    if (req.query.action) filters.action = req.query.action as string;
+    if (req.query.limit) filters.limit = parseInt(req.query.limit as string);
+    const logs = await storage.getUserActivityLogs(filters);
+    res.json(logs);
+  });
+
+  const activityLogBodySchema = z.object({
+    action: z.string().min(1),
+    category: z.string().min(1),
+    targetType: z.string().optional(),
+    targetId: z.string().optional(),
+    targetName: z.string().optional(),
+    metadata: z.record(z.unknown()).optional(),
+    sessionId: z.string().optional(),
+  });
+
+  app.post(api.userActivityLogs.create.path, isAuthenticated, async (req, res) => {
+    try {
+      const parsed = activityLogBodySchema.parse(req.body);
+      const user = req.user as any;
+      const log = await storage.createUserActivityLog({
+        id: `UAL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        userId: user?.id || user?.discordId || "unknown",
+        userName: user?.discordUsername || user?.firstName || user?.email || "Unknown",
+        userRole: user?.role || "unknown",
+        action: parsed.action,
+        category: parsed.category,
+        targetType: parsed.targetType || null,
+        targetId: parsed.targetId || null,
+        targetName: parsed.targetName || null,
+        metadata: parsed.metadata ? JSON.stringify(parsed.metadata) : null,
+        ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+        sessionId: parsed.sessionId || null,
+      });
+      res.json(log);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request body", errors: err.errors });
+      }
+      res.status(400).json({ message: String(err) });
+    }
+  });
+
   app.get(api.config.get.path, requireStaff, async (req, res) => {
     const config = await storage.getQueueConfig();
     res.json(config);

@@ -1614,6 +1614,23 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.update(orderPaymentLinks).set(data).where(eq(orderPaymentLinks.id, id)).returning();
     return updated;
   }
+
+  async getUserActivityLogs(filters?: { userId?: string; category?: string; action?: string; limit?: number }): Promise<UserActivityLog[]> {
+    const conditions = [];
+    if (filters?.userId) conditions.push(eq(userActivityLogs.userId, filters.userId));
+    if (filters?.category) conditions.push(eq(userActivityLogs.category, filters.category));
+    if (filters?.action) conditions.push(eq(userActivityLogs.action, filters.action));
+    const limit = filters?.limit || 500;
+    if (conditions.length > 0) {
+      return await db.select().from(userActivityLogs).where(and(...conditions)).orderBy(desc(userActivityLogs.createdAt)).limit(limit);
+    }
+    return await db.select().from(userActivityLogs).orderBy(desc(userActivityLogs.createdAt)).limit(limit);
+  }
+
+  async createUserActivityLog(log: InsertUserActivityLog): Promise<UserActivityLog> {
+    const [created] = await db.insert(userActivityLogs).values(log).returning();
+    return created;
+  }
 }
 
 export const storage = new DatabaseStorage();

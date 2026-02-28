@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Activity } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { ChatDrawer } from "@/components/chat-drawer";
 import { LowerThirdNotifications } from "@/components/lower-third-notification";
 import { SiteAlertTicker } from "@/components/site-alert-ticker";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
+import { useLoginTracker } from "@/hooks/use-activity-tracker";
 import type { MessageThread, Notification, ThreadParticipant } from "@shared/schema";
 import { 
   Sidebar, 
@@ -52,6 +53,7 @@ export const staffNavItems = [
   { title: "Streams", url: "/streams", icon: Tv },
   { title: "Events & Promos", url: "/events", icon: Calendar },
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
+  { title: "Activity Log", url: "/activity-log", icon: Activity },
   { title: "Staff Notes", url: "/patch-notes", icon: Newspaper },
   { title: "Features", url: "/features", icon: BookOpen },
   { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
@@ -63,6 +65,7 @@ export function getFilteredStaffNavItems(isOwner: boolean, userId: string) {
   return staffNavItems.filter(item => {
     if (item.url === "/business") return canSeeBusiness;
     if (item.url === "/staff-overview") return isOwner;
+    if (item.url === "/activity-log") return isOwner;
     return true;
   });
 }
@@ -226,6 +229,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
   const userId = (user as any)?.discordId || user?.id || "";
   const isStaffOrOwner = user?.role === "owner" || user?.role === "staff";
+  useLoginTracker();
   const { data: grinderProfileForTheme } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
     enabled: !isStaffOrOwner,
