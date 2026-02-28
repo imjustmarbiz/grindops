@@ -1398,7 +1398,7 @@ export function InteractiveTutorial() {
       const timer = setTimeout(() => {
         hasNavigatedRef.current = true;
         navigate(step.pageUrl);
-      }, 50);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [isOpen, currentStep, steps, location, navigate]);
@@ -1448,7 +1448,7 @@ export function InteractiveTutorial() {
       // Increase delay to ensure the UI has time to breathe between steps
       setTimeout(() => {
         wrappedSetStep(next);
-      }, 50);
+      }, 150);
     } else {
       setIsOpen(false);
       setCurrentStep(0);
@@ -1462,7 +1462,9 @@ export function InteractiveTutorial() {
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
-      wrappedSetStep(currentStep - 1);
+      setTimeout(() => {
+        wrappedSetStep(currentStep - 1);
+      }, 150);
     }
   }, [currentStep, wrappedSetStep]);
 
@@ -1543,7 +1545,7 @@ export function InteractiveTutorial() {
         aria-modal="true"
         aria-labelledby="tutorial-title"
         aria-describedby="tutorial-desc"
-        className={`fixed z-[9999] ${positionClass}`}
+        className={`fixed z-[9999] ${positionClass} transition-all duration-300 ease-in-out`}
       >
         <div className={`${hasMockup ? "w-[440px]" : "w-[400px]"} max-w-[92vw] max-h-[85vh] overflow-y-auto bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl shadow-black/50 animate-in fade-in zoom-in-95 duration-300`}>
           <div className="h-1 bg-muted" aria-hidden="true">
