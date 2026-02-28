@@ -1352,13 +1352,21 @@ export function InteractiveTutorial() {
 
   const storageKey = `grindops-tutorial-${isStaff ? "staff" : "grinder"}-v2-completed`;
 
-  const session = getTutorialSession();
-  const [isOpen, setIsOpen] = useState(session?.isOpen ?? false);
-  const [currentStep, setCurrentStep] = useState(session?.step ?? 0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(true);
 
   useEffect(() => {
+    const session = getTutorialSession();
+    if (session?.isOpen) {
+      setIsOpen(true);
+      setCurrentStep(session.step);
+    }
+  }, []);
+
+  useEffect(() => {
     const seen = localStorage.getItem(storageKey);
+    const session = getTutorialSession();
     if (!seen && !session?.isOpen) {
       setHasSeenTutorial(false);
       const timer = setTimeout(() => {
@@ -1477,7 +1485,7 @@ export function InteractiveTutorial() {
         <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
           <GraduationCap className="w-5 h-5 text-white" />
         </div>
-        <span className="absolute right-14 top-1/2 -translate-y-1/2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl" aria-hidden="true">
+        <span className="absolute right-14 top-1/2 -translate-y-1/2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity md:pointer-events-none shadow-xl" aria-hidden="true">
           {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
         </span>
       </button>
