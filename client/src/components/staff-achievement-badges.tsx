@@ -315,6 +315,18 @@ export function StaffPeacekeeper() { return <ShieldBadge id="staff-peacekeeper" 
 export function StaffArchitect() { return <HexBadge id="staff-architect" c1="#c084fc" c2="#9333ea" c3="#581c87" icon={<path d="M24,40 L32,24 L40,40 M27,34 L37,34" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />} />; }
 export function StaffPerfectionist() { return <MedalBadge id="staff-perfectionist" c1="#fde68a" c2="#facc15" c3="#854d0e" icon={<polygon points="32,30 35,37 42,37 36,42 38,49 32,45 26,49 28,42 22,37 29,37" fill="#facc15" />} />; }
 
+export function StaffVcSpecialist() { return <ShieldBadge id="staff-vc-specialist" c1="#60a5fa" c2="#2563eb" c3="#1e3a5f" icon={<><path d="M26,28 L32,24 L38,28 L38,40 L26,40 Z" fill="#60a5fa" opacity="0.7" /><text x="32" y="37" textAnchor="middle" fill="#bfdbfe" fontSize="9" fontWeight="bold">VC</text></>} />; }
+export function StaffBadgeSpecialist() { return <HexBadge id="staff-badge-specialist" c1="#f472b6" c2="#db2777" c3="#831843" icon={<><polygon points="32,22 36,28 36,36 32,40 28,36 28,28" fill="#f472b6" opacity="0.7" /><circle cx="32" cy="30" r="4" fill="#fce7f3" /></>} />; }
+export function StaffRepSpecialist() { return <StarBadge id="staff-rep-specialist" c1="#a78bfa" c2="#7c3aed" c3="#4c1d95" icon={<><path d="M28,26 L36,26 L36,34 L28,34 Z" fill="#a78bfa" opacity="0.6" /><text x="32" y="35" textAnchor="middle" fill="#e9d5ff" fontSize="8" fontWeight="bold">REP</text></>} />; }
+export function StaffHotzoneSpecialist() { return <DiamondBadge id="staff-hotzone-specialist" c1="#f97316" c2="#ea580c" c3="#7c2d12" icon={<><path d="M28,36 Q32,22 36,36" fill="none" stroke="#fdba74" strokeWidth="2.5" strokeLinecap="round" /><circle cx="32" cy="28" r="3" fill="#fbbf24" /></>} />; }
+export function StaffBuildSpecialist() { return <HexBadge id="staff-build-specialist" c1="#34d399" c2="#059669" c3="#064e3b" icon={<><path d="M26,38 L30,28 L34,34 L38,26" fill="none" stroke="#6ee7b7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="38" cy="26" r="2.5" fill="#a7f3d0" /></>} />; }
+export function StaffChallengeSpecialist() { return <ShieldBadge id="staff-challenge-specialist" c1="#fbbf24" c2="#d97706" c3="#78350f" icon={<><path d="M26,34 L32,26 L38,34" fill="none" stroke="#fde68a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M24,38 L40,38" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round" /></>} />; }
+export function StaffCardSpecialist() { return <CircleBadge id="staff-card-specialist" c1="#67e8f9" c2="#0891b2" c3="#083344" icon={<><rect x="25" y="26" width="14" height="10" rx="2" fill="#67e8f9" opacity="0.6" stroke="#a5f3fc" strokeWidth="0.8" /><text x="32" y="34" textAnchor="middle" fill="#ecfeff" fontSize="7" fontWeight="bold">PC</text></>} />; }
+export function StaffEventSpecialist() { return <MedalBadge id="staff-event-specialist" c1="#f0abfc" c2="#d946ef" c3="#701a75" icon={<><path d="M26,36 L30,30 L34,38 L38,32" fill="none" stroke="#f5d0fe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="32" cy="44" r="2" fill="#f0abfc" /></>} />; }
+export function StaffBundleSpecialist() { return <StarBadge id="staff-bundle-specialist" c1="#fb923c" c2="#ea580c" c3="#7c2d12" icon={<><rect x="27" y="25" width="10" height="12" rx="1.5" fill="#fed7aa" opacity="0.7" /><path d="M27,28 L37,28 M27,32 L37,32" stroke="#7c2d12" strokeWidth="1" /></>} />; }
+export function StaffSeasonSpecialist() { return <DiamondBadge id="staff-season-specialist" c1="#4ade80" c2="#16a34a" c3="#052e16" icon={<><path d="M32,24 Q38,28 36,34 Q34,38 32,38 Q30,38 28,34 Q26,28 32,24 Z" fill="#86efac" opacity="0.7" /><path d="M32,28 L32,36" stroke="#052e16" strokeWidth="1" /></>} />; }
+export function StaffAddonSpecialist() { return <CircleBadge id="staff-addon-specialist" c1="#c084fc" c2="#9333ea" c3="#581c87" icon={<><path d="M26,32 L38,32 M32,26 L32,38" stroke="#e9d5ff" strokeWidth="2.5" strokeLinecap="round" /></>} />; }
+
 export type StaffBadgeTier = "short" | "mid" | "long";
 export type StaffBadgeCategory = "auto" | "manual";
 
@@ -329,7 +341,11 @@ export type StaffBadgeId =
   | "staff-customer-champ" | "staff-efficiency" | "staff-strategic" | "staff-mvp" | "staff-problem-solver"
   | "staff-communicator" | "staff-reliability" | "staff-growth" | "staff-founding"
   | "staff-iron-will" | "staff-profit-master" | "staff-night-ops" | "staff-peacekeeper"
-  | "staff-architect" | "staff-perfectionist";
+  | "staff-architect" | "staff-perfectionist"
+  | "staff-vc-specialist" | "staff-badge-specialist" | "staff-rep-specialist"
+  | "staff-hotzone-specialist" | "staff-build-specialist" | "staff-challenge-specialist"
+  | "staff-card-specialist" | "staff-event-specialist" | "staff-bundle-specialist"
+  | "staff-season-specialist" | "staff-addon-specialist";
 
 export const STAFF_BADGE_COMPONENTS: Record<StaffBadgeId, () => JSX.Element> = {
   "staff-first-action": StaffFirstAction,
@@ -382,6 +398,17 @@ export const STAFF_BADGE_COMPONENTS: Record<StaffBadgeId, () => JSX.Element> = {
   "staff-peacekeeper": StaffPeacekeeper,
   "staff-architect": StaffArchitect,
   "staff-perfectionist": StaffPerfectionist,
+  "staff-vc-specialist": StaffVcSpecialist,
+  "staff-badge-specialist": StaffBadgeSpecialist,
+  "staff-rep-specialist": StaffRepSpecialist,
+  "staff-hotzone-specialist": StaffHotzoneSpecialist,
+  "staff-build-specialist": StaffBuildSpecialist,
+  "staff-challenge-specialist": StaffChallengeSpecialist,
+  "staff-card-specialist": StaffCardSpecialist,
+  "staff-event-specialist": StaffEventSpecialist,
+  "staff-bundle-specialist": StaffBundleSpecialist,
+  "staff-season-specialist": StaffSeasonSpecialist,
+  "staff-addon-specialist": StaffAddonSpecialist,
 };
 
 export const STAFF_BADGE_META: Record<StaffBadgeId, { label: string; tooltip: string; category: StaffBadgeCategory; tier: StaffBadgeTier }> = {
@@ -438,6 +465,17 @@ export const STAFF_BADGE_META: Record<StaffBadgeId, { label: string; tooltip: st
   "staff-peacekeeper": { label: "Peacekeeper", tooltip: "Resolved team conflicts and maintained harmony", category: "manual", tier: "short" },
   "staff-architect": { label: "System Architect", tooltip: "Designed or improved key operational systems", category: "manual", tier: "long" },
   "staff-perfectionist": { label: "Perfectionist", tooltip: "Consistently delivers flawless work with attention to detail", category: "manual", tier: "mid" },
+  "staff-vc-specialist": { label: "VC Grinding Specialist", tooltip: "Specialist in managing VC grinding orders", category: "manual", tier: "mid" },
+  "staff-badge-specialist": { label: "Badge Grinding Specialist", tooltip: "Specialist in managing badge grinding orders", category: "manual", tier: "mid" },
+  "staff-rep-specialist": { label: "Rep Grinding Specialist", tooltip: "Specialist in managing rep grinding orders", category: "manual", tier: "mid" },
+  "staff-hotzone-specialist": { label: "Hot Zones Specialist", tooltip: "Specialist in managing hot zones orders", category: "manual", tier: "mid" },
+  "staff-build-specialist": { label: "Build Specializations Specialist", tooltip: "Specialist in managing build specialization orders", category: "manual", tier: "mid" },
+  "staff-challenge-specialist": { label: "Lifetime Challenges Specialist", tooltip: "Specialist in managing lifetime challenge orders", category: "manual", tier: "mid" },
+  "staff-card-specialist": { label: "Plate Card Specialist", tooltip: "Specialist in managing plate card orders", category: "manual", tier: "mid" },
+  "staff-event-specialist": { label: "Event Grinding Specialist", tooltip: "Specialist in managing event grinding orders", category: "manual", tier: "mid" },
+  "staff-bundle-specialist": { label: "Bundle Order Specialist", tooltip: "Specialist in managing bundle orders", category: "manual", tier: "mid" },
+  "staff-season-specialist": { label: "Season Pass Specialist", tooltip: "Specialist in managing season pass orders", category: "manual", tier: "mid" },
+  "staff-addon-specialist": { label: "Add-Ons Specialist", tooltip: "Specialist in managing add-on orders", category: "manual", tier: "mid" },
 };
 
 export const ALL_STAFF_BADGE_IDS = Object.keys(STAFF_BADGE_META) as StaffBadgeId[];

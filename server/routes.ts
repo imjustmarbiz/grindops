@@ -5514,6 +5514,84 @@ export async function registerRoutes(
     res.json(badges);
   });
 
+  app.get("/api/staff/scorecard/:userId", requireStaff, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const targetUser = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
+      if (!targetUser) return res.status(404).json({ error: "Staff member not found" });
+      if (targetUser.role !== "staff" && targetUser.role !== "owner") {
+        return res.status(404).json({ error: "Not a staff member" });
+      }
+
+      const staffBadges = await storage.getStaffBadges(userId);
+      const allAuditLogs = await storage.getAuditLogs();
+      const discordId = targetUser.discordId || targetUser.id;
+      const username = (targetUser.discordUsername || "").toLowerCase();
+
+      const staffLogs = allAuditLogs
+        .filter(l => {
+          const actor = l.actor?.toLowerCase() || "";
+          return actor === username || actor === discordId;
+        })
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const now = Date.now();
+      const actionsLast24h = staffLogs.filter(l => now - new Date(l.createdAt).getTime() < 86400000).length;
+      const actionsLast7d = staffLogs.filter(l => now - new Date(l.createdAt).getTime() < 604800000).length;
+      const lastAction = staffLogs.length > 0 ? staffLogs[0].createdAt : null;
+
+      const actionBreakdown: Record<string, number> = {};
+      staffLogs.forEach(l => {
+        const action = l.action || "unknown";
+        actionBreakdown[action] = (actionBreakdown[action] || 0) + 1;
+      });
+
+      const recentLogs = staffLogs.slice(0, 50).map(l => ({
+        id: l.id,
+        action: l.action,
+        entityType: l.entityType,
+        entityId: l.entityId,
+        details: l.details,
+        createdAt: l.createdAt,
+      }));
+
+      const ordersManaged = actionBreakdown["order_created"] || 0;
+      const bidsReviewed = (actionBreakdown["bid_accepted"] || 0) + (actionBreakdown["bid_denied"] || 0) + (actionBreakdown["bid_rejected"] || 0);
+      const assignmentsMade = (actionBreakdown["grinder_assigned"] || 0) + (actionBreakdown["order_assigned"] || 0);
+      const payoutsProcessed = (actionBreakdown["payout_approved"] || 0) + (actionBreakdown["payout_paid"] || 0) + (actionBreakdown["payout_denied"] || 0);
+
+      res.json({
+        profile: {
+          id: targetUser.id,
+          discordId,
+          name: targetUser.discordUsername || targetUser.firstName || "Staff",
+          firstName: targetUser.firstName,
+          discordUsername: targetUser.discordUsername,
+          role: targetUser.role,
+          avatarUrl: targetUser.discordAvatar
+            ? `https://cdn.discordapp.com/avatars/${targetUser.discordId}/${targetUser.discordAvatar}.png`
+            : targetUser.profileImageUrl || null,
+          createdAt: targetUser.createdAt,
+        },
+        badges: staffBadges,
+        stats: {
+          totalActions: staffLogs.length,
+          actionsLast24h,
+          actionsLast7d,
+          lastAction,
+          ordersManaged,
+          bidsReviewed,
+          assignmentsMade,
+          payoutsProcessed,
+        },
+        actionBreakdown,
+        recentLogs,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/owner/staff-badges", requireOwner, async (req, res) => {
     const userId = req.query.userId as string | undefined;
     const badges = await storage.getStaffBadges(userId || undefined);

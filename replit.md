@@ -28,7 +28,8 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - **Completion Video Proof:** Grinders must upload video proof for staff review upon order completion.
 - **Audit Logging:** Comprehensive logging of all grinder self-service actions and checkpoint time edits.
 - **Grinder Queue Position:** Calculates and displays a grinder's rank using a 9-factor AI queue system, providing personalized tips.
-- **Badge Management System:** Dedicated page for staff/owners to manage achievement badges (auto-earned and manual) with a progression system across tiers.
+- **Badge Management System:** Dedicated page for staff/owners to manage achievement badges (auto-earned and manual) with a progression system across tiers. Includes 11 service-specific specialist badges (VC, Rep, Badge, HotZones, Build, Challenge, Card, Event, Bundle, Season, Add-Ons).
+- **Staff Scorecard System:** Staff Team cards on the owner's overview page showing each staff member's activity metrics. Clicking a card opens a scorecard dialog with profile, badges, performance stats (orders managed, bids reviewed, assignments, payouts), action breakdown, and recent activity log. API: `GET /api/staff/scorecard/:userId`.
 - **Financial Management:** Includes a Payout Reduction System, Deletion Request Workflow, Fine Payment System, and a comprehensive Business Wallet System with detailed financial tracking, transfer capabilities, and robust notification systems.
 - **Admin Functionality:** Combined admin page for operations, management, and system settings, including toggles for MGT Bot data tracking, maintenance mode, order ID editing, and early access mode.
 - **Site Alerts System:** Owners can broadcast scrolling ticker-bar alerts with targeting options for various user groups.
