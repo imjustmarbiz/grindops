@@ -1246,12 +1246,12 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
   const resolvedArea = targetSelector && !rect ? "full" : targetArea;
 
   if (resolvedArea === "full" || (!targetSelector && !targetArea)) {
-    return <div className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm transition-all duration-500" aria-hidden="true" />;
+    return <div className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm transition-opacity duration-500" aria-hidden="true" />;
   }
 
   if (!rect && resolvedArea === "sidebar") {
     return (
-      <div className="fixed inset-0 z-[9998]" aria-hidden="true">
+      <div className="fixed inset-0 z-[9998] transition-opacity duration-500" aria-hidden="true">
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
         <div className="absolute top-0 left-0 w-[var(--sidebar-width,18rem)] h-full" style={{ background: "transparent", boxShadow: "0 0 0 9999px rgba(0,0,0,0.7)" }} />
       </div>
@@ -1260,7 +1260,7 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
 
   if (!rect && resolvedArea === "header") {
     return (
-      <div className="fixed inset-0 z-[9998]" aria-hidden="true">
+      <div className="fixed inset-0 z-[9998] transition-opacity duration-500" aria-hidden="true">
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
         <div className="absolute top-0 right-0 w-40 h-16" style={{ background: "transparent", boxShadow: "0 0 0 9999px rgba(0,0,0,0.7)" }} />
       </div>
@@ -1268,11 +1268,11 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
   }
 
   if (!rect && resolvedArea === "main") {
-    return <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-[2px] transition-all duration-500" aria-hidden="true" />;
+    return <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-[2px] transition-opacity duration-500" aria-hidden="true" />;
   }
 
   if (!rect) {
-    return <div className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm" aria-hidden="true" />;
+    return <div className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm transition-opacity duration-500" aria-hidden="true" />;
   }
 
   const padding = 8;
@@ -1292,7 +1292,7 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
             />
           </mask>
         </defs>
-        <rect x="0" y="0" width="100%" height="100%" fill="rgba(0,0,0,0.75)" mask="url(#spotlight-mask)" />
+        <rect x="0" y="0" width="100%" height="100%" fill="rgba(0,0,0,0.75)" mask="url(#spotlight-mask)" className="transition-all duration-300" />
         <rect
           x={rect.x - padding}
           y={rect.y - padding}
@@ -1302,7 +1302,7 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
           fill="none"
           stroke="hsl(262, 83%, 58%)"
           strokeWidth="2"
-          className="animate-pulse"
+          className="animate-pulse transition-all duration-300"
         />
       </svg>
     </div>
@@ -1393,92 +1393,61 @@ export function InteractiveTutorial() {
   useEffect(() => {
     if (!isOpen) return;
     const step = steps[currentStep];
-    // This effect is now primarily for initial mount/sync
-    // The handleNext/handlePrev handle the active navigation transitions
+    
+    // Explicitly check if the step is different from current page
     if (step?.pageUrl && location !== step.pageUrl && !hasNavigatedRef.current) {
       hasNavigatedRef.current = true;
       navigate(step.pageUrl);
     }
   }, [isOpen, currentStep, steps, location, navigate]);
 
-  useEffect(() => {
-    if (isOpen && dialogRef.current) {
-      const nextBtn = dialogRef.current.querySelector<HTMLElement>('[data-testid="button-tutorial-next"]');
-      nextBtn?.focus();
-    }
-  }, [isOpen, currentStep]);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      return () => { document.body.style.overflow = ""; };
-    }
-  }, [isOpen]);
-
-  const wrappedSetStep = useCallback((step: number) => {
-    setCurrentStep(step);
-    setTutorialSession(true, step);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    const returnPath = getTutorialSession()?.returnPath ?? "/";
-    setIsOpen(false);
-    setCurrentStep(0);
-    clearTutorialSession();
-    localStorage.setItem(storageKey, "true"); window.dispatchEvent(new Event("storage"));
-    setHasSeenTutorial(true);
-    if (hasNavigatedRef.current) {
-      hasNavigatedRef.current = false;
-      navigate(returnPath);
-    }
-  }, [storageKey, navigate]);
-
-  const handleStartTutorial = useCallback(() => {
-    setTutorialSession(true, 0, window.location.pathname);
-    setIsOpen(true);
-    setCurrentStep(0);
-    setShowReplayLabel(false);
-  }, []);
-
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
       const next = currentStep + 1;
-      const step = steps[next];
+      const nextStep = steps[next];
       
-      // If the next step requires a page change, handle it carefully
-      if (step?.pageUrl && location !== step.pageUrl) {
-        // 1. First update the session so if they refresh they are on the right step
+      if (nextStep?.pageUrl && location !== nextStep.pageUrl) {
+        // Prepare for navigation
+        hasNavigatedRef.current = true;
         setTutorialSession(true, next, location);
-        // 2. Navigate first
-        navigate(step.pageUrl);
-        // 3. Update the internal state after a longer delay to allow page load
+        
+        // Use a single state transition to avoid intermediate renders
+        navigate(nextStep.pageUrl);
+        
+        // Wait for page transition to complete before showing next step
         setTimeout(() => {
           setCurrentStep(next);
-        }, 300);
+          hasNavigatedRef.current = false;
+        }, 400);
       } else {
-        // No page change, just move to next step with slight delay
-        setTimeout(() => {
-          wrappedSetStep(next);
-        }, 50);
+        setCurrentStep(next);
+        setTutorialSession(true, next, location);
       }
     } else {
-      setIsOpen(false);
-      setCurrentStep(0);
-      clearTutorialSession();
-      localStorage.setItem(storageKey, "true"); window.dispatchEvent(new Event("storage"));
-      setHasSeenTutorial(true);
-      hasNavigatedRef.current = false;
-      navigate("/");
+      handleClose();
     }
-  }, [currentStep, steps, storageKey, navigate, wrappedSetStep, location]);
+  }, [currentStep, steps, location, navigate, handleClose]);
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
-      setTimeout(() => {
-        wrappedSetStep(currentStep - 1);
-      }, 150);
+      const prev = currentStep - 1;
+      const prevStep = steps[prev];
+      
+      if (prevStep?.pageUrl && location !== prevStep.pageUrl) {
+        hasNavigatedRef.current = true;
+        setTutorialSession(true, prev, location);
+        navigate(prevStep.pageUrl);
+        
+        setTimeout(() => {
+          setCurrentStep(prev);
+          hasNavigatedRef.current = false;
+        }, 400);
+      } else {
+        setCurrentStep(prev);
+        setTutorialSession(true, prev, location);
+      }
     }
-  }, [currentStep, wrappedSetStep]);
+  }, [currentStep, steps, location, navigate]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isOpen) return;
