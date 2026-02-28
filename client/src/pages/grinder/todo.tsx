@@ -117,6 +117,17 @@ export default function GrinderTodoList() {
     const hasStrikes = (customTasks || []).some((t: any) => t.id === "req-review-strikes" && t.status === "completed");
     const hasQueueGuide = (customTasks || []).some((t: any) => t.id === "req-review-queue" && t.status === "completed");
     const hasAcceptedRules = !!grinder?.rulesAccepted;
+    const hasCompletedTutorial = localStorage.getItem(`grindops-tutorial-grinder-v2-completed`) === "true";
+
+    const [tutorialCompleted, setTutorialCompleted] = useState(hasCompletedTutorial);
+
+    useEffect(() => {
+      const handleStorageChange = () => {
+        setTutorialCompleted(localStorage.getItem(`grindops-tutorial-grinder-v2-completed`) === "true");
+      };
+      window.addEventListener("storage", handleStorageChange);
+      return () => window.removeEventListener("storage", handleStorageChange);
+    }, []);
 
     if (!hasLinkedTwitch) {
       todos.push({
@@ -140,6 +151,19 @@ export default function GrinderTodoList() {
         assignmentId: "",
         type: "custom",
         priority: "high",
+        completed: false,
+      });
+    }
+
+    if (!tutorialCompleted) {
+      todos.push({
+        id: "req-complete-tutorial",
+        title: "Complete Dashboard Tutorial",
+        description: "Take the interactive tour to understand how to use your dashboard effectively.",
+        orderId: "",
+        assignmentId: "",
+        type: "custom",
+        priority: "normal",
         completed: false,
       });
     }
@@ -358,6 +382,7 @@ export default function GrinderTodoList() {
                       todo.id === "req-review-strikes" ? "/grinder/strikes" :
                       todo.id === "req-review-queue" ? "/scorecard-guide" :
                       todo.id === "req-accept-rules" ? "/grinder/overview" :
+                      todo.id === "req-complete-tutorial" ? "/grinder/overview" :
                       "/grinder/assignments"
                     } data-testid={`link-goto-orders-${todo.id}`}>
                       <Badge variant="outline" className="shrink-0 border-amber-500/20 text-amber-400/80 text-[10px] cursor-pointer hover:bg-amber-500/10 transition-colors">

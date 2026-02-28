@@ -45,6 +45,16 @@ export default function StaffTodo() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  const [tutorialCompleted, setTutorialCompleted] = useState(localStorage.getItem("grindops-tutorial-staff-v2-completed") === "true");
+
+  useState(() => {
+    const handleStorage = () => {
+      setTutorialCompleted(localStorage.getItem("grindops-tutorial-staff-v2-completed") === "true");
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  });
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
@@ -170,6 +180,20 @@ export default function StaffTodo() {
     const bi = categoryOrder.indexOf(b);
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
+
+  if (!tutorialCompleted) {
+    if (!groupedActions["Onboarding"]) groupedActions["Onboarding"] = [];
+    groupedActions["Onboarding"].push({
+      key: "req-complete-tutorial",
+      category: "Onboarding",
+      priority: "normal",
+      title: "Complete Dashboard Tutorial",
+      description: "Take the interactive tour to understand how to use your management dashboard effectively.",
+      linkUrl: "/",
+      dismissed: false
+    });
+    if (!sortedCategories.includes("Onboarding")) sortedCategories.unshift("Onboarding");
+  }
 
   const isLoading = tasksLoading || actionItemsLoading;
 

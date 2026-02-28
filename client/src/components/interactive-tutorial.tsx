@@ -1403,7 +1403,7 @@ export function InteractiveTutorial() {
     setIsOpen(false);
     setCurrentStep(0);
     clearTutorialSession();
-    localStorage.setItem(storageKey, "true");
+    localStorage.setItem(storageKey, "true"); window.dispatchEvent(new Event("storage"));
     setHasSeenTutorial(true);
     if (hasNavigatedRef.current) {
       hasNavigatedRef.current = false;
@@ -1419,7 +1419,7 @@ export function InteractiveTutorial() {
       setIsOpen(false);
       setCurrentStep(0);
       clearTutorialSession();
-      localStorage.setItem(storageKey, "true");
+      localStorage.setItem(storageKey, "true"); window.dispatchEvent(new Event("storage"));
       setHasSeenTutorial(true);
       hasNavigatedRef.current = false;
       navigate("/");
