@@ -431,9 +431,14 @@ export default function Assignments() {
                           <RefreshCw className="w-2 h-2 mr-0.5" />Needs Replacement
                         </Badge>
                       )}
-                      {a.status === "Completed" && !a.customerApproved && order?.customerDiscordId && (
-                        <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 w-fit">
-                          ⏳ Awaiting Customer
+                      {a.status === "Completed" && !a.customerApproved && !a.customerIssueReported && order?.customerDiscordId && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 w-fit gap-0.5">
+                          <Clock className="w-2.5 h-2.5" /> Awaiting Customer
+                        </Badge>
+                      )}
+                      {a.status === "Completed" && !a.customerApproved && a.customerIssueReported && order?.customerDiscordId && (
+                        <Badge variant="outline" className="text-[10px] border-red-500/20 text-red-400 bg-red-500/10 w-fit gap-0.5">
+                          <AlertTriangle className="w-2.5 h-2.5" /> Customer Issue
                         </Badge>
                       )}
                       {a.customerApproved && (

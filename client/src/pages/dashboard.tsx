@@ -1959,6 +1959,9 @@ export default function Dashboard() {
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Payouts</p>
               {[...pendingPayouts, ...approvedPayouts].map((p: any) => {
                 const grinder = allGrinders.find(g => g.id === p.grinderId);
+                const payoutAssignment = allAssignments.find(a => a.id === p.assignmentId);
+                const payoutOrder = allOrders.find(o => o.id === p.orderId);
+                const hasCustomerLink = payoutOrder?.customerDiscordId && payoutOrder?.discordTicketChannelId;
                 return (
                   <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/5" data-testid={`staff-payout-${p.id}`}>
                     <div className="flex-1 min-w-0">
@@ -1966,6 +1969,21 @@ export default function Dashboard() {
                         <span className="font-medium text-sm">{grinder?.name || p.grinderId}</span>
                         <span className="text-green-400 font-bold">{formatCurrency(Number(p.amount))}</span>
                         <Badge variant="outline" className={`text-[10px] ${p.status === "Approved" ? "text-blue-400 border-blue-500/30" : "text-yellow-400 border-yellow-500/30"}`}>{p.status}</Badge>
+                        {hasCustomerLink && payoutAssignment?.customerApproved && (
+                          <Badge variant="outline" className="text-[10px] text-green-400 border-green-500/30 gap-1">
+                            <CheckCircle className="w-2.5 h-2.5" /> Customer Approved
+                          </Badge>
+                        )}
+                        {hasCustomerLink && !payoutAssignment?.customerApproved && payoutAssignment?.customerIssueReported && (
+                          <Badge variant="outline" className="text-[10px] text-red-400 border-red-500/30 gap-1">
+                            <AlertTriangle className="w-2.5 h-2.5" /> Customer Issue
+                          </Badge>
+                        )}
+                        {hasCustomerLink && !payoutAssignment?.customerApproved && !payoutAssignment?.customerIssueReported && (
+                          <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-500/30 gap-1">
+                            <Clock className="w-2.5 h-2.5" /> Awaiting Customer
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap mt-1">
                         {p.payoutPlatform && (

@@ -181,6 +181,8 @@ export const assignments = pgTable("assignments", {
   customerApproved: boolean("customer_approved").notNull().default(false),
   customerApprovedAt: timestamp("customer_approved_at"),
   customerApprovalToken: varchar("customer_approval_token"),
+  customerIssueReported: boolean("customer_issue_reported").notNull().default(false),
+  customerIssueReportedAt: timestamp("customer_issue_reported_at"),
 });
 
 export const queueConfig = pgTable("queue_config", {

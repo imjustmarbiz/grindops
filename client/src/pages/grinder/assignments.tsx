@@ -99,7 +99,11 @@ export default function GrinderAssignments() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
+  const [proofConfirmed, setProofConfirmed] = useState(false);
+  const [completeStep, setCompleteStep] = useState<"form" | "confirm">("form");
   const proofInputRef = useRef<HTMLInputElement>(null);
+  const proofVideoRef = useRef<HTMLVideoElement>(null);
   const updateProofInputRef = useRef<HTMLInputElement>(null);
 
   const checkpointMutation = useMutation({
@@ -601,14 +605,16 @@ export default function GrinderAssignments() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!completeDialog} onOpenChange={(open) => { if (!open) { setCompleteDialog(null); setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); setProofFile(null); setProofUrl(null); } }}>
+      <Dialog open={!!completeDialog} onOpenChange={(open) => { if (!open) { setCompleteDialog(null); setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); setProofFile(null); setProofUrl(null); if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl); setProofPreviewUrl(null); setProofConfirmed(false); setCompleteStep("form"); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-400" />
-              Complete Order - {completeDialog?.orderId}
+              {completeStep === "form" ? `Complete Order - ${completeDialog?.orderId}` : "Confirm & Submit"}
             </DialogTitle>
           </DialogHeader>
+
+          {completeStep === "form" && (
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
               <p className="text-sm text-white/60">Payout Amount</p>
@@ -631,6 +637,9 @@ export default function GrinderAssignments() {
                   const file = e.target.files?.[0];
                   if (!file) return;
                   setProofFile(file);
+                  setProofConfirmed(false);
+                  const localUrl = URL.createObjectURL(file);
+                  setProofPreviewUrl(localUrl);
                   setUploadingProof(true);
                   try {
                     const formData = new FormData();
@@ -642,11 +651,12 @@ export default function GrinderAssignments() {
                     }
                     const data = await res.json();
                     setProofUrl(data.url);
-                    toast({ title: "Video uploaded successfully" });
+                    toast({ title: "Video uploaded — please review and confirm below" });
                   } catch (err: any) {
                     toast({ title: "Upload failed", description: err.message, variant: "destructive" });
                     setProofFile(null);
                     setProofUrl(null);
+                    setProofPreviewUrl(null);
                   } finally {
                     setUploadingProof(false);
                   }
@@ -658,17 +668,47 @@ export default function GrinderAssignments() {
                   <Upload className="w-4 h-4" /> Select Video File
                 </Button>
               ) : (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  {uploadingProof ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
-                  ) : proofUrl ? (
-                    <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-                  ) : null}
-                  <span className="text-sm truncate flex-1">{proofFile.name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">{(proofFile.size / 1024 / 1024).toFixed(1)}MB</span>
-                  <button className="text-muted-foreground hover:text-white" data-testid="button-remove-proof" onClick={() => { setProofFile(null); setProofUrl(null); if (proofInputRef.current) proofInputRef.current.value = ""; }}>
-                    ✕
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    {uploadingProof ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+                    ) : proofUrl ? (
+                      <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                    ) : null}
+                    <span className="text-sm truncate flex-1">{proofFile.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{(proofFile.size / 1024 / 1024).toFixed(1)}MB</span>
+                    <button className="text-muted-foreground hover:text-white" data-testid="button-remove-proof" onClick={() => { setProofFile(null); setProofUrl(null); if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl); setProofPreviewUrl(null); setProofConfirmed(false); if (proofInputRef.current) proofInputRef.current.value = ""; }}>
+                      ✕
+                    </button>
+                  </div>
+                  {proofPreviewUrl && (
+                    <div className="rounded-lg overflow-hidden border border-white/10 bg-black">
+                      <video
+                        ref={proofVideoRef}
+                        src={proofPreviewUrl}
+                        controls
+                        className="w-full max-h-48"
+                        data-testid="video-proof-preview"
+                      />
+                      {!proofConfirmed && proofUrl && (
+                        <div className="p-2 bg-yellow-500/10 border-t border-yellow-500/20">
+                          <Button
+                            size="sm"
+                            className="w-full text-xs bg-yellow-600 hover:bg-yellow-700 gap-1"
+                            data-testid="button-confirm-video"
+                            onClick={() => setProofConfirmed(true)}
+                          >
+                            <Play className="w-3 h-3" /> I've reviewed this video — looks good
+                          </Button>
+                        </div>
+                      )}
+                      {proofConfirmed && (
+                        <div className="p-2 bg-green-500/10 border-t border-green-500/20 flex items-center gap-2 text-xs text-green-400">
+                          <CheckCircle className="w-3.5 h-3.5" /> Video confirmed
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -739,27 +779,75 @@ export default function GrinderAssignments() {
                 Save this payment method for future payouts
               </label>
             )}
-            <Button className="w-full bg-green-600 hover:bg-green-700" data-testid="button-confirm-complete"
-              disabled={!completePlatform || !completeDetails || !proofUrl || uploadingProof || markCompleteMutation.isPending}
-              onClick={() => {
-                markCompleteMutation.mutate({
-                  assignmentId: completeDialog.id,
-                  payoutPlatform: completePlatform,
-                  payoutDetails: completeDetails,
-                  savePayoutMethod: completeSaveMethod,
-                  completionProofUrl: proofUrl!,
-                });
-                setCompleteDialog(null);
-                setCompletePlatform("");
-                setCompleteDetails("");
-                setCompleteSaveMethod(true);
-                setProofFile(null);
-                setProofUrl(null);
-              }}>
-              {markCompleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-              Complete & Request Payout
+            <Button className="w-full bg-blue-600 hover:bg-blue-700" data-testid="button-review-complete"
+              disabled={!completePlatform || !completeDetails || !proofUrl || !proofConfirmed || uploadingProof}
+              onClick={() => setCompleteStep("confirm")}>
+              <FileCheck className="w-4 h-4 mr-2" /> Review & Confirm
             </Button>
           </div>
+          )}
+
+          {completeStep === "confirm" && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs font-medium text-amber-400 mb-2">Please confirm the details below are correct before submitting:</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <p className="text-xs text-white/50 mb-0.5">Payout Amount</p>
+                <p className="text-lg font-bold text-green-400" data-testid="text-confirm-amount">
+                  ${Number(completeDialog?.grinderEarnings || completeDialog?.bidAmount || 0).toFixed(2)}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <p className="text-xs text-white/50 mb-0.5">Payment Method</p>
+                <p className="text-sm font-medium" data-testid="text-confirm-method">{completePlatform}: {completeDetails}</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <p className="text-xs text-white/50 mb-0.5">Video Proof</p>
+                <p className="text-sm font-medium flex items-center gap-1.5" data-testid="text-confirm-video">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                  {proofFile?.name} ({proofFile ? (proofFile.size / 1024 / 1024).toFixed(1) : 0}MB)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" data-testid="button-back-to-edit"
+                onClick={() => setCompleteStep("form")}>
+                Edit Details
+              </Button>
+              <Button className="flex-1 bg-green-600 hover:bg-green-700" data-testid="button-confirm-complete"
+                disabled={markCompleteMutation.isPending}
+                onClick={() => {
+                  markCompleteMutation.mutate({
+                    assignmentId: completeDialog.id,
+                    payoutPlatform: completePlatform,
+                    payoutDetails: completeDetails,
+                    savePayoutMethod: completeSaveMethod,
+                    completionProofUrl: proofUrl!,
+                  });
+                  setCompleteDialog(null);
+                  setCompletePlatform("");
+                  setCompleteDetails("");
+                  setCompleteSaveMethod(true);
+                  setProofFile(null);
+                  setProofUrl(null);
+                  if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
+                  setProofPreviewUrl(null);
+                  setProofConfirmed(false);
+                  setCompleteStep("form");
+                }}>
+                {markCompleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                Complete & Request Payout
+              </Button>
+            </div>
+          </div>
+          )}
+
         </DialogContent>
       </Dialog>
 

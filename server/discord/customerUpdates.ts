@@ -355,6 +355,11 @@ export async function handleCustomerIssueButton(token: string, customerDiscordId
 
     const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : assignment.orderId;
 
+    await storage.updateAssignment(assignment.id, {
+      customerIssueReported: true,
+      customerIssueReportedAt: new Date(),
+    });
+
     await storage.createAuditLog({
       id: `AL-${Date.now().toString(36)}`,
       entityType: "assignment",

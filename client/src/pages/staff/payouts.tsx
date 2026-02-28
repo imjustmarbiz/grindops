@@ -493,10 +493,24 @@ export default function StaffPayouts() {
                         {(() => {
                           const payoutOrder = (orders || []).find((o: any) => o.id === p.orderId);
                           const payoutAssignment = (assignments || []).find((a: any) => a.id === p.assignmentId);
-                          if (payoutOrder?.customerDiscordId && payoutAssignment && !payoutAssignment.customerApproved) {
+                          if (payoutOrder?.customerDiscordId && payoutOrder?.discordTicketChannelId && payoutAssignment) {
+                            if (payoutAssignment.customerApproved) {
+                              return (
+                                <Badge variant="outline" className="text-[10px] border-green-500/20 text-green-400 bg-green-500/10 gap-0.5" data-testid={`badge-customer-approved-${p.id}`}>
+                                  <CheckCircle className="w-2.5 h-2.5" /> Customer Approved
+                                </Badge>
+                              );
+                            }
+                            if (payoutAssignment.customerIssueReported) {
+                              return (
+                                <Badge variant="outline" className="text-[10px] border-red-500/20 text-red-400 bg-red-500/10 gap-0.5" data-testid={`badge-customer-issue-${p.id}`}>
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Customer Issue
+                                </Badge>
+                              );
+                            }
                             return (
-                              <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10" data-testid={`badge-customer-pending-${p.id}`}>
-                                <Clock className="w-2.5 h-2.5 mr-0.5" /> Customer Pending
+                              <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-400 bg-amber-500/10 gap-0.5" data-testid={`badge-customer-pending-${p.id}`}>
+                                <Clock className="w-2.5 h-2.5" /> Awaiting Customer
                               </Badge>
                             );
                           }
