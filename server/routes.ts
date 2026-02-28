@@ -4106,6 +4106,78 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/grinder/me/staff-alert", requireGrinderOrStaff, async (req, res) => {
+    try {
+      const { assignmentId, orderId, message } = req.body;
+      const grinderId = (req as any).user?.discordId || (req as any).user?.id || "";
+      if (!grinderId || !message) return res.status(400).json({ error: "Grinder ID and message are required" });
+
+      const grinder = await storage.getGrinderByDiscordId(grinderId);
+      const order = await storage.getOrder(orderId);
+      const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : orderId.slice(0, 10);
+
+      await storage.createStaffAlert({
+        id: `SAL-${Date.now().toString(36)}`,
+        targetType: "all",
+        grinderId: grinder?.id || null,
+        title: `Internal Alert: Order ${orderLabel}`,
+        message: `**From ${grinder?.name || "Grinder"}:** ${message}`,
+        severity: "warning",
+        createdBy: grinderId,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "assignment",
+        entityId: assignmentId,
+        action: "staff_alert_sent",
+        actor: grinder?.name || "Grinder",
+        details: JSON.stringify({ message, orderId }),
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[staff-alert] Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/grinder/me/staff-alert", requireGrinderOrStaff, async (req, res) => {
+    try {
+      const { assignmentId, orderId, message } = req.body;
+      const grinderId = (req as any).user?.discordId || (req as any).user?.id || "";
+      if (!grinderId || !message) return res.status(400).json({ error: "Grinder ID and message are required" });
+
+      const grinder = await storage.getGrinderByDiscordId(grinderId);
+      const order = await storage.getOrder(orderId);
+      const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : orderId.slice(0, 10);
+
+      await storage.createStaffAlert({
+        id: `SAL-${Date.now().toString(36)}`,
+        targetType: "all",
+        grinderId: grinder?.id || null,
+        title: `Internal Alert: Order ${orderLabel}`,
+        message: `**From ${grinder?.name || "Grinder"}:** ${message}`,
+        severity: "warning",
+        createdBy: grinderId,
+      });
+
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "assignment",
+        entityId: assignmentId,
+        action: "staff_alert_sent",
+        actor: grinder?.name || "Grinder",
+        details: JSON.stringify({ message, orderId }),
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[staff-alert] Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/grinder/me/checkpoints", async (req, res) => {
     try {
       const userId = (req as any).userId;
