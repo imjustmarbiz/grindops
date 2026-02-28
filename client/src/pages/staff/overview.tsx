@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AnimatedPage, FadeInUp, FadeIn, ScaleIn, StaggerList, StaggerItem } from "@/lib/animations";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
+  Shield, Calendar
 } from "lucide-react";
 
 
@@ -129,49 +131,65 @@ export default function StaffOverview() {
     <TooltipProvider>
     <AnimatedPage className="space-y-6">
       <FadeInUp>
-        {isOwner ? (
-          <div className="relative overflow-hidden rounded-xl border border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30 p-5 sm:p-6">
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-red-500/[0.06] -translate-y-32 translate-x-32" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-amber-500/[0.04] translate-y-24 -translate-x-24" />
-            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/30 to-amber-500/20 flex items-center justify-center border border-red-500/20 shadow-lg shadow-red-500/10">
-                  <Crown className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
-                    Owner Command Center
-                  </h1>
-                  <p className="text-sm text-red-200/60">Full authority over operations, analytics, and team management</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
+        <div className={`relative overflow-hidden rounded-2xl border p-6 sm:p-8 ${
+          isOwner 
+            ? "border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30" 
+            : "border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5"
+        }`}>
+          <div className={`absolute top-0 right-0 w-64 h-64 rounded-full -translate-y-16 translate-x-16 ${
+            isOwner ? "bg-red-500/[0.06]" : "bg-primary/[0.04]"
+          }`} />
+          
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <Avatar className={`h-20 w-20 border-2 shadow-lg ${
+              isOwner ? "border-red-500/40" : "border-primary/40"
+            }`}>
+              <AvatarImage src={user?.profileImageUrl || undefined} />
+              <AvatarFallback className={`${isOwner ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"} text-2xl font-bold`}>
+                {(user?.firstName || user?.discordUsername || "U").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
+                  {isOwner ? "Owner Command Center" : "Staff Command Center"}
+                </h1>
+                <Badge className={`gap-1 ${
+                  isOwner 
+                    ? "bg-red-500/20 text-red-400 border-red-500/30" 
+                    : "bg-primary/20 text-primary border-primary/30"
+                }`}>
+                  {isOwner ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                  {isOwner ? "Owner" : "Staff"}
+                </Badge>
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
                 </div>
+              </div>
+              
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <p className="flex items-center gap-1">
+                  Welcome back, <span className="text-foreground font-medium">{user?.firstName || user?.discordUsername}</span>
+                </p>
+                <span className="hidden sm:inline opacity-20">|</span>
+                <p className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Joined {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                </p>
+                <span className="hidden sm:inline opacity-20">|</span>
                 <LastUpdated date={lastUpdatedDate} />
               </div>
+              
+              <p className="mt-3 text-sm opacity-70 max-w-2xl">
+                {isOwner 
+                  ? "Full authority over operations, analytics, and team management." 
+                  : "Real-time analytics and operations overview."}
+              </p>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <LayoutDashboard className="w-7 h-7 text-primary" />
-                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">
-                  Staff Command Center
-                </h1>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
-                </div>
-              </div>
-              <LastUpdated date={lastUpdatedDate} />
-            </div>
-            <p className="text-sm text-muted-foreground">Real-time analytics and operations overview</p>
-          </div>
-        )}
+        </div>
       </FadeInUp>
 
       <FadeInUp>
