@@ -260,21 +260,50 @@ export default function GrinderAssignments() {
       ) : (
         <div className="space-y-4">
           {filteredAssignments.map((a: any) => (
-            <Card key={a.id} className="border-0 bg-white/[0.03] sm:hover:bg-white/[0.05] transition-all duration-200" data-testid={`card-work-assignment-${a.id}`}>
+            <Card key={a.id} className={`border-0 sm:hover:bg-white/[0.05] transition-all duration-200 ${
+              (() => {
+                const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+                const isPaid = pr && ["Paid", "Completed"].includes(pr.status);
+                const isPayoutPending = pr && ["Pending", "Disputed", "Grinder Approved"].includes(pr.status);
+                if (isPaid) return "bg-emerald-500/[0.02] border-l-2 border-l-emerald-500/30";
+                if (isPayoutPending) return "bg-violet-500/[0.02] border-l-2 border-l-violet-500/30";
+                if (a.status === "Completed") return "bg-amber-500/[0.02] border-l-2 border-l-amber-500/30";
+                return "bg-white/[0.03]";
+              })()
+            }`} data-testid={`card-work-assignment-${a.id}`}>
               <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-lg sm:text-xl">Order {a.mgtOrderNumber ? `#${a.mgtOrderNumber}` : (a.displayId || a.orderId)}</span>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <Badge className={`shrink-0 ${
-                          (a.orderStatus || a.status) === "Active" ? "bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/20" :
-                          (a.orderStatus || a.status) === "Paid Out" ? "bg-cyan-500/20 text-cyan-400 border-0" :
-                          (a.orderStatus || a.status) === "Completed" || a.status === "Completed" ? "bg-blue-500/20 text-blue-400 border-0" :
-                          "bg-white/[0.06] text-white/40 border-0"
-                        }`}>
-                          {a.orderStatus || a.status}
-                        </Badge>
+                        {(() => {
+                          const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+                          const isPaid = pr && ["Paid", "Completed"].includes(pr.status);
+                          const isPayoutPending = pr && ["Pending", "Disputed", "Grinder Approved"].includes(pr.status);
+                          const isCompleted = a.status === "Completed";
+                          
+                          if (isPaid) return (
+                            <Badge className="shrink-0 bg-emerald-500/20 text-emerald-400 border-0" data-testid={`badge-status-${a.id}`}>
+                              <Banknote className="w-3 h-3 mr-1" /> Paid Out
+                            </Badge>
+                          );
+                          if (isPayoutPending) return (
+                            <Badge className="shrink-0 bg-violet-500/20 text-violet-400 border-violet-500/20" data-testid={`badge-status-${a.id}`}>
+                              <Clock className="w-3 h-3 mr-1" /> Payout Pending
+                            </Badge>
+                          );
+                          if (isCompleted) return (
+                            <Badge className="shrink-0 bg-amber-500/20 text-amber-400 border-amber-500/20" data-testid={`badge-status-${a.id}`}>
+                              <CheckCircle className="w-3 h-3 mr-1" /> Completed
+                            </Badge>
+                          );
+                          return (
+                            <Badge className="shrink-0 bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/20" data-testid={`badge-status-${a.id}`}>
+                              {a.orderStatus || a.status}
+                            </Badge>
+                          );
+                        })()}
                         {a.isRush && <Badge className="border-0 bg-orange-500/20 text-orange-400 text-[10px]">Rush</Badge>}
                         {a.isEmergency && <Badge className="border-0 bg-red-500/20 text-red-400 text-[10px]">Emergency</Badge>}
                       </div>
@@ -377,35 +406,63 @@ export default function GrinderAssignments() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
-                    <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
-                        <CheckCircle className="w-4 h-4" />
-                        {a.status === "Completed" ? "Completed & Pending Payout" : a.status}
+                  (() => {
+                    const pr = payoutRequests?.find((p: any) => p.assignmentId === a.id);
+                    const isPaid = pr && ["Paid", "Completed"].includes(pr.status);
+                    const isPayoutPending = pr && ["Pending", "Disputed", "Grinder Approved"].includes(pr.status);
+                    return (
+                      <div className="flex flex-col gap-2">
+                        {isPaid ? (
+                          <div className="p-4 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15" data-testid={`status-paid-${a.id}`}>
+                            <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-1">
+                              <Banknote className="w-5 h-5" />
+                              Paid Out
+                            </div>
+                            <p className="text-xs text-emerald-400/60">Payment has been processed. This order is complete.</p>
+                            {pr?.amount && <p className="text-sm font-bold text-emerald-400 mt-2">${Number(pr.amount).toFixed(2)} received</p>}
+                          </div>
+                        ) : isPayoutPending ? (
+                          <div className="p-4 rounded-lg bg-violet-500/[0.06] border border-violet-500/15" data-testid={`status-payout-pending-${a.id}`}>
+                            <div className="flex items-center gap-2 text-violet-400 font-semibold mb-1">
+                              <Clock className="w-5 h-5 animate-pulse" />
+                              Payout Under Review
+                            </div>
+                            <p className="text-xs text-violet-400/60">Staff is reviewing your payout request. You'll be notified when it's processed.</p>
+                            {pr?.amount && <p className="text-sm font-bold text-violet-400 mt-2">${Number(pr.amount).toFixed(2)} requested</p>}
+                          </div>
+                        ) : (
+                          <div className="p-4 rounded-lg bg-amber-500/[0.06] border border-amber-500/15" data-testid={`status-completed-${a.id}`}>
+                            <div className="flex items-center gap-2 text-amber-400 font-semibold mb-1">
+                              <CheckCircle className="w-5 h-5" />
+                              Order Complete — Awaiting Payout
+                            </div>
+                            <p className="text-xs text-amber-400/60">This order has been marked complete. Staff will process your payout.</p>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" className="flex-1 h-9 gap-2 text-xs bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20" data-testid={`button-staff-alert-done-${a.id}`}
+                            onClick={() => { setStaffAlertModal(a); setStaffAlertMessage(""); }}>
+                            <BellRing className="w-3 h-3" /> Alert Staff
+                          </Button>
+                          <Button size="sm" variant="outline" asChild
+                            className="flex-1 h-9 gap-2 text-xs bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06]"
+                            data-testid={`button-order-history-done-${a.id}`}>
+                            <Link href="/my-scorecard">
+                              <Clock className="w-3 h-3" /> Order History
+                            </Link>
+                          </Button>
+                          {a.orderBrief && (
+                            <Button size="sm" variant="outline"
+                              className="flex-1 h-9 gap-2 text-xs bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06]"
+                              data-testid={`button-view-brief-done-${a.id}`}
+                              onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
+                              <FileText className="w-3 h-3" /> Brief
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <Button size="sm" variant="outline" className="h-8 gap-2 text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20" data-testid={`button-staff-alert-done-${a.id}`}
-                        onClick={() => { setStaffAlertModal(a); setStaffAlertMessage(""); }}>
-                        <BellRing className="w-3 h-3" /> Alert Staff
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button size="sm" variant="outline" asChild
-                        className="w-full gap-2 text-xs font-semibold bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06] h-9"
-                        data-testid={`button-order-history-done-${a.id}`}>
-                        <Link href="/my-scorecard">
-                          <Clock className="w-4 h-4" /> Order History
-                        </Link>
-                      </Button>
-                      {a.orderBrief && (
-                        <Button size="sm" variant="outline"
-                          className="w-full gap-2 text-xs font-semibold bg-white/[0.03] border-white/[0.06] text-white/60 hover:bg-white/[0.06] h-9"
-                          data-testid={`button-view-brief-done-${a.id}`}
-                          onClick={() => setBriefDialog({ orderId: a.orderId, brief: a.orderBrief })}>
-                          <FileText className="w-4 h-4" /> Brief
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })()
                 )}
                 {a.status === "Active" && (
                   <div className="mt-2 pt-2 border-t border-white/[0.06]">
@@ -477,7 +534,7 @@ export default function GrinderAssignments() {
               Alert Staff (Internal)
             </DialogTitle>
             <DialogDescription className="text-white/40">
-              Send a message to staff-only Discord channels. This will NOT be sent to the customer.
+              Send a message to the staff to-do list as a required action. This will NOT be sent to the customer.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -495,7 +552,7 @@ export default function GrinderAssignments() {
               <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
               <p className="text-[11px] text-amber-400/80 leading-relaxed">
                 Use this for internal concerns, password issues, or anything sensitive. 
-                These alerts are sent to the staff to-do list and internal channels. 
+                This will create a high-priority task on the staff to-do list and send a notification to all staff members. 
                 Customers cannot see these alerts.
               </p>
             </div>

@@ -4212,8 +4212,10 @@ export async function registerRoutes(
 
       const staffUsers = await db.select().from(users).where(or(eq(users.role, "staff"), eq(users.role, "owner")));
       for (const staff of staffUsers) {
+        const staffIdentifier = staff.discordId || staff.id;
+        if (staffIdentifier === grinderId) continue;
         await createSystemNotification({
-          userId: staff.discordId || staff.id,
+          userId: staffIdentifier,
           type: "alert",
           title: `Internal Alert: Order ${orderLabel}`,
           body: `**From Grinder:** ${grinder?.name || "Grinder"}\n${message.substring(0, 100)}${message.length > 100 ? "..." : ""}`,
