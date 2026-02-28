@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Activity } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,7 @@ export const staffNavItems = [
   { title: "Business Performance", url: "/business", icon: DollarSign },
   { title: "Services", url: "/services", icon: Package },
   { title: "Grinders", url: "/grinders", icon: Users },
-  { title: "Tier Progress", url: "/tier-progress", icon: TrendingUp },
+  { title: "Grinders Performance", url: "/tier-progress", icon: TrendingUp },
   { title: "Badges", url: "/badges", icon: Award },
   { title: "Reports", url: "/reports", icon: FileBarChart },
   { title: "Bids", url: "/bids", icon: Gavel },
@@ -55,7 +55,6 @@ export const staffNavItems = [
   { title: "Streams", url: "/streams", icon: Tv },
   { title: "Events & Promos", url: "/events", icon: Calendar },
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
-  { title: "Activity Log", url: "/activity-log", icon: Activity },
   { title: "Staff Notes", url: "/patch-notes", icon: Newspaper },
 ];
 
@@ -65,7 +64,6 @@ export function getFilteredStaffNavItems(isOwner: boolean, userId: string) {
   return staffNavItems.filter(item => {
     if (item.url === "/business") return canSeeBusiness;
     if (item.url === "/staff-overview") return isOwner;
-    if (item.url === "/activity-log") return isOwner;
     return true;
   });
 }
@@ -110,6 +108,23 @@ function AppSidebar() {
     const readBy = (n.readBy as string[]) || [];
     return !readBy.includes(userId);
   }).length;
+  const { data: staffActionItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/action-items"],
+    refetchInterval: 30000,
+    enabled: isStaff,
+  });
+  const { data: staffTasks = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/tasks"],
+    refetchInterval: 30000,
+    enabled: isStaff,
+  });
+  const staffTodoCount = staffActionItems.filter((i: any) => !i.dismissed).length + staffTasks.filter((t: any) => t.status === "pending").length;
+  const { data: grinderTasks = [] } = useQuery<any[]>({
+    queryKey: ["/api/grinder/me/tasks"],
+    refetchInterval: 30000,
+    enabled: !isStaff,
+  });
+  const grinderTodoCount = grinderTasks.filter((t: any) => t.status === "pending").length;
   const isElite = !isStaff && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
   const WALLET_RESTRICTED_IDS = ["872820240139046952"];
@@ -147,6 +162,9 @@ function AppSidebar() {
                 const isActive = location === item.url;
                 const unreadAlerts = !isStaff && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
                 const staffUnreadNotifs = isStaff && item.url === "/notifications" ? unreadNotifCount : 0;
+                const todoCount = isStaff && item.url === "/todo" ? staffTodoCount
+                  : !isStaff && item.url === "/grinder/todo" ? grinderTodoCount : 0;
+                const badgeCount = unreadAlerts || staffUnreadNotifs || todoCount;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
@@ -162,8 +180,10 @@ function AppSidebar() {
                       >
                         <item.icon className="w-5 h-5" />
                         <span className="flex-1">{item.title}</span>
-                        {(unreadAlerts > 0 || staffUnreadNotifs > 0) && (
-                          <Badge className="bg-blue-500/20 text-blue-400 border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse">{unreadAlerts || staffUnreadNotifs}</Badge>
+                        {badgeCount > 0 && (
+                          <Badge className={`border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse ${
+                            todoCount > 0 ? "bg-amber-500/20 text-amber-400" : "bg-blue-500/20 text-blue-400"
+                          }`}>{badgeCount}</Badge>
                         )}
                       </Link>
                     </SidebarMenuButton>

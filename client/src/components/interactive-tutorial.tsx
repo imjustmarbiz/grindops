@@ -734,7 +734,7 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/tier-progress": {
-    description: "Track grinder tier progression — from New to Elite. Review promotions, demotions, and requirements for each tier level.",
+    description: "Grinders Performance — track tier progression from New to Elite, review promotions and demotions, and monitor performance requirements for each tier level.",
     demoSteps: [
       { label: "New → Regular → Veteran → Elite", icon: TrendingUp, color: "text-blue-400" },
       { label: "See requirements for next tier", icon: ClipboardCheck, color: "text-cyan-400" },
@@ -879,15 +879,6 @@ const staffPageDescriptions: Record<string, PageMeta> = {
       { label: "Grinder role updated by Owner", icon: Shield, color: "text-orange-400" },
       { label: "Payout approved at 2:45 PM", icon: Banknote, color: "text-green-400" },
       { label: "Filter by action type, user, or date", icon: Eye, color: "text-cyan-400" },
-    ],
-  },
-  "/activity-log": {
-    description: "Owner-only user activity tracker — see who's using the platform, which pages they visit, login sessions, and user behavior analytics.",
-    demoSteps: [
-      { label: "Track user logins and page views", icon: Activity, color: "text-blue-400" },
-      { label: "Filter by user, category, action", icon: Eye, color: "text-cyan-400" },
-      { label: "24h stats: active users, sessions", icon: Users, color: "text-green-400" },
-      { label: "Detailed session and IP tracking", icon: Monitor, color: "text-purple-400" },
     ],
   },
   "/patch-notes": {
