@@ -270,11 +270,96 @@ export default function Bids() {
         </FadeInUp>
 
         <FadeInUp>
-        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
+        <div className="md:hidden space-y-3">
+          {sortedBids.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Gavel className="w-8 h-8 opacity-30 mx-auto mb-2" />
+              <p>No bids yet.</p>
+            </div>
+          ) : sortedBids.map(bid => {
+            const grinder = (grinders || []).find(g => g.id === bid.grinderId);
+            const order = (orders || []).find(o => o.id === bid.orderId);
+            const computedMarginPct = order?.customerPrice && Number(order.customerPrice) > 0 && bid.bidAmount
+              ? (((Number(order.customerPrice) - Number(bid.bidAmount)) / Number(order.customerPrice)) * 100)
+              : null;
+            const marginVal = bid.marginPct ? `${Number(bid.marginPct).toFixed(0)}%`
+              : computedMarginPct !== null ? `${computedMarginPct.toFixed(0)}%`
+              : bid.margin ? `$${Number(bid.margin).toFixed(0)}`
+              : "—";
+            return (
+              <Card key={bid.id} className={`${bidRowStyle(bid.status)} border-white/[0.06] bg-white/[0.02]`} data-testid={`card-bid-${bid.id}`}>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-muted-foreground">{bid.displayId || bid.mgtProposalId || bid.id}</span>
+                      {bid.bidSource === "discord" && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-indigo-500/30 text-indigo-400">Discord</Badge>}
+                      {bid.bidSource === "dashboard" && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-amber-500/30 text-amber-400">Dashboard</Badge>}
+                    </div>
+                    <Badge className={statusColor(bid.status)}>{bid.status}</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Order</span>
+                      <p className="font-bold">{order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Grinder</span>
+                      <p>{grinder?.name || bid.grinderId}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Bid Amount</span>
+                      <p className="font-bold text-emerald-400">${bid.bidAmount}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Margin</span>
+                      <p>{marginVal}</p>
+                    </div>
+                    {bid.timeline && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Timeline</span>
+                        <p>{bid.timeline}</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-muted-foreground text-xs">Submitted</span>
+                      <p>{bid.bidTime ? format(new Date(bid.bidTime), "MMM d, yyyy") : "—"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => { setEditingBid(bid); setEditForm({ bidAmount: bid.bidAmount, timeline: bid.timeline || "", notes: bid.notes || "" }); }}
+                      data-testid={`button-edit-bid-mobile-${bid.id}`}
+                    >
+                      <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                    </Button>
+                    {bid.status === "Pending" && (
+                      <>
+                        <Button size="sm" variant="ghost" className="h-7 text-emerald-400" onClick={() => {
+                          if (!order?.customerPrice || Number(order.customerPrice) <= 0) {
+                            setPricePrompt({ bidId: bid.id, orderId: bid.orderId, orderLabel: order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId });
+                          } else { bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" }); }
+                        }} data-testid={`button-accept-bid-mobile-${bid.id}`}>
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" /> Accept
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-red-400" onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Rejected" })} data-testid={`button-reject-bid-mobile-${bid.id}`}>
+                          <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden hidden md:block">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
+                <TableRow className="border-white/[0.06]">
                   <SortableHeader label="ID" sortKey="id" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
                   <SortableHeader label="Order" sortKey="orderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
                   <SortableHeader label="Grinder" sortKey="grinderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
@@ -427,6 +512,7 @@ export default function Bids() {
                 placeholder="0.00"
                 value={promptPrice}
                 onChange={(e) => setPromptPrice(e.target.value)}
+                className="bg-white/[0.03] border-white/[0.08]"
               />
               <Button
                 className="w-full"
@@ -456,7 +542,7 @@ export default function Bids() {
               <div className="space-y-2">
                 <Label>Order</Label>
                 <Select value={addBidForm.orderId} onValueChange={(v) => setAddBidForm(f => ({ ...f, orderId: v }))}>
-                  <SelectTrigger data-testid="select-add-bid-order">
+                  <SelectTrigger className="bg-white/[0.03] border-white/[0.08]" data-testid="select-add-bid-order">
                     <SelectValue placeholder="Select an order" />
                   </SelectTrigger>
                   <SelectContent>
@@ -471,7 +557,7 @@ export default function Bids() {
               <div className="space-y-2">
                 <Label>Grinder</Label>
                 <Select value={addBidForm.grinderId} onValueChange={(v) => setAddBidForm(f => ({ ...f, grinderId: v }))}>
-                  <SelectTrigger data-testid="select-add-bid-grinder">
+                  <SelectTrigger className="bg-white/[0.03] border-white/[0.08]" data-testid="select-add-bid-grinder">
                     <SelectValue placeholder="Select a grinder" />
                   </SelectTrigger>
                   <SelectContent>
@@ -488,6 +574,7 @@ export default function Bids() {
                   placeholder="0.00"
                   value={addBidForm.bidAmount}
                   onChange={(e) => setAddBidForm(f => ({ ...f, bidAmount: e.target.value }))}
+                  className="bg-white/[0.03] border-white/[0.08]"
                   data-testid="input-add-bid-amount"
                 />
               </div>
@@ -498,6 +585,7 @@ export default function Bids() {
                     placeholder="e.g. 2 days"
                     value={addBidForm.timeline}
                     onChange={(e) => setAddBidForm(f => ({ ...f, timeline: e.target.value }))}
+                    className="bg-white/[0.03] border-white/[0.08]"
                     data-testid="input-add-bid-timeline"
                   />
                 </div>
@@ -507,6 +595,7 @@ export default function Bids() {
                     placeholder="e.g. Immediately"
                     value={addBidForm.canStart}
                     onChange={(e) => setAddBidForm(f => ({ ...f, canStart: e.target.value }))}
+                    className="bg-white/[0.03] border-white/[0.08]"
                     data-testid="input-add-bid-can-start"
                   />
                 </div>
@@ -517,6 +606,7 @@ export default function Bids() {
                   placeholder="Optional notes..."
                   value={addBidForm.notes}
                   onChange={(e) => setAddBidForm(f => ({ ...f, notes: e.target.value }))}
+                  className="bg-white/[0.03] border-white/[0.08]"
                   data-testid="input-add-bid-notes"
                 />
               </div>
@@ -583,6 +673,7 @@ export default function Bids() {
                   step="0.01"
                   value={editForm.bidAmount}
                   onChange={(e) => setEditForm(f => ({ ...f, bidAmount: e.target.value }))}
+                  className="bg-white/[0.03] border-white/[0.08]"
                   data-testid="input-edit-bid-amount"
                 />
               </div>
@@ -592,6 +683,7 @@ export default function Bids() {
                   value={editForm.timeline}
                   onChange={(e) => setEditForm(f => ({ ...f, timeline: e.target.value }))}
                   placeholder="e.g. 2 days"
+                  className="bg-white/[0.03] border-white/[0.08]"
                   data-testid="input-edit-bid-timeline"
                 />
               </div>
@@ -601,6 +693,7 @@ export default function Bids() {
                   value={editForm.notes}
                   onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))}
                   placeholder="Optional notes..."
+                  className="bg-white/[0.03] border-white/[0.08]"
                   data-testid="input-edit-bid-notes"
                 />
               </div>
@@ -634,9 +727,9 @@ export default function Bids() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <Label>Channel ID</Label>
-              <Input value={ticketChannelId} onChange={(e) => setTicketChannelId(e.target.value)} />
+              <Input value={ticketChannelId} onChange={(e) => setTicketChannelId(e.target.value)} className="bg-white/[0.03] border-white/[0.08]" />
               <Label>Customer User ID</Label>
-              <Input value={customerDiscordId} onChange={(e) => setCustomerDiscordId(e.target.value)} />
+              <Input value={customerDiscordId} onChange={(e) => setCustomerDiscordId(e.target.value)} className="bg-white/[0.03] border-white/[0.08]" />
               <Button
                 className="w-full"
                 onClick={() => {

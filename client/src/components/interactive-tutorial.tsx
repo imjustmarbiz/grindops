@@ -761,13 +761,13 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/bids": {
-    description: "Review all grinder bids — AI ranks by scorecard. Accept the best, reject others, or let the system auto-assign.",
+    description: "Review all grinder bids — from both Discord and Dashboard. AI ranks by scorecard. Accept, reject, edit, or let the system auto-assign. Color-coded rows show status at a glance.",
     mockupId: "staff-bids",
     demoSteps: [
-      { label: "Bids arrive from grinders on orders", icon: Gavel, color: "text-purple-400" },
+      { label: "Bids from Discord & Dashboard tracked", icon: Gavel, color: "text-purple-400" },
       { label: "AI ranks bids by scorecard & history", icon: Brain, color: "text-cyan-400" },
-      { label: "Review top candidates side-by-side", icon: Eye, color: "text-blue-400" },
-      { label: "Accept bid — grinder gets notified", icon: CheckCircle2, color: "text-emerald-400" },
+      { label: "Edit bids, review margins, accept top pick", icon: Eye, color: "text-blue-400" },
+      { label: "Cross-platform dedup prevents duplicates", icon: CheckCircle2, color: "text-emerald-400" },
     ],
   },
   "/orders": {
@@ -931,13 +931,13 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/orders": {
-    description: "Browse available orders — see service, platform, price, deadline, and place bids on orders you want.",
+    description: "Browse available orders — see service, platform, deadline, and place bids from the dashboard or Discord. Duplicate bids across platforms are blocked automatically.",
     mockupId: "grinder-orders",
     demoSteps: [
       { label: "New order drops into the queue", icon: Zap, color: "text-yellow-400" },
-      { label: "Service: VC Grinding — $85.00", icon: ListOrdered, color: "text-blue-400" },
+      { label: "Bid from Dashboard or Discord — your choice", icon: Gavel, color: "text-purple-400" },
       { label: "Platform: PlayStation — Due in 3 days", icon: Play, color: "text-cyan-400" },
-      { label: "Click to place your bid amount", icon: Gavel, color: "text-purple-400" },
+      { label: "Duplicate bids auto-blocked with warning", icon: Shield, color: "text-orange-400" },
     ],
   },
   "/grinder/assignments": {
@@ -1007,11 +1007,11 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/strikes": {
-    description: "Your compliance record — view any strikes, fines, and policy violations. Appeal strikes, submit fine payment proofs, and understand the policy rules.",
+    description: "Your compliance record — view strikes, fines, and policy violations. Appeal strikes, submit fine payment proofs, and review all rules including the duplicate bid policy.",
     demoSteps: [
       { label: "Clean record: no active strikes", icon: Shield, color: "text-green-400" },
       { label: "Strike for late delivery → appeal it", icon: AlertTriangle, color: "text-orange-400" },
-      { label: "Fine issued → submit payment proof", icon: Upload, color: "text-blue-400" },
+      { label: "Duplicate bids across platforms = strike", icon: Gavel, color: "text-red-400" },
       { label: "Policy guide explains all rules", icon: BookOpen, color: "text-cyan-400" },
     ],
   },
