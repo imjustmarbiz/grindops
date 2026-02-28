@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { staffNavItems, grinderNavItems, getFilteredStaffNavItems } from "@/components/layout";
@@ -1108,6 +1109,7 @@ interface TutorialStep {
   demoSteps?: DemoStep[];
   mockupId?: string;
   position?: "center" | "right" | "bottom";
+  pageUrl?: string;
 }
 
 function buildTutorialSteps(
@@ -1151,6 +1153,7 @@ function buildTutorialSteps(
       position: "right",
       demoSteps: meta?.demoSteps,
       mockupId: meta?.mockupId,
+      pageUrl: item.url,
     });
   }
 
@@ -1344,8 +1347,10 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
 
 export function InteractiveTutorial() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const dialogRef = useRef<HTMLDivElement>(null);
+  const preOpenPathRef = useRef<string>("/");
 
   const userId = (user as any)?.discordId || user?.id || "";
   const isOwner = user?.role === "owner";
@@ -1368,10 +1373,21 @@ export function InteractiveTutorial() {
     const seen = localStorage.getItem(storageKey);
     if (!seen) {
       setHasSeenTutorial(false);
-      const timer = setTimeout(() => setIsOpen(true), 1500);
+      const timer = setTimeout(() => {
+        preOpenPathRef.current = window.location.pathname;
+        setIsOpen(true);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const step = steps[currentStep];
+    if (step?.pageUrl) {
+      navigate(step.pageUrl);
+    }
+  }, [isOpen, currentStep, steps, navigate]);
 
   useEffect(() => {
     if (isOpen && dialogRef.current) {
@@ -1392,7 +1408,8 @@ export function InteractiveTutorial() {
     setCurrentStep(0);
     localStorage.setItem(storageKey, "true");
     setHasSeenTutorial(true);
-  }, [storageKey]);
+    navigate(preOpenPathRef.current);
+  }, [storageKey, navigate]);
 
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -1445,7 +1462,7 @@ export function InteractiveTutorial() {
   if (!isOpen) {
     return (
       <button
-        onClick={() => { setIsOpen(true); setCurrentStep(0); }}
+        onClick={() => { preOpenPathRef.current = window.location.pathname; setIsOpen(true); setCurrentStep(0); }}
         className="fixed bottom-20 right-4 z-[100] group"
         data-testid="button-start-tutorial"
         aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
@@ -1462,14 +1479,7 @@ export function InteractiveTutorial() {
 
   const hasMockup = !!step.mockupId;
 
-  const positionClass =
-    step.position === "center" || step.targetArea === "full"
-      ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-      : step.targetArea === "sidebar"
-      ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:left-[calc(var(--sidebar-width,18rem)+1rem)] md:translate-x-0"
-      : step.targetArea === "header"
-      ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-20 md:right-4 md:left-auto md:translate-x-0 md:translate-y-0"
-      : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
+  const positionClass = "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
 
   return (
     <>
@@ -1483,7 +1493,7 @@ export function InteractiveTutorial() {
         aria-describedby="tutorial-desc"
         className={`fixed z-[9999] ${positionClass}`}
       >
-        <div className={`${hasMockup ? "w-[440px]" : "w-[400px]"} max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in zoom-in-95 duration-300`}>
+        <div className={`${hasMockup ? "w-[440px]" : "w-[400px]"} max-w-[92vw] max-h-[85vh] overflow-y-auto bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl shadow-black/50 animate-in fade-in zoom-in-95 duration-300`}>
           <div className="h-1 bg-muted" aria-hidden="true">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500 ease-out"
@@ -1491,14 +1501,14 @@ export function InteractiveTutorial() {
             />
           </div>
 
-          <div className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center" aria-hidden="true">
-                  <StepIcon className="w-5 h-5 text-primary" />
+          <div className="p-3 sm:p-5">
+            <div className="flex items-start justify-between mb-2 sm:mb-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0" aria-hidden="true">
+                  <StepIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 id="tutorial-title" className="font-display font-bold text-base leading-tight">{step.title}</h3>
+                  <h3 id="tutorial-title" className="font-display font-bold text-sm sm:text-base leading-tight">{step.title}</h3>
                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 mt-0.5 border-primary/30 text-primary">
                     Step {currentStep + 1} of {steps.length}
                   </Badge>
@@ -1510,13 +1520,13 @@ export function InteractiveTutorial() {
                 onClick={handleClose}
                 data-testid="button-close-tutorial"
                 aria-label="Close tutorial"
-                className="w-7 h-7"
+                className="w-7 h-7 shrink-0"
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            <p id="tutorial-desc" className="text-sm text-muted-foreground leading-relaxed mb-1">
+            <p id="tutorial-desc" className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-1">
               {step.description}
             </p>
 
@@ -1526,8 +1536,8 @@ export function InteractiveTutorial() {
               <DemoAnimation demoSteps={step.demoSteps} />
             ) : null}
 
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
-              <div className="flex gap-0.5 max-w-[140px] flex-wrap" aria-label={`Step ${currentStep + 1} of ${steps.length}`} role="tablist">
+            <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-border/50">
+              <div className="hidden sm:flex gap-0.5 max-w-[140px] flex-wrap" aria-label={`Step ${currentStep + 1} of ${steps.length}`} role="tablist">
                 {steps.map((_, i) => (
                   <button
                     key={i}
@@ -1542,18 +1552,19 @@ export function InteractiveTutorial() {
                   />
                 ))}
               </div>
-              <div className="flex items-center gap-2">
+              <span className="sm:hidden text-[10px] text-muted-foreground">{currentStep + 1}/{steps.length}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {!isFirst && (
-                  <Button size="sm" variant="ghost" onClick={handlePrev} data-testid="button-tutorial-prev">
-                    <ChevronLeft className="w-3.5 h-3.5" /> Back
+                  <Button size="sm" variant="ghost" onClick={handlePrev} data-testid="button-tutorial-prev" className="h-8 px-2 sm:px-3 text-xs sm:text-sm">
+                    <ChevronLeft className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Back</span>
                   </Button>
                 )}
                 {isFirst && (
-                  <Button size="sm" variant="ghost" onClick={handleClose} data-testid="button-tutorial-skip" className="text-muted-foreground">
-                    Skip Tour
+                  <Button size="sm" variant="ghost" onClick={handleClose} data-testid="button-tutorial-skip" className="text-muted-foreground h-8 px-2 sm:px-3 text-xs sm:text-sm">
+                    Skip
                   </Button>
                 )}
-                <Button size="sm" onClick={handleNext} data-testid="button-tutorial-next">
+                <Button size="sm" onClick={handleNext} data-testid="button-tutorial-next" className="h-8 px-2.5 sm:px-3 text-xs sm:text-sm">
                   {isLast ? "Get Started" : "Next"}
                   {isLast ? <Rocket className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 </Button>
@@ -1561,7 +1572,7 @@ export function InteractiveTutorial() {
             </div>
           </div>
 
-          <div className="px-5 pb-3" aria-hidden="true">
+          <div className="hidden sm:block px-5 pb-3" aria-hidden="true">
             <p className="text-[10px] text-muted-foreground/60 text-center">
               Use arrow keys to navigate · Press Esc to close
             </p>

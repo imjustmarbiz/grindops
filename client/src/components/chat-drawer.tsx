@@ -427,7 +427,7 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
-                {!activeThreadId && !showGroupCreate && isStaff && (
+                {!activeThreadId && !showGroupCreate && (
                   <>
                     <Button
                       variant="ghost"
@@ -439,16 +439,18 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     >
                       <MessageCircle className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => { setShowGroupCreate(true); setShowNewChat(false); setSearchQuery(""); setSelectedParticipants([]); }}
-                      data-testid="button-new-group"
-                      className="h-8 w-8"
-                      title="New group"
-                    >
-                      <Users className="w-4 h-4" />
-                    </Button>
+                    {isStaff && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => { setShowGroupCreate(true); setShowNewChat(false); setSearchQuery(""); setSelectedParticipants([]); }}
+                        data-testid="button-new-group"
+                        className="h-8 w-8"
+                        title="New group"
+                      >
+                        <Users className="w-4 h-4" />
+                      </Button>
+                    )}
                   </>
                 )}
                 <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-chat" className="h-8 w-8">
@@ -576,7 +578,7 @@ export function ChatDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search grinders..."
+                      placeholder={isStaff ? "Search grinders..." : "Search staff..."}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 bg-background/50"
