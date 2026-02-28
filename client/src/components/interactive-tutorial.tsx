@@ -1441,7 +1441,11 @@ export function InteractiveTutorial() {
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
       const next = currentStep + 1;
-      wrappedSetStep(next);
+      // Use a small timeout to ensure navigation and state updates don't collide
+      // and cause the "glitchy" feeling on desktop
+      setTimeout(() => {
+        wrappedSetStep(next);
+      }, 10);
     } else {
       setIsOpen(false);
       setCurrentStep(0);
