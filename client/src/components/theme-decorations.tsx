@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import nba2kS5Bg from "@assets/N26-S5-MT-MC-BONUS-OFFER_INFOGRAPHIC-NA-STATIC-ENUS-ESRB-AGN-_1772302161182.avif";
 
 const SNOWFLAKES = ["❄", "❅", "❆", "✦"];
 const LEAVES = ["🍂", "🍁", "🍃"];
@@ -7,7 +8,7 @@ const HEARTS = ["💕", "💗", "♥"];
 const STARS = ["✦", "★", "✧", "⭐"];
 const CLOVERS = ["☘", "🍀"];
 const CONFETTI = ["✦", "✧", "★", "🎊"];
-const BASKETBALLS = ["🏀"];
+const ENERGY = ["✦", "⚡", "✧"];
 
 interface Particle {
   id: number;
@@ -84,21 +85,63 @@ function CornerWebs() {
   );
 }
 
-function CourtLines() {
+function NBA2KS5Theme() {
   return (
     <>
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.04]">
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-orange-400" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full border border-orange-400" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-orange-400" />
-        <div className="absolute top-0 bottom-0 left-8 right-8 border-l border-r border-orange-400" />
-        <div className="absolute top-1/4 left-0 w-24 h-48 border border-orange-400 rounded-r-full -translate-y-1/2" />
-        <div className="absolute top-1/4 right-0 w-24 h-48 border border-orange-400 rounded-l-full -translate-y-1/2" />
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-32 h-20 border-b border-l border-r border-orange-400" />
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-20 border-t border-l border-r border-orange-400" />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${nba2kS5Bg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+          opacity: 0.04,
+          filter: "saturate(1.2)",
+        }}
+      />
+
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full nba2k-glow-pulse"
+          style={{
+            background: "radial-gradient(circle, rgba(25,168,220,0.08) 0%, rgba(25,168,220,0) 70%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-32 -left-32 w-[600px] h-[600px] rounded-full nba2k-glow-pulse"
+          style={{
+            background: "radial-gradient(circle, rgba(54,167,201,0.06) 0%, rgba(54,167,201,0) 70%)",
+            animationDelay: "3s",
+          }}
+        />
+        <div
+          className="absolute top-1/3 right-1/4 w-[300px] h-[300px] rounded-full nba2k-glow-pulse"
+          style={{
+            background: "radial-gradient(circle, rgba(25,168,220,0.04) 0%, rgba(25,168,220,0) 70%)",
+            animationDelay: "6s",
+          }}
+        />
       </div>
-      <div className="absolute bottom-4 right-4 text-orange-500/[0.06] text-[120px] font-black pointer-events-none select-none leading-none" style={{ fontFamily: "var(--font-display)" }}>
-        2K
+
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]">
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-cyan-400" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 rounded-full border border-cyan-400" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-cyan-400" />
+        <div className="absolute top-0 bottom-0 left-8 right-8 border-l border-r border-cyan-400" />
+        <div className="absolute top-1/4 left-0 w-28 h-52 border border-cyan-400 rounded-r-full -translate-y-1/2" />
+        <div className="absolute top-1/4 right-0 w-28 h-52 border border-cyan-400 rounded-l-full -translate-y-1/2" />
+      </div>
+
+      <div className="absolute bottom-3 right-4 pointer-events-none select-none flex flex-col items-end gap-0">
+        <div className="text-cyan-400/[0.04] text-[100px] font-black leading-none tracking-tighter" style={{ fontFamily: "var(--font-display)" }}>
+          2K26
+        </div>
+        <div className="text-cyan-300/[0.06] text-[28px] font-bold tracking-[0.3em] leading-none -mt-2 mr-1" style={{ fontFamily: "var(--font-display)" }}>
+          SEASON 5
+        </div>
+      </div>
+
+      <div className="absolute top-16 left-0 right-0 pointer-events-none overflow-hidden h-px">
+        <div className="w-full h-full nba2k-scanline" style={{ background: "linear-gradient(90deg, transparent, rgba(25,168,220,0.15), transparent)" }} />
       </div>
     </>
   );
@@ -183,7 +226,7 @@ export function ThemeDecorations({ theme }: { theme: string | null | undefined }
         setParticles(generateParticles(STARS, 14));
         break;
       case "nba2k":
-        setParticles(generateParticles(BASKETBALLS, 5));
+        setParticles(generateParticles(ENERGY, 8));
         break;
       default:
         setParticles([]);
@@ -199,7 +242,7 @@ export function ThemeDecorations({ theme }: { theme: string | null | undefined }
       {theme === "christmas" && <ChristmasLights />}
       {theme === "halloween" && <CornerWebs />}
       {theme === "4th-of-july" && <Fireworks />}
-      {theme === "nba2k" && <CourtLines />}
+      {theme === "nba2k" && <NBA2KS5Theme />}
     </div>
   );
 }

@@ -335,24 +335,6 @@ export default function StaffAdmin() {
     onError: () => toast({ title: "Failed to update holiday theme", variant: "destructive" }),
   });
 
-  const GAME_THEMES = [
-    { value: "none", label: "Default (No Game Theme)", color: "text-muted-foreground", emoji: "" },
-    { value: "nba2k", label: "NBA 2K26", color: "text-orange-400", emoji: "🏀" },
-  ];
-
-  const setGameThemeMutation = useMutation({
-    mutationFn: async (theme: string) => {
-      const res = await apiRequest("PATCH", "/api/config/game-theme", { theme });
-      return res.json();
-    },
-    onSuccess: (_, theme) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
-      const label = GAME_THEMES.find(t => t.value === theme)?.label || theme;
-      toast({ title: theme === "none" ? "Game theme disabled" : `Game theme set to ${label}` });
-    },
-    onError: () => toast({ title: "Failed to update game theme", variant: "destructive" }),
-  });
-
   const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
   const actorDiscordId = (user as any)?.discordId || (user as any)?.id || "";
   const isImjustmar = actorUsername === "imjustmar" || actorUsername === "demoowner" || actorDiscordId === "172526626888876032";
@@ -1841,59 +1823,6 @@ export default function StaffAdmin() {
                     <p className="text-[10px] text-muted-foreground px-1">
                       Currently active: {HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.emoji}{" "}
                       {HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.label}. All users will see this theme.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </FadeInUp>
-
-            <FadeInUp>
-              <Card className="border-0 bg-gradient-to-br from-orange-500/[0.08] via-background to-orange-900/[0.04] overflow-hidden relative" data-testid="card-game-theme">
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-orange-500/[0.04] -translate-y-12 translate-x-12" />
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                      <Gamepad2 className="w-4 h-4 text-orange-400" />
-                    </div>
-                    Game Theme
-                    <Badge className={`ml-auto text-xs ${maintenanceConfig?.gameTheme && maintenanceConfig.gameTheme !== "none" ? "bg-orange-500/15 text-orange-400 border border-orange-500/20" : "bg-white/[0.06] text-muted-foreground border border-white/[0.08]"}`}>
-                      {maintenanceConfig?.gameTheme && maintenanceConfig.gameTheme !== "none"
-                        ? GAME_THEMES.find(t => t.value === maintenanceConfig.gameTheme)?.label || maintenanceConfig.gameTheme
-                        : "Off"}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="relative space-y-3">
-                  <p className="text-xs text-muted-foreground">Apply a game-specific UI theme that adds court lines, basketball elements, and warm tones that make the site feel like the game.</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {GAME_THEMES.map((theme) => {
-                      const isActive = (maintenanceConfig?.gameTheme || "none") === theme.value;
-                      return (
-                        <button
-                          key={theme.value}
-                          onClick={() => setGameThemeMutation.mutate(theme.value)}
-                          disabled={setGameThemeMutation.isPending}
-                          className={`p-3 rounded-xl border text-left transition-all ${
-                            isActive
-                              ? "border-orange-500/40 bg-orange-500/10 ring-1 ring-orange-500/20"
-                              : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
-                          }`}
-                          data-testid={`button-game-${theme.value}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {theme.emoji && <span className="text-lg">{theme.emoji}</span>}
-                            <span className={`text-xs font-medium ${isActive ? theme.color : "text-white/70"}`}>
-                              {theme.label}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {maintenanceConfig?.gameTheme && maintenanceConfig.gameTheme !== "none" && (
-                    <p className="text-[10px] text-muted-foreground px-1">
-                      Currently active: {GAME_THEMES.find(t => t.value === maintenanceConfig.gameTheme)?.emoji}{" "}
-                      {GAME_THEMES.find(t => t.value === maintenanceConfig.gameTheme)?.label}. All users will see this theme with court lines and basketball elements.
                     </p>
                   )}
                 </CardContent>

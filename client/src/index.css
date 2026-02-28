@@ -233,21 +233,21 @@
   }
 
   .game-nba2k {
-    --background: 20 25% 4%;
-    --card: 20 25% 7%;
-    --card-border: 20 35% 15%;
-    --border: 20 25% 13%;
-    --input: 20 25% 13%;
-    --muted: 20 25% 13%;
-    --secondary: 20 25% 13%;
-    --sidebar-background: 20 28% 5%;
-    --sidebar-border: 20 25% 13%;
-    --sidebar-accent: 20 30% 10%;
-    --accent: 24 95% 53%;
-    --accent-foreground: 240 10% 4%;
-    --elevate-1: rgba(230, 120, 20, 0.05);
-    --elevate-2: rgba(230, 120, 20, 0.10);
-    scrollbar-color: hsl(20 30% 24%) hsl(20 25% 8%);
+    --background: 195 40% 4%;
+    --card: 195 35% 7%;
+    --card-border: 195 40% 15%;
+    --border: 195 35% 12%;
+    --input: 195 35% 12%;
+    --muted: 195 35% 12%;
+    --secondary: 195 35% 12%;
+    --sidebar-background: 195 42% 5%;
+    --sidebar-border: 195 35% 12%;
+    --sidebar-accent: 195 40% 10%;
+    --accent: 195 80% 55%;
+    --accent-foreground: 195 40% 4%;
+    --elevate-1: rgba(25, 168, 220, 0.05);
+    --elevate-2: rgba(25, 168, 220, 0.10);
+    scrollbar-color: hsl(195 35% 22%) hsl(195 40% 6%);
   }
 
   body {
@@ -390,5 +390,20 @@
   animation: theme-firework 3s ease-out infinite;
 }
 
+@keyframes nba2k-glow-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
 
+.nba2k-glow-pulse {
+  animation: nba2k-glow-pulse 6s ease-in-out infinite;
+}
 
+@keyframes nba2k-scanline {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.nba2k-scanline {
+  animation: nba2k-scanline 8s linear infinite;
+}
