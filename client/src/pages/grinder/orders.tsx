@@ -428,17 +428,23 @@ export default function GrinderOrders() {
                         </span>
                       </div>
                       <div className="space-y-1.5">
-                        {queuePosition.improvementTips.map((tip: string, i: number) => {
-                          const isMarginTip = tip.toLowerCase().includes("margin") || tip.toLowerCase().includes("bid");
+                        {(() => {
                           const hasNoBids = !availableOrders.some((o: any) => o.hasBid);
                           const marginScore = queuePosition.factorScores?.margin ?? 0;
-                          
-                          let displayTip = tip;
-                          if (isMarginTip && marginScore === 0 && hasNoBids) {
-                            displayTip = "Your margin score is 0% because you haven't placed any bids yet. Place a bid with a competitive margin to improve this.";
+                          const seen = new Set<string>();
+                          const dedupedTips: string[] = [];
+                          for (const tip of queuePosition.improvementTips) {
+                            const isMarginTip = tip.toLowerCase().includes("margin") || tip.toLowerCase().includes("bid");
+                            let displayTip = tip;
+                            if (isMarginTip && marginScore === 0 && hasNoBids) {
+                              displayTip = "Your margin score is 0% because you haven't placed any bids yet. Place a bid with a competitive margin to improve this.";
+                            }
+                            if (!seen.has(displayTip)) {
+                              seen.add(displayTip);
+                              dedupedTips.push(displayTip);
+                            }
                           }
-
-                          return (
+                          return dedupedTips.map((displayTip, i) => (
                             <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground" data-testid={`tip-${i}`}>
                               <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
                                 queuePosition.bestPosition <= 3
@@ -447,8 +453,8 @@ export default function GrinderOrders() {
                               }`} />
                               <span>{displayTip}</span>
                             </div>
-                          );
-                        })}
+                          ));
+                        })()}
                       </div>
                     </div>
                   )}
