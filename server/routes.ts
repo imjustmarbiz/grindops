@@ -50,7 +50,17 @@ import { isGrinderLive } from "./twitchStreamChecker";
 import { uploadToObjectStorage, streamFromObjectStorage } from "./objectStorageUpload";
 
 const updateProofUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(process.cwd(), "uploads/update-proofs");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mkv|avi|pdf)$/i;
@@ -63,7 +73,17 @@ const updateProofUpload = multer({
 });
 
 const proofUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(process.cwd(), "uploads/proofs");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(mp4|mov|webm|mkv|avi)$/i;
@@ -76,7 +96,17 @@ const proofUpload = multer({
 });
 
 const paymentProofUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(process.cwd(), "uploads/payout-proofs");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|pdf)$/i;
@@ -89,7 +119,17 @@ const paymentProofUpload = multer({
 });
 
 const fineProofUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(process.cwd(), "uploads/fine-proofs");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|pdf)$/i;
@@ -102,7 +142,17 @@ const fineProofUpload = multer({
 });
 
 const chatUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(process.cwd(), "uploads/chat-attachments");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mp3|ogg|wav|m4a|pdf|doc|docx|txt|zip|rar)$/i;
@@ -5272,7 +5322,7 @@ export async function registerRoutes(
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
     try {
-      const urls = await Promise.all(files.map(f => uploadToObjectStorage(f.buffer, f.originalname, "chat", f.mimetype)));
+      const urls = await Promise.all(files.map(f => uploadToObjectStorage(f.path, f.filename, "chat", f.mimetype)));
       res.json({ urls });
     } catch (err: any) {
       console.error("[upload] Chat upload error:", err);
@@ -5286,7 +5336,7 @@ export async function registerRoutes(
     const file = req.file;
     if (!file) return res.status(400).json({ error: "No video file uploaded" });
     try {
-      const url = await uploadToObjectStorage(file.buffer, file.originalname, "proofs", file.mimetype);
+      const url = await uploadToObjectStorage(file.path, file.filename, "proofs", file.mimetype);
 
       const allGrinders = await storage.getGrinders();
       const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
@@ -5314,7 +5364,7 @@ export async function registerRoutes(
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
     try {
-      const urls = await Promise.all(files.map(f => uploadToObjectStorage(f.buffer, f.originalname, "update-proofs", f.mimetype)));
+      const urls = await Promise.all(files.map(f => uploadToObjectStorage(f.path, f.filename, "update-proofs", f.mimetype)));
       res.json({ urls });
     } catch (err: any) {
       console.error("[upload] Update proof upload error:", err);

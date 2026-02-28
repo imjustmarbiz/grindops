@@ -1,5 +1,6 @@
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
 import path from "path";
+import fs from "fs";
 
 const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "";
 
@@ -11,7 +12,7 @@ function requireBucketId(): string {
 }
 
 export async function uploadToObjectStorage(
-  buffer: Buffer,
+  source: Buffer | string,
   originalFilename: string,
   folder: string,
   contentType?: string
@@ -24,10 +25,17 @@ export async function uploadToObjectStorage(
   const bucket = objectStorageClient.bucket(bucketId);
   const file = bucket.file(objectName);
 
-  await file.save(buffer, {
-    contentType: contentType || "application/octet-stream",
-    resumable: false,
-  });
+  if (typeof source === "string") {
+    await file.save(fs.readFileSync(source), {
+      contentType: contentType || "application/octet-stream",
+      resumable: false,
+    });
+  } else {
+    await file.save(source, {
+      contentType: contentType || "application/octet-stream",
+      resumable: false,
+    });
+  }
 
   return `/storage/${objectName}`;
 }
