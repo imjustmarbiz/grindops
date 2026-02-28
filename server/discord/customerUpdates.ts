@@ -251,7 +251,12 @@ export async function sendCompletionApprovalRequest(options: {
       .setLabel("✅ Approve Completion")
       .setStyle(ButtonStyle.Success);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton);
+    const issueButton = new ButtonBuilder()
+      .setCustomId(`customer_issue:${token}`)
+      .setLabel("⚠️ Submit Issue")
+      .setStyle(ButtonStyle.Danger);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, issueButton);
 
     const content = customerMention
       ? `${customerMention} — Your order is ready for review!`
@@ -328,5 +333,54 @@ export async function handleCustomerApprovalButton(token: string, customerDiscor
   } catch (err: any) {
     console.error("[customer-updates] Error handling approval:", err.message);
     return { success: false, message: "An error occurred while processing your approval." };
+  }
+}
+
+export async function handleCustomerIssueButton(token: string, customerDiscordId: string): Promise<{ success: boolean; orderId?: string; message: string }> {
+  try {
+    const allAssignments = await storage.getAssignments();
+    const assignment = allAssignments.find((a: any) => a.customerApprovalToken === token);
+    if (!assignment) {
+      return { success: false, message: "This link is no longer valid." };
+    }
+
+    if (assignment.customerApproved) {
+      return { success: false, message: "This order has already been approved — issues can no longer be submitted." };
+    }
+
+    const order = assignment.orderId ? await storage.getOrder(assignment.orderId) : null;
+    if (order?.customerDiscordId && order.customerDiscordId !== customerDiscordId) {
+      return { success: false, message: "Only the order's customer can submit issues." };
+    }
+
+    const orderLabel = order?.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : assignment.orderId;
+
+    await storage.createAuditLog({
+      id: `AL-${Date.now().toString(36)}`,
+      entityType: "assignment",
+      entityId: assignment.id,
+      action: "customer_issue_submitted",
+      actor: customerDiscordId,
+      details: JSON.stringify({ orderId: assignment.orderId }),
+    });
+
+    await storage.createNotification({
+      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: null,
+      roleScope: "staff",
+      type: "alert",
+      title: "⚠️ Customer Issue Reported",
+      body: `Customer reported an issue with order ${orderLabel}. Please review the ticket channel.`,
+      linkUrl: null,
+      icon: null,
+      severity: "warning",
+      readBy: [],
+      expiresAt: null,
+    });
+
+    return { success: true, orderId: assignment.orderId, message: "Your issue has been submitted. Staff has been notified and will follow up in this channel." };
+  } catch (err: any) {
+    console.error("[customer-updates] Error handling issue submission:", err.message);
+    return { success: false, message: "An error occurred while submitting your issue." };
   }
 }

@@ -1,8 +1,8 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, Partials, type ButtonInteraction } from "discord.js";
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, type ChatInputCommandInteraction, Partials, type ButtonInteraction } from "discord.js";
 import { storage } from "../storage";
 import { handleNewOrderMessage, handleProposalMessage, handleMessageUpdate, handleRulesAcceptance, backfillMissedMessages, startProposalBidSync } from "./mgtWatcher";
 import { GRINDER_ROLES, ROLE_LABELS } from "@shared/schema";
-import { handleCustomerApprovalButton } from "./customerUpdates";
+import { handleCustomerApprovalButton, handleCustomerIssueButton } from "./customerUpdates";
 
 let client: Client | null = null;
 
@@ -718,6 +718,43 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
         .setDescription(result.message)
         .setTimestamp();
       await interaction.reply({ embeds: [embed] });
+
+      try {
+        const msg = interaction.message;
+        if (msg && msg.components?.length) {
+          const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId("approved_done").setLabel("✅ Approved").setStyle(ButtonStyle.Success).setDisabled(true),
+          );
+          await msg.edit({ components: [disabledRow] });
+        }
+      } catch {}
+    } else {
+      await interaction.reply({ content: result.message, ephemeral: true });
+    }
+    return;
+  }
+
+  if (customId.startsWith("customer_issue:")) {
+    const token = customId.replace("customer_issue:", "");
+    const result = await handleCustomerIssueButton(token, interaction.user.id);
+
+    if (result.success) {
+      const embed = new EmbedBuilder()
+        .setTitle("⚠️ Issue Submitted")
+        .setColor(0xEF4444)
+        .setDescription(result.message)
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+
+      try {
+        const msg = interaction.message;
+        if (msg && msg.components?.length) {
+          const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId("issue_done").setLabel("⚠️ Issue Reported").setStyle(ButtonStyle.Danger).setDisabled(true),
+          );
+          await msg.edit({ components: [disabledRow] });
+        }
+      } catch {}
     } else {
       await interaction.reply({ content: result.message, ephemeral: true });
     }
