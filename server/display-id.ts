@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { orders, bids, assignments, orderUpdates, payoutRequests, strikeLogs, finePayments, events, customerReviews, orderClaimRequests } from "@shared/schema";
 import { eq, sql, count } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 function pad(n: number, width = 2): string {
   return String(n).padStart(width, "0");
@@ -113,7 +114,7 @@ export function formatDisplayId(entity: { displayId?: string | null; id: string;
 export function generateShortId(prefix: string): string {
   const chars = "0123456789abcdefghijklmnopqrstuvwxyz";
   let result = "";
-  const bytes = require("crypto").randomBytes(4);
+  const bytes = randomBytes(4);
   for (let i = 0; i < 4; i++) {
     result += chars[bytes[i] % chars.length];
   }
