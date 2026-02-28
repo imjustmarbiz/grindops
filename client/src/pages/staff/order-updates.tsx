@@ -541,7 +541,10 @@ export default function StaffOrderUpdates() {
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                            onClick={() => acknowledgeMutation.mutate({ id: u.id, acknowledgedBy: "staff" })}
+                            onClick={() => {
+                              const actorName = user?.discordUsername || user?.firstName || "staff";
+                              acknowledgeMutation.mutate({ id: u.id, acknowledgedBy: actorName });
+                            }}
                             disabled={acknowledgeMutation.isPending}
                             data-testid={`button-acknowledge-${u.id}`}
                           >

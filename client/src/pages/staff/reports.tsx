@@ -651,10 +651,13 @@ export default function StaffReports() {
                       variant="outline"
                       data-testid={`button-acknowledge-update-${upd.id}`}
                       disabled={acknowledgeUpdateMutation.isPending}
-                      onClick={() => acknowledgeUpdateMutation.mutate({
-                        id: upd.id,
-                        acknowledgedBy: user?.discordUsername || user?.id || "staff",
-                      })}
+                      onClick={() => {
+                        const actorName = user?.discordUsername || user?.firstName || "staff";
+                        acknowledgeUpdateMutation.mutate({
+                          id: upd.id,
+                          acknowledgedBy: actorName,
+                        });
+                      }}
                     >
                       {acknowledgeUpdateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
                       Acknowledge
