@@ -1470,7 +1470,7 @@ export function InteractiveTutorial() {
     return (
       <button
         onClick={() => { setTutorialSession(true, 0, window.location.pathname); setIsOpen(true); setCurrentStep(0); }}
-        className="fixed bottom-20 right-4 z-[100] group"
+        className="fixed bottom-32 right-4 z-[100] group"
         data-testid="button-start-tutorial"
         aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
       >
