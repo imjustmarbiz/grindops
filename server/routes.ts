@@ -47,41 +47,10 @@ import fs from "fs";
 import { messages as messagesTable, normalizePlatform } from "@shared/schema";
 import { isGrinderLive } from "./twitchStreamChecker";
 
-const uploadsDir = path.join(process.cwd(), "uploads", "chat");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const proofsDir = path.join(process.cwd(), "uploads", "proofs");
-if (!fs.existsSync(proofsDir)) {
-  fs.mkdirSync(proofsDir, { recursive: true });
-}
-
-const paymentProofsDir = path.join(process.cwd(), "uploads", "payment-proofs");
-if (!fs.existsSync(paymentProofsDir)) {
-  fs.mkdirSync(paymentProofsDir, { recursive: true });
-}
-
-const fineProofsDir = path.join(process.cwd(), "uploads", "fine-proofs");
-if (!fs.existsSync(fineProofsDir)) {
-  fs.mkdirSync(fineProofsDir, { recursive: true });
-}
-
-const updateProofsDir = path.join(process.cwd(), "uploads", "update-proofs");
-if (!fs.existsSync(updateProofsDir)) {
-  fs.mkdirSync(updateProofsDir, { recursive: true });
-}
-
+import { uploadToObjectStorage, streamFromObjectStorage } from "./objectStorageUpload";
 
 const updateProofUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, updateProofsDir),
-    filename: (_req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const ext = path.extname(file.originalname);
-      cb(null, `${uniqueSuffix}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mkv|avi|pdf)$/i;
@@ -94,14 +63,7 @@ const updateProofUpload = multer({
 });
 
 const proofUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, proofsDir),
-    filename: (_req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const ext = path.extname(file.originalname);
-      cb(null, `${uniqueSuffix}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(mp4|mov|webm|mkv|avi)$/i;
@@ -114,14 +76,7 @@ const proofUpload = multer({
 });
 
 const paymentProofUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, paymentProofsDir),
-    filename: (_req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const ext = path.extname(file.originalname);
-      cb(null, `${uniqueSuffix}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|pdf)$/i;
@@ -134,14 +89,7 @@ const paymentProofUpload = multer({
 });
 
 const fineProofUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, fineProofsDir),
-    filename: (_req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const ext = path.extname(file.originalname);
-      cb(null, `${uniqueSuffix}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|pdf)$/i;
@@ -154,14 +102,7 @@ const fineProofUpload = multer({
 });
 
 const chatUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadsDir),
-    filename: (_req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const ext = path.extname(file.originalname);
-      cb(null, `${uniqueSuffix}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mov|webm|mp3|ogg|wav|m4a|pdf|doc|docx|txt|zip|rar)$/i;
@@ -208,13 +149,24 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupDiscordAuth(app);
 
-  const express = (await import("express")).default;
-  app.use('/uploads', express.static(path.join(process.cwd(), "uploads"), {
-    fallthrough: false,
-    setHeaders: (res) => {
-      res.set('Access-Control-Allow-Origin', '*');
+  app.get('/storage/{*splat}', async (req, res) => {
+    const served = await streamFromObjectStorage(req.path, res);
+    if (!served) res.status(404).json({ error: "File not found" });
+  });
+
+  app.get('/uploads/{*splat}', async (req, res) => {
+    const objectPath = req.path.replace(/^\/uploads\//, '/storage/uploads/');
+    const served = await streamFromObjectStorage(objectPath, res);
+    if (!served) {
+      const localPath = path.join(process.cwd(), req.path.replace(/^\//, ""));
+      if (fs.existsSync(localPath)) {
+        res.set('Access-Control-Allow-Origin', '*');
+        res.sendFile(localPath);
+      } else {
+        res.status(404).json({ error: "File not found" });
+      }
     }
-  }));
+  });
 
   app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/auth') || req.path === '/logout' || req.path.startsWith('/public/')) {
@@ -2971,7 +2923,7 @@ export async function registerRoutes(
   app.post("/api/staff/upload-payment-proof", requireStaff, paymentProofUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const fileUrl = `/uploads/payment-proofs/${req.file.filename}`;
+      const fileUrl = await uploadToObjectStorage(req.file.buffer, req.file.originalname, "payment-proofs", req.file.mimetype);
       res.json({ url: fileUrl });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Upload failed" });
@@ -3440,7 +3392,7 @@ export async function registerRoutes(
       const hasPending = existingPayments.some((p: any) => p.status === "pending");
       if (hasPending) return res.status(400).json({ message: "You already have a pending fine payment submission. Please wait for staff review." });
 
-      const proofUrl = `/uploads/fine-proofs/${req.file.filename}`;
+      const proofUrl = await uploadToObjectStorage(req.file.buffer, req.file.originalname, "fine-proofs", req.file.mimetype);
 
       const finDisplay = await generateFineDisplayId();
       const payment = await storage.createFinePayment({
@@ -5237,8 +5189,13 @@ export async function registerRoutes(
     if (!user) return res.status(401).json({ error: "Not authenticated" });
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
-    const urls = files.map(f => `/uploads/chat/${f.filename}`);
-    res.json({ urls });
+    try {
+      const urls = await Promise.all(files.map(f => uploadToObjectStorage(f.buffer, f.originalname, "chat", f.mimetype)));
+      res.json({ urls });
+    } catch (err: any) {
+      console.error("[upload] Chat upload error:", err);
+      res.status(500).json({ error: "Upload failed" });
+    }
   });
 
   app.post('/api/grinder/me/upload-proof', proofUpload.single('video'), async (req, res) => {
@@ -5246,22 +5203,27 @@ export async function registerRoutes(
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const file = req.file;
     if (!file) return res.status(400).json({ error: "No video file uploaded" });
-    const url = `/uploads/proofs/${file.filename}`;
+    try {
+      const url = await uploadToObjectStorage(file.buffer, file.originalname, "proofs", file.mimetype);
 
-    const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
-    if (myGrinder) {
-      await storage.createAuditLog({
-        id: `AL-${Date.now().toString(36)}`,
-        entityType: "grinder",
-        entityId: myGrinder.id,
-        action: "proof_uploaded",
-        actor: myGrinder.name || myGrinder.id,
-        details: JSON.stringify({ filename: file.filename }),
-      });
+      const allGrinders = await storage.getGrinders();
+      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      if (myGrinder) {
+        await storage.createAuditLog({
+          id: `AL-${Date.now().toString(36)}`,
+          entityType: "grinder",
+          entityId: myGrinder.id,
+          action: "proof_uploaded",
+          actor: myGrinder.name || myGrinder.id,
+          details: JSON.stringify({ filename: file.originalname }),
+        });
+      }
+
+      res.json({ url });
+    } catch (err: any) {
+      console.error("[upload] Proof upload error:", err);
+      res.status(500).json({ error: "Upload failed" });
     }
-
-    res.json({ url });
   });
 
   app.post('/api/grinder/me/upload-update-proofs', updateProofUpload.array('files', 5), async (req, res) => {
@@ -5269,8 +5231,13 @@ export async function registerRoutes(
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
-    const urls = files.map(f => `/uploads/update-proofs/${f.filename}`);
-    res.json({ urls });
+    try {
+      const urls = await Promise.all(files.map(f => uploadToObjectStorage(f.buffer, f.originalname, "update-proofs", f.mimetype)));
+      res.json({ urls });
+    } catch (err: any) {
+      console.error("[upload] Update proof upload error:", err);
+      res.status(500).json({ error: "Upload failed" });
+    }
   });
 
   app.delete('/api/chat/threads/:threadId', async (req, res) => {

@@ -50,8 +50,12 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 
 - **Interactive Tutorial:** Auto-discovering guided tour for new users (`client/src/components/interactive-tutorial.tsx`). Reads `staffNavItems` and `grinderNavItems` exported from `layout.tsx` to automatically generate tutorial steps — any new page added to the sidebar nav arrays is automatically included with a fallback description. Rich descriptions and 4-step animated demos are registered in `staffPageDescriptions` and `grinderPageDescriptions` lookup tables (keyed by URL). Features: spotlight overlay highlighting real sidebar/header elements, animated demo sequences for ~30 pages, step-by-step navigation with progress dots, focus trap and ARIA modal, keyboard navigation (arrows/enter/esc), localStorage-persisted completion state per role (`v2` key), and a floating replay button (bottom-right). To add tutorial coverage for a new page: 1) add it to `staffNavItems`/`grinderNavItems` in `layout.tsx` (auto-discovered), 2) optionally add a `PageMeta` entry in the corresponding descriptions record for a custom description and demo animation.
 
+## File Storage
+- **Replit Object Storage:** All file uploads (chat attachments, proofs, update-proofs, payment-proofs, fine-proofs) use Replit Object Storage via `@google-cloud/storage`. Files are stored under `uploads/<folder>/` prefix in the bucket. Upload helper: `server/objectStorageUpload.ts`. Serving: `/storage/{*splat}` route streams from object storage; `/uploads/{*splat}` route checks object storage first, falls back to local disk for legacy files. All multer instances use memory storage (no disk writes).
+
 ## External Dependencies
 - **PostgreSQL:** Primary database, managed with Drizzle ORM.
 - **Discord API:** Used for OAuth2 authentication, bot interactions, slash commands, and MGT Bot message monitoring.
 - **MGT Bot:** An existing Discord bot passively monitored for order and proposal data.
 - **OpenAI:** Utilized for AI-driven text rewriting.
+- **Replit Object Storage:** Cloud file storage for all uploaded files (proofs, attachments, etc.).
