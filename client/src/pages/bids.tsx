@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Gavel, Clock, CheckCircle, XCircle, Filter, Search, Shield, RotateCcw, Pencil, DollarSign, Link2, Loader2, Plus } from "lucide-react";
+import { Gavel, Clock, CheckCircle, XCircle, Filter, Search, Shield, RotateCcw, Pencil, DollarSign, Link2, Loader2, Plus, Percent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -19,6 +19,7 @@ import { HelpTip } from "@/components/help-tip";
 import { useAuth } from "@/hooks/use-auth";
 import type { Bid, Order, Grinder } from "@shared/schema";
 import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/sortable-header";
 
 export default function Bids() {
   const { user } = useAuth();
@@ -134,6 +135,10 @@ export default function Bids() {
   const pendingCount = bids?.filter(b => b.status === "Pending").length || 0;
   const acceptedCount = bids?.filter(b => b.status === "Accepted").length || 0;
   const rejectedCount = bids?.filter(b => b.status === "Rejected" || b.status === "Denied").length || 0;
+  const bidsWithMargin = (bids || []).filter(b => b.marginPct && Number(b.marginPct) > 0);
+  const avgMargin = bidsWithMargin.length > 0
+    ? `${(bidsWithMargin.reduce((s, b) => s + Number(b.marginPct || 0), 0) / bidsWithMargin.length).toFixed(0)}%`
+    : "—";
 
   const statusColor = (s: string) => {
     if (s === "Accepted") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
@@ -152,12 +157,12 @@ export default function Bids() {
         <FadeInUp>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-bids-title">
                 <Gavel className="w-7 h-7 text-primary" />
                 Proposals & Bids
-                <HelpTip text="Bids are imported from the MGT Bot. Accept a bid to auto-create an assignment." />
+                <HelpTip text="Accept a bid to auto-create an assignment. Bids come from grinder dashboard submissions and can also be added manually by staff." />
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">Grinder proposals imported from MGT Bot.</p>
+              <p className="text-sm text-muted-foreground mt-1">Track and manage grinder bids. Accept a bid to auto-create an assignment.</p>
             </div>
             <Button
               size="sm"
@@ -172,21 +177,23 @@ export default function Bids() {
         </FadeInUp>
 
         <FadeInUp>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total", value: bids?.length || 0, color: "text-foreground", icon: Gavel },
-              { label: "Pending", value: pendingCount, color: "text-blue-400", icon: Clock },
-              { label: "Accepted", value: acceptedCount, color: "text-emerald-400", icon: CheckCircle },
-              { label: "Rejected", value: rejectedCount, color: "text-red-400", icon: XCircle },
+              { label: "Total", value: bids?.length || 0, icon: Gavel, gradient: "from-purple-500/[0.08] via-background to-purple-900/[0.04]", iconBg: "bg-purple-500/15", color: "text-purple-400" },
+              { label: "Pending", value: pendingCount, icon: Clock, gradient: "from-blue-500/[0.08] via-background to-blue-900/[0.04]", iconBg: "bg-blue-500/15", color: "text-blue-400" },
+              { label: "Accepted", value: acceptedCount, icon: CheckCircle, gradient: "from-emerald-500/[0.08] via-background to-emerald-900/[0.04]", iconBg: "bg-emerald-500/15", color: "text-emerald-400" },
+              { label: "Rejected", value: rejectedCount, icon: XCircle, gradient: "from-red-500/[0.08] via-background to-red-900/[0.04]", iconBg: "bg-red-500/15", color: "text-red-400" },
+              { label: "Avg Margin", value: avgMargin, icon: Percent, gradient: "from-amber-500/[0.06] via-background to-amber-900/[0.03]", iconBg: "bg-amber-500/15", color: "text-amber-400" },
             ].map(s => (
-              <Card key={s.label} className="border-0 bg-white/[0.02]">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                    <s.icon className={`w-5 h-5 ${s.color}`} />
+              <Card key={s.label} className={`border-0 bg-gradient-to-br ${s.gradient} overflow-hidden relative`}>
+                <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-white/[0.02] -translate-y-5 translate-x-5" />
+                <CardContent className="p-4 flex items-center gap-3 relative">
+                  <div className={`w-9 h-9 rounded-xl ${s.iconBg} flex items-center justify-center shrink-0`}>
+                    <s.icon className={`w-4 h-4 ${s.color}`} />
                   </div>
                   <div>
-                    <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-                    <p className="text-xs text-muted-foreground">{s.label}</p>
+                    <p className={`text-lg font-bold ${s.color} truncate`} data-testid={`text-${s.label.toLowerCase().replace(/\s+/g, "-")}`}>{s.value}</p>
+                    <p className="text-[10px] text-muted-foreground">{s.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -194,52 +201,89 @@ export default function Bids() {
           </div>
         </FadeInUp>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64 bg-white/[0.03]"
-            />
-          </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-40 bg-white/[0.03]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Accepted">Accepted</SelectItem>
-              <SelectItem value="Rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <FadeInUp>
+          <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by ID, order, grinder..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-background/50 border-white/10"
+                  data-testid="input-search-bids"
+                />
+              </div>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[150px] bg-background/50 border-white/10" data-testid="select-status-filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Accepted">Accepted</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  <SelectItem value="Denied">Denied</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterGrinderId} onValueChange={setFilterGrinderId}>
+                <SelectTrigger className="w-[180px] bg-background/50 border-white/10" data-testid="select-grinder-filter">
+                  <SelectValue placeholder="Grinder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grinders</SelectItem>
+                  {(grinders || []).map(g => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground whitespace-nowrap" data-testid="text-showing-count">
+                Showing {filteredBids.length} of {(bids || []).length} bids
+              </span>
+            </div>
+          </Card>
+        </FadeInUp>
 
-        <Card className="border-0 bg-white/[0.02] overflow-hidden">
+        <FadeInUp>
+        <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => toggleSort("id")} className="cursor-pointer">ID</TableHead>
-                  <TableHead onClick={() => toggleSort("orderId")} className="cursor-pointer">Order</TableHead>
-                  <TableHead onClick={() => toggleSort("grinderId")} className="cursor-pointer">Grinder</TableHead>
-                  <TableHead onClick={() => toggleSort("bidAmount")} className="cursor-pointer text-right">Amount</TableHead>
-                  <TableHead onClick={() => toggleSort("status")} className="cursor-pointer">Status</TableHead>
+                  <SortableHeader label="ID" sortKey="id" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Order" sortKey="orderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Grinder" sortKey="grinderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Bid Amount" sortKey="bidAmount" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Margin" sortKey="margin" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Timeline" sortKey="timeline" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Submitted" sortKey="bidTime" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                  <SortableHeader label="Status" sortKey="status" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedBids.map(bid => {
+                {sortedBids.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Gavel className="w-8 h-8 opacity-30" />
+                        <p>No bids yet. Bids appear when grinders submit proposals or staff adds them manually.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : sortedBids.map(bid => {
                   const grinder = (grinders || []).find(g => g.id === bid.grinderId);
                   const order = (orders || []).find(o => o.id === bid.orderId);
+                  const marginVal = bid.marginPct ? `${Number(bid.marginPct).toFixed(0)}%` : bid.margin ? `$${Number(bid.margin).toFixed(0)}` : "—";
                   return (
-                    <TableRow key={bid.id}>
-                      <TableCell className="font-mono text-xs">{bid.mgtProposalId || bid.id}</TableCell>
+                    <TableRow key={bid.id} data-testid={`row-bid-${bid.id}`}>
+                      <TableCell className="font-mono text-xs">{bid.displayId || bid.mgtProposalId || bid.id}</TableCell>
                       <TableCell className="font-bold">{order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId}</TableCell>
                       <TableCell>{grinder?.name || bid.grinderId}</TableCell>
-                      <TableCell className="text-right font-bold text-emerald-400">${bid.bidAmount}</TableCell>
+                      <TableCell className="font-bold text-emerald-400">${bid.bidAmount}</TableCell>
+                      <TableCell className="text-muted-foreground">{marginVal}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{bid.timeline || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{bid.bidTime ? format(new Date(bid.bidTime), "MMM d, yyyy") : "—"}</TableCell>
                       <TableCell>
                         <Badge className={statusColor(bid.status)}>{bid.status}</Badge>
                       </TableCell>
@@ -247,39 +291,57 @@ export default function Bids() {
                         <div className="flex justify-end gap-1">
                           {bid.status === "Pending" && (
                             <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-emerald-400"
-                                onClick={() => {
-                                  if (!order?.customerPrice || Number(order.customerPrice) <= 0) {
-                                    setPricePrompt({ bidId: bid.id, orderId: bid.orderId, orderLabel: order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId });
-                                  } else {
-                                    bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" });
-                                  }
-                                }}
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-red-400"
-                                onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Rejected" })}
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-emerald-400"
+                                    onClick={() => {
+                                      if (!order?.customerPrice || Number(order.customerPrice) <= 0) {
+                                        setPricePrompt({ bidId: bid.id, orderId: bid.orderId, orderLabel: order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId });
+                                      } else {
+                                        bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" });
+                                      }
+                                    }}
+                                    data-testid={`button-accept-bid-${bid.id}`}
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Accept</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-red-400"
+                                    onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Rejected" })}
+                                    data-testid={`button-reject-bid-${bid.id}`}
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Reject</TooltipContent>
+                              </Tooltip>
                             </>
                           )}
                           {isOwner && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-blue-400"
-                              onClick={() => bidOverrideMutation.mutate({ bidId: bid.id, status: "Pending" })}
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-blue-400"
+                                  onClick={() => bidOverrideMutation.mutate({ bidId: bid.id, status: "Pending" })}
+                                  data-testid={`button-reset-bid-${bid.id}`}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reset to Pending</TooltipContent>
+                            </Tooltip>
                           )}
                         </div>
                       </TableCell>
@@ -290,6 +352,7 @@ export default function Bids() {
             </Table>
           </div>
         </Card>
+        </FadeInUp>
 
         <Dialog open={!!pricePrompt} onOpenChange={() => setPricePrompt(null)}>
           <DialogContent>
