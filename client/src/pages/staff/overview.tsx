@@ -221,18 +221,19 @@ export default function StaffOverview() {
                   <span className="hidden sm:inline opacity-20">|</span>
                   <LastUpdated date={lastUpdatedDate} />
                   <span className="hidden sm:inline opacity-20">|</span>
-                  <button
-                    onClick={() => navigate("/my-performance")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      isOwner
-                        ? "bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20"
-                        : "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
-                    }`}
-                    data-testid="button-my-performance"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5" />
-                    Performance
-                  </button>
+                  <Link href="/my-performance">
+                    <a
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        isOwner
+                          ? "bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20"
+                          : "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20"
+                      }`}
+                      data-testid="button-my-performance"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      Performance
+                    </a>
+                  </Link>
                 </div>
               </div>
             </div>

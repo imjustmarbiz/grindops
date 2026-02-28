@@ -19,6 +19,7 @@ export function useStaffData() {
   const eliteRequests = useQuery<any[]>({ queryKey: ["/api/staff/elite-requests"], refetchInterval: 30000 });
   const staffAlerts = useQuery<any[]>({ queryKey: ["/api/staff/alerts"], refetchInterval: 30000 });
   const strikeLogs = useQuery<any[]>({ queryKey: ["/api/staff/strike-logs"], refetchInterval: 30000 });
+  const events = useQuery<any[]>({ queryKey: ["/api/events"], refetchInterval: 60000 });
 
   const allGrindersData = grinders.data || [];
   const activeGrindersData = allGrindersData.filter(g => !g.isRemoved);
@@ -38,6 +39,8 @@ export function useStaffData() {
     orders: orders.data || [],
     ordersLoading: orders.isLoading,
     ordersUpdatedAt: orders.dataUpdatedAt,
+    events: events.data || [],
+    eventsUpdatedAt: events.dataUpdatedAt,
     bids: bids.data || [],
     bidsLoading: bids.isLoading,
     bidsUpdatedAt: bids.dataUpdatedAt,

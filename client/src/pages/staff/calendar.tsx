@@ -13,6 +13,7 @@ const staffTypeConfig: Record<string, ActivityTypeConfig> = {
   payout: { label: "Payout", color: "bg-green-500/20 text-green-300", dotColor: "bg-green-400" },
   strike: { label: "Strike", color: "bg-red-500/20 text-red-300", dotColor: "bg-red-400" },
   audit: { label: "Audit Log", color: "bg-slate-500/20 text-slate-300", dotColor: "bg-slate-400" },
+  event: { label: "Event/Promo", color: "bg-cyan-500/20 text-cyan-300", dotColor: "bg-cyan-400" },
 };
 
 const iconMap: Record<string, any> = {
@@ -23,13 +24,27 @@ const iconMap: Record<string, any> = {
   payout: DollarSign,
   strike: AlertTriangle,
   audit: ScrollText,
+  event: CalendarDays,
 };
 
 export default function StaffCalendar() {
-  const { orders, bids, assignments, payoutReqs, strikeLogs, auditLogs, ordersUpdatedAt } = useStaffData();
+  const { orders, bids, assignments, payoutReqs, strikeLogs, auditLogs, events, ordersUpdatedAt } = useStaffData();
 
   const activities = useMemo(() => {
     const items: CalendarActivity[] = [];
+
+    events.forEach((e: any) => {
+      if (e.startDate) {
+        items.push({
+          id: `evt-${e.id}`,
+          type: "event",
+          title: e.title,
+          description: e.description,
+          date: new Date(e.startDate),
+          icon: iconMap.event,
+        });
+      }
+    });
 
     orders.forEach((o: any) => {
       if (o.createdAt) {
@@ -121,7 +136,7 @@ export default function StaffCalendar() {
     });
 
     return items;
-  }, [orders, bids, assignments, payoutReqs, strikeLogs, auditLogs]);
+  }, [orders, bids, assignments, payoutReqs, strikeLogs, auditLogs, events]);
 
   if (!ordersUpdatedAt) {
     return (
