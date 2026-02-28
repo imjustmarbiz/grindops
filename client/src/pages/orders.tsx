@@ -725,7 +725,74 @@ export default function Orders() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-auto max-h-[calc(100vh-200px)]">
+        <div className="md:hidden space-y-3 p-4">
+          {(() => {
+            const searchLower = filterSearch.toLowerCase();
+            const filteredOrders = sortedOrders.filter((order: Order) => {
+              if (filterStatus !== "all" && order.status !== filterStatus) return false;
+              if (filterService !== "all" && order.serviceId !== filterService) return false;
+              if (filterPlatform !== "all" && order.platform !== filterPlatform) return false;
+              if (filterSearch) {
+                const svc = (services || []).find((s: Service) => s.id === order.serviceId);
+                const searchable = [
+                  order.id,
+                  order.mgtOrderNumber ? String(order.mgtOrderNumber) : "",
+                  order.gamertag || "",
+                  svc?.name || "",
+                ].join(" ").toLowerCase();
+                if (!searchable.includes(searchLower)) return false;
+              }
+              return true;
+            });
+            return filteredOrders.map((order) => (
+              <Card key={order.id} className="bg-white/[0.02] border-white/[0.06] p-4 space-y-3" data-testid={`card-order-${order.id}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-primary">#{order.mgtOrderNumber || order.id}</h3>
+                    <p className="text-[10px] text-muted-foreground">{(services || []).find(s => s.id === order.serviceId)?.name || "Order"}</p>
+                  </div>
+                  <Badge variant="outline" className={`h-5 text-[10px] ${
+                    order.status === "Open" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                    order.status === "Assigned" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
+                    order.status === "In Progress" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" :
+                    order.status === "Completed" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
+                    "border-white/10 text-muted-foreground"
+                  }`}>
+                    {order.status}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Customer</p>
+                    <p className="font-medium truncate">{order.customerDiscordUsername || "Unknown"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Price</p>
+                    <p className="font-medium text-emerald-400">${order.customerPrice || "0"}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/[0.04] flex justify-between items-center">
+                   <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-white/10" onClick={() => setViewOrder(order)}>
+                        <FileText className="w-4 h-4" />
+                      </Button>
+                      {isOwner && (
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-white/10 text-red-400 hover:text-red-300" onClick={() => deleteMutation.mutate(order.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                   </div>
+                   <div className="text-[10px] text-muted-foreground">
+                      {order.orderDate ? format(new Date(order.orderDate), "MMM d") : "-"}
+                   </div>
+                </div>
+              </Card>
+            ));
+          })()}
+        </div>
+        <div className="hidden md:block overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1200px] table-fixed w-full">
           <colgroup>
             <col className="w-[6%]" />

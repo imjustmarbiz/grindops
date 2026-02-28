@@ -349,8 +349,15 @@ export default function GrinderAssignments() {
                       onClick={() => {
                         setCompleteDialog(a);
                         const defaultMethod = payoutMethods?.find((m: any) => m.isDefault) || payoutMethods?.[0];
-                        if (defaultMethod) { setCompletePlatform(defaultMethod.platform); setCompleteDetails(defaultMethod.details); setCompleteSaveMethod(false); }
-                        else { setCompletePlatform(""); setCompleteDetails(""); setCompleteSaveMethod(true); }
+                        if (defaultMethod) { 
+                          setCompletePlatform(defaultMethod.platform); 
+                          setCompleteDetails(defaultMethod.details); 
+                          setCompleteSaveMethod(false); 
+                        } else { 
+                          setCompletePlatform(""); 
+                          setCompleteDetails(""); 
+                          setCompleteSaveMethod(true); 
+                        }
                       }}>
                       <CheckCircle className="w-5 h-5" /> Mark Complete
                     </Button>

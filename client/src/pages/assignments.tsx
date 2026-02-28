@@ -285,7 +285,62 @@ export default function Assignments() {
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-auto max-h-[calc(100vh-200px)]">
+        <div className="md:hidden space-y-3 p-4">
+          {filteredAssignments.map((a: Assignment) => {
+            const grinder = (grinders || []).find((g: Grinder) => g.id === a.grinderId);
+            const order = (orders || []).find((o: Order) => o.id === a.orderId);
+            const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : a.orderId;
+            const grinderPay = Number(a.grinderEarnings || a.bidAmount || 0);
+            
+            return (
+              <Card key={a.id} className="bg-white/[0.02] border-white/[0.06] p-4 space-y-3" data-testid={`card-assignment-${a.id}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-primary">{orderRef}</h3>
+                    <p className="text-[10px] font-mono text-muted-foreground">{a.id}</p>
+                  </div>
+                  <Badge variant="outline" className={`border ${a.status === "Active" ? "bg-primary/15 text-primary border-primary/20" : "bg-white/[0.03]"}`}>
+                    {a.status}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Grinder</p>
+                    <p className="font-medium">{grinder?.name || "Unknown"}</p>
+                    <p className="text-[10px] text-muted-foreground">{grinder?.category}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Pay</p>
+                    <p className="font-medium text-blue-400">{formatCurrency(grinderPay)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Due</p>
+                    <p className="text-orange-400">{format(new Date(a.dueDateTime), "MMM d, h:mm a")}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Profit</p>
+                    <p className="font-bold text-emerald-400">{a.companyProfit ? `$${a.companyProfit}` : "-"}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/[0.04] flex justify-between items-center">
+                   <div className="flex gap-2">
+                    {a.status === "Active" && (
+                      <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-white/10" onClick={() => openReplaceDialog(a)} data-testid={`button-replace-mobile-${a.id}`}>
+                        <Repeat className="w-3 h-3" /> Replace
+                      </Button>
+                    )}
+                   </div>
+                   <Link href={`/orders`}>
+                    <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground">Details</Button>
+                   </Link>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+        <div className="hidden md:block overflow-auto max-h-[calc(100vh-200px)]">
         <Table className="min-w-[1400px]">
           <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
             <TableRow className="border-white/[0.06]">
