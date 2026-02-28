@@ -6383,6 +6383,16 @@ export async function registerRoutes(
         details: JSON.stringify({ entityType, entityId, entityLabel, reason }),
       });
 
+      await createSystemNotification({
+        roleScope: "owner",
+        type: "deletion_request",
+        title: "Deletion Request Submitted",
+        body: `${getActorName(req)} requested deletion of ${entityType} "${entityLabel || entityId}" — ${reason}`,
+        linkUrl: "/admin",
+        icon: "trash",
+        severity: "warning",
+      });
+
       res.json(request);
     } catch (error) {
       console.error("Error creating deletion request:", error);
@@ -7354,6 +7364,18 @@ export async function registerRoutes(
           description: `${grinder?.name || "Unknown"} completed this order but no payout request exists.`,
           orderId: assignment.orderId,
           linkUrl: "/payouts",
+        });
+      }
+
+      const pendingDeletionRequests = await storage.getDeletionRequests("Pending");
+      for (const dr of pendingDeletionRequests) {
+        items.push({
+          key: `review-deletion-${dr.id}`,
+          category: "Deletion Requests",
+          priority: "high",
+          title: `Review deletion request — ${dr.entityLabel || dr.entityId}`,
+          description: `${dr.requestedByName || "Staff"} requested deletion of ${dr.entityType} "${dr.entityLabel || dr.entityId}". Reason: ${dr.reason}`,
+          linkUrl: "/admin",
         });
       }
 
