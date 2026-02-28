@@ -1225,7 +1225,7 @@ function DemoAnimation({ demoSteps }: { demoSteps: DemoStep[] }) {
   );
 }
 
-function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: string; targetArea?: string }) {
+function SpotlightOverlay({ targetSelector, targetArea, strokeColor, glowColor }: { targetSelector?: string; targetArea?: string; strokeColor?: string; glowColor?: string }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const requestRef = useRef<number>(null);
 
@@ -1322,10 +1322,18 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
           height={rect.height + padding * 2}
           rx="8"
           fill="none"
-          stroke="hsl(262, 83%, 58%)"
+          stroke={strokeColor || "hsl(262, 83%, 58%)"}
           strokeWidth="2"
           className="animate-pulse transition-all duration-300"
+          filter={glowColor ? "url(#spotlight-glow)" : undefined}
         />
+        {glowColor && (
+          <defs>
+            <filter id="spotlight-glow">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={glowColor} floodOpacity="0.8" />
+            </filter>
+          </defs>
+        )}
       </svg>
     </div>
   );
@@ -1416,11 +1424,21 @@ export function TutorialTrigger() {
   );
 }
 
+function useThemeColor() {
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
+  const isStaff = user?.role === "staff";
+  if (isOwner) return { stroke: "hsl(0, 72%, 50%)", glow: "rgba(239, 68, 68, 0.4)" };
+  if (isStaff) return { stroke: "hsl(193, 55%, 55%)", glow: "rgba(76, 173, 208, 0.4)" };
+  return { stroke: "hsl(262, 83%, 58%)", glow: "rgba(124, 58, 237, 0.4)" };
+}
+
 export function InteractiveTutorial() {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const dialogRef = useRef<HTMLDivElement>(null);
+  const themeColor = useThemeColor();
 
   const userId = (user as any)?.discordId || user?.id || "";
   const isOwner = user?.role === "owner";
@@ -1567,7 +1585,7 @@ export function InteractiveTutorial() {
 
   return (
     <>
-      <SpotlightOverlay targetSelector={step.targetSelector} targetArea={step.targetArea} />
+      <SpotlightOverlay targetSelector={step.targetSelector} targetArea={step.targetArea} strokeColor={themeColor.stroke} glowColor={themeColor.glow} />
 
       <div
         ref={dialogRef}
