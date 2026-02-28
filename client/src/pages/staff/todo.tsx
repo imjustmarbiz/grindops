@@ -239,7 +239,7 @@ export default function StaffTodo() {
 
         {activeActionItems.length > 0 && (
           <FadeInUp delay={0.05}>
-            <Card data-testid="card-action-items">
+            <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-action-items">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-400" />
@@ -255,12 +255,12 @@ export default function StaffTodo() {
                     <div className="flex items-center gap-2 mb-2">
                       {categoryIcon(category)}
                       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{groupedActions[category].length}</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/[0.1] text-muted-foreground">{groupedActions[category].length}</Badge>
                     </div>
                     {groupedActions[category].map(item => (
                       <div
                         key={item.key}
-                        className="flex items-start gap-3 p-3 rounded-md bg-muted/30 border group"
+                        className="flex items-start gap-3 p-3 rounded-md bg-white/[0.03] border border-white/[0.06] group"
                         data-testid={`action-item-${item.key}`}
                       >
                         <div className="flex-1 min-w-0">
@@ -273,7 +273,7 @@ export default function StaffTodo() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           {item.linkUrl && (
                             <Link href={item.linkUrl}>
-                              <Button size="sm" variant="outline" className="h-7 text-xs" data-testid={`link-action-${item.key}`}>
+                              <Button size="sm" variant="outline" className="h-7 text-xs border-white/[0.1] hover:bg-white/[0.06]" data-testid={`link-action-${item.key}`}>
                                 <ExternalLink className="w-3 h-3 mr-1" />
                                 View
                               </Button>
@@ -310,12 +310,12 @@ export default function StaffTodo() {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <Card className="mt-2 opacity-60" data-testid="card-dismissed-items">
+                <Card className="mt-2 opacity-60 border-white/[0.06] bg-white/[0.02]" data-testid="card-dismissed-items">
                   <CardContent className="pt-4 space-y-1.5">
                     {dismissedActionItems.map(item => (
                       <div
                         key={item.key}
-                        className="flex items-center gap-3 p-2.5 rounded-md bg-muted/20 border"
+                        className="flex items-center gap-3 p-2.5 rounded-md bg-white/[0.02] border border-white/[0.04]"
                         data-testid={`dismissed-item-${item.key}`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -339,7 +339,7 @@ export default function StaffTodo() {
 
         {activeActionItems.length === 0 && sortedPending.length === 0 && pendingCreated.length === 0 && completedTasks.length === 0 && (
           <FadeInUp delay={0.1}>
-            <Card data-testid="card-all-clear">
+            <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-all-clear">
               <CardContent className="py-12 flex flex-col items-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
                   <CheckCircle2 className="w-7 h-7 text-emerald-400" />
@@ -355,7 +355,7 @@ export default function StaffTodo() {
 
         {sortedPending.length > 0 && (
           <FadeInUp delay={0.1}>
-            <Card data-testid="card-my-tasks">
+            <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-my-tasks">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Circle className="w-4 h-4 text-amber-400" />
@@ -369,7 +369,7 @@ export default function StaffTodo() {
                 {sortedPending.map((task: any) => (
                   <div
                     key={task.id}
-                    className="flex items-start gap-3 p-3 rounded-md bg-muted/30 border"
+                    className="flex items-start gap-3 p-3 rounded-md bg-white/[0.03] border border-white/[0.06]"
                     data-testid={`task-pending-${task.id}`}
                   >
                     <div className="mt-0.5">
@@ -389,7 +389,7 @@ export default function StaffTodo() {
                         )}
                         {task.orderId && (
                           <Link href={`/orders`} data-testid={`link-order-${task.id}`}>
-                            <Badge variant="outline" className="text-[10px] cursor-pointer px-1.5 py-0">
+                            <Badge variant="outline" className="text-[10px] cursor-pointer px-1.5 py-0 border-white/[0.1] text-muted-foreground hover:text-foreground">
                               <ExternalLink className="w-2.5 h-2.5 mr-1" />
                               Order {task.orderId}
                             </Badge>
@@ -404,6 +404,7 @@ export default function StaffTodo() {
                     <Button
                       size="sm"
                       variant="outline"
+                      className="border-white/[0.1] hover:bg-white/[0.06]"
                       onClick={() => completeTaskMutation.mutate(task.id)}
                       disabled={completeTaskMutation.isPending}
                       data-testid={`button-complete-${task.id}`}
@@ -419,7 +420,7 @@ export default function StaffTodo() {
         )}
 
         <FadeInUp delay={0.15}>
-          <Card data-testid="card-create-task">
+          <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-create-task">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Plus className="w-4 h-4" />
@@ -515,7 +516,7 @@ export default function StaffTodo() {
 
         {pendingCreated.length > 0 && (
           <FadeInUp delay={0.2}>
-            <Card data-testid="card-tasks-i-assigned">
+            <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-tasks-i-assigned">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Flag className="w-4 h-4 text-blue-400" />
@@ -531,7 +532,7 @@ export default function StaffTodo() {
                   return (
                     <div
                       key={task.id}
-                      className="flex items-start gap-3 p-3 rounded-md bg-muted/30 border"
+                      className="flex items-start gap-3 p-3 rounded-md bg-white/[0.03] border border-white/[0.06]"
                       data-testid={`task-assigned-${task.id}`}
                     >
                       <div className="mt-0.5">
@@ -555,7 +556,7 @@ export default function StaffTodo() {
                           </span>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">Pending</Badge>
+                      <Badge variant="outline" className="text-[10px] shrink-0 border-white/[0.1] text-muted-foreground">Pending</Badge>
                     </div>
                   );
                 })}
@@ -567,7 +568,7 @@ export default function StaffTodo() {
         {completedTasks.length > 0 && (
           <FadeInUp delay={0.25}>
             <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
-              <Card data-testid="card-completed-tasks">
+              <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-completed-tasks">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="pb-3 cursor-pointer">
                     <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
@@ -585,7 +586,7 @@ export default function StaffTodo() {
                     {completedTasks.map((task: any) => (
                       <div
                         key={task.id}
-                        className="flex items-center gap-3 p-2.5 rounded-md bg-muted/20 border opacity-60"
+                        className="flex items-center gap-3 p-2.5 rounded-md bg-white/[0.02] border border-white/[0.04] opacity-60"
                         data-testid={`task-completed-${task.id}`}
                       >
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />

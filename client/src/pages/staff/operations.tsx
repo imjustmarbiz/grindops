@@ -113,7 +113,7 @@ function DeletionRequestsPanel() {
               <div>
                 <p className="text-sm font-medium">{r.entityLabel || r.entityId}</p>
                 <p className="text-xs text-muted-foreground">
-                  <Badge variant="outline" className="mr-1 text-[10px] px-1.5 py-0">{r.entityType}</Badge>
+                  <Badge variant="outline" className="mr-1 text-[10px] px-1.5 py-0 border-white/[0.1] text-muted-foreground">{r.entityType}</Badge>
                   by {r.requestedByName || "Staff"}
                 </p>
               </div>
@@ -133,7 +133,7 @@ function DeletionRequestsPanel() {
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 text-xs"
+                className="flex-1 text-xs border-white/[0.1] hover:bg-white/[0.06]"
                 disabled={denyMutation.isPending}
                 onClick={() => denyMutation.mutate({ id: r.id, reason: "Denied by owner" })}
                 data-testid={`button-deny-deletion-${r.id}`}

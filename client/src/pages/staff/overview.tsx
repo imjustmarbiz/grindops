@@ -34,19 +34,25 @@ function SparkBar({ segments, height = 6 }: { segments: { value: number; color: 
   );
 }
 
-function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textColor, trend, trendUp }: {
-  label: string; value: string; subtitle: string; icon: any; gradient: string; iconBg: string; textColor: string; trend?: string; trendUp?: boolean;
+function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textColor, trend, trendUp, onClick, linkLabel }: {
+  label: string; value: string; subtitle: string; icon: any; gradient: string; iconBg: string; textColor: string; trend?: string; trendUp?: boolean; onClick?: () => void; linkLabel?: string;
 }) {
+  const testId = `card-stat-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <Card className={`${gradient} border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300`}>
+    <Card
+      className={`${gradient} border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300 ${onClick ? "cursor-pointer" : ""}`}
+      onClick={onClick}
+      data-testid={testId}
+      {...(onClick ? { role: "button", tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } } : {})}
+    >
       <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.03] -translate-y-8 translate-x-8" />
-      <CardContent className="p-5">
+      <CardContent className="p-4">
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-white/50">{label}</p>
-            <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${textColor} tracking-tight truncate`} data-testid={`text-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">{label}</p>
+            <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${textColor} tracking-tight truncate`} data-testid={`text-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-white/40">{subtitle}</p>
+              <p className="text-[10px] text-white/40">{subtitle}</p>
               {trend && (
                 <span className={`flex items-center gap-0.5 text-[10px] font-medium ${trendUp ? "text-emerald-400" : "text-red-400"}`}>
                   {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -55,10 +61,16 @@ function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textCo
               )}
             </div>
           </div>
-          <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center backdrop-blur-sm`}>
-            <Icon className={`w-5 h-5 ${textColor}`} />
+          <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center backdrop-blur-sm`}>
+            <Icon className={`w-4 h-4 ${textColor}`} />
           </div>
         </div>
+        {linkLabel && (
+          <div className={`mt-2 pt-2 border-t border-white/[0.06] flex items-center gap-1.5 text-[10px] font-medium ${textColor} opacity-70 group-hover:opacity-100 transition-opacity`}>
+            {linkLabel}
+            <ArrowUpRight className="w-3 h-3" />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -350,24 +362,32 @@ export default function StaffOverview() {
         {isOwner ? (
           <>
             <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
-              gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
+              gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400"
+              onClick={() => navigate("/business")} linkLabel="Business" />
             <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${allGrinders.length} grinders`} icon={Users}
-              gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+              gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400"
+              onClick={() => navigate("/payouts")} linkLabel="Payouts" />
             <StatCard label="Company Profit" value={formatCurrency(profit)} subtitle={`${profitMarginPct.toFixed(1)}% margin`} icon={TrendingUp}
-              gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400" />
+              gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400"
+              onClick={() => navigate("/business")} linkLabel="Business" />
             <StatCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} subtitle={`avg margin ${(analytics?.avgMargin || 0).toFixed(1)}%`} icon={BarChart3}
-              gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
+              gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400"
+              onClick={() => navigate("/orders")} linkLabel="Orders" />
           </>
         ) : (
           <>
             <StatCard label="Active Orders" value={String(activeOrders)} subtitle={`${openOrders} open, ${inProgressOrders} in progress`} icon={ListOrdered}
-              gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+              gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400"
+              onClick={() => navigate("/orders")} linkLabel="Orders" />
             <StatCard label="Pending Bids" value={String(pendingBids)} subtitle={`${acceptedBids} accepted total`} icon={Gavel}
-              gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400" />
+              gradient="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent" iconBg="bg-amber-500/20" textColor="text-amber-400"
+              onClick={() => navigate("/bids")} linkLabel="Bids" />
             <StatCard label="Grinder Availability" value={`${availableGrinders}/${allGrinders.length}`} subtitle={`${atCapacity} at capacity`} icon={Users}
-              gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400" />
+              gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400"
+              onClick={() => navigate("/grinders")} linkLabel="Grinders" />
             <StatCard label="Pending Payouts" value={String(pendingPayouts)} subtitle={`${suspendedGrinders.length} suspended grinders`} icon={ClipboardList}
-              gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400" />
+              gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400"
+              onClick={() => navigate("/payouts")} linkLabel="Payouts" />
           </>
         )}
       </div>
