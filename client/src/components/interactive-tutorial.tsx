@@ -10,7 +10,8 @@ import {
   CheckCircle2, Play, AlertTriangle, Star, CalendarDays, Tv, Newspaper,
   BookOpen, ScrollText, Wrench, Package, Award, TrendingUp, ClipboardList,
   FileBarChart, Wallet, DollarSign, UserCheck, Calendar, Shield, Upload,
-  Sparkles
+  Sparkles, LogIn, LogOut, Clock, Monitor, ArrowRight, Timer, Hash,
+  Gamepad2, Video, CircleDot, Activity
 } from "lucide-react";
 
 type DemoStep = { label: string; icon: any; color: string };
@@ -18,11 +19,631 @@ type DemoStep = { label: string; icon: any; color: string };
 interface PageMeta {
   description: string;
   demoSteps?: DemoStep[];
+  mockupId?: string;
+}
+
+function MockOrderCard({ step, service, price, platform, dueIn, complexity, bids, isReplacement }: {
+  step: number; service: string; price: string; platform: string; dueIn: string; complexity: number; bids: number; isReplacement?: boolean;
+}) {
+  return (
+    <div className={`rounded-lg border p-2.5 transition-all duration-500 ${
+      step >= 1 ? "bg-white/[0.04] border-white/10 scale-[1.02]" : "bg-white/[0.02] border-white/[0.06] opacity-60"
+    }`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <Hash className="w-3 h-3 text-muted-foreground" />
+          <span className="text-[10px] font-mono text-muted-foreground">#MGT-4821</span>
+          {isReplacement && <Badge className="text-[8px] px-1 py-0 bg-red-500/20 text-red-400 border-red-500/20">REPLACEMENT</Badge>}
+        </div>
+        <div className="flex items-center gap-1">
+          <Timer className="w-3 h-3 text-amber-400" />
+          <span className="text-[9px] text-amber-400">Bidding: 8:42</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium">{service}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Gamepad2 className="w-2.5 h-2.5" />{platform}</span>
+            <span className="text-[10px] text-muted-foreground">Due: {dueIn}</span>
+            <span className="text-[10px] text-muted-foreground">⚡{complexity}/5</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold text-emerald-400">{price}</p>
+          <span className="text-[9px] text-muted-foreground">{bids} bids</span>
+        </div>
+      </div>
+      {step >= 2 && (
+        <div className="mt-2 flex items-center gap-2 animate-in fade-in duration-500">
+          <div className="flex-1 bg-white/[0.06] rounded px-2 py-1">
+            <span className="text-[9px] text-muted-foreground">Your bid: </span>
+            <span className="text-[10px] font-bold text-white">$65.00</span>
+          </div>
+          <div className="bg-purple-500/20 text-purple-400 text-[9px] px-2 py-1 rounded font-medium">Place Bid →</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockAssignmentCard({ step }: { step: number }) {
+  const buttons = [
+    { label: "Accept", icon: CheckCircle2, done: step >= 1, active: step === 0, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    { label: "Log In", icon: LogIn, done: step >= 2, active: step === 1, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+    { label: "Start", icon: Play, done: step >= 3, active: step === 2, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+    { label: "Log Off", icon: LogOut, done: step >= 4, active: step === 3, color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+    { label: "Complete", icon: Upload, done: false, active: step === 4, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  ];
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge className="text-[8px] px-1.5 py-0 bg-[#5865F2]/20 text-[#5865F2] border-[#5865F2]/30">In Progress</Badge>
+          <span className="text-[10px] font-mono text-muted-foreground">#MGT-4821</span>
+        </div>
+        <span className="text-xs font-medium text-emerald-400">$85.00</span>
+      </div>
+      <p className="text-[11px] font-medium">VC Grinding 🪙 · PlayStation</p>
+      <div className="flex items-center gap-1 flex-wrap">
+        {buttons.map((btn, i) => {
+          const Icon = btn.icon;
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] border transition-all duration-500 ${
+                btn.done ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                btn.active ? `${btn.color} scale-105 ring-1 ring-white/20` :
+                "bg-white/[0.03] text-white/20 border-white/[0.06]"
+              }`}
+            >
+              {btn.done ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Icon className="w-2.5 h-2.5" />}
+              {btn.label}
+            </div>
+          );
+        })}
+      </div>
+      {step === 4 && (
+        <div className="flex items-center gap-1.5 p-1.5 rounded bg-purple-500/10 border border-purple-500/20 animate-in fade-in duration-500">
+          <Video className="w-3 h-3 text-purple-400" />
+          <span className="text-[9px] text-purple-400">Upload proof video to mark complete</span>
+        </div>
+      )}
+      {step >= 1 && step < 4 && (
+        <div className="flex items-center gap-1 text-[9px] text-muted-foreground animate-in fade-in duration-300">
+          <Activity className="w-3 h-3" />
+          <span>{step === 1 ? "Accepted ticket — ready to log in" : step === 2 ? "Logged in — start the order" : "Order started — complete when done"}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockBidCard({ step }: { step: number }) {
+  const states = [
+    { status: "Pending", color: "bg-yellow-500/20 text-yellow-400", desc: "Bid submitted — waiting for review" },
+    { status: "Ranked #2", color: "bg-cyan-500/20 text-cyan-400", desc: "AI Queue scored your bid" },
+    { status: "Accepted!", color: "bg-emerald-500/20 text-emerald-400", desc: "You won! Order assigned to you" },
+  ];
+  const current = states[Math.min(step, states.length - 1)];
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Gavel className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-xs font-medium">Your Bid on #MGT-4821</span>
+        </div>
+        <Badge className={`text-[8px] px-1.5 py-0 ${current.color} transition-all duration-500`}>{current.status}</Badge>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <div className="bg-white/[0.04] rounded px-2 py-1">
+          <span className="text-[8px] text-muted-foreground block">Amount</span>
+          <span className="text-[11px] font-bold">$65.00</span>
+        </div>
+        <div className="bg-white/[0.04] rounded px-2 py-1">
+          <span className="text-[8px] text-muted-foreground block">Timeline</span>
+          <span className="text-[11px] font-medium">2 days</span>
+        </div>
+        <div className="bg-white/[0.04] rounded px-2 py-1">
+          <span className="text-[8px] text-muted-foreground block">Start</span>
+          <span className="text-[11px] font-medium">Today</span>
+        </div>
+      </div>
+      {step >= 1 && (
+        <div className="flex items-center gap-2 p-1.5 rounded bg-white/[0.04] animate-in fade-in duration-500">
+          <Brain className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-muted-foreground">AI Queue Rank</span>
+              <span className="text-[10px] font-bold text-cyan-400">#2 of 6</span>
+            </div>
+            <div className="h-1 bg-white/10 rounded-full mt-0.5">
+              <div className="h-1 bg-cyan-400 rounded-full transition-all duration-700" style={{ width: "75%" }} />
+            </div>
+          </div>
+        </div>
+      )}
+      {step >= 2 && (
+        <div className="flex items-center gap-2 p-1.5 rounded bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in duration-500">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-[10px] text-emerald-400 font-medium">Order assigned — go to Assignments!</span>
+          <ArrowRight className="w-3 h-3 text-emerald-400 ml-auto" />
+        </div>
+      )}
+      <p className="text-[9px] text-muted-foreground italic">{current.desc}</p>
+    </div>
+  );
+}
+
+function MockPayoutCard({ step, isStaff }: { step: number; isStaff?: boolean }) {
+  if (isStaff) {
+    const stages = ["Pending Review", "Approved", "Paid"];
+    const stageIdx = Math.min(step, 2);
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Banknote className="w-3.5 h-3.5 text-green-400" />
+            <span className="text-xs font-medium">Payout Request</span>
+          </div>
+          <Badge className={`text-[8px] px-1.5 py-0 ${
+            stageIdx === 0 ? "bg-yellow-500/20 text-yellow-400" : stageIdx === 1 ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
+          }`}>{stages[stageIdx]}</Badge>
+        </div>
+        <div className="flex items-center justify-between bg-white/[0.04] rounded px-2 py-1.5">
+          <div>
+            <span className="text-[9px] text-muted-foreground">Grinder: </span>
+            <span className="text-[11px] font-medium">ProGrinder99</span>
+          </div>
+          <div className="text-right">
+            <span className="text-sm font-bold text-emerald-400">$85.00</span>
+            <span className="text-[9px] text-muted-foreground block">via Cash App</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {step === 0 && (
+            <>
+              <div className="flex-1 bg-emerald-500/20 text-emerald-400 text-[9px] text-center py-1 rounded font-medium">Approve</div>
+              <div className="flex-1 bg-red-500/20 text-red-400 text-[9px] text-center py-1 rounded font-medium">Deny</div>
+              <div className="flex-1 bg-amber-500/20 text-amber-400 text-[9px] text-center py-1 rounded font-medium">Reduce</div>
+            </>
+          )}
+          {step === 1 && (
+            <div className="flex-1 bg-blue-500/20 text-blue-400 text-[9px] text-center py-1 rounded font-medium animate-in fade-in duration-500">
+              💰 Mark Paid — upload proof
+            </div>
+          )}
+          {step === 2 && (
+            <div className="flex items-center gap-1.5 flex-1 p-1 rounded bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in duration-500">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <span className="text-[9px] text-emerald-400">Paid — grinder notified</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">Your Earnings</span>
+        <span className="text-sm font-bold text-emerald-400">$1,250.00</span>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="bg-white/[0.04] rounded px-2 py-1">
+          <span className="text-[8px] text-muted-foreground block">Pending</span>
+          <span className="text-[11px] font-bold text-yellow-400">$200.00</span>
+        </div>
+        <div className="bg-white/[0.04] rounded px-2 py-1">
+          <span className="text-[8px] text-muted-foreground block">Paid</span>
+          <span className="text-[11px] font-bold text-emerald-400">$1,050.00</span>
+        </div>
+      </div>
+      {step >= 1 && (
+        <div className="bg-white/[0.04] rounded px-2 py-1.5 animate-in fade-in duration-500">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] text-muted-foreground">Request: $200 via Cash App</span>
+            <Badge className={`text-[8px] px-1 py-0 ${step >= 2 ? "bg-emerald-500/20 text-emerald-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+              {step >= 2 ? "Approved" : "Pending"}
+            </Badge>
+          </div>
+        </div>
+      )}
+      {step >= 2 && (
+        <div className="flex items-center gap-1.5 p-1 rounded bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in duration-500">
+          <DollarSign className="w-3 h-3 text-emerald-400" />
+          <span className="text-[9px] text-emerald-400">Payout sent to your Cash App!</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockDashboardCard({ step, isStaff }: { step: number; isStaff?: boolean }) {
+  if (isStaff) {
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { label: "Revenue", value: "$12,450", icon: DollarSign, color: "text-green-400" },
+            { label: "Payouts", value: "$8,200", icon: Banknote, color: "text-blue-400" },
+            { label: "Profit", value: "$4,250", icon: TrendingUp, color: "text-emerald-400" },
+            { label: "Avg Order", value: "$95", icon: BarChart3, color: "text-cyan-400" },
+          ].map((kpi, i) => {
+            const Icon = kpi.icon;
+            return (
+              <div key={i} className={`rounded-lg bg-white/[0.04] border border-white/[0.06] p-2 transition-all duration-500 ${
+                step === i ? "ring-1 ring-primary/40 scale-[1.03]" : ""
+              }`}>
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Icon className={`w-3 h-3 ${kpi.color}`} />
+                  <span className="text-[8px] text-muted-foreground">{kpi.label}</span>
+                </div>
+                <span className="text-sm font-bold">{kpi.value}</span>
+              </div>
+            );
+          })}
+        </div>
+        {step >= 2 && (
+          <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-2 animate-in fade-in duration-500">
+            <span className="text-[9px] text-muted-foreground block mb-1">Order Pipeline</span>
+            <div className="flex items-center gap-0.5 h-2 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-l" style={{ width: "20%" }} />
+              <div className="h-full bg-amber-500" style={{ width: "15%" }} />
+              <div className="h-full bg-[#5865F2]" style={{ width: "25%" }} />
+              <div className="h-full bg-emerald-500" style={{ width: "25%" }} />
+              <div className="h-full bg-cyan-500 rounded-r" style={{ width: "15%" }} />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              {["Open", "Assigned", "Active", "Done", "Paid"].map((s, i) => (
+                <span key={i} className="text-[7px] text-muted-foreground">{s}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-1.5">
+        {[
+          { label: "Active", value: "2", color: "text-blue-400" },
+          { label: "Completed", value: "15", color: "text-emerald-400" },
+          { label: "Earned", value: "$1,250", color: "text-green-400" },
+        ].map((stat, i) => (
+          <div key={i} className={`rounded bg-white/[0.04] border border-white/[0.06] p-1.5 text-center transition-all duration-500 ${
+            step === i ? "ring-1 ring-primary/40 scale-[1.03]" : ""
+          }`}>
+            <span className={`text-sm font-bold ${stat.color}`}>{stat.value}</span>
+            <span className="text-[8px] text-muted-foreground block">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+      {step >= 1 && (
+        <div className="rounded bg-white/[0.04] border border-white/[0.06] p-2 animate-in fade-in duration-500">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-medium">Availability</span>
+            <div className="flex items-center gap-1">
+              <CircleDot className="w-2.5 h-2.5 text-green-400" />
+              <span className="text-[9px] text-green-400">Available</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-muted-foreground">Win Rate: 78%</span>
+            <span className="text-[9px] text-muted-foreground">·</span>
+            <span className="text-[9px] text-muted-foreground">Quality: 92%</span>
+          </div>
+        </div>
+      )}
+      {step >= 2 && (
+        <div className="rounded bg-white/[0.04] border border-white/[0.06] p-2 animate-in fade-in duration-500">
+          <span className="text-[9px] text-muted-foreground block mb-1">Quality Score</span>
+          <div className="h-1.5 bg-white/10 rounded-full">
+            <div className="h-1.5 bg-emerald-400 rounded-full transition-all duration-700" style={{ width: "92%" }} />
+          </div>
+          <span className="text-[10px] font-bold text-emerald-400 mt-0.5 block">92/100</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockScorecardCard({ step }: { step: number }) {
+  const factors = [
+    { name: "Quality", score: 92, color: "bg-emerald-400" },
+    { name: "Reliability", score: 88, color: "bg-blue-400" },
+    { name: "Speed", score: 75, color: "bg-cyan-400" },
+    { name: "Communication", score: 95, color: "bg-purple-400" },
+  ];
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">Your Scorecard</span>
+        <Badge className="text-[8px] px-1.5 py-0 bg-blue-500/20 text-blue-400 border-blue-500/20">Regular Tier</Badge>
+      </div>
+      <div className="space-y-1.5">
+        {factors.map((f, i) => (
+          <div key={i} className={`transition-all duration-500 ${step >= i ? "opacity-100" : "opacity-30"}`}>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[9px] text-muted-foreground">{f.name}</span>
+              <span className="text-[10px] font-bold">{step >= i ? f.score : "—"}%</span>
+            </div>
+            <div className="h-1 bg-white/10 rounded-full">
+              <div className={`h-1 ${f.color} rounded-full transition-all duration-700`} style={{ width: step >= i ? `${f.score}%` : "0%" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {step >= 3 && (
+        <div className="flex items-center gap-2 p-1.5 rounded bg-blue-500/10 border border-blue-500/20 animate-in fade-in duration-500">
+          <TrendingUp className="w-3 h-3 text-blue-400" />
+          <span className="text-[9px] text-blue-400">Next tier: Veteran — 5 more orders!</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockStaffOrderCard({ step }: { step: number }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">Order Management</span>
+        <Badge className="text-[8px] px-1.5 py-0 bg-blue-500/20 text-blue-400">Create New</Badge>
+      </div>
+      {step === 0 && (
+        <div className="space-y-1.5 animate-in fade-in duration-500">
+          <div className="bg-white/[0.04] rounded px-2 py-1 flex items-center gap-2">
+            <Package className="w-3 h-3 text-blue-400" />
+            <span className="text-[9px]">Service: VC Grinding</span>
+          </div>
+          <div className="bg-white/[0.04] rounded px-2 py-1 flex items-center gap-2">
+            <Gamepad2 className="w-3 h-3 text-cyan-400" />
+            <span className="text-[9px]">Platform: PlayStation</span>
+          </div>
+          <div className="bg-white/[0.04] rounded px-2 py-1 flex items-center gap-2">
+            <DollarSign className="w-3 h-3 text-green-400" />
+            <span className="text-[9px]">Price: $120.00</span>
+          </div>
+        </div>
+      )}
+      {step >= 1 && (
+        <div className="animate-in fade-in duration-500">
+          <div className="flex items-center gap-0.5 h-2 rounded-full overflow-hidden mb-1">
+            <div className={`h-full transition-all duration-500 rounded-l ${step === 1 ? "bg-blue-500 w-full" : step === 2 ? "bg-amber-500 w-full" : "bg-emerald-500 w-full rounded-r"}`} />
+          </div>
+          <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+            <span className={step === 1 ? "text-blue-400 font-medium" : ""}>Open</span>
+            <ArrowRight className="w-2.5 h-2.5" />
+            <span className={step === 2 ? "text-amber-400 font-medium" : ""}>Assigned</span>
+            <ArrowRight className="w-2.5 h-2.5" />
+            <span className={step >= 3 ? "text-emerald-400 font-medium" : ""}>Complete</span>
+          </div>
+        </div>
+      )}
+      {step >= 2 && (
+        <div className="flex items-center gap-1.5 p-1.5 rounded bg-white/[0.04] border border-white/[0.06] animate-in fade-in duration-500">
+          <Users className="w-3 h-3 text-amber-400" />
+          <span className="text-[9px]">Assigned to ProGrinder99 via bid accept</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MockStaffBidsCard({ step }: { step: number }) {
+  const bids = [
+    { grinder: "ProGrinder99", amount: "$65", rank: 1, score: 92 },
+    { grinder: "SpeedRunner_X", amount: "$70", rank: 2, score: 85 },
+    { grinder: "GrindMaster", amount: "$60", rank: 3, score: 78 },
+  ];
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Gavel className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-xs font-medium">Bid Review — #MGT-4821</span>
+        </div>
+        <span className="text-[9px] text-muted-foreground">3 bids</span>
+      </div>
+      <div className="space-y-1">
+        {bids.map((b, i) => (
+          <div key={i} className={`flex items-center gap-2 px-2 py-1 rounded transition-all duration-500 ${
+            step >= 1 && i === 0 ? "bg-emerald-500/10 border border-emerald-500/20 scale-[1.02]" :
+            step >= 2 && i > 0 ? "bg-white/[0.02] opacity-40" :
+            "bg-white/[0.04]"
+          }`}>
+            <div className="flex items-center gap-1 flex-1">
+              <Brain className="w-2.5 h-2.5 text-cyan-400" />
+              <span className="text-[9px] font-medium">#{b.rank}</span>
+              <span className="text-[10px]">{b.grinder}</span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400">{b.amount}</span>
+            <span className="text-[8px] text-muted-foreground">{b.score}pts</span>
+            {step >= 2 && i === 0 && (
+              <CheckCircle2 className="w-3 h-3 text-emerald-400 animate-in fade-in duration-500" />
+            )}
+          </div>
+        ))}
+      </div>
+      {step >= 2 && (
+        <p className="text-[9px] text-emerald-400 italic animate-in fade-in duration-500">
+          ✓ Top bid accepted — grinder notified
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MockStaffAssignmentsCard({ step }: { step: number }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">Active Assignments</span>
+        <Badge className="text-[8px] px-1.5 py-0 bg-blue-500/20 text-blue-400">3 Active</Badge>
+      </div>
+      <div className="bg-white/[0.04] rounded px-2 py-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-medium">ProGrinder99 → #MGT-4821</span>
+          <Badge className={`text-[8px] px-1 py-0 transition-all duration-500 ${
+            step === 0 ? "bg-blue-500/20 text-blue-400" :
+            step === 1 ? "bg-[#5865F2]/20 text-[#5865F2]" :
+            step === 2 ? "bg-amber-500/20 text-amber-400" :
+            "bg-emerald-500/20 text-emerald-400"
+          }`}>
+            {step === 0 ? "Assigned" : step === 1 ? "In Progress" : step === 2 ? "Proof Submitted" : "Completed"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+          <span>VC Grinding · PS5</span>
+          <span>·</span>
+          <span>$85.00</span>
+        </div>
+      </div>
+      {step >= 1 && (
+        <div className="flex items-center gap-1.5 text-[9px] animate-in fade-in duration-500">
+          <Activity className="w-3 h-3 text-cyan-400" />
+          <span className="text-muted-foreground">
+            {step === 1 ? "Grinder logged in 5 min ago" : step === 2 ? "Proof video uploaded — review needed" : "Customer approved — ready for payout"}
+          </span>
+        </div>
+      )}
+      {step >= 2 && (
+        <div className="flex items-center gap-1.5 animate-in fade-in duration-500">
+          {step === 2 && <div className="bg-amber-500/20 text-amber-400 text-[9px] px-2 py-0.5 rounded">Review Proof</div>}
+          {step === 2 && <div className="bg-blue-500/20 text-blue-400 text-[9px] px-2 py-0.5 rounded">Reassign</div>}
+          {step >= 3 && (
+            <div className="flex items-center gap-1 text-[9px] text-emerald-400">
+              <UserCheck className="w-3 h-3" />
+              <span>Customer approved ✓</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InteractiveMockup({ mockupId, isStaff }: { mockupId: string; isStaff?: boolean }) {
+  const [step, setStep] = useState(0);
+  const maxSteps = mockupId === "grinder-orders" ? 3 : mockupId === "grinder-assignments" ? 5 : mockupId === "grinder-scorecard" ? 4 : mockupId === "staff-bids" ? 3 : 4;
+
+  useEffect(() => {
+    setStep(0);
+    const interval = setInterval(() => {
+      setStep(s => (s + 1) % (maxSteps + 1));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [mockupId, maxSteps]);
+
+  switch (mockupId) {
+    case "grinder-orders":
+      return (
+        <div className="mt-3 space-y-1.5">
+          <MockOrderCard step={step} service="VC Grinding 🪙" price="$85.00" platform="PS5" dueIn="3 days" complexity={3} bids={4} />
+          {step >= 1 && (
+            <div className="text-[9px] text-muted-foreground flex items-center gap-1 px-1 animate-in fade-in duration-500">
+              <ArrowRight className="w-3 h-3 text-purple-400" />
+              {step === 1 ? "Browse available orders by service & platform" : "Click 'Place Bid' to enter your price and timeline"}
+            </div>
+          )}
+        </div>
+      );
+
+    case "grinder-assignments":
+      return (
+        <div className="mt-3">
+          <MockAssignmentCard step={step} />
+          <div className="text-[9px] text-muted-foreground flex items-center gap-1 px-1 mt-1.5">
+            <ArrowRight className="w-3 h-3 text-cyan-400" />
+            {step === 0 ? "Accept the ticket to begin" :
+             step === 1 ? "Log into the customer's account" :
+             step === 2 ? "Click Start to begin grinding" :
+             step === 3 ? "Log off when session ends" :
+             "Upload proof video to complete"}
+          </div>
+        </div>
+      );
+
+    case "grinder-bids":
+      return (
+        <div className="mt-3">
+          <MockBidCard step={step > 2 ? 2 : step} />
+        </div>
+      );
+
+    case "grinder-payouts":
+      return (
+        <div className="mt-3">
+          <MockPayoutCard step={step > 2 ? 2 : step} />
+        </div>
+      );
+
+    case "grinder-scorecard":
+      return (
+        <div className="mt-3">
+          <MockScorecardCard step={step > 3 ? 3 : step} />
+        </div>
+      );
+
+    case "grinder-dashboard":
+      return (
+        <div className="mt-3">
+          <MockDashboardCard step={step > 2 ? 2 : step} isStaff={false} />
+        </div>
+      );
+
+    case "staff-dashboard":
+      return (
+        <div className="mt-3">
+          <MockDashboardCard step={step > 3 ? 3 : step} isStaff={true} />
+        </div>
+      );
+
+    case "staff-orders":
+      return (
+        <div className="mt-3">
+          <MockStaffOrderCard step={step > 3 ? 3 : step} />
+        </div>
+      );
+
+    case "staff-bids":
+      return (
+        <div className="mt-3">
+          <MockStaffBidsCard step={step > 2 ? 2 : step} />
+        </div>
+      );
+
+    case "staff-assignments":
+      return (
+        <div className="mt-3">
+          <MockStaffAssignmentsCard step={step > 3 ? 3 : step} />
+        </div>
+      );
+
+    case "staff-payouts":
+      return (
+        <div className="mt-3">
+          <MockPayoutCard step={step > 2 ? 2 : step} isStaff={true} />
+        </div>
+      );
+
+    default:
+      return null;
+  }
 }
 
 const staffPageDescriptions: Record<string, PageMeta> = {
   "/": {
-    description: "Your command center shows real-time financials — total revenue, grinder payouts, company profit, and average order value. The order pipeline tracks every status. Fleet health shows utilization.",
+    description: "Your command center — real-time financials, order pipeline, and fleet health at a glance.",
+    mockupId: "staff-dashboard",
     demoSteps: [
       { label: "Revenue, payouts, profit at a glance", icon: DollarSign, color: "text-green-400" },
       { label: "Order pipeline: Open → Assigned → Done", icon: ListOrdered, color: "text-blue-400" },
@@ -139,7 +760,8 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/bids": {
-    description: "Review all grinder bids — the AI queue ranks by scorecard but you can override. Accept, reject, or let the system auto-assign based on rankings.",
+    description: "Review all grinder bids — AI ranks by scorecard. Accept the best, reject others, or let the system auto-assign.",
+    mockupId: "staff-bids",
     demoSteps: [
       { label: "Bids arrive from grinders on orders", icon: Gavel, color: "text-purple-400" },
       { label: "AI ranks bids by scorecard & history", icon: Brain, color: "text-cyan-400" },
@@ -148,7 +770,8 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/orders": {
-    description: "Order management central — create new orders, set prices, assign platforms, track statuses, and manage the full order lifecycle from open to paid out.",
+    description: "Order management central — create, assign, track, and complete orders through their full lifecycle.",
+    mockupId: "staff-orders",
     demoSteps: [
       { label: "Create order: service, platform, price", icon: ListOrdered, color: "text-blue-400" },
       { label: "Open for bidding — grinders compete", icon: Gavel, color: "text-purple-400" },
@@ -157,7 +780,8 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/assignments": {
-    description: "Active assignment tracking — see login status, checkpoints, progress updates, and proof submissions for every assigned order in real-time.",
+    description: "Track all active assignments — grinder login status, checkpoints, proof submissions, and customer approvals in real-time.",
+    mockupId: "staff-assignments",
     demoSteps: [
       { label: "Grinder logs in → status updates live", icon: MousePointerClick, color: "text-yellow-400" },
       { label: "Checkpoint: started, progress, issues", icon: CheckCircle2, color: "text-cyan-400" },
@@ -184,7 +808,8 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/payouts": {
-    description: "Payout processing — review grinder requests, verify amounts, approve payments, and mark as paid. Track payment methods and full payout history.",
+    description: "Payout processing — review requests, verify amounts, approve, and mark as paid with proof.",
+    mockupId: "staff-payouts",
     demoSteps: [
       { label: "Grinder requests $85 via Cash App", icon: Banknote, color: "text-green-400" },
       { label: "Verify against completed order value", icon: Eye, color: "text-blue-400" },
@@ -255,6 +880,15 @@ const staffPageDescriptions: Record<string, PageMeta> = {
       { label: "Filter by action type, user, or date", icon: Eye, color: "text-cyan-400" },
     ],
   },
+  "/activity-log": {
+    description: "Owner-only user activity tracker — see who's using the platform, which pages they visit, login sessions, and user behavior analytics.",
+    demoSteps: [
+      { label: "Track user logins and page views", icon: Activity, color: "text-blue-400" },
+      { label: "Filter by user, category, action", icon: Eye, color: "text-cyan-400" },
+      { label: "24h stats: active users, sessions", icon: Users, color: "text-green-400" },
+      { label: "Detailed session and IP tracking", icon: Monitor, color: "text-purple-400" },
+    ],
+  },
   "/patch-notes": {
     description: "Internal staff notes and platform updates — document changes, share operational updates, and keep the team informed about new features.",
     demoSteps: [
@@ -286,7 +920,8 @@ const staffPageDescriptions: Record<string, PageMeta> = {
 
 const grinderPageDescriptions: Record<string, PageMeta> = {
   "/": {
-    description: "Your personal dashboard — quick stats, active assignments, performance analytics, badges, and availability controls. Everything at a glance.",
+    description: "Your personal dashboard — active orders, stats, availability toggle, and performance overview.",
+    mockupId: "grinder-dashboard",
     demoSteps: [
       { label: "Active orders, completed, pending bids", icon: LayoutDashboard, color: "text-blue-400" },
       { label: "Toggle availability: Online/Busy/Away", icon: CheckCircle2, color: "text-green-400" },
@@ -313,16 +948,18 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/orders": {
-    description: "Browse available orders — each shows service, platform, price, and deadline. Orders are sorted by priority. Place bids on the ones you want.",
+    description: "Browse available orders — see service, platform, price, deadline, and place bids on orders you want.",
+    mockupId: "grinder-orders",
     demoSteps: [
       { label: "New order drops into the queue", icon: Zap, color: "text-yellow-400" },
-      { label: "Service: Ranked Boost — $85.00", icon: ListOrdered, color: "text-blue-400" },
+      { label: "Service: VC Grinding — $85.00", icon: ListOrdered, color: "text-blue-400" },
       { label: "Platform: PlayStation — Due in 3 days", icon: Play, color: "text-cyan-400" },
       { label: "Click to place your bid amount", icon: Gavel, color: "text-purple-400" },
     ],
   },
   "/grinder/assignments": {
-    description: "Your active work — assigned orders with login buttons, status checkpoints, timeline, and proof submission. Follow the flow: Log In → Start → Complete.",
+    description: "Your active work — follow the flow: Accept → Log In → Start → Log Off → Complete with proof.",
+    mockupId: "grinder-assignments",
     demoSteps: [
       { label: "Order assigned — click to accept", icon: FileCheck, color: "text-blue-400" },
       { label: "Log into the customer's account", icon: MousePointerClick, color: "text-yellow-400" },
@@ -340,7 +977,8 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/bids": {
-    description: "Track all your bids — see which are pending, accepted, or rejected. View bid amounts, order details, and AI queue ranking for each bid.",
+    description: "Track your bids — see pending, AI-ranked, accepted, and rejected bids with full details.",
+    mockupId: "grinder-bids",
     demoSteps: [
       { label: "You submit your bid amount", icon: Gavel, color: "text-purple-400" },
       { label: "AI Queue scores your bid...", icon: Brain, color: "text-cyan-400" },
@@ -349,7 +987,8 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/scorecard": {
-    description: "Your performance metrics — quality, speed, reliability, communication scores. Includes tier progress, payout summary, completed orders, and strike history.",
+    description: "Your performance metrics — quality, speed, reliability, communication scores, with tier progress.",
+    mockupId: "grinder-scorecard",
     demoSteps: [
       { label: "Quality Score: 92% — Excellent", icon: Star, color: "text-yellow-400" },
       { label: "Reliability: 15/15 on-time deliveries", icon: CheckCircle2, color: "text-emerald-400" },
@@ -394,7 +1033,8 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/grinder/payouts": {
-    description: "Your earnings hub — request payouts via Zelle, PayPal, Cash App, and more. Track pending and completed payments with full history.",
+    description: "Your earnings hub — request payouts via Zelle, PayPal, Cash App, and more. Track status from request to paid.",
+    mockupId: "grinder-payouts",
     demoSteps: [
       { label: "Total earned: $1,250 this month", icon: DollarSign, color: "text-emerald-400" },
       { label: "Request payout: $200 via Cash App", icon: Banknote, color: "text-green-400" },
@@ -466,6 +1106,7 @@ interface TutorialStep {
   targetSelector?: string;
   targetArea?: "sidebar" | "header" | "main" | "full";
   demoSteps?: DemoStep[];
+  mockupId?: string;
   position?: "center" | "right" | "bottom";
 }
 
@@ -509,6 +1150,7 @@ function buildTutorialSteps(
       targetArea: "sidebar",
       position: "right",
       demoSteps: meta?.demoSteps,
+      mockupId: meta?.mockupId,
     });
   }
 
@@ -818,6 +1460,8 @@ export function InteractiveTutorial() {
     );
   }
 
+  const hasMockup = !!step.mockupId;
+
   const positionClass =
     step.position === "center" || step.targetArea === "full"
       ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -839,7 +1483,7 @@ export function InteractiveTutorial() {
         aria-describedby="tutorial-desc"
         className={`fixed z-[9999] ${positionClass}`}
       >
-        <div className="w-[400px] max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+        <div className={`${hasMockup ? "w-[440px]" : "w-[400px]"} max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in zoom-in-95 duration-300`}>
           <div className="h-1 bg-muted" aria-hidden="true">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500 ease-out"
@@ -872,13 +1516,15 @@ export function InteractiveTutorial() {
               </Button>
             </div>
 
-            <p id="tutorial-desc" className="text-sm text-muted-foreground leading-relaxed mb-3">
+            <p id="tutorial-desc" className="text-sm text-muted-foreground leading-relaxed mb-1">
               {step.description}
             </p>
 
-            {step.demoSteps && step.demoSteps.length > 0 && (
+            {hasMockup ? (
+              <InteractiveMockup mockupId={step.mockupId!} isStaff={isStaff} />
+            ) : step.demoSteps && step.demoSteps.length > 0 ? (
               <DemoAnimation demoSteps={step.demoSteps} />
-            )}
+            ) : null}
 
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
               <div className="flex gap-0.5 max-w-[140px] flex-wrap" aria-label={`Step ${currentStep + 1} of ${steps.length}`} role="tablist">
