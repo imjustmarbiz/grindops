@@ -306,7 +306,7 @@ export default function StaffAdmin() {
     },
     onSuccess: (_, enabled) => {
       queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
-      toast({ title: enabled ? "Early access mode enabled — only Elite Grinders can access" : "Early access mode disabled — all grinders can access" });
+      toast({ title: enabled ? "Elite access mode enabled — only Elite Grinders can access" : "Elite access mode disabled — all grinders can access" });
     },
     onError: () => toast({ title: "Failed to update", variant: "destructive" }),
   });
@@ -425,7 +425,7 @@ export default function StaffAdmin() {
             <CardContent className="p-4 flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-cyan-400">Early Access Mode Active</p>
+                <p className="text-sm font-medium text-cyan-400">Elite Grinders Only Access Active</p>
                 <p className="text-xs text-muted-foreground">Only Elite Grinders can access the dashboard. Regular grinders are denied.</p>
               </div>
             </CardContent>
@@ -1760,7 +1760,7 @@ export default function StaffAdmin() {
                     <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
                       <ShieldCheck className="w-4 h-4 text-cyan-400" />
                     </div>
-                    Early Access Mode
+                    Elite Grinders Only Access
                     <Badge className={`ml-auto text-xs ${maintenanceConfig?.earlyAccessMode ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"}`}>
                       {maintenanceConfig?.earlyAccessMode ? "Active" : "Off"}
                     </Badge>
@@ -1769,7 +1769,7 @@ export default function StaffAdmin() {
                 <CardContent className="relative space-y-3">
                   <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <div>
-                      <p className="text-sm font-medium">Elite Grinders Only</p>
+                      <p className="text-sm font-medium">Elite Grinders Only Access</p>
                       <p className="text-xs text-muted-foreground mt-0.5">When enabled, only Elite Grinders, Staff, and Owners can access the dashboard. Regular grinders and other roles are denied.</p>
                     </div>
                     <Switch
@@ -1781,7 +1781,7 @@ export default function StaffAdmin() {
                   </div>
                   {maintenanceConfig?.earlyAccessMode && (
                     <p className="text-[10px] text-cyan-400 px-1">
-                      Early access is ON. Only grinders with the Elite Grinder Discord role can log in. Staff and owners bypass this restriction.
+                      Elite access is ON. Only grinders with the Elite Grinder Discord role can log in. Staff and owners bypass this restriction.
                     </p>
                   )}
                 </CardContent>

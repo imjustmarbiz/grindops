@@ -162,15 +162,15 @@ export default function AuditLogPage() {
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table className="min-w-[700px]">
+        <CardContent className="p-0 overflow-x-auto overflow-y-hidden">
+          <Table className="min-w-full">
             <TableHeader className="bg-white/[0.03]">
               <TableRow className="border-white/[0.06]">
                 <SortableHeader label="Timestamp" sortKey="createdAt" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
-                <SortableHeader label="Entity" sortKey="entityType" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
-                <SortableHeader label="Entity ID" sortKey="entityId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                <SortableHeader label="Entity" sortKey="entityType" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="hidden sm:table-cell" />
+                <SortableHeader label="Entity ID" sortKey="entityId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="hidden md:table-cell" />
                 <SortableHeader label="Action" sortKey="action" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
-                <SortableHeader label="Actor" sortKey="actor" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+                <SortableHeader label="Actor" sortKey="actor" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="hidden sm:table-cell" />
                 <TableHead>Details</TableHead>
               </TableRow>
             </TableHeader>
@@ -182,37 +182,69 @@ export default function AuditLogPage() {
                 try { details = JSON.parse(log.details || "{}"); } catch {}
                 return (
                   <TableRow key={log.id} className="hover:bg-white/[0.03] border-white/[0.04] transition-colors" data-testid={`row-audit-${log.id}`}>
-                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3 h-3 opacity-50" />
-                        {new Date(log.createdAt).toLocaleString()}
+                    <TableCell className="text-[11px] sm:text-sm text-muted-foreground whitespace-nowrap">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 opacity-50" />
+                          {new Date(log.createdAt).toLocaleDateString()}
+                        </div>
+                        <span className="opacity-50 sm:block hidden">•</span>
+                        <span>{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`border ${entityColor(log.entityType)} gap-1`}>
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge variant="outline" className={`border ${entityColor(log.entityType)} gap-1 text-[10px] sm:text-xs`}>
                         {entityIcon(log.entityType)}
                         {formatLabel(log.entityType)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{log.entityId}</TableCell>
+                    <TableCell className="font-mono text-[10px] text-muted-foreground hidden md:table-cell">{log.entityId}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={`border ${actionColor(log.action)}`}>
-                        {formatLabel(log.action)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{log.actor}</TableCell>
-                    <TableCell className="max-w-[300px]">
-                      {Object.keys(details).length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(details).slice(0, 4).map(([k, v]) => (
-                            <span key={k} className="text-xs bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded-md">
-                              <span className="text-muted-foreground">{formatLabel(k)}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                            </span>
-                          ))}
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="outline" className={`border ${actionColor(log.action)} text-[10px] w-fit`}>
+                          {formatLabel(log.action)}
+                        </Badge>
+                        <div className="sm:hidden flex items-center gap-1 text-[10px] text-muted-foreground">
+                          {entityIcon(log.entityType)}
+                          {formatLabel(log.entityType)}
                         </div>
-                      ) : log.details ? (
-                        <span className="text-xs text-muted-foreground">{log.details.length > 80 ? log.details.substring(0, 80) + "…" : log.details}</span>
-                      ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">{log.actor}</TableCell>
+                    <TableCell className="max-w-[150px] sm:max-w-[300px]">
+                      <div className="flex flex-col gap-0.5">
+                        {Object.keys(details).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(details).slice(0, 2).map(([k, v]) => (
+                              <span key={k} className="text-[10px] bg-white/[0.04] border border-white/[0.06] px-1 py-0.5 rounded">
+                                <span className="text-muted-foreground">{formatLabel(k)}:</span> {String(v)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : log.details ? (
+                          <span className="text-[11px] sm:text-xs text-muted-foreground truncate" title={log.message}>{log.message}</span>
+                        ) : null}
+                        <span className="sm:hidden text-[10px] opacity-50 font-medium">By {log.actor}</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              }) : (                    <TableCell className="hidden sm:table-cell text-sm">{log.actor}</TableCell>
+                    <TableCell className="max-w-[150px] sm:max-w-[300px]">
+                      <div className="flex flex-col gap-0.5">
+                        {Object.keys(details).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(details).slice(0, 2).map(([k, v]) => (
+                              <span key={k} className="text-[10px] bg-white/[0.04] border border-white/[0.06] px-1 py-0.5 rounded">
+                                <span className="text-muted-foreground">{formatLabel(k)}:</span> {String(v)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : log.details ? (
+                          <span className="text-[11px] sm:text-xs text-muted-foreground truncate" title={log.message}>{log.message}</span>
+                        ) : null}
+                        <span className="sm:hidden text-[10px] opacity-50 font-medium">By {log.actor}</span>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

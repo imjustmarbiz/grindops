@@ -48,32 +48,32 @@ function SuggestionCard({ s, i, customerPrice }: { s: SuggestionResult; i: numbe
 
   return (
     <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors sm:hover:bg-white/[0.05] ${i === 0 ? "border-primary/20 bg-primary/[0.03]" : "border-white/[0.06] bg-white/[0.02]"}`} data-testid={`card-suggestion-${s.grinderId}-rank-${i}`}>
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.05] text-muted-foreground"}`}>
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+        <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-bold ${i === 0 ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.05] text-muted-foreground"}`}>
           #{i + 1}
         </div>
         {categoryIcon(s.displayRole || s.category)}
-        <div>
-          <p className="font-medium text-sm">{s.grinderName}</p>
-          <p className="text-[10px] text-muted-foreground">{s.category} · {s.activeOrders}/{s.capacity} active</p>
+        <div className="min-w-0">
+          <p className="font-medium text-xs sm:text-sm truncate">{s.grinderName}</p>
+          <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{s.category} · {s.activeOrders}/{s.capacity} active</p>
         </div>
-        {s.bidAmount && <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px]">Bid: ${s.bidAmount}</Badge>}
+        {s.bidAmount && <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[9px] sm:text-[10px]">Bid: ${s.bidAmount}</Badge>}
         {profit !== null && (
-          <Badge className={`border text-[10px] ${profit >= 0 ? "bg-amber-500/15 text-amber-400 border-amber-500/20" : "bg-red-500/15 text-red-400 border-red-500/20"}`}>
-            <DollarSign className="w-3 h-3 mr-0.5" />
+          <Badge className={`border text-[9px] sm:text-[10px] ${profit >= 0 ? "bg-amber-500/15 text-amber-400 border-amber-500/20" : "bg-red-500/15 text-red-400 border-red-500/20"}`}>
+            <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5" />
             ${profit.toFixed(0)} ({margin!.toFixed(0)}%)
           </Badge>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         {s.strikes > 0 && (
-          <div className="flex gap-1">
+          <div className="flex gap-0.5 sm:gap-1">
             {Array.from({ length: 3 }).map((_, j) => (
-              <div key={j} className={`w-2 h-2 rounded-full ${j < s.strikes ? "bg-red-500" : "bg-white/10"}`} />
+              <div key={j} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${j < s.strikes ? "bg-red-500" : "bg-white/10"}`} />
             ))}
           </div>
         )}
-        <Badge className="bg-primary/15 text-primary border border-primary/20">
+        <Badge className="bg-primary/15 text-primary border border-primary/20 text-[10px] sm:text-xs px-1 sm:px-2">
           {(s.scores.finalScore * 100).toFixed(0)}
         </Badge>
       </div>
@@ -153,25 +153,25 @@ export default function Queue() {
                           </span>
                         </div>
                         {item.isEmergency && <Badge className="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px]">EMERGENCY</Badge>}
-                        <span className="text-xs text-muted-foreground truncate max-w-[140px]">{serviceName(item.serviceId)}</span>
-                        {item.platform && <Badge variant="outline" className="text-[10px] text-muted-foreground">{item.platform}</Badge>}
+                        <span className="text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-[140px]">{serviceName(item.serviceId)}</span>
+                        {item.platform && <Badge variant="outline" className="text-[10px] text-muted-foreground hidden xs:inline-flex">{item.platform}</Badge>}
                         <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
                           <DollarSign className="w-3 h-3 mr-0.5" />{item.customerPrice}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                         {topGrinder ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground hidden sm:inline">Top:</span>
-                            <span className="text-sm font-medium">{topGrinder.grinderName}</span>
-                            <Badge className="bg-primary/15 text-primary border border-primary/20 text-xs">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <span className="text-xs text-muted-foreground hidden md:inline">Top:</span>
+                            <span className="text-xs sm:text-sm font-medium truncate max-w-[60px] sm:max-w-none">{topGrinder.grinderName}</span>
+                            <Badge className="bg-primary/15 text-primary border border-primary/20 text-[10px] sm:text-xs px-1 sm:px-2">
                               {(topGrinder.scores.finalScore * 100).toFixed(0)}
                             </Badge>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">No candidates</span>
                         )}
-                        <Badge variant="outline" className="text-[10px]">{item.suggestions.length} ranked</Badge>
+                        <Badge variant="outline" className="text-[10px] hidden sm:inline-flex">{item.suggestions.length} ranked</Badge>
                       </div>
                     </button>
                     {isExpanded && (

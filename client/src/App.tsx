@@ -79,9 +79,9 @@ function EarlyAccessDeniedPage() {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6 text-center" data-testid="page-early-access-denied">
       <ShieldAlert className="w-16 h-16 text-amber-500" />
-      <h1 className="text-2xl font-bold">Early Access Only</h1>
+      <h1 className="text-2xl font-bold">Elite Grinders Only Access</h1>
       <p className="text-muted-foreground max-w-md">
-        The dashboard is currently in early access mode and only available to Elite Grinders, Staff, and Owners.
+        The dashboard is currently in elite access mode and only available to Elite Grinders, Staff, and Owners.
       </p>
       <p className="text-sm text-muted-foreground max-w-sm">
         If you believe you should have access, please contact staff in the Discord server.

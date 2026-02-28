@@ -408,124 +408,95 @@ export default function Bids() {
           )}
       </div>
 
+      <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden">
-        <div className="overflow-auto max-h-[calc(100vh-200px)]">
-        <Table className="min-w-[1400px]">
-          <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
+        <div className="overflow-x-auto overflow-y-hidden">
+        <Table className="min-w-full">
+          <TableHeader className="bg-white/[0.03]">
             <TableRow className="border-white/[0.06]">
-              <TableHead className="whitespace-nowrap">Proposal</TableHead>
+              <TableHead className="hidden sm:table-cell min-w-[80px]">ID</TableHead>
               <SortableHeader label="Order" sortKey="orderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
               <SortableHeader label="Grinder" sortKey="grinderId" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
               <SortableHeader label="Bid" sortKey="bidAmount" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
-              <TableHead className="text-right whitespace-nowrap">Order Price</TableHead>
-              <SortableHeader label="Margin" sortKey="margin" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right" />
-              <SortableHeader label="Timeline" sortKey="timeline" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
-              <TableHead className="whitespace-nowrap">Can Start</TableHead>
-              <TableHead className="whitespace-nowrap">Est. Delivery</TableHead>
-              <TableHead className="text-center whitespace-nowrap">QS</TableHead>
-              <SortableHeader label="Submitted" sortKey="bidTime" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
+              <TableHead className="text-right hidden sm:table-cell">Price</TableHead>
+              <SortableHeader label="Margin" sortKey="margin" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="text-right hidden md:table-cell" />
+              <SortableHeader label="Timeline" sortKey="timeline" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} className="hidden lg:table-cell" />
               <SortableHeader label="Status" sortKey="status" currentSortKey={sortKey} currentSortDir={sortDir} onToggle={toggleSort} />
-              <TableHead className="whitespace-nowrap">Actions</TableHead>
+              <TableHead className="text-right pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={13} className="text-center h-24">Loading...</TableCell></TableRow>
-            ) : sortedBids && sortedBids.length > 0 ? sortedBids.map((bid: Bid) => {
+              <TableRow><TableCell colSpan={9} className="text-center h-24">Loading...</TableCell></TableRow>
+            ) : sortedBids.length > 0 ? sortedBids.map((bid: Bid) => {
               const grinder = (grinders || []).find((g: Grinder) => g.id === bid.grinderId);
               const order = (orders || []).find((o: Order) => o.id === bid.orderId);
               const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : bid.orderId;
               const rowStyle =
-                bid.status === "Accepted" ? "bg-emerald-500/[0.06] border-emerald-500/15 hover:bg-emerald-500/[0.1]" :
-                bid.status === "Denied" || bid.status === "Rejected" ? "opacity-45 hover:opacity-70 border-white/[0.03]" :
-                bid.status === "Order Assigned" ? "opacity-50 hover:opacity-75 border-white/[0.03]" :
-                "hover:bg-white/[0.03] border-white/[0.04]";
+                bid.status === "Accepted" ? "bg-emerald-500/[0.06] border-emerald-500/15" :
+                bid.status === "Denied" || bid.status === "Rejected" ? "opacity-60" :
+                "hover:bg-white/[0.03]";
               return (
-                <TableRow key={bid.id} className={`${rowStyle} transition-all`} data-testid={`row-bid-${bid.id}`}>
-                  <TableCell className="font-mono text-sm">{bid.mgtProposalId ? `P${bid.mgtProposalId}` : (bid.displayId || bid.id)}</TableCell>
-                  <TableCell className="font-medium text-primary">{orderRef}</TableCell>
+                <TableRow key={bid.id} className={`${rowStyle} transition-all border-white/[0.04]`} data-testid={`row-bid-${bid.id}`}>
+                  <TableCell className="font-mono text-[10px] text-muted-foreground hidden sm:table-cell">{bid.mgtProposalId ? `P${bid.mgtProposalId}` : (bid.displayId || bid.id.substring(0,6))}</TableCell>
+                  <TableCell className="font-bold text-xs sm:text-sm text-primary">{orderRef}</TableCell>
                   <TableCell>
-                    <div>
-                      <Link href={`/grinders?highlight=${bid.grinderId}`} className="font-medium text-primary hover:underline cursor-pointer" data-testid={`link-grinder-${bid.grinderId}`}>
-                        {grinder?.name || bid.grinderId}
-                      </Link>
-                      {grinder && <p className="text-xs text-muted-foreground">{grinder.category}</p>}
+                    <div className="flex flex-col">
+                      <span className="font-medium text-xs sm:text-sm">{grinder?.name || bid.grinderId}</span>
+                      <span className="text-[10px] text-muted-foreground hidden sm:block">{grinder?.category}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">${bid.bidAmount}</TableCell>
-                  <TableCell className="text-right text-muted-foreground whitespace-nowrap">
-                    {order && (!order.customerPrice || Number(order.customerPrice) <= 0) ? (
-                      <Link href="/orders">
-                        <span className="inline-flex items-center gap-1 text-xs text-amber-400 bg-amber-500/15 border border-amber-500/30 rounded px-1.5 py-0.5 hover:bg-amber-500/25 cursor-pointer" data-testid={`link-set-price-bid-${bid.id}`}>
-                          <AlertTriangle className="w-3 h-3" /> Set Price
-                        </span>
-                      </Link>
-                    ) : order ? `$${order.customerPrice}` : "-"}
+                  <TableCell className="text-right font-bold text-emerald-400 text-xs sm:text-sm">${bid.bidAmount}</TableCell>
+                  <TableCell className="text-right text-muted-foreground text-xs hidden sm:table-cell">
+                    {order?.customerPrice ? `$${order.customerPrice}` : "-"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right hidden md:table-cell">
                     {(() => {
                       const orderPrice = order?.customerPrice ? parseFloat(order.customerPrice) : 0;
-                      const bidAmt = bid.bidAmount ? parseFloat(bid.bidAmount) : 0;
-                      if (orderPrice <= 0) {
-                        return <span className="text-amber-400/70 text-xs whitespace-nowrap">Needs price</span>;
-                      }
-                      const liveMargin = orderPrice - bidAmt;
-                      const liveMarginPct = ((liveMargin / orderPrice) * 100).toFixed(1);
-                      return (
-                        <span className={`font-medium whitespace-nowrap ${liveMargin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                          ${liveMargin.toFixed(2)}
-                          <span className="text-xs text-muted-foreground ml-1">({liveMarginPct}%)</span>
-                        </span>
-                      );
+                      const bidAmt = parseFloat(bid.bidAmount || "0");
+                      if (orderPrice <= 0) return <span className="text-[10px] text-amber-400">Set Price</span>;
+                      const margin = orderPrice - bidAmt;
+                      return <span className={`text-xs font-medium ${margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>${margin.toFixed(0)}</span>;
                     })()}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {bid.timeline ? (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span>{bid.timeline}</span>
-                      </div>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {bid.canStart ? (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Play className="w-3 h-3 text-cyan-400 shrink-0" />
-                        <span className="text-cyan-300">{bid.canStart}</span>
-                      </div>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {bid.estDeliveryDate ? (
-                      <div className="flex items-center gap-1 text-sm">
-                        <CalendarCheck className="w-3 h-3 text-orange-400 shrink-0" />
-                        <span>{format(new Date(bid.estDeliveryDate), "MMM d")}</span>
-                      </div>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {bid.qualityScore ? (
-                      <Badge variant="outline" className="border-purple-500/20 text-purple-400 bg-purple-500/10 text-xs">{bid.qualityScore}</Badge>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {bid.bidTime ? (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(bid.bidTime), "MMM d, h:mm a")}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>{format(new Date(bid.bidTime), "PPpp")}</TooltipContent>
-                      </Tooltip>
-                    ) : <span className="text-muted-foreground">-</span>}
-                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">{bid.timeline || "-"}</TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Badge variant="outline" className={`border ${statusColor(bid.status)}`}>{bid.status}</Badge>
-                      {bid.acceptedBy && <span className="text-[10px] text-muted-foreground">by {bid.acceptedBy}</span>}
+                    <Badge variant="outline" className={`text-[10px] border ${statusColor(bid.status)}`}>{bid.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right pr-2">
+                    <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openEditDialog(bid)} data-testid={`button-edit-bid-${bid.id}`}>
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      {bid.status === "Pending" && (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400 hover:bg-emerald-500/10" onClick={() => {
+                            const bidOrder = (orders || []).find((o: Order) => o.id === bid.orderId);
+                            if (bidOrder && (!bidOrder.customerPrice || Number(bidOrder.customerPrice) <= 0)) {
+                              setPricePrompt({ bidId: bid.id, orderId: bid.orderId, orderLabel: orderRef });
+                            } else {
+                              bidStatusMutation.mutate({ bidId: bid.id, status: "Accepted" });
+                            }
+                          }} data-testid={`button-accept-bid-${bid.id}`}>
+                            <CheckCircle className="w-3 h-3" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-red-400 hover:bg-red-500/10" onClick={() => bidStatusMutation.mutate({ bidId: bid.id, status: "Denied" })} data-testid={`button-deny-bid-${bid.id}`}>
+                            <XCircle className="w-3 h-3" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
+                </TableRow>
+              );
+            }) : (
+              <TableRow><TableCell colSpan={9} className="text-center h-24 text-muted-foreground">No bids found.</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+        </div>
+      </Card>
+      </FadeInUp>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-blue-400 hover:bg-blue-500/10"
