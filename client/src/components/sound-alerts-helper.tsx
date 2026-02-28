@@ -10,9 +10,7 @@ import {
 import { 
   playNotificationSound, 
   getVolume, 
-  setVolume, 
-  unlockMobileAudio,
-  isAudioUnlocked 
+  setVolume 
 } from "@/lib/notification-sounds";
 
 const ALERTS = [
@@ -31,18 +29,12 @@ const ALERTS = [
 
 export function SoundAlertsHelper() {
   const [volume, setVolumeState] = useState(getVolume() * 100);
-  const [unlocked, setUnlocked] = useState(isAudioUnlocked());
   const [playing, setPlaying] = useState<string | null>(null);
 
   const handleVolumeChange = (value: number[]) => {
     const newVol = value[0];
     setVolumeState(newVol);
     setVolume(newVol / 100);
-  };
-
-  const handleUnlock = () => {
-    unlockMobileAudio();
-    setUnlocked(true);
   };
 
   const handlePlay = (id: string) => {
@@ -65,12 +57,6 @@ export function SoundAlertsHelper() {
           ) : (
             <Volume2 className="w-5 h-5 text-muted-foreground" />
           )}
-          {!unlocked && (
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-            </span>
-          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4 bg-card/95 backdrop-blur-xl border-border/50 shadow-2xl" align="end">
@@ -80,16 +66,6 @@ export function SoundAlertsHelper() {
               <Music className="w-4 h-4 text-primary" />
               <h4 className="font-semibold text-sm">Sound Alerts</h4>
             </div>
-            {!unlocked && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="h-7 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
-                onClick={handleUnlock}
-              >
-                Enable Audio
-              </Button>
-            )}
           </div>
 
           <div className="space-y-2 md:block hidden">
