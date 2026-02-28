@@ -265,7 +265,7 @@ export default function StaffServices() {
           <Card className="bg-card/50 border-border/30 lg:min-w-[320px]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <SiPlaystation className="w-4 h-4 text-primary" />
+                <BarChart3 className="w-4 h-4 text-primary" />
                 Console / Platform Comparison
               </CardTitle>
             </CardHeader>
@@ -284,7 +284,7 @@ export default function StaffServices() {
                           key={platform}
                           className={`rounded-xl p-4 border transition-all ${
                             isTop ? "border-primary/30 bg-primary/5" :
-                            platform === "PlayStation" ? "border-blue-500/20 bg-blue-500/[0.04]" :
+                            (platform === "PlayStation" || platform === "PS5") ? "border-blue-500/20 bg-blue-500/[0.04]" :
                             platform === "Xbox" ? "border-green-500/20 bg-green-500/[0.04]" :
                             "border-border/30 bg-white/[0.02]"
                           }`}
@@ -292,7 +292,7 @@ export default function StaffServices() {
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              {platform === "PlayStation" ? (
+                              {(platform === "PlayStation" || platform === "PS5") ? (
                                 <SiPlaystation className="w-5 h-5 text-blue-500" />
                               ) : platform === "Xbox" ? (
                                 <FaXbox className="w-5 h-5 text-green-400" />
@@ -339,7 +339,7 @@ export default function StaffServices() {
                               <span>{completionRate.toFixed(0)}%</span>
                             </div>
                             <ProgressBar value={stats.completed} max={stats.total || 1} color={
-                              platform === "PlayStation" ? "bg-blue-500" : platform === "Xbox" ? "bg-green-500" : "bg-primary"
+                              (platform === "PlayStation" || platform === "PS5") ? "bg-blue-500" : platform === "Xbox" ? "bg-green-500" : "bg-primary"
                             } />
                           </div>
                         </div>
@@ -353,7 +353,7 @@ export default function StaffServices() {
                       <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden flex">
                         {sortedPlatforms.map(([platform, stats]) => {
                           const pct = totalOrders > 0 ? (stats.total / totalOrders) * 100 : 0;
-                          const bgColor = platform === "PlayStation" ? "bg-blue-500" : platform === "Xbox" ? "bg-green-500" : platform === "PC" ? "bg-purple-500" : "bg-muted-foreground";
+                          const bgColor = (platform === "PlayStation" || platform === "PS5") ? "bg-blue-500" : platform === "Xbox" ? "bg-green-500" : platform === "PC" ? "bg-purple-500" : "bg-muted-foreground";
                           return (
                             <TooltipProvider key={platform}>
                               <Tooltip>
@@ -370,7 +370,7 @@ export default function StaffServices() {
                       </div>
                       <div className="flex flex-wrap gap-3 mt-2">
                         {sortedPlatforms.map(([platform, stats]) => {
-                          const bgColor = platform === "PlayStation" ? "bg-blue-500" : platform === "Xbox" ? "bg-green-500" : platform === "PC" ? "bg-purple-500" : "bg-muted-foreground";
+                          const bgColor = (platform === "PlayStation" || platform === "PS5") ? "bg-blue-500" : platform === "Xbox" ? "bg-green-500" : platform === "PC" ? "bg-purple-500" : "bg-muted-foreground";
                           return (
                             <div key={platform} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                               <div className={`w-2 h-2 rounded-full ${bgColor}`} />
