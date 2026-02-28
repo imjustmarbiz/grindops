@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { staffNavItems, grinderNavItems, getFilteredStaffNavItems } from "@/components/layout";
 import {
-  ChevronRight, ChevronLeft, X, Sparkles, MousePointerClick, Eye, Zap,
+  ChevronRight, ChevronLeft, X, GraduationCap, MousePointerClick, Eye, Zap,
   FileCheck, Gavel, Banknote, LayoutDashboard, Bell, MessageCircle, Brain,
   Crown, Settings, ListOrdered, Users, ClipboardCheck, BarChart3, Rocket,
   CheckCircle2, Play, AlertTriangle, Star, CalendarDays, Tv, Newspaper,
   BookOpen, ScrollText, Wrench, Package, Award, TrendingUp, ClipboardList,
-  FileBarChart, Wallet, DollarSign, UserCheck, Calendar, Shield, Upload
+  FileBarChart, Wallet, DollarSign, UserCheck, Calendar, Shield, Upload,
+  Sparkles
 } from "lucide-react";
 
 type DemoStep = { label: string; icon: any; color: string };
@@ -808,7 +809,7 @@ export function InteractiveTutorial() {
         aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
       >
         <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
-          <Sparkles className="w-5 h-5 text-white" />
+          <GraduationCap className="w-5 h-5 text-white" />
         </div>
         <span className="absolute right-14 top-1/2 -translate-y-1/2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl" aria-hidden="true">
           {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
@@ -821,9 +822,9 @@ export function InteractiveTutorial() {
     step.position === "center" || step.targetArea === "full"
       ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
       : step.targetArea === "sidebar"
-      ? "top-1/2 left-[calc(var(--sidebar-width,18rem)+1rem)] -translate-y-1/2"
+      ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:left-[calc(var(--sidebar-width,18rem)+1rem)] md:translate-x-0"
       : step.targetArea === "header"
-      ? "top-20 right-4"
+      ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-20 md:right-4 md:left-auto md:translate-x-0 md:translate-y-0"
       : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
 
   return (

@@ -41,6 +41,7 @@ import {
   type BusinessPayout, type InsertBusinessPayout,
   type WalletTransfer, type InsertWalletTransfer,
   type OrderPaymentLink, type InsertOrderPaymentLink,
+  type UserActivityLog, type InsertUserActivityLog, userActivityLogs,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -222,6 +223,9 @@ export interface IStorage {
   getOrderPaymentLinks(orderId?: string): Promise<OrderPaymentLink[]>;
   createOrderPaymentLink(data: InsertOrderPaymentLink): Promise<OrderPaymentLink>;
   updateOrderPaymentLink(id: string, data: Partial<OrderPaymentLink>): Promise<OrderPaymentLink | undefined>;
+
+  getUserActivityLogs(filters?: { userId?: string; category?: string; action?: string; limit?: number }): Promise<UserActivityLog[]>;
+  createUserActivityLog(log: InsertUserActivityLog): Promise<UserActivityLog>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;

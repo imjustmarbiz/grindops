@@ -190,6 +190,16 @@ export const api = {
       path: '/api/audit-logs' as const,
     },
   },
+  userActivityLogs: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/user-activity-logs' as const,
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/user-activity-logs' as const,
+    },
+  },
   config: {
     get: {
       method: 'GET' as const,

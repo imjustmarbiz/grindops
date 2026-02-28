@@ -914,6 +914,27 @@ export const insertSiteAlertSchema = createInsertSchema(siteAlerts).omit({ creat
 export type InsertSiteAlert = z.infer<typeof insertSiteAlertSchema>;
 export type SiteAlert = typeof siteAlerts.$inferSelect;
 
+export const userActivityLogs = pgTable("user_activity_logs", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  userName: text("user_name").notNull(),
+  userRole: text("user_role").notNull(),
+  action: text("action").notNull(),
+  category: text("category").notNull(),
+  targetType: text("target_type"),
+  targetId: varchar("target_id"),
+  targetName: text("target_name"),
+  metadata: text("metadata"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertUserActivityLogSchema = createInsertSchema(userActivityLogs).omit({ createdAt: true });
+export type UserActivityLog = typeof userActivityLogs.$inferSelect;
+export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
+
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
   const lower = platform.toLowerCase().trim();
