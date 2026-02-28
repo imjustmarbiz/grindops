@@ -1393,13 +1393,11 @@ export function InteractiveTutorial() {
   useEffect(() => {
     if (!isOpen) return;
     const step = steps[currentStep];
-    if (step?.pageUrl && location !== step.pageUrl) {
-      // Small delay before navigating to let the spotlight/dialog settle
-      const timer = setTimeout(() => {
-        hasNavigatedRef.current = true;
-        navigate(step.pageUrl);
-      }, 150);
-      return () => clearTimeout(timer);
+    // This effect is now primarily for initial mount/sync
+    // The handleNext/handlePrev handle the active navigation transitions
+    if (step?.pageUrl && location !== step.pageUrl && !hasNavigatedRef.current) {
+      hasNavigatedRef.current = true;
+      navigate(step.pageUrl);
     }
   }, [isOpen, currentStep, steps, location, navigate]);
 
@@ -1445,10 +1443,24 @@ export function InteractiveTutorial() {
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
       const next = currentStep + 1;
-      // Increase delay to ensure the UI has time to breathe between steps
-      setTimeout(() => {
-        wrappedSetStep(next);
-      }, 150);
+      const step = steps[next];
+      
+      // If the next step requires a page change, handle it carefully
+      if (step?.pageUrl && location !== step.pageUrl) {
+        // 1. First update the session so if they refresh they are on the right step
+        setTutorialSession(true, next, location);
+        // 2. Navigate first
+        navigate(step.pageUrl);
+        // 3. Update the internal state after a longer delay to allow page load
+        setTimeout(() => {
+          setCurrentStep(next);
+        }, 300);
+      } else {
+        // No page change, just move to next step with slight delay
+        setTimeout(() => {
+          wrappedSetStep(next);
+        }, 50);
+      }
     } else {
       setIsOpen(false);
       setCurrentStep(0);
@@ -1458,7 +1470,7 @@ export function InteractiveTutorial() {
       hasNavigatedRef.current = false;
       navigate("/");
     }
-  }, [currentStep, steps.length, storageKey, navigate, wrappedSetStep]);
+  }, [currentStep, steps, storageKey, navigate, wrappedSetStep, location]);
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
