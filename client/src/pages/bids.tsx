@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Gavel, Clock, DollarSign, CalendarCheck, Play, CheckCircle, XCircle, RotateCcw, Shield, Pencil, Loader2, Filter, Plus, Link2, AlertTriangle, Search } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import type { Bid, Order, Grinder, Service } from "@shared/schema";
 
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -289,6 +290,7 @@ export default function Bids() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-bids-title">
             <Gavel className="w-7 h-7 text-primary" />
             Proposals & Bids
+            <HelpTip text="Bids are imported from the MGT Bot. Accept a bid to auto-create an assignment. You can also manually create bids for orders that came in outside the bot." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Grinder proposals imported from MGT Bot.</p>
         </div>

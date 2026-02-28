@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Award, Loader2, Plus, Trash2, Sparkles, Star } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, ALL_BADGE_IDS, MANUAL_BADGE_IDS, AUTO_BADGE_IDS, TIER_LABELS, TIER_COLORS, type BadgeId, type BadgeTier } from "@/components/achievement-badges";
 import type { Grinder, GrinderBadge } from "@shared/schema";
 
@@ -85,7 +86,10 @@ export default function StaffBadges() {
             <div className="flex items-center gap-3">
               <Award className="w-7 h-7 text-primary" />
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">Badge Management</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">Badge Management</h1>
+                  <HelpTip text="Most badges are earned automatically based on performance milestones. Manual badges can be awarded here for special recognition. Grinders see all their badges on their overview page." />
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">Award and manage grinder achievement badges</p>
               </div>
             </div>

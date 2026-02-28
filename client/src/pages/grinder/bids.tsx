@@ -11,6 +11,7 @@ import {
 import { FaDiscord } from "react-icons/fa6";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
+import { HelpTip } from "@/components/help-tip";
 
 export default function GrinderBids() {
   const {
@@ -57,6 +58,7 @@ export default function GrinderBids() {
         <Gavel className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-purple-400"}`} />
         My Bids
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{allBids.length}</Badge>
+        <HelpTip text="Your bids compete against other grinders. Win rate is calculated from accepted vs total bids and directly impacts your queue ranking. You can edit pending bids before they're reviewed." />
       </h2>
       <p className="text-sm text-muted-foreground mt-1">Track your bid submissions, outcomes, and edit pending bids</p>
       </FadeInUp>

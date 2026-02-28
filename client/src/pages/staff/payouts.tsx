@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wallet, Banknote, CheckCircle, X, CreditCard, Loader2, DollarSign, MessageSquare, TrendingUp, Clock, AlertTriangle, RefreshCw, ThumbsUp, Video, Upload, ImageIcon, FileText, ArrowDownCircle, ShieldAlert, ArrowDown, Filter } from "lucide-react";
+import { HelpTip } from "@/components/help-tip";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
@@ -179,6 +180,7 @@ export default function StaffPayouts() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
                 Payout Management
+                <HelpTip text="Payouts are created when assignments are completed. Grinders approve their amount first, then you review and mark as paid. Disputed payouts need manual resolution — check the dispute reason before approving." />
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Review and manage grinder payout requests</p>
             </div>

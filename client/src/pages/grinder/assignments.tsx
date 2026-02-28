@@ -15,7 +15,6 @@ import {
   MessageSquare, Banknote, TicketCheck, LogIn, LogOut, AlertTriangle, FileText, ExternalLink, ClipboardList, Upload, Video, Play, Tv, Repeat, BellRing
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
-import { HelpTip } from "@/components/help-tip";
 import { FaXbox, FaDiscord } from "react-icons/fa6";
 import { SiPlaystation, SiSteam, SiNintendoswitch } from "react-icons/si";
 
@@ -196,7 +195,6 @@ export default function GrinderAssignments() {
       <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
         <FileCheck className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-emerald-400"}`} />
         My Orders
-        <HelpTip text="Track your active assignments and completed work." />
         <Badge className="border-0 bg-white/[0.06] text-white/60 text-xs">{assignments.length}</Badge>
       </h2>
       <p className="text-sm text-muted-foreground mt-1">Manage your active orders, send updates, and request payouts</p>

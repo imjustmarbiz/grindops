@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { WALLET_TYPES, TRANSACTION_CATEGORIES, DEFAULT_PAYOUT_CATEGORIES, DEFAULT_PAYOUT_ROLES } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -220,6 +221,7 @@ export default function StaffWallets() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">
                 {isOwner ? "Business Wallet" : "My Wallet"}
+                <HelpTip text={isOwner ? "Tracks all company revenue, grinder payouts, and staff balances. Add transactions to log payments, expenses, or adjustments. Each staff member has their own sub-wallet." : "Shows what you owe the business and what the business owes you. Log transactions as you collect payments or receive payouts."} />
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isOwner ? "Track business finances across all wallets" : "Track finances you owe to the business and your payouts from the business"}

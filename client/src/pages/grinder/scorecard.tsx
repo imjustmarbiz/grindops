@@ -11,6 +11,7 @@ import {
   TrendingUp, Award, ShieldCheck, Package
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 
 import type { CustomerReview } from "@shared/schema";
 
@@ -157,6 +158,7 @@ export default function GrinderScorecard() {
       <div className="flex items-center gap-3">
         <ClipboardCheck className={`w-7 h-7 ${eliteAccent}`} />
         <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-scorecard-header">My Scorecard</h1>
+        <HelpTip text="Your scorecard grades you on on-time delivery, speed, strikes, reassignments, and daily update compliance. These grades directly feed into the AI Queue ranking that determines who gets assigned orders." />
       </div>
       <p className="text-sm text-muted-foreground mt-1">Your performance metrics, quality score, and customer reviews</p>
       </FadeInUp>

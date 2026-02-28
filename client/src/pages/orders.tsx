@@ -23,6 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { usePlatforms } from "@/hooks/use-platforms";
 import { useAuth } from "@/hooks/use-auth";
 import type { Order, Service, Grinder, Bid } from "@shared/schema";
@@ -495,6 +496,7 @@ export default function Orders() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-orders-title">
             <ListOrdered className="w-7 h-7 text-primary" />
             Order Management
+            <HelpTip text="Orders flow from Open → Assigned → In Progress → Completed. Click any cell to edit inline. Orders with $0 price are flagged — update the price before completing." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Track and edit customer orders. Click any field to edit inline.</p>
         </div>

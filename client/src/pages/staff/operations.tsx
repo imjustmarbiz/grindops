@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import type { Service } from "@shared/schema";
 import { usePlatforms } from "@/hooks/use-platforms";
 
@@ -670,6 +671,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-2" data-testid="text-page-title">
                   Operations
+                  <HelpTip text="Create manual orders, send broadcast alerts to all grinders or specific ones, and manage day-to-day operations. Use the MGT Bot for automated order imports." />
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">Create orders, assign grinders, and send alerts</p>
               </div>

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollText, Filter, Clock, Activity, FileText, Package, Gavel, Users, Settings, ClipboardCheck, BarChart3, DollarSign, Star, AlertTriangle } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/sortable-header";
 import type { AuditLog } from "@shared/schema";
@@ -102,6 +103,7 @@ export default function AuditLogPage() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-audit-title">
             <ScrollText className="w-7 h-7 text-primary" />
             Audit Log
+            <HelpTip text="Every action in the system is logged here — order edits, bid accepts, payout approvals, strike changes, and more. Use filters to narrow down by entity type or search for specific events." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Complete history of all system actions, grinder activity, and reports.</p>
         </div>

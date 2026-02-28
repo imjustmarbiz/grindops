@@ -7,6 +7,7 @@ import { Loader2, Activity, Brain, AlertTriangle, Crown, Users, Zap, Shield, Dol
 import { FaXbox } from "react-icons/fa6";
 import { SiPlaystation } from "react-icons/si";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import type { Order, SuggestionResult } from "@shared/schema";
 
 type FullQueueItem = {
@@ -104,6 +105,7 @@ export default function Queue() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-queue-title">
             <Brain className="w-7 h-7 text-primary" />
             AI Queue
+            <HelpTip text="The queue scores each grinder using 9 weighted factors: margin, capacity, tier, fairness, new grinder boost, reliability, quality, risk, and emergency. Adjust the weights in Admin settings to change how grinders are ranked." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">9-factor weighted scoring · ranked grinder suggestions for every open order</p>
         </div>

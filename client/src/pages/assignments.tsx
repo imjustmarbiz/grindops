@@ -16,6 +16,7 @@ import { FileCheck, DollarSign, Users, CheckCircle, Clock, Star, AlertTriangle, 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import type { Assignment, Order, Grinder } from "@shared/schema";
 
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -210,6 +211,7 @@ export default function Assignments() {
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight flex items-center gap-3" data-testid="text-assignments-title">
             <FileCheck className="w-7 h-7 text-primary" />
             Assignments
+            <HelpTip text="Completing an assignment auto-generates a payout request and performance report. Quality ratings and on-time delivery here directly affect the grinder's scorecard and queue ranking." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Auto-created when bids are accepted. Replace grinders with custom pay splits.</p>
         </div>

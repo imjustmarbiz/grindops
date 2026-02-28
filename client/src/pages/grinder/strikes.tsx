@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -164,7 +165,10 @@ export default function GrinderStrikes() {
           <div className="flex items-center gap-3">
             <Shield className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-red-400"}`} />
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Strikes & Policy</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Strikes & Policy</h1>
+                <HelpTip text="3 strikes = automatic suspension. Fines must be paid before you can bid again. You can appeal any strike within 7 days — staff will review and respond." />
+              </div>
               <p className="text-muted-foreground text-sm mt-1">
                 Your strike status, fines, appeals, and grinder policy overview
               </p>

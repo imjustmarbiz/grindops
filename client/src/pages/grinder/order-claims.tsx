@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -155,7 +156,10 @@ export default function GrinderOrderClaims() {
         <div className="flex items-center gap-3">
           <Wrench className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-grind-repair-title">Order Repairs</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-grind-repair-title">Order Repairs</h2>
+              <HelpTip text="Use this if an order has wrong details, you completed work that wasn't tracked, or you need to add a past order to your profile. Staff will review and approve each request." />
+            </div>
             <p className="text-sm text-muted-foreground">Fix orders, claim missing work, or add completed orders to your profile</p>
           </div>
         </div>

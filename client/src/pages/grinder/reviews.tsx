@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -209,7 +210,10 @@ export default function GrinderReviews() {
         <div className="flex items-center gap-3">
           <Star className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-reviews-title">Customer Reviews</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-reviews-title">Customer Reviews</h2>
+              <HelpTip text="Positive reviews boost your quality score and help you climb the queue rankings. Generate an access code to let customers submit a review, or submit one yourself with proof for staff approval." />
+            </div>
             <p className="text-sm text-muted-foreground">Invite customers to review, submit reviews, and manage access</p>
           </div>
         </div>

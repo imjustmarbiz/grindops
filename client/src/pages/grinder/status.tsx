@@ -11,6 +11,7 @@ import {
   Loader2, Crown, Sparkles, Lightbulb, ArrowUpCircle, Tv, ExternalLink, Info, Shield
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 
 export default function GrinderStatus() {
   const {
@@ -27,7 +28,10 @@ export default function GrinderStatus() {
         <div className="flex items-center gap-3">
           <Crown className={`w-7 h-7 ${isElite ? "text-cyan-400" : "text-amber-400"}`} />
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Grinder Status</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Grinder Status</h1>
+              <HelpTip text="Your tier advances based on completed orders, quality, and consistency. Elite grinders get higher capacity, priority queue boosts, and exclusive badges. Link your Twitch to appear on the streams page." />
+            </div>
             <p className="text-muted-foreground text-sm mt-1">
               Your role, elite progress, and integrations
             </p>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { HelpTip } from "@/components/help-tip";
 import {
   MessageSquare, CheckCircle, Clock, AlertTriangle, Search,
   FileText, Image, Calendar, User, Hash, Filter, Activity,
@@ -221,6 +222,7 @@ export default function StaffOrderUpdates() {
               <MessageSquare className="w-5 h-5 text-blue-400" />
             </div>
             Order Updates
+            <HelpTip text="Grinders submit progress updates and proof here. Deadline extension requests need your approval — check the reason and approve or deny. Acknowledge updates to let grinders know you've seen them." />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">All grinder progress updates, proof uploads, and deadline requests</p>
         </div>

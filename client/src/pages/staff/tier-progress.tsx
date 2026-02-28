@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { HelpTip } from "@/components/help-tip";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TrendingUp, Award, CheckCircle, Search, Users, Clock, Trophy,
@@ -233,6 +234,7 @@ export default function TierProgressPage() {
         <div className="flex items-center gap-3">
           <TrendingUp className="w-7 h-7 text-primary" />
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-tier-progress-title">Tier Progress</h1>
+          <HelpTip text="Tiers go from New → Bronze → Silver → Gold → Diamond → Elite. Advancement is based on completed orders, quality ratings, on-time delivery, and consistency across 7-day, 30-day, and 90-day windows." />
         </div>
         <p className="text-sm text-muted-foreground mt-1">Track grinder advancement across short-term, mid-term, and long-term performance windows</p>
       </FadeInUp>
