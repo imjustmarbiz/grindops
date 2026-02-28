@@ -13,7 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   ClipboardList, CheckCircle2, Circle, Flag, Clock, Loader2,
   Plus, ChevronDown, ChevronRight, User, ExternalLink, AlertTriangle,
-  Zap, Eye, EyeOff, X
+  Zap, Eye, EyeOff, X, Hash
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
@@ -64,6 +64,10 @@ export default function StaffTodo() {
 
   const { data: allTasks = [] } = useQuery<any[]>({
     queryKey: ["/api/staff/tasks/all"],
+  });
+
+  const { data: orders = [] } = useQuery<any[]>({
+    queryKey: ["/api/orders"],
   });
 
   const { data: chatMembers = [] } = useQuery<StaffMember[]>({
@@ -120,7 +124,13 @@ export default function StaffTodo() {
       toast({ title: "Missing fields", description: "Title and recipient are required.", variant: "destructive" });
       return;
     }
-    createTaskMutation.mutate({ title: title.trim(), description: description.trim(), assignedTo, priority, orderId: orderId.trim() });
+    createTaskMutation.mutate({ 
+      title: title.trim(), 
+      description: description.trim(), 
+      assignedTo, 
+      priority, 
+      orderId: orderId === "none" ? "" : orderId.trim() 
+    });
   };
 
   const pendingTasks = myTasks.filter((t: any) => t.status === "pending");
@@ -447,13 +457,24 @@ export default function StaffTodo() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">Order ID (optional)</label>
-                <Input
-                  placeholder="e.g. ORD-123"
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  data-testid="input-task-order-id"
-                />
+                <label className="text-xs text-muted-foreground">Order (optional)</label>
+                <Select value={orderId} onValueChange={setOrderId}>
+                  <SelectTrigger data-testid="select-task-order">
+                    <SelectValue placeholder="Select an order..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Order</SelectItem>
+                    {orders.filter(o => !["Completed", "Paid Out", "Cancelled", "Refunded"].includes(o.status)).map((o: any) => (
+                      <SelectItem key={o.id} value={o.id} data-testid={`select-item-order-${o.id}`}>
+                        <span className="flex items-center gap-2">
+                          <Hash className="w-3 h-3 text-muted-foreground" />
+                          <span className="font-mono text-xs">#{o.mgtOrderNumber || o.id}</span>
+                          <span className="text-[10px] text-muted-foreground truncate">- {o.customerDiscordUsername}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 onClick={handleCreateTask}
