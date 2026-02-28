@@ -22,6 +22,18 @@ export function formatCompact(val: number) {
   return `$${val.toFixed(0)}`;
 }
 
+export function moneyColor(val: number): string {
+  if (val < 0) return "text-red-400";
+  if (val === 0) return "text-muted-foreground";
+  return "text-emerald-400";
+}
+
+export function moneyColorClass(val: number | string | null | undefined): string {
+  const n = typeof val === "string" ? parseFloat(val) : (val ?? 0);
+  if (isNaN(n) || n === 0) return "text-muted-foreground";
+  return n < 0 ? "text-red-400" : "text-emerald-400";
+}
+
 export function AnimatedRing({ percent, size = 80, stroke = 8, color, label, value }: { percent: number; size?: number; stroke?: number; color: string; label: string; value: string }) {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
