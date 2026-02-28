@@ -97,7 +97,8 @@ export default function GrinderTodoList() {
     const completedAssignments = (assignments || []).filter((a: any) => a.status === "Completed");
     for (const assignment of completedAssignments) {
       const hasPayout = (payoutRequests || []).find((p: any) => p.assignmentId === assignment.id);
-      if (hasPayout && !hasPayout.completionProofUrl) {
+      // Only show proof task if payout is pending AND no proof is uploaded
+      if (hasPayout && hasPayout.status === "Pending" && !hasPayout.completionProofUrl) {
         todos.push({
           id: `auto-proof-${assignment.id}`,
           title: `Upload video proof for Order #${assignment.orderId}`,
@@ -111,8 +112,52 @@ export default function GrinderTodoList() {
       }
     }
 
+    // New Registration Tasks
+    const hasLinkedTwitch = !!grinder?.twitchUsername;
+    const hasStrikes = (customTasks || []).some((t: any) => t.id === "req-review-strikes" && t.status === "completed");
+    const hasQueueGuide = (customTasks || []).some((t: any) => t.id === "req-review-queue" && t.status === "completed");
+
+    if (!hasLinkedTwitch) {
+      todos.push({
+        id: "req-link-twitch",
+        title: "Link your Twitch Account",
+        description: "Connect your Twitch to appear on the live streams page and boost your profile visibility.",
+        orderId: "",
+        assignmentId: "",
+        type: "custom",
+        priority: "normal",
+        completed: false,
+      });
+    }
+
+    if (!hasStrikes) {
+      todos.push({
+        id: "req-review-strikes",
+        title: "Review Strikes & Policy",
+        description: "Read through the grinder policy and strike system to ensure you're compliant.",
+        orderId: "",
+        assignmentId: "",
+        type: "custom",
+        priority: "normal",
+        completed: false,
+      });
+    }
+
+    if (!hasQueueGuide) {
+      todos.push({
+        id: "req-review-queue",
+        title: "Review Scorecard & AI Queue",
+        description: "Understand how the 9-factor AI queue works and how to improve your ranking.",
+        orderId: "",
+        assignmentId: "",
+        type: "custom",
+        priority: "normal",
+        completed: false,
+      });
+    }
+
     return todos;
-  }, [assignments, payoutRequests]);
+  }, [assignments, payoutRequests, grinder, customTasks]);
 
   const pendingCustomTasks = customTasks.filter((t: any) => t.status === "pending");
   const completedCustomTasks = customTasks.filter((t: any) => t.status === "completed");
@@ -138,6 +183,7 @@ export default function GrinderTodoList() {
       case "start_order": return <PlayCircle className="w-4 h-4 text-emerald-400" />;
       case "submit_proof": return <Video className="w-4 h-4 text-purple-400" />;
       case "ticket_ack": return <Send className="w-4 h-4 text-amber-400" />;
+      case "custom": return <ClipboardList className="w-4 h-4 text-cyan-400" />;
       default: return <ClipboardList className="w-4 h-4 text-cyan-400" />;
     }
   };
@@ -293,9 +339,14 @@ export default function GrinderTodoList() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{todo.description}</p>
                     </div>
-                    <Link href="/grinder/assignments" data-testid={`link-goto-orders-${todo.id}`}>
+                    <Link href={
+                      todo.id === "req-link-twitch" ? "/grinder/status" :
+                      todo.id === "req-review-strikes" ? "/grinder/strikes" :
+                      todo.id === "req-review-queue" ? "/scorecard-guide" :
+                      "/grinder/assignments"
+                    } data-testid={`link-goto-orders-${todo.id}`}>
                       <Badge variant="outline" className="shrink-0 border-amber-500/20 text-amber-400/80 text-[10px] cursor-pointer hover:bg-amber-500/10 transition-colors">
-                        Go to My Orders
+                        {todo.id.startsWith("req-") ? "Go to Page" : "Go to My Orders"}
                       </Badge>
                     </Link>
                   </div>
