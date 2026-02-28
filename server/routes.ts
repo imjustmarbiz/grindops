@@ -5511,6 +5511,18 @@ export async function registerRoutes(
   app.get("/api/staff/my-badges", requireStaff, async (req, res) => {
     const user = (req as any).user;
     const badges = await storage.getStaffBadges(user.id);
+    const roleBadgeId = user.role === "owner" ? "staff-owner-role" : "staff-staff-role";
+    const hasRoleBadge = badges.some((b: any) => b.badgeId === roleBadgeId);
+    if (!hasRoleBadge) {
+      badges.unshift({
+        id: `auto-role-${user.id}`,
+        userId: user.id,
+        badgeId: roleBadgeId,
+        awardedBy: "system",
+        note: "Auto-assigned based on role",
+        createdAt: user.createdAt || new Date().toISOString(),
+      });
+    }
     res.json(badges);
   });
 
@@ -5524,6 +5536,17 @@ export async function registerRoutes(
       }
 
       const staffBadges = await storage.getStaffBadges(userId);
+      const roleBadgeId = targetUser.role === "owner" ? "staff-owner-role" : "staff-staff-role";
+      if (!staffBadges.some((b: any) => b.badgeId === roleBadgeId)) {
+        staffBadges.unshift({
+          id: `auto-role-${userId}`,
+          userId,
+          badgeId: roleBadgeId,
+          awardedBy: "system",
+          note: "Auto-assigned based on role",
+          createdAt: targetUser.createdAt || new Date().toISOString(),
+        } as any);
+      }
       const allAuditLogs = await storage.getAuditLogs();
       const discordId = targetUser.discordId || targetUser.id;
       const username = (targetUser.discordUsername || "").toLowerCase();
@@ -5664,13 +5687,6 @@ export async function registerRoutes(
     }
 
     res.json({ success: true });
-  });
-
-  app.get("/api/staff/my-badges", requireStaff, async (req, res) => {
-    const user = (req as any).user;
-    if (!user) return res.status(401).json({ error: "Not authenticated" });
-    const badges = await storage.getStaffBadges(user.id);
-    res.json(badges);
   });
 
   app.get("/api/owner/staff-badge-stats", requireOwner, async (req, res) => {

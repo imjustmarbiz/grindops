@@ -373,7 +373,7 @@ function StaffBadgesSection() {
               <Sparkles className="w-5 h-5 text-red-400" />
               Staff Badge Catalogue
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">All 50 staff badges and how they are earned</p>
+            <p className="text-xs text-muted-foreground mt-1">All 63 staff badges and how they are earned</p>
           </CardHeader>
           <CardContent className="space-y-6">
             <BadgeCatalogueSection

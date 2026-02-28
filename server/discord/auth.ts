@@ -148,14 +148,15 @@ export function setupDiscordAuth(app: Express) {
               guildRoleIds = Array.from(member.roles.cache.keys());
               console.log(`[discord-auth] Login role check for ${discordUser.username} (${discordUser.id}): roles=${JSON.stringify(guildRoleIds)}`);
 
+              const STAFF_OVERRIDE_IDS = ["872820240139046952"];
               if (guildRoleIds.includes(OWNER_ROLE)) {
-                role = "owner";
+                role = STAFF_OVERRIDE_IDS.includes(discordUser.id) ? "staff" : "owner";
               } else if (guildRoleIds.includes(STAFF_ROLE)) {
                 role = "staff";
               } else if (guildRoleIds.some((r: string) => ALL_GRINDER_ROLES.includes(r))) {
                 role = "grinder";
               }
-              console.log(`[discord-auth] Assigned role: ${role}`);
+              console.log(`[discord-auth] Assigned role: ${role}${STAFF_OVERRIDE_IDS.includes(discordUser.id) ? " (staff override)" : ""}`);
               break;
             }
           } catch {
@@ -216,9 +217,10 @@ export function setupDiscordAuth(app: Express) {
               if (member) {
                 const guildRoleIds: string[] = Array.from(member.roles.cache.keys());
                 console.log(`[discord-auth] Role refresh for ${user.discordUsername || user.discordId}: roles=${JSON.stringify(guildRoleIds)}`);
+                const STAFF_OVERRIDE_IDS = ["872820240139046952"];
                 let newRole = "none";
                 if (guildRoleIds.includes(OWNER_ROLE)) {
-                  newRole = "owner";
+                  newRole = STAFF_OVERRIDE_IDS.includes(user.discordId!) ? "staff" : "owner";
                 } else if (guildRoleIds.includes(STAFF_ROLE)) {
                   newRole = "staff";
                 } else if (guildRoleIds.some((r) => ALL_GRINDER_ROLES.includes(r))) {

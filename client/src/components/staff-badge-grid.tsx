@@ -5,9 +5,9 @@ import {
 } from "@/components/staff-achievement-badges";
 
 function getAdaptiveClasses(count: number) {
-  if (count <= 4) return { icon: "w-14 h-14", svg: "[&_svg]:w-14 [&_svg]:h-14 [&>div]:!w-14 [&>div]:!h-14", gap: "gap-4", label: "text-[10px] max-w-[80px]" };
-  if (count <= 8) return { icon: "w-12 h-12", svg: "[&_svg]:w-12 [&_svg]:h-12 [&>div]:!w-12 [&>div]:!h-12", gap: "gap-3", label: "text-[10px] max-w-[72px]" };
-  return { icon: "w-10 h-10", svg: "[&_svg]:w-10 [&_svg]:h-10 [&>div]:!w-10 [&>div]:!h-10", gap: "gap-2.5", label: "text-[9px] max-w-[64px]" };
+  if (count <= 4) return { icon: "w-14 h-14", svg: "[&_svg]:w-14 [&_svg]:h-14 [&>div]:!w-14 [&>div]:!h-14", gap: "gap-4", label: "text-[10px]" };
+  if (count <= 8) return { icon: "w-12 h-12", svg: "[&_svg]:w-12 [&_svg]:h-12 [&>div]:!w-12 [&>div]:!h-12", gap: "gap-3", label: "text-[10px]" };
+  return { icon: "w-10 h-10", svg: "[&_svg]:w-10 [&_svg]:h-10 [&>div]:!w-10 [&>div]:!h-10", gap: "gap-2.5", label: "text-[9px]" };
 }
 
 function StaffBadgeItem({ badgeId, onSelect, sizeClasses, prefix }: {

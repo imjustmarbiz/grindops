@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
@@ -7,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { formatLabel } from "@/lib/staff-utils";
+import { StaffPerformanceDialog } from "@/components/staff-scorecard";
 import {
   Loader2, UserCheck, ClipboardList, History, Activity, Users,
   Clock, CheckCircle, TrendingUp, BarChart3, ScrollText,
@@ -15,6 +17,8 @@ import {
 export default function StaffOverviewPage() {
   const { user } = useAuth();
   const { auditLogs, auditLogsUpdatedAt } = useStaffData();
+  const [perfUserId, setPerfUserId] = useState<string | null>(null);
+  const [perfOpen, setPerfOpen] = useState(false);
 
   const { data: staffMembers = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/owner/staff-members"],
@@ -118,7 +122,7 @@ export default function StaffOverviewPage() {
                   const barWidth = maxActions7d > 0 ? (member.actionsLast7d / maxActions7d) * 100 : 0;
                   const lastActionStr = member.lastAction ? new Date(member.lastAction).toLocaleString() : "No activity yet";
                   return (
-                    <div key={member.id} className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors" data-testid={`card-staff-${member.discordId}`}>
+                    <div key={member.id} className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors cursor-pointer" onClick={() => { setPerfUserId(member.id); setPerfOpen(true); }} data-testid={`card-staff-${member.discordId}`}>
                       <Avatar className="w-10 h-10 border border-white/10">
                         <AvatarImage src={member.avatarUrl || undefined} />
                         <AvatarFallback className="bg-white/5 text-xs">{member.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -246,6 +250,11 @@ export default function StaffOverviewPage() {
             </CardContent>
           </Card>
         </FadeInUp>
+      <StaffPerformanceDialog
+        userId={perfUserId}
+        open={perfOpen}
+        onClose={() => { setPerfOpen(false); setPerfUserId(null); }}
+      />
       </AnimatedPage>
     </TooltipProvider>
   );

@@ -327,6 +327,45 @@ export function StaffBundleSpecialist() { return <StarBadge id="staff-bundle-spe
 export function StaffSeasonSpecialist() { return <DiamondBadge id="staff-season-specialist" c1="#4ade80" c2="#16a34a" c3="#052e16" icon={<><path d="M32,24 Q38,28 36,34 Q34,38 32,38 Q30,38 28,34 Q26,28 32,24 Z" fill="#86efac" opacity="0.7" /><path d="M32,28 L32,36" stroke="#052e16" strokeWidth="1" /></>} />; }
 export function StaffAddonSpecialist() { return <CircleBadge id="staff-addon-specialist" c1="#c084fc" c2="#9333ea" c3="#581c87" icon={<><path d="M26,32 L38,32 M32,26 L32,38" stroke="#e9d5ff" strokeWidth="2.5" strokeLinecap="round" /></>} />; }
 
+export function StaffOwnerRole() {
+  return (
+    <SBadgeShell glow="#ef4444" id="staff-owner-role">
+      <defs>
+        <linearGradient id="sb-owner-role" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="40%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#7f1d1d" />
+        </linearGradient>
+        <radialGradient id="sb-owner-glow" cx="50%" cy="40%" r="40%">
+          <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <path d="M32,4 L54,16 L54,36 Q54,52 32,60 Q10,52 10,36 L10,16 Z" fill="url(#sb-owner-role)" stroke="#fbbf24" strokeWidth="1.5" />
+      <circle cx="32" cy="32" r="14" fill="url(#sb-owner-glow)" />
+      <path d="M22,34 L27,26 L32,30 L37,26 L42,34 L38,34 L36,40 L28,40 L26,34 Z" fill="#fbbf24" stroke="#fef3c7" strokeWidth="0.8" />
+    </SBadgeShell>
+  );
+}
+
+export function StaffStaffRole() {
+  return (
+    <SBadgeShell glow="#14b8a6" id="staff-staff-role">
+      <defs>
+        <linearGradient id="sb-staff-role" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2dd4bf" />
+          <stop offset="40%" stopColor="#0d9488" />
+          <stop offset="100%" stopColor="#042f2e" />
+        </linearGradient>
+      </defs>
+      <path d="M32,4 L54,16 L54,36 Q54,52 32,60 Q10,52 10,36 L10,16 Z" fill="url(#sb-staff-role)" stroke="#2dd4bf" strokeWidth="1" />
+      <path d="M32,12 L46,20 L46,34 Q46,46 32,52 Q18,46 18,34 L18,20 Z" fill="#042f2e" stroke="#0d9488" strokeWidth="0.8" />
+      <path d="M32,22 L32,40 M26,28 L38,28 M26,34 L38,34" stroke="#2dd4bf" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="32" cy="24" r="4" fill="#14b8a6" stroke="#ccfbf1" strokeWidth="0.8" />
+    </SBadgeShell>
+  );
+}
+
 export type StaffBadgeTier = "short" | "mid" | "long";
 export type StaffBadgeCategory = "auto" | "manual";
 
@@ -345,7 +384,8 @@ export type StaffBadgeId =
   | "staff-vc-specialist" | "staff-badge-specialist" | "staff-rep-specialist"
   | "staff-hotzone-specialist" | "staff-build-specialist" | "staff-challenge-specialist"
   | "staff-card-specialist" | "staff-event-specialist" | "staff-bundle-specialist"
-  | "staff-season-specialist" | "staff-addon-specialist";
+  | "staff-season-specialist" | "staff-addon-specialist"
+  | "staff-owner-role" | "staff-staff-role";
 
 export const STAFF_BADGE_COMPONENTS: Record<StaffBadgeId, () => JSX.Element> = {
   "staff-first-action": StaffFirstAction,
@@ -409,6 +449,8 @@ export const STAFF_BADGE_COMPONENTS: Record<StaffBadgeId, () => JSX.Element> = {
   "staff-bundle-specialist": StaffBundleSpecialist,
   "staff-season-specialist": StaffSeasonSpecialist,
   "staff-addon-specialist": StaffAddonSpecialist,
+  "staff-owner-role": StaffOwnerRole,
+  "staff-staff-role": StaffStaffRole,
 };
 
 export const STAFF_BADGE_META: Record<StaffBadgeId, { label: string; tooltip: string; category: StaffBadgeCategory; tier: StaffBadgeTier }> = {
@@ -476,6 +518,8 @@ export const STAFF_BADGE_META: Record<StaffBadgeId, { label: string; tooltip: st
   "staff-bundle-specialist": { label: "Bundle Order Specialist", tooltip: "Specialist in managing bundle orders", category: "manual", tier: "mid" },
   "staff-season-specialist": { label: "Season Pass Specialist", tooltip: "Specialist in managing season pass orders", category: "manual", tier: "mid" },
   "staff-addon-specialist": { label: "Add-Ons Specialist", tooltip: "Specialist in managing add-on orders", category: "manual", tier: "mid" },
+  "staff-owner-role": { label: "Owner", tooltip: "Automatically awarded to users with the Owner role — leadership and full operational authority", category: "auto", tier: "long" },
+  "staff-staff-role": { label: "Staff Member", tooltip: "Automatically awarded to users with the Staff role — trusted team operator", category: "auto", tier: "short" },
 };
 
 export const ALL_STAFF_BADGE_IDS = Object.keys(STAFF_BADGE_META) as StaffBadgeId[];

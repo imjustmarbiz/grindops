@@ -671,12 +671,21 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/staff-overview": {
-    description: "Owner-only view of your entire staff team — activity metrics, actions per day, and individual performance breakdowns for every team member.",
+    description: "Owner-only view of your entire staff team — activity metrics, actions per day, and individual performance breakdowns. Click any team member to open their Performance Card.",
     demoSteps: [
-      { label: "Total staff actions today: 47", icon: UserCheck, color: "text-blue-400" },
-      { label: "Activity bars show 7-day trends", icon: BarChart3, color: "text-cyan-400" },
+      { label: "Total staff actions today & 7-day trends", icon: UserCheck, color: "text-blue-400" },
+      { label: "Click any member → Performance Card dialog", icon: BarChart3, color: "text-cyan-400" },
       { label: "Staff audit log by action type", icon: ScrollText, color: "text-purple-400" },
       { label: "Compare team member contributions", icon: Users, color: "text-green-400" },
+    ],
+  },
+  "/my-performance": {
+    description: "Your personal performance dashboard — KPI stats, action breakdown, achievement badges, recent activity feed, and task tracking all in one view.",
+    demoSteps: [
+      { label: "8 KPI cards: orders, bids, payouts & more", icon: BarChart3, color: "text-blue-400" },
+      { label: "Action breakdown chart by category", icon: TrendingUp, color: "text-cyan-400" },
+      { label: "Achievement badges with role auto-badge", icon: Award, color: "text-yellow-400" },
+      { label: "Recent activity feed & task tracker", icon: ClipboardCheck, color: "text-green-400" },
     ],
   },
   "/admin": {
@@ -734,12 +743,12 @@ const staffPageDescriptions: Record<string, PageMeta> = {
     ],
   },
   "/badges": {
-    description: "Achievement badge system — create badges, set auto-earn criteria, manually award badges, and manage the progression tiers for grinder motivation.",
+    description: "Achievement badge system with 63 staff badges — auto-earned milestones, role badges (Owner/Staff), service specialist badges, and manually awarded achievements across 3 tiers.",
     demoSteps: [
-      { label: "Auto-earned: First Order, 10 Completed", icon: Award, color: "text-yellow-400" },
-      { label: "Manual awards for exceptional work", icon: Star, color: "text-purple-400" },
-      { label: "Bronze → Silver → Gold → Diamond", icon: TrendingUp, color: "text-cyan-400" },
-      { label: "Badges display on grinder profiles", icon: Eye, color: "text-blue-400" },
+      { label: "63 badges: auto-earned, manual & role-based", icon: Award, color: "text-yellow-400" },
+      { label: "Owner & Staff role badges auto-assigned", icon: Star, color: "text-purple-400" },
+      { label: "Short-term → Mid-term → Long-term tiers", icon: TrendingUp, color: "text-cyan-400" },
+      { label: "11 service specialist badges for expertise", icon: Eye, color: "text-blue-400" },
     ],
   },
   "/reports": {
