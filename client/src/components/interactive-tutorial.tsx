@@ -1416,9 +1416,15 @@ export function InteractiveTutorial() {
       const next = currentStep + 1;
       wrappedSetStep(next);
     } else {
-      handleClose();
+      setIsOpen(false);
+      setCurrentStep(0);
+      clearTutorialSession();
+      localStorage.setItem(storageKey, "true");
+      setHasSeenTutorial(true);
+      hasNavigatedRef.current = false;
+      navigate("/");
     }
-  }, [currentStep, steps.length, handleClose, wrappedSetStep]);
+  }, [currentStep, steps.length, storageKey, navigate, wrappedSetStep]);
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
