@@ -39,6 +39,7 @@ export const staffNavItems = [
   { title: "Grinders", url: "/grinders", icon: Users },
   { title: "Tier Progress", url: "/tier-progress", icon: TrendingUp },
   { title: "Badges", url: "/badges", icon: Award },
+  { title: "My Performance", url: "/my-performance", icon: BarChart3 },
   { title: "Reports", url: "/reports", icon: FileBarChart },
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Orders", url: "/orders", icon: ListOrdered },

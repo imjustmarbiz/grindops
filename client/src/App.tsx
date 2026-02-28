@@ -59,6 +59,7 @@ import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
 import StaffOrderUpdates from "@/pages/staff/order-updates";
 import ActivityLogPage from "@/pages/activity-log";
+import MyPerformance from "@/pages/staff/my-performance";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 
@@ -246,6 +247,7 @@ function Router() {
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
       <Route path="/wallets" component={() => <ProtectedRoute component={StaffWallets} staffOnly />} />
       <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
+      <Route path="/my-performance" component={() => <ProtectedRoute component={MyPerformance} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />

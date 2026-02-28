@@ -17,10 +17,9 @@ import {
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
   Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList
 } from "lucide-react";
-import {
-  STAFF_BADGE_COMPONENTS, STAFF_BADGE_META, type StaffBadgeId,
-} from "@/components/staff-achievement-badges";
-import { StaffScorecardDialog } from "@/components/staff-scorecard";
+import { type StaffBadgeId } from "@/components/staff-achievement-badges";
+import { StaffPerformanceDialog } from "@/components/staff-scorecard";
+import { StaffBadgeGrid } from "@/components/staff-badge-grid";
 import type { StaffBadge as StaffBadgeType } from "@shared/schema";
 
 
@@ -222,31 +221,10 @@ export default function StaffOverview() {
 
             {myBadges.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
-                  {myBadges.map((b) => {
-                    const BadgeComp = STAFF_BADGE_COMPONENTS[b.badgeId as StaffBadgeId];
-                    const meta = STAFF_BADGE_META[b.badgeId as StaffBadgeId];
-                    if (!BadgeComp || !meta) return null;
-                    return (
-                      <TooltipProvider key={b.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex flex-col items-center gap-1 cursor-default" data-testid={`profile-badge-${b.badgeId}`}>
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center [&_svg]:w-10 [&_svg]:h-10 sm:[&_svg]:w-12 sm:[&_svg]:h-12 [&>div]:!w-10 [&>div]:!h-10 sm:[&>div]:!w-12 sm:[&>div]:!h-12">
-                                <BadgeComp />
-                              </div>
-                              <span className="text-[9px] sm:text-[10px] text-muted-foreground text-center leading-tight max-w-[56px] sm:max-w-[72px] truncate">{meta.label}</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="max-w-[200px]">
-                            <p className="text-xs font-medium">{meta.label}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{meta.tooltip}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    );
-                  })}
-                </div>
+                <StaffBadgeGrid
+                  badgeIds={myBadges.map(b => b.badgeId as StaffBadgeId)}
+                  testIdPrefix="profile"
+                />
               </div>
             )}
           </div>
@@ -797,7 +775,7 @@ export default function StaffOverview() {
       </Card>
       </FadeInUp>
 
-      <StaffScorecardDialog
+      <StaffPerformanceDialog
         userId={scorecardUserId}
         open={scorecardOpen}
         onClose={() => { setScorecardOpen(false); setScorecardUserId(null); }}

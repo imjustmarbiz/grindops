@@ -3,14 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Loader2, Crown, Shield, Calendar, Activity, ClipboardList, Gavel,
   DollarSign, ListOrdered, Clock, BarChart3, Zap
 } from "lucide-react";
-import {
-  STAFF_BADGE_COMPONENTS, STAFF_BADGE_META, type StaffBadgeId,
-} from "@/components/staff-achievement-badges";
+import { type StaffBadgeId } from "@/components/staff-achievement-badges";
+import { StaffBadgeGrid } from "@/components/staff-badge-grid";
 
 function formatLabel(action: string) {
   return action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -31,7 +29,7 @@ function timeAgo(date: string | Date | null | undefined): string {
   return d.toLocaleDateString();
 }
 
-function StaffScorecardContent({ userId }: { userId: string }) {
+export function StaffPerformanceContent({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<any>({
     queryKey: [`/api/staff/scorecard/${userId}`],
   });
@@ -56,6 +54,8 @@ function StaffScorecardContent({ userId }: { userId: string }) {
     .sort(([, a], [, b]) => (b as number) - (a as number))
     .slice(0, 8);
 
+  const badgeIds = (badges || []).map((b: any) => b.badgeId as StaffBadgeId);
+
   return (
     <div className="space-y-4 mt-2">
       <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl ${accentBg} border ${accentBorder}`}>
@@ -67,7 +67,7 @@ function StaffScorecardContent({ userId }: { userId: string }) {
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg sm:text-xl font-bold" data-testid="text-scorecard-name">{profile.firstName || profile.name}</h2>
+            <h2 className="text-lg sm:text-xl font-bold" data-testid="text-performance-name">{profile.firstName || profile.name}</h2>
             {profile.discordUsername && profile.firstName && profile.firstName !== profile.discordUsername && (
               <span className="text-sm text-muted-foreground">(@{profile.discordUsername})</span>
             )}
@@ -91,34 +91,10 @@ function StaffScorecardContent({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {badges && badges.length > 0 && (
+      {badgeIds.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Badges ({badges.length})</h3>
-          <div className="flex flex-wrap gap-3 sm:gap-4">
-            {badges.map((b: any) => {
-              const BadgeComp = STAFF_BADGE_COMPONENTS[b.badgeId as StaffBadgeId];
-              const meta = STAFF_BADGE_META[b.badgeId as StaffBadgeId];
-              if (!BadgeComp || !meta) return null;
-              return (
-                <TooltipProvider key={b.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center gap-1 cursor-default" data-testid={`scorecard-badge-${b.badgeId}`}>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center [&_svg]:w-10 [&_svg]:h-10 sm:[&_svg]:w-12 sm:[&_svg]:h-12 [&>div]:!w-10 [&>div]:!h-10 sm:[&>div]:!w-12 sm:[&>div]:!h-12">
-                          <BadgeComp />
-                        </div>
-                        <span className="text-[9px] sm:text-[10px] text-muted-foreground text-center leading-tight max-w-[56px] sm:max-w-[72px] truncate">{meta.label}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[200px]">
-                      <p className="text-xs font-medium">{meta.label}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{meta.tooltip}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            })}
-          </div>
+          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Badges ({badgeIds.length})</h3>
+          <StaffBadgeGrid badgeIds={badgeIds} testIdPrefix="perf" />
         </div>
       )}
 
@@ -182,7 +158,7 @@ function StaffScorecardContent({ userId }: { userId: string }) {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {topActions.map(([action, count]) => (
-              <div key={action} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div key={action} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]" data-testid={`text-action-${action}`}>
                 <span className="text-xs text-muted-foreground truncate mr-2">{formatLabel(action)}</span>
                 <span className="text-xs font-mono font-medium">{count as number}</span>
               </div>
@@ -199,7 +175,7 @@ function StaffScorecardContent({ userId }: { userId: string }) {
           </h3>
           <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
             {recentLogs.slice(0, 20).map((log: any) => (
-              <div key={log.id} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div key={log.id} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]" data-testid={`log-entry-${log.id}`}>
                 <Zap className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{formatLabel(log.action)}</p>
@@ -218,26 +194,27 @@ function StaffScorecardContent({ userId }: { userId: string }) {
   );
 }
 
-export function StaffScorecardDialog({ userId, open, onClose, staffName }: {
+export function StaffPerformanceDialog({ userId, open, onClose }: {
   userId: string | null;
   open: boolean;
   onClose: () => void;
-  staffName?: string;
 }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-staff-scorecard">
+      <DialogContent className="max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-staff-performance">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2" data-testid="text-scorecard-title">
+          <DialogTitle className="flex items-center gap-2" data-testid="text-performance-title">
             <Activity className="w-5 h-5 text-primary" />
-            Staff Scorecard
+            Performance Card
           </DialogTitle>
         </DialogHeader>
-        {userId && <StaffScorecardContent userId={userId} />}
+        {userId && <StaffPerformanceContent userId={userId} />}
       </DialogContent>
     </Dialog>
   );
 }
+
+export { StaffPerformanceDialog as StaffScorecardDialog };
 
 export function ClickableStaffName({ userId, name, className }: {
   userId: string;
