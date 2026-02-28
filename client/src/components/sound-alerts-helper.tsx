@@ -48,7 +48,7 @@ export function SoundAlertsHelper() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative hover-elevate hover:bg-white/10"
+          className="relative hover-elevate hover:bg-white/10 hidden md:flex"
           data-testid="button-sound-alerts"
         >
           {volume === 0 ? (
@@ -83,7 +83,7 @@ export function SoundAlertsHelper() {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 md:block hidden">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>Volume</span>
               <span>{Math.round(volume)}%</span>
