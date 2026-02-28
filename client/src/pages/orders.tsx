@@ -26,6 +26,7 @@ import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 import { usePlatforms } from "@/hooks/use-platforms";
 import { useAuth } from "@/hooks/use-auth";
+import { moneyColorClass } from "@/lib/staff-utils";
 import type { Order, Service, Grinder, Bid } from "@shared/schema";
 
 import { Link } from "wouter";

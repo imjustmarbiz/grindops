@@ -24,7 +24,7 @@ import {
 import { FaXbox } from "react-icons/fa6";
 import { SiPlaystation } from "react-icons/si";
 import type { AnalyticsSummary, AuditLog, Grinder, Assignment, Order, Bid, Service } from "@shared/schema";
-import { pluralize, formatLabel } from "@/lib/staff-utils";
+import { pluralize, formatLabel, moneyColorClass } from "@/lib/staff-utils";
 import { usePlatforms } from "@/hooks/use-platforms";
 import spLogo from "@assets/image_1771930905137.png";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";

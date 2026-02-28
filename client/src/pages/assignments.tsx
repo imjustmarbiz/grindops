@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
+import { moneyColorClass } from "@/lib/staff-utils";
 import type { Assignment, Order, Grinder } from "@shared/schema";
 
 import { useTableSort } from "@/hooks/use-table-sort";

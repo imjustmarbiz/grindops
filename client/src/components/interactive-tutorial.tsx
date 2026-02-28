@@ -643,13 +643,13 @@ function InteractiveMockup({ mockupId, isStaff }: { mockupId: string; isStaff?: 
 
 const staffPageDescriptions: Record<string, PageMeta> = {
   "/": {
-    description: "Your command center — real-time financials, order pipeline, and fleet health at a glance.",
+    description: "Your operations hub — active orders, pending bids, grinder availability, order pipeline, and fleet health at a glance.",
     mockupId: "staff-dashboard",
     demoSteps: [
-      { label: "Revenue, payouts, profit at a glance", icon: DollarSign, color: "text-green-400" },
-      { label: "Order pipeline: Open → Assigned → Done", icon: ListOrdered, color: "text-blue-400" },
+      { label: "Active orders, bids & grinder availability", icon: ListOrdered, color: "text-blue-400" },
+      { label: "Order pipeline: Open → Assigned → Done", icon: CheckCircle2, color: "text-emerald-400" },
       { label: "Fleet utilization ring shows capacity", icon: Users, color: "text-cyan-400" },
-      { label: "Active bidding countdown timer", icon: Gavel, color: "text-purple-400" },
+      { label: "Risk alerts & strike monitoring", icon: Shield, color: "text-orange-400" },
     ],
   },
   "/notifications": {
@@ -704,15 +704,6 @@ const staffPageDescriptions: Record<string, PageMeta> = {
       { label: "Profit margin per service type", icon: BarChart3, color: "text-cyan-400" },
       { label: "Top-earning services ranked", icon: TrendingUp, color: "text-blue-400" },
       { label: "Grinder cost analysis breakdown", icon: Users, color: "text-purple-400" },
-    ],
-  },
-  "/analytics": {
-    description: "Deep-dive data visualization — order volume trends, completion rates, growth metrics, and platform engagement over customizable time periods.",
-    demoSteps: [
-      { label: "Order volume trends over time", icon: BarChart3, color: "text-blue-400" },
-      { label: "Completion rate by service type", icon: CheckCircle2, color: "text-emerald-400" },
-      { label: "Revenue growth month-over-month", icon: TrendingUp, color: "text-green-400" },
-      { label: "Filter by date range and service", icon: CalendarDays, color: "text-cyan-400" },
     ],
   },
   "/services": {

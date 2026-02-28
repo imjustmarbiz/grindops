@@ -35,7 +35,6 @@ export const staffNavItems = [
   { title: "Admin", url: "/admin", icon: Settings },
   { title: "Business Wallet", url: "/wallets", icon: Wallet },
   { title: "Business Performance", url: "/business", icon: DollarSign },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Services", url: "/services", icon: Package },
   { title: "Grinders", url: "/grinders", icon: Users },
   { title: "Tier Progress", url: "/tier-progress", icon: TrendingUp },
@@ -65,7 +64,6 @@ export function getFilteredStaffNavItems(isOwner: boolean, userId: string) {
     if (item.url === "/business") return canSeeBusiness;
     if (item.url === "/staff-overview") return isOwner;
     if (item.url === "/activity-log") return isOwner;
-    if (item.url === "/analytics") return isOwner;
     return true;
   });
 }
