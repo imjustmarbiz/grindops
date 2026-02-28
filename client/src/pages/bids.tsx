@@ -36,6 +36,7 @@ export default function Bids() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingBid, setEditingBid] = useState<Bid | null>(null);
   const [addBidOpen, setAddBidOpen] = useState(false);
+  const [addBidForm, setAddBidForm] = useState({ orderId: "", grinderId: "", bidAmount: "", timeline: "", canStart: "", notes: "" });
   const [pricePrompt, setPricePrompt] = useState<{ bidId: string; orderId: string; orderLabel: string; isOverride?: boolean } | null>(null);
   const [promptPrice, setPromptPrice] = useState("");
   const [ticketDialog, setTicketDialog] = useState<{ orderId: string; orderLabel: string } | null>(null);
@@ -91,6 +92,23 @@ export default function Bids() {
     },
   });
 
+  const createBidMutation = useMutation({
+    mutationFn: async (data: { orderId: string; grinderId: string; bidAmount: string; timeline?: string; canStart?: string; notes?: string }) => {
+      const res = await apiRequest("POST", "/api/bids", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({ title: "Bid created", description: "Manual bid added successfully." });
+      setAddBidOpen(false);
+      setAddBidForm({ orderId: "", grinderId: "", bidAmount: "", timeline: "", canStart: "", notes: "" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to create bid", description: err.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+
   const filteredBids = useMemo(() => {
     let result = bids || [];
     if (filterStatus !== "all") result = result.filter(b => b.status === filterStatus);
@@ -141,6 +159,15 @@ export default function Bids() {
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Grinder proposals imported from MGT Bot.</p>
             </div>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setAddBidOpen(true)}
+              data-testid="button-add-bid"
+            >
+              <Plus className="w-4 h-4" />
+              Add Bid
+            </Button>
           </div>
         </FadeInUp>
 
@@ -293,6 +320,106 @@ export default function Bids() {
                 Set Price & Accept
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={addBidOpen} onOpenChange={setAddBidOpen}>
+          <DialogContent data-testid="dialog-add-bid">
+            <DialogHeader>
+              <DialogTitle>Add Bid Manually</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Order</Label>
+                <Select value={addBidForm.orderId} onValueChange={(v) => setAddBidForm(f => ({ ...f, orderId: v }))}>
+                  <SelectTrigger data-testid="select-add-bid-order">
+                    <SelectValue placeholder="Select an order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(orders || []).filter(o => o.status === "Open").map(o => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.mgtOrderNumber ? `#${o.mgtOrderNumber}` : o.id} — {o.serviceName || o.gameTitle || "Order"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Grinder</Label>
+                <Select value={addBidForm.grinderId} onValueChange={(v) => setAddBidForm(f => ({ ...f, grinderId: v }))}>
+                  <SelectTrigger data-testid="select-add-bid-grinder">
+                    <SelectValue placeholder="Select a grinder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(grinders || []).filter(g => !g.suspended).map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Bid Amount ($)</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={addBidForm.bidAmount}
+                  onChange={(e) => setAddBidForm(f => ({ ...f, bidAmount: e.target.value }))}
+                  data-testid="input-add-bid-amount"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Timeline</Label>
+                  <Input
+                    placeholder="e.g. 2 days"
+                    value={addBidForm.timeline}
+                    onChange={(e) => setAddBidForm(f => ({ ...f, timeline: e.target.value }))}
+                    data-testid="input-add-bid-timeline"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Can Start</Label>
+                  <Input
+                    placeholder="e.g. Immediately"
+                    value={addBidForm.canStart}
+                    onChange={(e) => setAddBidForm(f => ({ ...f, canStart: e.target.value }))}
+                    data-testid="input-add-bid-can-start"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  placeholder="Optional notes..."
+                  value={addBidForm.notes}
+                  onChange={(e) => setAddBidForm(f => ({ ...f, notes: e.target.value }))}
+                  data-testid="input-add-bid-notes"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setAddBidOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!addBidForm.orderId || !addBidForm.grinderId || !addBidForm.bidAmount || createBidMutation.isPending}
+                onClick={() => createBidMutation.mutate({
+                  orderId: addBidForm.orderId,
+                  grinderId: addBidForm.grinderId,
+                  bidAmount: addBidForm.bidAmount,
+                  timeline: addBidForm.timeline || undefined,
+                  canStart: addBidForm.canStart || undefined,
+                  notes: addBidForm.notes || undefined,
+                })}
+                data-testid="button-submit-add-bid"
+              >
+                {createBidMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+                Add Bid
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
