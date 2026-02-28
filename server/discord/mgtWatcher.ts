@@ -439,6 +439,19 @@ export async function handleProposalMessage(message: Message) {
       status = "Countered";
     }
 
+    const allBids = await storage.getBids();
+    const existingDashboardBid = allBids.find((b: any) => b.orderId === order.id && b.grinderId === grinderId && b.bidSource === "dashboard");
+    if (existingDashboardBid) {
+      console.log(`[mgt-watcher] Skipped proposal #${proposalId} for order #${orderNumber} - grinder already has a dashboard bid (${existingDashboardBid.id})`);
+      return;
+    }
+
+    const existingDiscordBid = allBids.find((b: any) => b.orderId === order.id && b.grinderId === grinderId && b.bidSource === "discord" && b.mgtProposalId !== proposalId);
+    if (existingDiscordBid) {
+      console.log(`[mgt-watcher] Skipped proposal #${proposalId} for order #${orderNumber} - grinder already has a different discord bid (${existingDiscordBid.id})`);
+      return;
+    }
+
     const bid = await storage.upsertBidByProposalId(proposalId, {
       orderId: order.id,
       grinderId,
@@ -450,6 +463,7 @@ export async function handleProposalMessage(message: Message) {
       margin: margin ? margin.toFixed(2) : undefined,
       marginPct: marginPct ? marginPct.toFixed(2) : undefined,
       discordMessageId: message.id,
+      bidSource: "discord",
       status,
       acceptedBy,
     });

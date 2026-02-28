@@ -148,6 +148,7 @@ export const bids = pgTable("bids", {
   marginPct: numeric("margin_pct"),
   acceptedBy: text("accepted_by"),
   notes: text("notes"),
+  bidSource: text("bid_source"),
   status: text("status").notNull().default("Pending"),
 });
 

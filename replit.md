@@ -18,7 +18,8 @@ The system utilizes a modern full-stack architecture. The frontend is built with
 - Professional dark mode theme with role-based styling.
 
 **Technical Implementations:**
-- **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds to extract and backfill order, grinder, and bid data.
+- **MGT Bot Watcher:** Passively monitors Discord channels for MGT Bot embeds to extract and backfill order, grinder, and bid data. Includes cross-platform bid deduplication — if a grinder bids on the dashboard, Discord bids for the same order are automatically blocked, and vice versa. Bids track their source via `bidSource` field ("dashboard" or "discord").
+- **Bid Management:** Staff/owner bids page features status-based row color filtering (blue=Pending, green=Accepted, red=Rejected, amber=Countered), edit bid button (pencil icon) with margin preview, auto-calculated margin from order price vs bid amount, and bid source badges (Discord/Dashboard). Grinders can bid on ANY order from the dashboard (including Discord-originated orders) with a disclosure warning about duplicate bid penalties.
 - **Role-Based Features:** Supports multi-role grinders, elite priority order access, and staff alert messaging with distinct dashboards for Staff and Owners.
 - **Performance Management:** Includes Elite Path Coaching, a Strike Management System, and an Activity Checkpoint System.
 - **Order Management:** Features live bidding countdowns, staff override capabilities, manual order creation, Discord ticket linking, and automated price setting prompts for priceless orders.

@@ -185,39 +185,42 @@ export default function GrinderOrders() {
                   <Lock className="w-4 h-4" />
                   Bidding Closed
                 </Button>
-              ) : (order.isManual || (!order.discordMessageId && !order.discordBidLink)) ? (
-                <Button
-                  size="sm"
-                  className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
-                  data-testid={`button-bid-${order.id}`}
-                  onClick={() => {
-                    setPlaceBidDialog(order);
-                    setPlaceBidAmount("");
-                    setPlaceBidTimeline("");
-                    setPlaceBidCanStart("");
-                  }}
-                >
-                  <Gavel className="w-4 h-4" />
-                  Place Bid
-                </Button>
               ) : (
-                <Button
-                  size="sm"
-                  className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
-                  data-testid={`button-bid-${order.id}`}
-                  onClick={() => {
-                    const link = order.discordBidLink
-                      ? order.discordBidLink
-                      : order.discordMessageId
-                        ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
-                        : getBidWarLink();
-                    window.open(link, "_blank");
-                  }}
-                >
-                  <Gavel className="w-4 h-4" />
-                  Place Bid
-                  <ExternalLink className="w-3 h-3" />
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    className={`gap-2 ${isElite ? "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white" : ""}`}
+                    data-testid={`button-bid-${order.id}`}
+                    onClick={() => {
+                      setPlaceBidDialog(order);
+                      setPlaceBidAmount("");
+                      setPlaceBidTimeline("");
+                      setPlaceBidCanStart("");
+                    }}
+                  >
+                    <Gavel className="w-4 h-4" />
+                    Place Bid
+                  </Button>
+                  {order.discordBidLink || order.discordMessageId ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-white/10 text-muted-foreground hover:text-foreground"
+                      data-testid={`button-bid-discord-${order.id}`}
+                      onClick={() => {
+                        const link = order.discordBidLink
+                          ? order.discordBidLink
+                          : order.discordMessageId
+                            ? getDiscordMessageLink(BID_WAR_CHANNEL_ID, order.discordMessageId)
+                            : getBidWarLink();
+                        window.open(link, "_blank");
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Discord
+                    </Button>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>
@@ -683,7 +686,17 @@ export default function GrinderOrders() {
                 <span className="text-muted-foreground">Complexity:</span>
                 <span>{placeBidDialog?.complexity}/5</span>
               </div>
-              <Badge className="bg-amber-500/20 text-amber-400 mt-1">Dashboard Order</Badge>
+              {(placeBidDialog?.discordMessageId || placeBidDialog?.discordBidLink) ? (
+                <Badge className="bg-indigo-500/20 text-indigo-400 mt-1">Discord + Dashboard</Badge>
+              ) : (
+                <Badge className="bg-amber-500/20 text-amber-400 mt-1">Dashboard Order</Badge>
+              )}
+            </div>
+            <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-300/90">Submitting duplicate bids for the same order on both Discord and the dashboard is not allowed. The system will automatically block the second bid. Violations are subject to a strike penalty.</p>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Your Bid Amount ($)</label>

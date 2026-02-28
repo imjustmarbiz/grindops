@@ -2792,7 +2792,10 @@ export async function registerRoutes(
 
       const allBids = await storage.getBids();
       const existingBid = allBids.find((b: any) => b.orderId === orderId && b.grinderId === myGrinder.id);
-      if (existingBid) return res.status(400).json({ message: "You already have a bid on this order" });
+      if (existingBid) {
+        const source = existingBid.bidSource === "discord" ? "Discord" : "the dashboard";
+        return res.status(400).json({ message: `You already have a bid on this order (submitted via ${source}). Duplicate bids across platforms are not allowed and may result in a strike.` });
+      }
 
       if (myGrinder.activeOrders >= myGrinder.capacity) {
         return res.status(400).json({ message: "You are at your order limit" });
@@ -2805,6 +2808,15 @@ export async function registerRoutes(
         ? new Date(now.getTime() + parseInt(timeline) * 3600000)
         : new Date(now.getTime() + 48 * 3600000);
 
+      let marginData: any = {};
+      if (order.customerPrice && Number(order.customerPrice) > 0) {
+        const orderPrice = Number(order.customerPrice);
+        const bidAmt = Number(bidAmount);
+        const margin = orderPrice - bidAmt;
+        const marginPct = ((margin / orderPrice) * 100).toFixed(2);
+        marginData = { margin: String(margin.toFixed(2)), marginPct };
+      }
+
       const newBid = await storage.createBid({
         id: bidId,
         displayId: grinderBidDisplay,
@@ -2815,7 +2827,9 @@ export async function registerRoutes(
         estDeliveryDate: estDelivery,
         timeline: timeline || null,
         canStart: canStart || null,
+        bidSource: "dashboard",
         status: "Pending",
+        ...marginData,
       });
 
       await storage.createAuditLog({

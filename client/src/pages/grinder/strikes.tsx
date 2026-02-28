@@ -156,6 +156,7 @@ export default function GrinderStrikes() {
     "Failing to provide timely progress updates to the customer",
     "Disrespectful or unprofessional behavior toward staff, customers, or other grinders",
     "Violating any terms outlined in the grinder service agreement",
+    "Submitting duplicate bids for the same order across both Discord and the dashboard",
   ];
 
   return (
