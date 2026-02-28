@@ -1387,6 +1387,7 @@ export function TutorialTrigger() {
   const handleStartTutorial = () => {
     setTutorialSession(true, 0, window.location.pathname);
     window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("tutorial-start"));
     setShowReplayLabel(false);
   };
 
@@ -1443,11 +1444,24 @@ export function InteractiveTutorial() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const session = getTutorialSession();
-    if (session?.isOpen) {
-      setIsOpen(true);
-      setCurrentStep(session.step);
-    }
+    const checkSession = () => {
+      const session = getTutorialSession();
+      if (session?.isOpen) {
+        setIsOpen(true);
+        setCurrentStep(session.step);
+      } else {
+        setIsOpen(false);
+      }
+    };
+
+    checkSession();
+    window.addEventListener("storage", checkSession);
+    // Also listen for a custom event in case storage event doesn't fire on same window
+    window.addEventListener("tutorial-start", checkSession);
+    return () => {
+      window.removeEventListener("storage", checkSession);
+      window.removeEventListener("tutorial-start", checkSession);
+    };
   }, []);
 
   useEffect(() => {
