@@ -72,10 +72,6 @@ if (!fs.existsSync(updateProofsDir)) {
   fs.mkdirSync(updateProofsDir, { recursive: true });
 }
 
-const brandingDir = path.join(process.cwd(), "uploads", "branding");
-if (!fs.existsSync(brandingDir)) {
-  fs.mkdirSync(brandingDir, { recursive: true });
-}
 
 const updateProofUpload = multer({
   storage: multer.diskStorage({
@@ -6758,98 +6754,6 @@ export async function registerRoutes(
     }
   });
 
-  const brandingUpload = multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, brandingDir),
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `embed-logo${ext}`);
-      },
-    }),
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (_req, file, cb) => {
-      const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
-      if (allowed.test(path.extname(file.originalname))) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only image files are allowed (jpg, png, gif, webp)"));
-      }
-    },
-  });
-
-  app.post("/api/config/embed-logo", requireOwner, brandingUpload.single("logo"), async (req, res) => {
-    try {
-      const file = req.file;
-      if (!file) return res.status(400).json({ error: "No file uploaded" });
-      const logoUrl = `/uploads/branding/${file.filename}`;
-      const config = await storage.getQueueConfig();
-      if (!config) return res.status(404).json({ error: "Config not found" });
-      await storage.upsertQueueConfig({ ...config, embedThumbnailUrl: logoUrl });
-      res.json({ success: true, url: logoUrl });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to upload embed logo" });
-    }
-  });
-
-  app.delete("/api/config/embed-logo", requireOwner, async (req, res) => {
-    try {
-      const config = await storage.getQueueConfig();
-      if (!config) return res.status(404).json({ error: "Config not found" });
-      await storage.upsertQueueConfig({ ...config, embedThumbnailUrl: null });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to remove embed logo" });
-    }
-  });
-
-  const serviceLogoUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (_req, file, cb) => {
-      const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
-      if (allowed.test(path.extname(file.originalname))) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only image files are allowed (jpg, png, gif, webp)"));
-      }
-    },
-  });
-
-  app.post("/api/services/:id/logo", requireStaff, serviceLogoUpload.single("logo"), async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-      const serviceId = req.params.id;
-      const service = await storage.getServices().then(s => s.find(svc => svc.id === serviceId));
-      if (!service) return res.status(404).json({ error: "Service not found" });
-      const ext = path.extname(req.file.originalname) || ".png";
-      const filename = `service-logo-${serviceId}${ext}`;
-      const dir = path.join(process.cwd(), "uploads", "branding");
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const filepath = path.join(dir, filename);
-      fs.writeFileSync(filepath, req.file.buffer);
-      const logoUrl = `/uploads/branding/${filename}`;
-      await storage.updateService(serviceId, { logoUrl });
-      res.json({ logoUrl });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to upload service logo" });
-    }
-  });
-
-  app.delete("/api/services/:id/logo", requireStaff, async (req, res) => {
-    try {
-      const serviceId = req.params.id;
-      const service = await storage.getServices().then(s => s.find(svc => svc.id === serviceId));
-      if (!service) return res.status(404).json({ error: "Service not found" });
-      if (service.logoUrl && !service.logoUrl.startsWith("http")) {
-        const filepath = path.join(process.cwd(), service.logoUrl.replace(/^\//, ""));
-        if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
-      }
-      await storage.updateService(serviceId, { logoUrl: null });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to remove service logo" });
-    }
-  });
 
   app.patch("/api/orders/:id/customer-discord", requireStaff, async (req, res) => {
     try {

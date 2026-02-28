@@ -27,20 +27,8 @@ const UPDATE_CONFIG: Record<CustomerUpdateType, { color: number; emoji: string; 
   order_assigned: { color: 0x06B6D4, emoji: "📌", title: "Order Assigned" },
 };
 
+const BRAND_HEADER = "Customer Service Updates";
 const BRAND_FOOTER = "GrindOps by Service Plug LLC";
-async function getBrandIconUrl(): Promise<string> {
-  try {
-    const host = getAppBaseUrl();
-    if (!host) return "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
-    const config = await storage.getQueueConfig();
-    if (config?.embedThumbnailUrl) {
-      return resolveUrl(config.embedThumbnailUrl, host) || `${host}/embed-logo.png`;
-    }
-    return `${host}/embed-logo.png`;
-  } catch {
-    return "https://raw.githubusercontent.com/ServicePlug/Assets/main/GrindOps/Logo-2K.png";
-  }
-}
 
 function getAppBaseUrl(): string | null {
   const domains = process.env.REPLIT_DOMAINS;
@@ -54,29 +42,6 @@ function resolveUrl(urlPath: string | null | undefined, host: string | null): st
   if (urlPath.startsWith("http")) return urlPath;
   if (host) return `${host}${urlPath}`;
   return null;
-}
-
-async function getEmbedThumbnailUrl(serviceId?: string | null): Promise<string | null> {
-  try {
-    const host = getAppBaseUrl();
-    if (!host) return null;
-
-    if (serviceId) {
-      const allServices = await storage.getServices();
-      const service = allServices.find((s: any) => s.id === serviceId);
-      if (service?.logoUrl) {
-        const serviceLogoUrl = resolveUrl(service.logoUrl, host);
-        if (serviceLogoUrl) return serviceLogoUrl;
-      }
-    }
-
-    const config = await storage.getQueueConfig();
-    const customUrl = config?.embedThumbnailUrl;
-    if (customUrl) return resolveUrl(customUrl, host) || `${host}/embed-logo.png`;
-    return `${host}/embed-logo.png`;
-  } catch {
-    return null;
-  }
 }
 
 async function isCustomerUpdatesEnabled(): Promise<boolean> {
@@ -181,12 +146,9 @@ export async function sendCustomerUpdate(options: {
     const serviceName = service?.name || "Service";
     const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id;
 
-    const thumbnailUrl = await getEmbedThumbnailUrl(order.serviceId);
-    const brandIcon = await getBrandIconUrl();
-
     const embed = new EmbedBuilder()
       .setColor(config.color)
-      .setAuthor({ name: BRAND_FOOTER, iconURL: brandIcon })
+      .setAuthor({ name: BRAND_HEADER })
       .setTitle(`${config.emoji}  ${config.title}`)
       .setDescription(message)
       .addFields(
@@ -196,8 +158,6 @@ export async function sendCustomerUpdate(options: {
       )
       .setTimestamp()
       .setFooter({ text: BRAND_FOOTER });
-
-    if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
 
     if (proofUrls && proofUrls.length > 0) {
       const host = getAppBaseUrl();
@@ -254,12 +214,10 @@ export async function sendCompletionApprovalRequest(options: {
 
     const grinderInfo = await resolveGrinderInfo(options.grinderName, assignmentId);
     const grinderTag = grinderMention(grinderInfo.discordId, grinderInfo.name);
-    const thumbnailUrl = await getEmbedThumbnailUrl(order.serviceId);
-    const brandIcon = await getBrandIconUrl();
 
     const embed = new EmbedBuilder()
       .setColor(0x22C55E)
-      .setAuthor({ name: BRAND_FOOTER, iconURL: brandIcon })
+      .setAuthor({ name: BRAND_HEADER })
       .setTitle("✅  Order Completed — Approval Required")
       .setDescription(
         `Your order has been completed by ${grinderTag}!\n\n` +
@@ -272,8 +230,6 @@ export async function sendCompletionApprovalRequest(options: {
       )
       .setTimestamp()
       .setFooter({ text: BRAND_FOOTER });
-
-    if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
 
     const allProofs = [
       ...(completionProofUrl ? [completionProofUrl] : []),
