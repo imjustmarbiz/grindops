@@ -7,6 +7,7 @@ import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChatDrawer } from "@/components/chat-drawer";
+import { SoundAlertsHelper } from "@/components/sound-alerts-helper";
 import { LowerThirdNotifications } from "@/components/lower-third-notification";
 import { SiteAlertTicker } from "@/components/site-alert-ticker";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
@@ -275,7 +276,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           
           <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-6 backdrop-blur-md bg-background/50 relative z-10">
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-2 sm:gap-4">
+              <SoundAlertsHelper />
               <Button
                 variant="ghost"
                 size="icon"
