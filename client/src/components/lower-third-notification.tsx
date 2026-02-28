@@ -156,7 +156,7 @@ export function LowerThirdNotifications() {
   return (
     <div className="fixed right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none" style={{ bottom: `calc(var(--alert-bar-h, 0px) + 16px)` }}>
       <div className="pointer-events-auto self-end mb-1 flex items-center gap-1.5 relative" ref={soundInfoRef}>
-        <div className="relative hidden md:block">
+        <div className="relative">
           <button
             onClick={() => setShowSoundInfo(prev => !prev)}
             onMouseEnter={() => setShowSoundInfo(true)}

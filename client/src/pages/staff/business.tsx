@@ -387,7 +387,7 @@ export default function BusinessPerformance() {
             <KpiCard title="Grinder Costs" value={formatCurrency(totalGrinderCost)} icon={Users} iconColor="bg-blue-500/20 text-blue-400"
               subtitle={`${filteredAssignments.length} assignments`}
               trend={previousRange ? { current: totalGrinderCost, previous: prevGrinderCost } : undefined} />
-            <KpiCard title="Net Profit" value={formatCurrency(totalCompanyProfit)} icon={TrendingUp} iconColor="bg-purple-500/20 text-purple-400"
+            <KpiCard title="Net Profit" value={formatCurrency(totalCompanyProfit)} icon={TrendingUp} iconColor={totalCompanyProfit >= 0 ? "bg-purple-500/20 text-purple-400" : "bg-red-500/20 text-red-400"}
               subtitle={`${avgMarginPct.toFixed(1)}% avg margin`}
               trend={previousRange ? { current: totalCompanyProfit, previous: prevProfit } : undefined} />
             <KpiCard title="Cost Ratio" value={`${costToRevenueRatio.toFixed(1)}%`} icon={Percent} iconColor="bg-amber-500/20 text-amber-400"

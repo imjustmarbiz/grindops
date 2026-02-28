@@ -558,7 +558,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Company Profit</p>
-                <p className="text-2xl font-bold text-purple-400" data-testid="text-company-profit">{formatCurrency(profit)}</p>
+                <p className={`text-2xl font-bold ${moneyColorClass(profit)}`} data-testid="text-company-profit">{formatCurrency(profit)}</p>
                 <p className="text-xs text-muted-foreground mt-1">{profitMarginPct.toFixed(1)}% margin</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">

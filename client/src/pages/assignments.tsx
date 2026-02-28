@@ -322,7 +322,7 @@ export default function Assignments() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Profit</p>
-                    <p className="font-bold text-emerald-400">{a.companyProfit ? `$${a.companyProfit}` : "-"}</p>
+                    <p className={`font-bold ${moneyColorClass(a.companyProfit)}`}>{a.companyProfit ? `$${a.companyProfit}` : "-"}</p>
                   </div>
                 </div>
 
@@ -459,7 +459,7 @@ export default function Assignments() {
                       </span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell className="text-right font-bold text-emerald-400 whitespace-nowrap">{a.companyProfit ? `$${a.companyProfit}` : "-"}</TableCell>
+                  <TableCell className={`text-right font-bold ${moneyColorClass(a.companyProfit)} whitespace-nowrap`}>{a.companyProfit ? `$${a.companyProfit}` : "-"}</TableCell>
                   <TableCell className="text-center">
                     {a.qualityRating ? (
                       <Tooltip>

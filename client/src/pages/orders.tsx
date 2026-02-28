@@ -1079,7 +1079,7 @@ export default function Orders() {
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {order.companyProfit ? (
-                      <span className="font-semibold text-emerald-400">${order.companyProfit}</span>
+                      <span className={`font-semibold ${moneyColorClass(order.companyProfit)}`}>${order.companyProfit}</span>
                     ) : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell>
