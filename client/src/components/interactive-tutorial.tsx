@@ -1227,19 +1227,41 @@ function DemoAnimation({ demoSteps }: { demoSteps: DemoStep[] }) {
 
 function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: string; targetArea?: string }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const requestRef = useRef<number>(null);
 
-  useEffect(() => {
+  const updateRect = useCallback(() => {
     if (targetSelector) {
       const el = document.querySelector(targetSelector);
       if (el) {
         const r = el.getBoundingClientRect();
-        setRect(r);
-        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        setRect((prev) => {
+          if (!prev || r.top !== prev.top || r.left !== prev.left || r.width !== prev.width || r.height !== prev.height) {
+            return r;
+          }
+          return prev;
+        });
       } else {
         setRect(null);
       }
     } else {
       setRect(null);
+    }
+    requestRef.current = requestAnimationFrame(updateRect);
+  }, [targetSelector]);
+
+  useEffect(() => {
+    requestRef.current = requestAnimationFrame(updateRect);
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [updateRect]);
+
+  useEffect(() => {
+    if (targetSelector) {
+      const el = document.querySelector(targetSelector);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     }
   }, [targetSelector]);
 
@@ -1418,7 +1440,7 @@ export function InteractiveTutorial() {
         setTimeout(() => {
           setCurrentStep(next);
           hasNavigatedRef.current = false;
-        }, 400);
+        }, 800); // Increased from 400ms to 800ms for even more stability
       } else {
         setCurrentStep(next);
         setTutorialSession(true, next, location);
@@ -1441,7 +1463,7 @@ export function InteractiveTutorial() {
         setTimeout(() => {
           setCurrentStep(prev);
           hasNavigatedRef.current = false;
-        }, 400);
+        }, 800); // Increased from 400ms to 800ms for even more stability
       } else {
         setCurrentStep(prev);
         setTutorialSession(true, prev, location);
