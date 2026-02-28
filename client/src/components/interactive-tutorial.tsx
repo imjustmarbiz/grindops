@@ -1394,10 +1394,14 @@ export function InteractiveTutorial() {
     if (!isOpen) return;
     const step = steps[currentStep];
     if (step?.pageUrl && location !== step.pageUrl) {
-      hasNavigatedRef.current = true;
-      navigate(step.pageUrl);
+      // Small delay before navigating to let the spotlight/dialog settle
+      const timer = setTimeout(() => {
+        hasNavigatedRef.current = true;
+        navigate(step.pageUrl);
+      }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [isOpen, currentStep, steps]);
+  }, [isOpen, currentStep, steps, location, navigate]);
 
   useEffect(() => {
     if (isOpen && dialogRef.current) {
@@ -1441,11 +1445,10 @@ export function InteractiveTutorial() {
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
       const next = currentStep + 1;
-      // Use a small timeout to ensure navigation and state updates don't collide
-      // and cause the "glitchy" feeling on desktop
+      // Increase delay to ensure the UI has time to breathe between steps
       setTimeout(() => {
         wrappedSetStep(next);
-      }, 10);
+      }, 50);
     } else {
       setIsOpen(false);
       setCurrentStep(0);
