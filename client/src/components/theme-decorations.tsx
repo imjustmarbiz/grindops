@@ -88,17 +88,6 @@ function CornerWebs() {
 function NBA2KS5Theme() {
   return (
     <>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `url(${nba2kS5Bg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-          opacity: 0.04,
-          filter: "saturate(1.2)",
-        }}
-      />
-
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full nba2k-glow-pulse"
