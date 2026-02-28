@@ -198,24 +198,6 @@ export function LowerThirdNotifications() {
           </AnimatePresence>
         </div>
 
-        {soundEnabled && (
-          <div className="hidden md:flex items-center gap-1 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10" data-testid="volume-slider-container">
-            <Volume1 className="w-3 h-3 text-muted-foreground shrink-0" />
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={volume}
-              onChange={handleVolumeChange}
-              className="w-16 h-1 appearance-none bg-white/20 rounded-full cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
-              title={`Volume: ${volumePct}%`}
-              data-testid="input-volume-slider"
-            />
-            <span className="text-[9px] text-muted-foreground w-6 text-right tabular-nums" data-testid="text-volume-level">{volumePct}%</span>
-          </div>
-        )}
-
         <button
           onClick={testSound}
           disabled={!soundEnabled}
