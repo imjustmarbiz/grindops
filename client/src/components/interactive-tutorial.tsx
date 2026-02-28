@@ -1345,12 +1345,34 @@ function SpotlightOverlay({ targetSelector, targetArea }: { targetSelector?: str
   );
 }
 
+const SESSION_KEY = "grindops-tutorial-session";
+
+function getTutorialSession(): { isOpen: boolean; step: number; returnPath: string } | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function setTutorialSession(isOpen: boolean, step: number, returnPath?: string) {
+  const existing = getTutorialSession();
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+    isOpen,
+    step,
+    returnPath: returnPath ?? existing?.returnPath ?? "/",
+  }));
+}
+
+function clearTutorialSession() {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
 export function InteractiveTutorial() {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const dialogRef = useRef<HTMLDivElement>(null);
-  const preOpenPathRef = useRef<string>("/");
+  const hasNavigatedRef = useRef(false);
 
   const userId = (user as any)?.discordId || user?.id || "";
   const isOwner = user?.role === "owner";
@@ -1365,17 +1387,20 @@ export function InteractiveTutorial() {
   );
 
   const storageKey = `grindops-tutorial-${isStaff ? "staff" : "grinder"}-v2-completed`;
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
+
+  const session = getTutorialSession();
+  const [isOpen, setIsOpen] = useState(session?.isOpen ?? false);
+  const [currentStep, setCurrentStep] = useState(session?.step ?? 0);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(true);
 
   useEffect(() => {
     const seen = localStorage.getItem(storageKey);
-    if (!seen) {
+    if (!seen && !session?.isOpen) {
       setHasSeenTutorial(false);
       const timer = setTimeout(() => {
-        preOpenPathRef.current = window.location.pathname;
+        setTutorialSession(true, 0, window.location.pathname);
         setIsOpen(true);
+        setCurrentStep(0);
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -1384,10 +1409,11 @@ export function InteractiveTutorial() {
   useEffect(() => {
     if (!isOpen) return;
     const step = steps[currentStep];
-    if (step?.pageUrl) {
+    if (step?.pageUrl && location !== step.pageUrl) {
+      hasNavigatedRef.current = true;
       navigate(step.pageUrl);
     }
-  }, [isOpen, currentStep, steps, navigate]);
+  }, [isOpen, currentStep, steps]);
 
   useEffect(() => {
     if (isOpen && dialogRef.current) {
@@ -1403,27 +1429,38 @@ export function InteractiveTutorial() {
     }
   }, [isOpen]);
 
+  const wrappedSetStep = useCallback((step: number) => {
+    setCurrentStep(step);
+    setTutorialSession(true, step);
+  }, []);
+
   const handleClose = useCallback(() => {
+    const returnPath = getTutorialSession()?.returnPath ?? "/";
     setIsOpen(false);
     setCurrentStep(0);
+    clearTutorialSession();
     localStorage.setItem(storageKey, "true");
     setHasSeenTutorial(true);
-    navigate(preOpenPathRef.current);
+    if (hasNavigatedRef.current) {
+      hasNavigatedRef.current = false;
+      navigate(returnPath);
+    }
   }, [storageKey, navigate]);
 
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
-      setCurrentStep(s => s + 1);
+      const next = currentStep + 1;
+      wrappedSetStep(next);
     } else {
       handleClose();
     }
-  }, [currentStep, steps.length, handleClose]);
+  }, [currentStep, steps.length, handleClose, wrappedSetStep]);
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
-      setCurrentStep(s => s - 1);
+      wrappedSetStep(currentStep - 1);
     }
-  }, [currentStep]);
+  }, [currentStep, wrappedSetStep]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isOpen) return;
@@ -1462,7 +1499,7 @@ export function InteractiveTutorial() {
   if (!isOpen) {
     return (
       <button
-        onClick={() => { preOpenPathRef.current = window.location.pathname; setIsOpen(true); setCurrentStep(0); }}
+        onClick={() => { setTutorialSession(true, 0, window.location.pathname); setIsOpen(true); setCurrentStep(0); }}
         className="fixed bottom-20 right-4 z-[100] group"
         data-testid="button-start-tutorial"
         aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
@@ -1544,7 +1581,7 @@ export function InteractiveTutorial() {
                     role="tab"
                     aria-selected={i === currentStep}
                     aria-label={`Go to step ${i + 1}`}
-                    onClick={() => setCurrentStep(i)}
+                    onClick={() => wrappedSetStep(i)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       i === currentStep ? "bg-primary w-4" : i < currentStep ? "bg-primary/40 w-1.5" : "bg-white/10 w-1.5"
                     }`}
