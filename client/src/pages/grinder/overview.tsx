@@ -49,13 +49,26 @@ function BadgeItem({ id }: { id: BadgeId }) {
     if (!showMobile || !popupRef.current || !containerRef.current) return;
     const popup = popupRef.current;
     const container = containerRef.current;
+    if (!popup || !container) return;
+    
+    // Reset width and transform to get natural measurements
+    popup.style.width = "auto";
+    popup.style.transform = "none";
+    
+    const popupWidth = Math.min(popup.offsetWidth, window.innerWidth - 32);
+    popup.style.width = `${popupWidth}px`;
+    
     const containerRect = container.getBoundingClientRect();
-    const popupWidth = popup.offsetWidth;
-    const rightOverflow = containerRect.left + popupWidth / 2 + containerRect.width / 2 - window.innerWidth + 8;
-    const leftOverflow = -(containerRect.left + containerRect.width / 2 - popupWidth / 2 - 8);
-    if (rightOverflow > 0) popup.style.transform = `translateX(-${rightOverflow}px)`;
-    else if (leftOverflow > 0) popup.style.transform = `translateX(${leftOverflow}px)`;
-    else popup.style.transform = "translateX(0)";
+    const rightOverflow = containerRect.left + containerRect.width / 2 + popupWidth / 2 - window.innerWidth + 16;
+    const leftOverflow = -(containerRect.left + containerRect.width / 2 - popupWidth / 2 - 16);
+    
+    if (rightOverflow > 0) {
+      popup.style.transform = `translateX(-${rightOverflow}px)`;
+    } else if (leftOverflow > 0) {
+      popup.style.transform = `translateX(${leftOverflow}px)`;
+    } else {
+      popup.style.transform = "translateX(-50%)";
+    }
   }, [showMobile]);
 
   return (
