@@ -133,7 +133,6 @@ export default function GrinderOverview() {
     if (!grinder) return [] as BadgeId[];
     const ids = new Set<BadgeId>();
     const completed = grinder.completedOrders || 0;
-    const streak = grinder.completionStreak || 0;
     const totalOrders = grinder.totalOrders || 0;
     const quality = Number(grinder.avgQualityRating) || 0;
     const winRate = Number(grinder.winRate) || 0;
