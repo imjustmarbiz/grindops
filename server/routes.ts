@@ -5820,8 +5820,24 @@ export async function registerRoutes(
   });
 
   app.get('/api/events', async (req, res) => {
-    const allEvents = await storage.getEvents();
-    res.json(allEvents);
+    try {
+      const allEvents = await storage.getEvents();
+      const now = new Date();
+      let updated = false;
+
+      // Auto-deactivate expired events
+      for (const event of allEvents) {
+        if (event.isActive && event.endDate && new Date(event.endDate) < now) {
+          await storage.updateEvent(event.id, { isActive: false });
+          event.isActive = false;
+          updated = true;
+        }
+      }
+
+      res.json(allEvents);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.post('/api/events', async (req, res) => {

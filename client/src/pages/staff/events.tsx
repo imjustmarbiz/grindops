@@ -294,7 +294,7 @@ export default function StaffEvents() {
                           <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Starts: {new Date(event.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                             {event.endDate && <span>Ends: {new Date(event.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>}
-                            <span>By: {event.createdByName}</span>
+                            <span className="text-primary/90 font-semibold bg-primary/10 px-1.5 py-0.5 rounded-md border border-primary/20">By: {event.createdByName}</span>
                           </div>
                           {(event.tags || []).length > 0 && (
                             <div className="flex gap-1 mt-2 flex-wrap">
