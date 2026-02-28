@@ -1251,7 +1251,7 @@ export default function Orders() {
         <DialogHeader>
           <DialogTitle className="font-display text-xl flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
-              <ShieldAlert className="w-4 h-4 text-orange-400" />
+              <ShieldAlert className="w-4 h-4 text-orange-500" />
             </div>
             Grinder Replacement
           </DialogTitle>
@@ -1262,44 +1262,44 @@ export default function Orders() {
           const orderRef = replacementPromptOrder.mgtOrderNumber ? `#${replacementPromptOrder.mgtOrderNumber}` : replacementPromptOrder.id;
           return (
             <div className="space-y-5 mt-2">
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 shadow-inner">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Order</span>
-                  <span className="font-bold text-primary">{orderRef}</span>
+                  <span className="text-sm text-orange-200/70 font-medium">Order Case</span>
+                  <span className="font-bold text-orange-400">{orderRef}</span>
                 </div>
                 {prevGrinder && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Current Grinder</span>
-                    <span className="font-medium text-red-400">{prevGrinder.name}</span>
+                    <span className="text-sm text-orange-200/70 font-medium">Flagged Grinder</span>
+                    <span className="font-bold text-red-400 uppercase tracking-tight">{prevGrinder.name}</span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium">What action should be taken?</Label>
+                <Label className="text-sm font-bold text-orange-200 uppercase tracking-wider">Disciplinary Action</Label>
                 <RadioGroup value={replacementAction} onValueChange={(val: any) => setReplacementAction(val)} className="space-y-2">
-                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "no_penalty" ? "bg-emerald-500/[0.08] border-emerald-500/30" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-no-penalty">
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "no_penalty" ? "bg-emerald-500/[0.08] border-emerald-500/30 ring-1 ring-emerald-500/20" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-no-penalty">
                     <RadioGroupItem value="no_penalty" id="no_penalty" />
                     <ShieldCheck className={`w-4 h-4 ${replacementAction === "no_penalty" ? "text-emerald-400" : "text-muted-foreground"}`} />
                     <div>
-                      <div className="text-sm font-medium">No Penalty</div>
-                      <div className="text-xs text-muted-foreground">Simply replace — no strike or warning issued</div>
+                      <div className="text-sm font-bold">Standard Swap</div>
+                      <div className="text-[10px] text-muted-foreground uppercase">No penalties or strikes</div>
                     </div>
                   </label>
-                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "warning" ? "bg-amber-500/[0.08] border-amber-500/30" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-warning">
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "warning" ? "bg-orange-500/[0.08] border-orange-500/30 ring-1 ring-orange-500/20" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-warning">
                     <RadioGroupItem value="warning" id="warning" />
-                    <ShieldAlert className={`w-4 h-4 ${replacementAction === "warning" ? "text-amber-400" : "text-muted-foreground"}`} />
+                    <ShieldAlert className={`w-4 h-4 ${replacementAction === "warning" ? "text-orange-400" : "text-muted-foreground"}`} />
                     <div>
-                      <div className="text-sm font-medium">Formal Warning</div>
-                      <div className="text-xs text-muted-foreground">Notify grinder with a warning — no fine applied</div>
+                      <div className="text-sm font-bold text-orange-400">Official Warning</div>
+                      <div className="text-[10px] text-muted-foreground uppercase">Logs incident - no financial penalty</div>
                     </div>
                   </label>
-                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "strike" ? "bg-red-500/[0.08] border-red-500/30" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-strike">
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${replacementAction === "strike" ? "bg-red-500/[0.08] border-red-500/30 ring-1 ring-red-500/20" : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"}`} data-testid="radio-strike">
                     <RadioGroupItem value="strike" id="strike" />
                     <ShieldX className={`w-4 h-4 ${replacementAction === "strike" ? "text-red-400" : "text-muted-foreground"}`} />
                     <div>
-                      <div className="text-sm font-medium">Issue Strike</div>
-                      <div className="text-xs text-muted-foreground">Add a strike with fine and suspend the grinder</div>
+                      <div className="text-sm font-bold text-red-400">Execution Strike</div>
+                      <div className="text-[10px] text-muted-foreground uppercase">Strike + Fine + Immediate Suspension</div>
                     </div>
                   </label>
                 </RadioGroup>
@@ -1327,9 +1327,9 @@ export default function Orders() {
                 </Button>
                 <Button
                   className={
-                    replacementAction === "strike" ? "bg-red-600 hover:bg-red-700 text-white" :
-                    replacementAction === "warning" ? "bg-amber-600 hover:bg-amber-700 text-white" :
-                    "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    replacementAction === "strike" ? "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/20" :
+                    replacementAction === "warning" ? "bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/20" :
+                    "bg-emerald-600 hover:bg-emerald-500 text-white"
                   }
                   disabled={statusMutation.isPending || (replacementAction !== "no_penalty" && !replacementReason.trim())}
                   onClick={() => {
@@ -1342,10 +1342,10 @@ export default function Orders() {
                   }}
                   data-testid="button-confirm-replacement"
                 >
-                  {statusMutation.isPending ? "Processing..." :
-                   replacementAction === "strike" ? "Replace & Strike" :
-                   replacementAction === "warning" ? "Replace & Warn" :
-                   "Replace — No Penalty"}
+                  {statusMutation.isPending ? "Executing..." :
+                   replacementAction === "strike" ? "Execute Strike" :
+                   replacementAction === "warning" ? "Issue Warning" :
+                   "Finalize Swap"}
                 </Button>
               </div>
             </div>
@@ -1358,8 +1358,8 @@ export default function Orders() {
       <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-              <RefreshCw className="w-4 h-4 text-amber-400" />
+            <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+              <RefreshCw className="w-4 h-4 text-orange-500" />
             </div>
             Assign Replacement Grinder
           </DialogTitle>
@@ -1367,27 +1367,27 @@ export default function Orders() {
 
         {reassignOrder && (
           <div className="space-y-5 mt-2">
-            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 shadow-inner">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Order</span>
-                <span className="font-bold text-primary" data-testid="text-reassign-order-id">
+                <span className="text-sm text-orange-200/70 font-medium">Order</span>
+                <span className="font-bold text-orange-400" data-testid="text-reassign-order-id">
                   {reassignOrder.mgtOrderNumber ? `#${reassignOrder.mgtOrderNumber}` : (reassignOrder.displayId || reassignOrder.id)}
                 </span>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Service</span>
-                <span className="font-medium">
+                <span className="text-sm text-orange-200/70 font-medium">Service</span>
+                <span className="font-medium text-white">
                   {(services || []).find(s => s.id === reassignOrder.serviceId)?.name || reassignOrder.serviceId}
                 </span>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Customer Price</span>
+                <span className="text-sm text-orange-200/70 font-medium">Customer Price</span>
                 <span className="font-bold text-emerald-400">${reassignOrder.customerPrice}</span>
               </div>
               {reassignOrder.assignedGrinderId && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Previous Grinder</span>
-                  <span className="font-medium text-red-400">
+                  <span className="text-sm text-orange-200/70 font-medium">Removed Grinder</span>
+                  <span className="font-bold text-red-400">
                     {(grinders || []).find(g => g.id === reassignOrder.assignedGrinderId)?.name || reassignOrder.assignedGrinderId}
                   </span>
                 </div>
@@ -1395,7 +1395,7 @@ export default function Orders() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Replacement Grinder</Label>
+              <Label className="text-sm font-bold text-orange-200 uppercase tracking-wider">New Grinder</Label>
               <Select value={reassignGrinderId} onValueChange={setReassignGrinderId}>
                 <SelectTrigger className="mt-1.5 bg-background/50 border-white/10" data-testid="select-reassign-grinder">
                   <SelectValue placeholder="Select a grinder to take over..." />
@@ -1463,7 +1463,7 @@ export default function Orders() {
             </div>
 
             <Button
-              className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/20"
+              className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold h-11 shadow-lg shadow-orange-900/20"
               disabled={!reassignGrinderId || !reassignPayAmount || reassignMutation.isPending}
               onClick={handleReassign}
               data-testid="button-confirm-reassign"
