@@ -55,8 +55,6 @@ export const staffNavItems = [
   { title: "Audit Log", url: "/audit-log", icon: ScrollText },
   { title: "Activity Log", url: "/activity-log", icon: Activity },
   { title: "Staff Notes", url: "/patch-notes", icon: Newspaper },
-  { title: "Features", url: "/features", icon: BookOpen },
-  { title: "Operations Guide", url: "/staff/ops-guide", icon: ScrollText },
 ];
 
 export function getFilteredStaffNavItems(isOwner: boolean, userId: string) {
@@ -88,8 +86,6 @@ export const grinderNavItems = [
   { title: "Calendar", url: "/grinder/calendar", icon: CalendarDays },
   { title: "Events & Promos", url: "/grinder/events", icon: Calendar },
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
-  { title: "Features", url: "/grinder/guide", icon: BookOpen },
-  { title: "Operations Guide", url: "/grinder/ops-guide", icon: ScrollText },
 ];
 
 function AppSidebar() {

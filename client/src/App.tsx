@@ -30,7 +30,7 @@ import GrinderAssignments from "@/pages/grinder/assignments";
 import GrinderBids from "@/pages/grinder/bids";
 import GrinderPayouts from "@/pages/grinder/payouts";
 import GrinderStatus from "@/pages/grinder/status";
-import GrinderGuide from "@/pages/grinder/guide";
+
 import ScorecardGuide from "@/pages/scorecard-guide";
 import GrinderScorecard from "@/pages/grinder/scorecard";
 import GrinderQueue from "@/pages/grinder/queue";
@@ -49,9 +49,7 @@ import GrinderCalendar from "@/pages/grinder/calendar";
 import GrinderTodo from "@/pages/grinder/todo";
 import GrinderStrikes from "@/pages/grinder/strikes";
 import GrinderNotifications from "@/pages/grinder/notifications";
-import StaffFeatures from "@/pages/staff/features";
-import GrinderOpsGuide from "@/pages/grinder-ops-guide";
-import StaffOpsGuide from "@/pages/staff-ops-guide";
+
 import CustomerReviewPage from "@/pages/customer-review";
 import StaffNotifications from "@/pages/staff/notifications";
 import StaffTodo from "@/pages/staff/todo";
@@ -248,8 +246,6 @@ function Router() {
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
       <Route path="/wallets" component={() => <ProtectedRoute component={StaffWallets} staffOnly />} />
       <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
-      <Route path="/features" component={() => <ProtectedRoute component={StaffFeatures} staffOnly />} />
-      <Route path="/staff/ops-guide" component={() => <ProtectedRoute component={StaffOpsGuide} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />
       <Route path="/grinder/assignments" component={() => <ProtectedRoute component={GrinderAssignments} />} />
@@ -257,7 +253,6 @@ function Router() {
       <Route path="/grinder/payouts" component={() => <ProtectedRoute component={GrinderPayouts} />} />
       <Route path="/grinder/notifications" component={() => <ProtectedRoute component={GrinderNotifications} />} />
       <Route path="/grinder/status" component={() => <ProtectedRoute component={GrinderStatus} />} />
-      <Route path="/grinder/guide" component={() => <ProtectedRoute component={GrinderGuide} />} />
       <Route path="/grinder/scorecard" component={() => <ProtectedRoute component={GrinderScorecard} />} />
       <Route path="/grinder/queue" component={() => <ProtectedRoute component={GrinderQueue} />} />
       <Route path="/grinder/events" component={() => <ProtectedRoute component={GrinderEvents} />} />
@@ -268,7 +263,6 @@ function Router() {
       <Route path="/grinder/todo" component={() => <ProtectedRoute component={GrinderTodo} />} />
       <Route path="/grinder/strikes" component={() => <ProtectedRoute component={GrinderStrikes} />} />
       <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
-      <Route path="/grinder/ops-guide" component={() => <ProtectedRoute component={GrinderOpsGuide} />} />
       
       <Route path="/customer-review" component={CustomerReviewPage} />
 

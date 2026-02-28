@@ -899,24 +899,6 @@ const staffPageDescriptions: Record<string, PageMeta> = {
       { label: "Archive of all past updates", icon: ScrollText, color: "text-purple-400" },
     ],
   },
-  "/features": {
-    description: "Feature documentation — browse all platform capabilities, understand how systems work, and reference implementation details.",
-    demoSteps: [
-      { label: "Browse all platform features", icon: BookOpen, color: "text-blue-400" },
-      { label: "Detailed descriptions and screenshots", icon: Eye, color: "text-cyan-400" },
-      { label: "Learn advanced capabilities", icon: Brain, color: "text-purple-400" },
-      { label: "Reference guide for power users", icon: Star, color: "text-yellow-400" },
-    ],
-  },
-  "/staff/ops-guide": {
-    description: "Staff operations guide — standard operating procedures, workflow documentation, and best practices for managing the platform day-to-day.",
-    demoSteps: [
-      { label: "Standard operating procedures", icon: ScrollText, color: "text-blue-400" },
-      { label: "Order management best practices", icon: ListOrdered, color: "text-cyan-400" },
-      { label: "Grinder communication guidelines", icon: MessageCircle, color: "text-purple-400" },
-      { label: "Escalation and dispute resolution", icon: Shield, color: "text-orange-400" },
-    ],
-  },
 };
 
 const grinderPageDescriptions: Record<string, PageMeta> = {
@@ -1077,24 +1059,6 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
       { label: "New features and improvements", icon: Star, color: "text-yellow-400" },
       { label: "Bug fixes that affect your workflow", icon: Wrench, color: "text-orange-400" },
       { label: "Stay ahead of platform changes", icon: Eye, color: "text-cyan-400" },
-    ],
-  },
-  "/grinder/guide": {
-    description: "Your platform guide — understand all features, learn workflows, and reference documentation. Essential reading for new grinders.",
-    demoSteps: [
-      { label: "How to place bids and win orders", icon: Gavel, color: "text-purple-400" },
-      { label: "Understanding your scorecard", icon: ClipboardCheck, color: "text-blue-400" },
-      { label: "Payout process explained step-by-step", icon: Banknote, color: "text-green-400" },
-      { label: "Tips for ranking up faster", icon: TrendingUp, color: "text-cyan-400" },
-    ],
-  },
-  "/grinder/ops-guide": {
-    description: "Operations guide — step-by-step procedures for handling orders, bids, checkpoints, and payouts. Your handbook for working efficiently.",
-    demoSteps: [
-      { label: "Step 1: Accept order assignment", icon: FileCheck, color: "text-blue-400" },
-      { label: "Step 2: Log in and start work", icon: MousePointerClick, color: "text-yellow-400" },
-      { label: "Step 3: Complete and upload proof", icon: Upload, color: "text-cyan-400" },
-      { label: "Step 4: Request payout", icon: Banknote, color: "text-green-400" },
     ],
   },
 };
