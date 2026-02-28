@@ -23,59 +23,14 @@ import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, type BadgeId } from "@/components/achievement-badges";
 import type { GrinderBadge } from "@shared/schema";
 
-function BadgeItem({ id }: { id: BadgeId }) {
+function BadgeItem({ id, onSelect }: { id: BadgeId; onSelect: (id: BadgeId) => void }) {
   const BadgeComp = BADGE_COMPONENTS[id];
   const meta = BADGE_META[id];
-  const [showMobile, setShowMobile] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showMobile) return;
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        setShowMobile(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, [showMobile]);
-
-  useEffect(() => {
-    if (!showMobile || !popupRef.current || !containerRef.current) return;
-    const popup = popupRef.current;
-    const container = containerRef.current;
-    if (!popup || !container) return;
-    
-    // Reset width and transform to get natural measurements
-    popup.style.width = "auto";
-    popup.style.transform = "none";
-    
-    const popupWidth = Math.min(popup.offsetWidth, window.innerWidth - 32);
-    popup.style.width = `${popupWidth}px`;
-    
-    const containerRect = container.getBoundingClientRect();
-    const rightOverflow = containerRect.left + containerRect.width / 2 + popupWidth / 2 - window.innerWidth + 16;
-    const leftOverflow = -(containerRect.left + containerRect.width / 2 - popupWidth / 2 - 16);
-    
-    if (rightOverflow > 0) {
-      popup.style.transform = `translateX(-${rightOverflow}px)`;
-    } else if (leftOverflow > 0) {
-      popup.style.transform = `translateX(${leftOverflow}px)`;
-    } else {
-      popup.style.transform = "translateX(-50%)";
-    }
-  }, [showMobile]);
 
   return (
-    <div ref={containerRef} className="relative group">
+    <div className="relative group">
       <button
-        onClick={() => setShowMobile(prev => !prev)}
+        onClick={() => onSelect(id)}
         className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
         data-testid={`badge-tap-${id}`}
       >
@@ -90,27 +45,46 @@ function BadgeItem({ id }: { id: BadgeId }) {
         <p className="text-xs font-bold text-foreground">{meta.label}</p>
         <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
       </div>
-
-      {showMobile && (
-        <div
-          ref={popupRef}
-          className="md:hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 rounded-lg bg-popover border border-border shadow-2xl z-[9999] animate-in fade-in-0 zoom-in-95"
-          data-testid={`badge-popup-${id}`}
-        >
-          <p className="text-xs font-bold text-foreground">{meta.label}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{meta.tooltip}</p>
-        </div>
-      )}
     </div>
   );
 }
 
 function BadgeGrid({ badgeIds }: { badgeIds: BadgeId[] }) {
+  const [selectedBadge, setSelectedBadge] = useState<BadgeId | null>(null);
+  const selectedMeta = selectedBadge ? BADGE_META[selectedBadge] : null;
+  const SelectedComp = selectedBadge ? BADGE_COMPONENTS[selectedBadge] : null;
+
   return (
-    <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
-      {badgeIds.map(id => (
-        <BadgeItem key={id} id={id} />
-      ))}
+    <div className="relative">
+      <div className="flex items-center gap-2 mt-4 flex-wrap" data-testid="section-badges">
+        {badgeIds.map(id => (
+          <BadgeItem key={id} id={id} onSelect={(bid) => setSelectedBadge(prev => prev === bid ? null : bid)} />
+        ))}
+      </div>
+
+      {selectedBadge && selectedMeta && SelectedComp && (
+        <div
+          className="md:hidden mt-3 p-3 rounded-xl bg-popover/95 backdrop-blur-sm border border-border shadow-2xl animate-in fade-in-0 slide-in-from-bottom-2 duration-200"
+          data-testid={`badge-popup-${selectedBadge}`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="shrink-0">
+              <SelectedComp />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground">{selectedMeta.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{selectedMeta.tooltip}</p>
+            </div>
+            <button
+              onClick={() => setSelectedBadge(null)}
+              className="shrink-0 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground"
+              data-testid="button-close-badge-popup"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
