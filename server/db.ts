@@ -5,14 +5,25 @@ import * as authSchema from "@shared/models/auth";
 
 const { Pool } = pg;
 
-let pool: pg.Pool | undefined;
-let db: ReturnType<typeof drizzle> | undefined;
+const isProduction = process.env.NODE_ENV === "production";
 
-if (!process.env.DATABASE_URL) {
-  console.log("⚠️ No DATABASE_URL found. Running without database (local dev mode).");
-} else {
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  db = drizzle(pool, { schema: { ...schema, ...authSchema } });
+const connectionString = isProduction
+  ? process.env.DATABASE_URL_PROD
+  : process.env.DATABASE_URL_DEV;
+
+if (!connectionString) {
+  throw new Error(
+    `Database URL not set for ${isProduction ? "production" : "development"}`
+  );
 }
+
+const pool = new Pool({
+  connectionString,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
+});
+
+const db = drizzle(pool, {
+  schema: { ...schema, ...authSchema },
+});
 
 export { pool, db };
