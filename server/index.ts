@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -69,7 +70,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(httpServer, app);
+  await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -91,28 +92,41 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
+  const port = parseInt(process.env.PORT || "5050", 10);
+
+  // 🔥 Cross-platform safe server binding
+  if (process.platform === "win32") {
+    httpServer.listen(port, () => {
+      log(`serving on http://localhost:${port}`);
       initializeBackgroundServices();
-    },
-  );
+    });
+  } else {
+    httpServer.listen(
+      {
+        port,
+        host: "0.0.0.0",
+      },
+      () => {
+        log(`serving on port ${port}`);
+        initializeBackgroundServices();
+      },
+    );
+  }
 })();
 
 function logMemory(label: string) {
   const mem = process.memoryUsage();
   const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
-  log(`[memory] ${label}: RSS=${mb(mem.rss)}MB Heap=${mb(mem.heapUsed)}/${mb(mem.heapTotal)}MB`, "system");
+  log(
+    `[memory] ${label}: RSS=${mb(mem.rss)}MB Heap=${mb(mem.heapUsed)}/${mb(
+      mem.heapTotal,
+    )}MB`,
+    "system",
+  );
 }
 
 function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function initializeBackgroundServices() {
@@ -132,19 +146,25 @@ async function initializeBackgroundServices() {
   const skipDiscord = isDev && process.env.SKIP_DISCORD_BOT === "true";
 
   if (skipDiscord) {
-    log("Dev mode: skipping Discord bot, bidding timer, Twitch checker (SKIP_DISCORD_BOT=true)");
+    log(
+      "Dev mode: skipping Discord bot, bidding timer, Twitch checker (SKIP_DISCORD_BOT=true)",
+    );
   } else {
     await delay(2000);
 
     try {
-      const { startBiddingTimerScheduler } = await import("./discord/biddingTimer");
+      const { startBiddingTimerScheduler } = await import(
+        "./discord/biddingTimer"
+      );
       startBiddingTimerScheduler();
     } catch (error) {
       console.error("Failed to start bidding timer scheduler:", error);
     }
 
     try {
-      const { startDailyUpdateChecker } = await import("./dailyUpdateChecker");
+      const { startDailyUpdateChecker } = await import(
+        "./dailyUpdateChecker"
+      );
       startDailyUpdateChecker();
     } catch (error) {
       console.error("Failed to start daily update checker:", error);
@@ -153,7 +173,9 @@ async function initializeBackgroundServices() {
     await delay(2000);
 
     try {
-      const { startTwitchStreamChecker } = await import("./twitchStreamChecker");
+      const { startTwitchStreamChecker } = await import(
+        "./twitchStreamChecker"
+      );
       startTwitchStreamChecker();
     } catch (error) {
       console.error("Failed to start Twitch stream checker:", error);

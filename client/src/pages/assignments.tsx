@@ -57,6 +57,10 @@ export default function Assignments() {
       queryClient.invalidateQueries({ queryKey: ["/api/grinders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setReassignDialogOpen(false);
       setReassignAssignment(null);
       toast({ title: "Replacement grinder assigned successfully" });
@@ -111,6 +115,10 @@ export default function Assignments() {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setReplaceDialogOpen(false);
       setSelectedAssignment(null);
       toast({ title: "Grinder replaced successfully" });
@@ -280,7 +288,7 @@ export default function Assignments() {
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground whitespace-nowrap" data-testid="text-showing-count">
-            Showing {filteredAssignments.length} of {(assignments || []).length} assignments
+            Showing {filteredAssignments.length} of {(assignments || []).length} {(assignments || []).length === 1 ? "assignment" : "assignments"}
           </span>
         </div>
       </Card>

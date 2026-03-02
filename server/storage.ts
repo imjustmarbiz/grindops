@@ -47,6 +47,7 @@ import {
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
 import { eq, sql, desc, and, or, gte, lte, inArray } from "drizzle-orm";
+import { DevStorage } from "./dev-storage";
 
 export interface IStorage {
   getServices(): Promise<Service[]>;
@@ -74,6 +75,7 @@ export interface IStorage {
   deleteOrder(id: string): Promise<boolean>;
 
   getBids(): Promise<Bid[]>;
+  getBidsForOrder(orderId: string): Promise<Bid[]>;
   getBid(id: string): Promise<Bid | undefined>;
   getBidByProposalId(mgtProposalId: number): Promise<Bid | undefined>;
   createBid(bid: InsertBid): Promise<Bid>;
@@ -238,6 +240,7 @@ export interface IStorage {
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
 
 export async function startBiddingTimerIfFirst(orderId: string): Promise<boolean> {
+  if (!process.env.DATABASE_URL || !db) return false;
   const now = new Date();
   const closesAt = new Date(now.getTime() + BIDDING_WINDOW_MS);
   const result = await db.update(orders).set({
@@ -434,6 +437,8 @@ export class DatabaseStorage implements IStorage {
     const setData: any = { status };
     if (status === "Completed") {
       setData.completedAt = new Date();
+    } else if (status !== "Paid Out") {
+      setData.completedAt = null;
     }
     if (status === "Need Replacement") {
       setData.isEmergency = true;
@@ -466,6 +471,10 @@ export class DatabaseStorage implements IStorage {
 
   async getBids(): Promise<Bid[]> {
     return await db.select().from(bids).orderBy(desc(bids.bidTime));
+  }
+
+  async getBidsForOrder(orderId: string): Promise<Bid[]> {
+    return await db.select().from(bids).where(eq(bids.orderId, orderId)).orderBy(desc(bids.bidTime));
   }
 
   async getBid(id: string): Promise<Bid | undefined> {
@@ -1666,4 +1675,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage: IStorage =
+  !process.env.DATABASE_URL && process.env.NODE_ENV !== "production"
+    ? new DevStorage()
+    : new DatabaseStorage();
+
+if (storage instanceof DevStorage) {
+  console.log("[storage] Using DevStorage (no DATABASE_URL)");
+}

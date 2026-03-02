@@ -14,6 +14,8 @@ import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
 import { or, eq, sql, desc, and } from "drizzle-orm";
 import multer from "multer";
 
+const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 const WALLET_BLOCKED_IDS: string[] = [];
 const WALLET_RESTRICTED_IDS = ["872820240139046952"];
@@ -41,6 +43,65 @@ function getActorName(req: any): string {
   const user = req.user;
   if (!user) return "system";
   return user.discordUsername || user.firstName || user.email || user.id || "system";
+}
+
+const DEV_PROFILE_GRINDERS: Record<string, { name: string; discordUsername: string; category: string; tier: string; capacity: number; discordRoleId: string | null }> = {
+  owner: { name: "Demo Owner", discordUsername: "demoowner", category: "Owner", tier: "Elite", capacity: 10, discordRoleId: null },
+  staff: { name: "Demo Staff", discordUsername: "demostaff", category: "Staff", tier: "Elite", capacity: 8, discordRoleId: null },
+  grinder: { name: "Demo Grinder", discordUsername: "demogrinder", category: "Grinder", tier: "New", capacity: 3, discordRoleId: null },
+  elite: { name: "Demo Elite Grinder", discordUsername: "demoelite", category: "Elite Grinder", tier: "Elite", capacity: 5, discordRoleId: "1466370965016412316" },
+};
+
+const DEV_GRINDER_ID = (role: string) => `dev-grinder-${role}`;
+const DEV_USER_ID = (role: string) => `dev-user-${role}`;
+const isDevUser = (id: string) => id?.startsWith?.("dev-user");
+const isDevGrinder = (id: string) => id?.startsWith?.("dev-grinder");
+
+/** Resolve grinder for req - returns DB grinder or dev mock when dev-user (any dev profile: owner, staff, grinder, elite). */
+function resolveMyGrinder(req: any, allGrinders: any[]): any {
+  const userId = (req as any).userId;
+  const sessionUser = (req as any).user;
+  const userRole = (req as any).userRole;
+  let grinder = allGrinders.find((g: any) => g.discordUserId === userId);
+  const devProfiles = ["owner", "staff", "grinder", "elite"];
+  if (!grinder && process.env.NODE_ENV !== "production" && isDevUser(sessionUser?.id) && devProfiles.includes(userRole)) {
+    const profile = DEV_PROFILE_GRINDERS[userRole] || DEV_PROFILE_GRINDERS.owner;
+    grinder = {
+      id: DEV_GRINDER_ID(userRole),
+      discordUserId: sessionUser.id,
+      discordUsername: profile.discordUsername,
+      discordRoleId: profile.discordRoleId,
+      name: profile.name,
+      category: profile.category,
+      tier: profile.tier,
+      capacity: profile.capacity,
+      activeOrders: 0,
+      completedOrders: 0,
+      strikes: 0,
+      suspended: false,
+      outstandingFine: "0",
+      rulesAccepted: (req.session as any)?.devRulesAccepted ?? (userRole === "owner" || userRole === "staff"),
+      rulesAcceptedAt: (req.session as any)?.devRulesAccepted || userRole === "owner" || userRole === "staff" ? new Date() : null,
+    } as any;
+  }
+  return grinder;
+}
+
+/** Ensure dev-grinder exists in DB when using mock grinder with real database (satisfies FK constraints). */
+async function ensureDevGrinderInDb(myGrinder: any): Promise<void> {
+  if (!myGrinder || !isDevGrinder(myGrinder.id) || !process.env.DATABASE_URL || isDevNoDb()) return;
+  const existing = await storage.getGrinder(myGrinder.id);
+  if (existing) return;
+  await storage.createGrinder({
+    id: myGrinder.id,
+    name: myGrinder.name || "Dev Grinder",
+    discordUserId: myGrinder.discordUserId,
+    discordUsername: myGrinder.discordUsername || "devuser",
+    discordRoleId: myGrinder.discordRoleId || null,
+    category: myGrinder.category || "Grinder",
+    tier: myGrinder.tier || "New",
+    capacity: myGrinder.capacity ?? 3,
+  } as any);
 }
 import path from "path";
 import fs from "fs";
@@ -313,12 +374,44 @@ export async function registerRoutes(
 
   app.get("/api/owner/staff-members", requireOwner, async (req, res) => {
     try {
-      const staffUsers = await db.select().from(users)
+      if (isDevNoDb()) {
+        if (process.env.NODE_ENV !== "production") {
+          const allAuditLogs = await storage.getAuditLogs();
+          const devMembers = ["owner", "staff"].map((role) => {
+            const profile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.owner;
+            const devId = DEV_USER_ID(role);
+            const devActor = (profile?.discordUsername || "").toLowerCase();
+            const devLogs = allAuditLogs.filter((l: any) => (l.actor?.toLowerCase() || "") === devActor);
+            const now = Date.now();
+            const last24h = devLogs.filter((l: any) => now - new Date(l.createdAt).getTime() < 86400000).length;
+            const last7d = devLogs.filter((l: any) => now - new Date(l.createdAt).getTime() < 604800000).length;
+            const lastAction = devLogs.length > 0 ? devLogs[0].createdAt : null;
+            return {
+              id: devId,
+              discordId: devId,
+              name: profile.discordUsername || profile.name,
+              role,
+              avatarUrl: null,
+              totalActions: devLogs.length,
+              actionsLast24h: last24h,
+              actionsLast7d: last7d,
+              lastAction,
+              tasksAssigned: 0,
+              pendingTasks: 0,
+              completedTasks: 0,
+            };
+          });
+          return res.json(devMembers);
+        }
+        return res.json([]);
+      }
+      const sessionUser = (req as any).user;
+      const staffUsers = await db!.select().from(users)
         .where(or(eq(users.role, "staff"), eq(users.role, "owner")));
       const allAuditLogs = await storage.getAuditLogs();
       const allTasks = await storage.getStaffTasks();
 
-      const members = staffUsers.map(s => {
+      let members = staffUsers.map(s => {
         const discordId = s.discordId || s.id;
         const staffLogs = allAuditLogs.filter(l => {
           const actor = l.actor?.toLowerCase() || "";
@@ -351,6 +444,35 @@ export async function registerRoutes(
         };
       });
 
+      if (process.env.NODE_ENV !== "production" && isDevUser(sessionUser?.id)) {
+        const existingIds = new Set(members.map((m: any) => m.id));
+        for (const role of ["owner", "staff"]) {
+          const devId = DEV_USER_ID(role);
+          if (existingIds.has(devId)) continue;
+          const profile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.owner;
+          const devActor = (profile?.discordUsername || "").toLowerCase();
+          const devLogs = allAuditLogs.filter((l: any) => (l.actor?.toLowerCase() || "") === devActor);
+          const now = Date.now();
+          const last24h = devLogs.filter((l: any) => now - new Date(l.createdAt).getTime() < 86400000).length;
+          const last7d = devLogs.filter((l: any) => now - new Date(l.createdAt).getTime() < 604800000).length;
+          const lastAction = devLogs.length > 0 ? devLogs[0].createdAt : null;
+          members = [{
+            id: devId,
+            discordId: devId,
+            name: profile.discordUsername || profile.name,
+            role,
+            avatarUrl: null,
+            totalActions: devLogs.length,
+            actionsLast24h: last24h,
+            actionsLast7d: last7d,
+            lastAction,
+            tasksAssigned: 0,
+            pendingTasks: 0,
+            completedTasks: 0,
+          }, ...members];
+        }
+      }
+
       res.json(members);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -359,6 +481,9 @@ export async function registerRoutes(
 
   app.post("/api/owner/clear-data", requireOwner, async (req, res) => {
     try {
+      if (isDevNoDb()) {
+        return res.json({ success: true, results: {} });
+      }
       const { tables } = req.body;
       if (!tables || !Array.isArray(tables) || tables.length === 0) {
         return res.status(400).json({ error: "No tables specified" });
@@ -381,8 +506,8 @@ export async function registerRoutes(
       const results: Record<string, boolean> = {};
       for (const table of toDelete) {
         try {
-          await db.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = ${table}`);
-          await db.execute(sql`TRUNCATE TABLE ${sql.identifier(table)} CASCADE`);
+          await db!.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = ${table}`);
+          await db!.execute(sql`TRUNCATE TABLE ${sql.identifier(table)} CASCADE`);
           results[table] = true;
         } catch (e) {
           results[table] = false;
@@ -406,14 +531,36 @@ export async function registerRoutes(
   });
 
   app.get(api.grinders.list.path, requireStaff, async (req, res) => {
-    const allGrinders = await storage.getGrinders();
-    const allUsers = await db.select().from(users);
+    let allGrinders = await storage.getGrinders();
+    const allUsers = isDevNoDb() ? [] : await db!.select().from(users);
     const ownerStaffIds = new Set(
       allUsers
         .filter(u => u.role === "owner" || u.role === "staff")
         .map(u => u.id)
     );
-    const results = allGrinders.filter(g => !ownerStaffIds.has(g.discordUserId));
+    let results = allGrinders.filter(g => !ownerStaffIds.has(g.discordUserId));
+    if (process.env.NODE_ENV !== "production" && process.env.DATABASE_URL) {
+      for (const role of ["grinder", "elite"] as const) {
+        const gid = DEV_GRINDER_ID(role);
+        if (results.some((g: any) => g.id === gid)) continue;
+        const devProfile = DEV_PROFILE_GRINDERS[role];
+        results = [...results, {
+          id: gid,
+          discordUserId: DEV_USER_ID(role),
+          discordUsername: devProfile.discordUsername,
+          name: devProfile.name,
+          category: devProfile.category,
+          tier: devProfile.tier,
+          capacity: devProfile.capacity,
+          activeOrders: 0,
+          completedOrders: 0,
+          strikes: 0,
+          suspended: false,
+          outstandingFine: "0",
+          isRemoved: false,
+        } as any];
+      }
+    }
     res.json(results);
   });
 
@@ -620,7 +767,32 @@ export async function registerRoutes(
 
   app.get(api.orders.list.path, requireStaff, async (req, res) => {
     const results = await storage.getOrders();
-    res.json(results);
+    const customerIds = [...new Set(results.filter((o: any) => o.customerDiscordId).map((o: any) => o.customerDiscordId))];
+    const customerInfoMap: Record<string, { displayName: string; username: string }> = {};
+    if (customerIds.length > 0) {
+      try {
+        const { getDiscordBotClient } = await import("./discord/bot");
+        const botClient = getDiscordBotClient();
+        if (botClient) {
+          for (const cId of customerIds) {
+            try {
+              const user = await botClient.users.fetch(cId);
+              if (user) {
+                customerInfoMap[cId] = {
+                  displayName: user.global_name || user.username || cId,
+                  username: user.username,
+                };
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+    const enriched = results.map((o: any) => {
+      const info = o.customerDiscordId ? customerInfoMap[o.customerDiscordId] : null;
+      return { ...o, customerDiscordDisplayName: info?.displayName, customerDiscordUsername: info?.username };
+    });
+    res.json(enriched);
   });
 
   app.get(api.orders.get.path, requireStaff, async (req, res) => {
@@ -666,12 +838,13 @@ export async function registerRoutes(
       } else {
         (input as any).displayId = `ORD-${String(input.mgtOrderNumber).padStart(2, '0')}`;
       }
+      (input as any).id = (input as any).id || `MGT-${(input as any).mgtOrderNumber}`;
       const result = await storage.createOrder(input);
       await storage.createAuditLog({
         id: `AL-${Date.now().toString(36)}`,
         entityType: "order",
         entityId: result.id,
-        action: "created",
+        action: "order_created",
         actor: getActorName(req),
         details: JSON.stringify({ customerPrice: result.customerPrice, serviceId: result.serviceId }),
       });
@@ -783,7 +956,29 @@ export async function registerRoutes(
         await recalcGrinderStats(order.assignedGrinderId);
       }
 
-      const result = await storage.updateOrderStatus(req.params.id, status);
+      let result = await storage.updateOrderStatus(req.params.id, status);
+
+      // When marking as In Progress, set start date to now if not already set (don't override manual value)
+      if (status === "In Progress" && !order.startDate) {
+        const updated = await storage.updateOrder(req.params.id, { startDate: new Date() });
+        if (updated) result = updated;
+      }
+
+      // When reverting from Completed/Paid Out to another status, revert assignment so grinder "done" count updates
+      const wasCompleted = order.status === "Completed" || order.status === "Paid Out";
+      const isNoLongerCompleted = status !== "Completed" && status !== "Paid Out";
+      if (wasCompleted && isNoLongerCompleted && order.assignedGrinderId) {
+        const allAssignments = await storage.getAssignments();
+        const completedAssignment = allAssignments.find((a: any) => a.orderId === order.id && a.status === "Completed");
+        if (completedAssignment) {
+          await storage.updateAssignment(completedAssignment.id, {
+            status: "Active",
+            deliveredDateTime: null,
+            isOnTime: null,
+          });
+          await recalcGrinderStats(order.assignedGrinderId);
+        }
+      }
 
       if (status === "Completed" && order.assignedGrinderId) {
         const allAssignments = await storage.getAssignments();
@@ -876,6 +1071,11 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Order already has a grinder assigned" });
       }
 
+      if (isDevGrinder(input.grinderId)) {
+        const role = input.grinderId.replace(/^dev-grinder-/, "") as keyof typeof DEV_PROFILE_GRINDERS;
+        const devProfile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.grinder;
+        await ensureDevGrinderInDb({ id: input.grinderId, name: devProfile.name, discordUsername: devProfile.discordUsername, category: devProfile.category, tier: devProfile.tier, capacity: devProfile.capacity, discordUserId: DEV_USER_ID(role) } as any);
+      }
       const grinder = await storage.getGrinder(input.grinderId);
       if (!grinder) return res.status(404).json({ message: "Grinder not found" });
       if (grinder.suspended) {
@@ -917,7 +1117,32 @@ export async function registerRoutes(
       const marginPct = customerPrice > 0 ? (margin / customerPrice) * 100 : 0;
       const companyProfit = margin;
 
-      const [lockedOrder] = await db.update(ordersTable).set({
+      if (isDevNoDb() || !db) {
+        await storage.updateOrderStatus(orderId, "Assigned");
+        await storage.updateOrder(orderId, { assignedGrinderId: input.grinderId, companyProfit: companyProfit.toFixed(2) } as any);
+        const assignmentId = generateShortId("ASN");
+        const asnDisplayId = await generateAssignmentDisplayId(orderId);
+        const assignmentData: any = {
+          id: assignmentId,
+          displayId: asnDisplayId,
+          grinderId: input.grinderId,
+          orderId,
+          assignedDateTime: now,
+          status: "Active",
+          bidAmount: input.bidAmount,
+          orderPrice: order.customerPrice,
+          margin: margin.toFixed(2),
+          marginPct: marginPct.toFixed(2),
+          companyProfit: companyProfit.toFixed(2),
+          grinderEarnings: input.bidAmount,
+          dueDateTime: order.orderDueDate,
+          notes: input.notes || (order.status === "Need Replacement" ? "Replacement grinder assignment" : "Staff override assignment"),
+        };
+        const assignment = await storage.createAssignment(assignmentData);
+        return res.json({ success: true, assignment });
+      }
+
+      const [lockedOrder] = await db!.update(ordersTable).set({
         status: "Assigned",
         assignedGrinderId: input.grinderId,
         companyProfit: companyProfit.toFixed(2),
@@ -1104,6 +1329,9 @@ export async function registerRoutes(
       if (updateData.platform) updateData.platform = normalizePlatform(updateData.platform);
       if (input.orderDueDate) {
         updateData.orderDueDate = new Date(input.orderDueDate);
+      }
+      if (input.startDate !== undefined) {
+        updateData.startDate = input.startDate ? new Date(input.startDate) : null;
       }
       if (input.completedAt !== undefined) {
         updateData.completedAt = input.completedAt ? new Date(input.completedAt) : null;
@@ -1292,7 +1520,7 @@ export async function registerRoutes(
 
       if (!isStaff) {
         const allGrinders = await storage.getGrinders();
-        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        const myGrinder = resolveMyGrinder(req, allGrinders);
         if (!myGrinder || order.assignedGrinderId !== myGrinder.id) {
           return res.status(403).json({ message: "You can only access tickets for orders assigned to you." });
         }
@@ -1395,6 +1623,11 @@ export async function registerRoutes(
       };
       if (!input.orderId || !input.grinderId) {
         return res.status(400).json({ message: "orderId and grinderId are required" });
+      }
+      if (isDevGrinder(input.grinderId)) {
+        const role = input.grinderId.replace(/^dev-grinder-/, "") as keyof typeof DEV_PROFILE_GRINDERS;
+        const devProfile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.grinder;
+        await ensureDevGrinderInDb({ id: input.grinderId, name: devProfile.name, discordUsername: devProfile.discordUsername, category: devProfile.category, tier: devProfile.tier, capacity: devProfile.capacity, discordUserId: DEV_USER_ID(role) } as any);
       }
       const result = await storage.createBid(input);
       const userId = (req as any).userId;
@@ -1725,7 +1958,7 @@ export async function registerRoutes(
         id: `AL-${Date.now().toString(36)}`,
         entityType: "assignment",
         entityId: result.id,
-        action: "created",
+        action: "order_assigned",
         actor: getActorName(req),
         details: JSON.stringify({ grinderId: result.grinderId, orderId: result.orderId }),
       });
@@ -1795,6 +2028,143 @@ export async function registerRoutes(
 
   app.get("/api/grinder/me", async (req, res) => {
     const userId = (req as any).userId;
+    const sessionUser = (req as any).user;
+    const userRole = (req as any).userRole;
+
+    // 🔥 DEV MODE: return mock grinder profile for dev login (any profile: owner, staff, grinder, elite)
+    const devProfiles = ["owner", "staff", "grinder", "elite"];
+    if (process.env.NODE_ENV !== "production" && isDevUser(sessionUser?.id) && devProfiles.includes(userRole)) {
+      const isElite = userRole === "elite" || userRole === "owner" || userRole === "staff";
+      const profile = DEV_PROFILE_GRINDERS[userRole] || DEV_PROFILE_GRINDERS.owner;
+      const devGrinderId = DEV_GRINDER_ID(userRole);
+      const allOrders = await storage.getOrders();
+      const allBids = await storage.getBids();
+      const allAssignments = await storage.getAssignments();
+      const myAssignments = allAssignments.filter((a: any) => a.grinderId === devGrinderId);
+      const myBids = allBids.filter((b: any) => b.grinderId === devGrinderId);
+      const now = new Date();
+      const BIDDING_CLOSED_GRACE_MS = 10 * 60 * 1000;
+      const openOrders = allOrders.filter((o: any) => {
+        if (o.visibleToGrinders === false) return false;
+        if (o.status === "Bidding Closed") {
+          if (o.assignedGrinderId) return false;
+          if (!o.biddingClosesAt) return false;
+          const closedAgo = now.getTime() - new Date(o.biddingClosesAt).getTime();
+          return closedAgo < BIDDING_CLOSED_GRACE_MS;
+        }
+        if (o.status === "Need Replacement") return true;
+        if (o.status !== "Open") return false;
+        return true;
+      });
+      const availableOrders = openOrders.map((o: any) => {
+        const orderBids = allBids.filter((b: any) => b.orderId === o.id);
+        const myBidOnOrder = myBids.find((b: any) => b.orderId === o.id);
+        return {
+          id: o.id,
+          mgtOrderNumber: o.mgtOrderNumber,
+          serviceId: o.serviceId,
+          platform: o.platform,
+          gamertag: o.gamertag,
+          orderDueDate: o.orderDueDate,
+          isRush: o.isRush,
+          isEmergency: o.isEmergency,
+          complexity: o.complexity,
+          location: o.location,
+          status: o.status,
+          isManual: o.isManual,
+          discordMessageId: o.discordMessageId,
+          discordBidLink: o.discordBidLink,
+          orderBrief: o.orderBrief,
+          notes: o.notes,
+          createdAt: o.createdAt,
+          firstBidAt: o.firstBidAt,
+          biddingClosesAt: o.biddingClosesAt,
+          totalBids: orderBids.length,
+          hasBid: !!myBidOnOrder,
+          myBidId: myBidOnOrder?.id || null,
+          myBidStatus: myBidOnOrder?.status || null,
+          myBidAmount: myBidOnOrder?.bidAmount || null,
+        };
+      });
+      const orderMap = new Map(allOrders.map((o: any) => [o.id, o]));
+      const activeAssignments = myAssignments.filter((a: any) => a.status === "Active");
+      const completedAssignments = myAssignments.filter((a: any) => a.status === "Completed");
+      const mockGrinder = {
+        id: devGrinderId,
+        name: profile.name,
+        discordUserId: sessionUser.id,
+        discordUsername: profile.discordUsername,
+        discordAvatarUrl: null,
+        discordRoleId: profile.discordRoleId,
+        category: profile.category,
+        roles: userRole === "elite" ? ["Grinder", "Elite Grinder"] : userRole === "grinder" ? ["Grinder"] : [profile.category],
+        tier: profile.tier,
+        capacity: profile.capacity,
+        activeOrders: activeAssignments.length,
+        completedOrders: completedAssignments.length,
+        totalOrders: myAssignments.length,
+        totalReviews: 0,
+        winRate: null,
+        lastAssigned: null,
+        avgQualityRating: null,
+        onTimeRate: null,
+        completionRate: null,
+        rulesAccepted: (req.session as any)?.devRulesAccepted ?? (userRole === "owner" || userRole === "staff"),
+        rulesAcceptedAt: (req.session as any)?.devRulesAccepted || userRole === "owner" || userRole === "staff" ? new Date() : null,
+        strikes: 0,
+        suspended: false,
+        outstandingFine: "0",
+        avgTurnaroundDays: null,
+        availabilityStatus: "available",
+        availabilityNote: null,
+        availabilityUpdatedAt: null,
+        twitchUsername: null,
+        isStreaming: false,
+        notes: null,
+        joinedAt: new Date().toISOString(),
+        eliteSince: userRole === "elite" ? new Date().toISOString() : null,
+      };
+      const assignmentsForResponse = myAssignments.map((a: any) => {
+        const ord = orderMap.get(a.orderId);
+        return {
+          ...a,
+          order: ord ? { id: ord.id, serviceId: ord.serviceId, mgtOrderNumber: ord.mgtOrderNumber } : null,
+        };
+      });
+      return res.json({
+        grinder: mockGrinder,
+        isElite,
+        assignments: assignmentsForResponse,
+        bids: myBids,
+        availableOrders,
+        lostBids: [],
+        orderUpdates: [],
+        payoutRequests: [],
+        payoutMethods: [],
+        strikeLogs: [],
+        strikeAppeals: [],
+        alerts: [],
+        eliteRequests: [],
+        eliteCoaching: null,
+        systemNotifications: [],
+        unreadAlertCount: 0,
+        unackedStrikeCount: 0,
+        stats: {
+          totalAssignments: myAssignments.length,
+          activeAssignments: activeAssignments.length,
+          completedAssignments: completedAssignments.length,
+          totalBids: myBids.length,
+          pendingBids: myBids.filter((b: any) => b.status === "Pending").length,
+          acceptedBids: myBids.filter((b: any) => b.status === "Accepted").length,
+          winRate: myBids.length > 0 ? (myBids.filter((b: any) => b.status === "Accepted").length / myBids.length) * 100 : 0,
+          totalEarned: completedAssignments.reduce((s: number, a: any) => s + Number(a.grinderEarnings || a.bidAmount || 0), 0),
+          activeEarnings: activeAssignments.reduce((s: number, a: any) => s + Number(a.grinderEarnings || a.bidAmount || 0), 0),
+          totalEarnings: myAssignments.reduce((s: number, a: any) => s + Number(a.grinderEarnings || a.bidAmount || 0), 0),
+        },
+        aiTips: ["Welcome! Start by placing your first bid on an available order. Check the Available Orders page for open jobs matching your skills."],
+      });
+    }
+
     const allGrinders = await storage.getGrinders();
     let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
 
@@ -1803,7 +2173,7 @@ export async function registerRoutes(
     if (!myGrinder && authUser && (authUser.role === "grinder" || authUser.role === "owner" || authUser.role === "staff")) {
       const { GRINDER_ROLES: GR, ROLE_LABELS: RL, ROLE_CAPACITY: RC } = await import("@shared/schema");
       const displayName = authUser.firstName || authUser.discordUsername || authUser.username || "Unknown";
-      const isDevElite = userId === "dev-elite-user";
+      const isDevElite = (authUser as any).role === "elite";
       const discordRoles = (authUser as any).discordRoles as string[] | null;
 
       const detectedRoles = new Set<string>(["Grinder"]);
@@ -1847,7 +2217,7 @@ export async function registerRoutes(
       const discordRoles = (authUser as any).discordRoles as string[] | null;
       const grinderCurrentRoles = (myGrinder as any).roles as string[] | null;
 
-      const isDevElite = userId === "dev-elite-user";
+      const isDevElite = (authUser as any).role === "elite";
       if (discordRoles && discordRoles.length > 0 || isDevElite) {
         const detectedRoles = new Set<string>();
         if (discordRoles) {
@@ -2370,9 +2740,8 @@ export async function registerRoutes(
   });
 
   app.get("/api/grinder/me/queue-position", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
     const allOrders = await storage.getOrders();
@@ -2504,10 +2873,10 @@ export async function registerRoutes(
   });
 
   app.post("/api/grinder/me/order-updates", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    await ensureDevGrinderInDb(myGrinder);
 
     const { assignmentId, orderId, updateType, message, newDeadline, proofUrls } = req.body;
     if (!assignmentId || !orderId || !message) {
@@ -2563,10 +2932,10 @@ export async function registerRoutes(
   });
 
   app.post("/api/grinder/me/payout-requests", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    await ensureDevGrinderInDb(myGrinder);
 
     const { assignmentId, orderId, amount, notes, payoutPlatform, payoutDetails, savePayoutMethod } = req.body;
     if (!assignmentId || !orderId || !amount || !payoutPlatform || !payoutDetails) {
@@ -2622,18 +2991,16 @@ export async function registerRoutes(
   });
 
   app.get("/api/grinder/me/payout-methods", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
     const methods = await storage.getGrinderPayoutMethods(myGrinder.id);
     res.json(methods);
   });
 
   app.delete("/api/grinder/me/payout-methods/:id", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
     const methods = await storage.getGrinderPayoutMethods(myGrinder.id);
     const method = methods.find((m: any) => m.id === req.params.id);
@@ -2652,9 +3019,8 @@ export async function registerRoutes(
 
   app.patch("/api/grinder/me/payout-requests/:id/approve", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
       const payouts = await storage.getPayoutRequests(myGrinder.id);
@@ -2687,9 +3053,8 @@ export async function registerRoutes(
 
   app.patch("/api/grinder/me/payout-requests/:id/dispute", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
       const payouts = await storage.getPayoutRequests(myGrinder.id);
@@ -2728,8 +3093,24 @@ export async function registerRoutes(
   app.post("/api/grinder/me/accept-rules", async (req, res) => {
     try {
       const userId = (req as any).userId;
+      const sessionUser = (req as any).user;
+      const userRole = (req as any).userRole;
+
+      // Dev mode: persist rules accepted in session for dev-user (any dev profile)
+      if (process.env.NODE_ENV !== "production" && isDevUser(sessionUser?.id) && ["owner", "staff", "grinder", "elite"].includes(userRole)) {
+        (req.session as any).devRulesAccepted = true;
+        req.session.save((err) => {
+          if (err) {
+            console.error("[accept-rules] Dev session save error:", err);
+            return res.status(500).json({ message: "Failed to save" });
+          }
+          res.json({ message: "Rules accepted successfully", rulesAccepted: true });
+        });
+        return;
+      }
+
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
       if (myGrinder.rulesAccepted) {
@@ -2758,9 +3139,8 @@ export async function registerRoutes(
 
   app.post("/api/grinder/me/bids", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
       const { orderId, bidAmount, timeline, canStart } = req.body;
@@ -2800,6 +3180,8 @@ export async function registerRoutes(
       if (myGrinder.activeOrders >= myGrinder.capacity) {
         return res.status(400).json({ message: "You are at your order limit" });
       }
+
+      await ensureDevGrinderInDb(myGrinder);
 
       const bidId = generateShortId("BID");
       const grinderBidDisplay = await generateBidDisplayId(orderId);
@@ -2848,9 +3230,8 @@ export async function registerRoutes(
   });
 
   app.patch("/api/grinder/me/bids/:bidId", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
 
     const allBids = await storage.getBids();
@@ -2889,11 +3270,10 @@ export async function registerRoutes(
   });
 
   app.patch("/api/grinder/me/assignments/:assignmentId/complete", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
-
+    await ensureDevGrinderInDb(myGrinder);
     const assignment = await storage.getAssignment(req.params.assignmentId);
     if (!assignment || assignment.grinderId !== myGrinder.id) {
       return res.status(403).json({ message: "Not your assignment" });
@@ -3322,10 +3702,10 @@ export async function registerRoutes(
   });
 
   app.post("/api/grinder/me/elite-request", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+    await ensureDevGrinderInDb(myGrinder);
 
     const existing = await storage.getEliteRequests(myGrinder.id);
     const pending = existing.find((e: any) => e.status === "Pending");
@@ -3349,9 +3729,8 @@ export async function registerRoutes(
   });
 
   app.post("/api/grinder/me/alerts/:alertId/read", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
 
     await storage.markAlertRead(req.params.alertId as string, myGrinder.id);
@@ -3369,9 +3748,8 @@ export async function registerRoutes(
   });
 
   app.post("/api/grinder/me/strikes/:strikeId/ack", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
 
     await storage.acknowledgeStrike(req.params.strikeId as string);
@@ -3389,19 +3767,18 @@ export async function registerRoutes(
   });
 
   app.get("/api/grinder/me/strike-appeals", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
     const appeals = await storage.getStrikeAppeals(myGrinder.id);
     res.json(appeals);
   });
 
   app.post("/api/grinder/me/strike-appeals", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+    await ensureDevGrinderInDb(myGrinder);
 
     const { strikeLogId, reason } = req.body;
     if (!strikeLogId || !reason?.trim()) {
@@ -3437,9 +3814,8 @@ export async function registerRoutes(
   });
 
   app.get("/api/grinder/me/fine-payments", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
     const payments = await storage.getFinePayments(myGrinder.id);
     res.json(payments);
@@ -3447,10 +3823,10 @@ export async function registerRoutes(
 
   app.post("/api/grinder/me/fine-payments", fineProofUpload.single('proof'), async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+      await ensureDevGrinderInDb(myGrinder);
 
       const currentFine = parseFloat(myGrinder.outstandingFine?.toString() || "0");
       if (currentFine <= 0) return res.status(400).json({ message: "No outstanding fines to pay" });
@@ -3505,10 +3881,10 @@ export async function registerRoutes(
   });
 
   app.patch("/api/grinder/me/availability", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+    await ensureDevGrinderInDb(myGrinder);
 
     const { status, note } = req.body;
     const validStatuses = ["available", "busy", "away", "offline"];
@@ -3536,10 +3912,10 @@ export async function registerRoutes(
 
   app.patch("/api/grinder/me/twitch", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(404).json({ message: "No grinder profile found" });
+      await ensureDevGrinderInDb(myGrinder);
       const { twitchUsername } = req.body;
       const sanitized = twitchUsername ? twitchUsername.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 25) : null;
       const updated = await storage.updateGrinder(myGrinder.id, { twitchUsername: sanitized });
@@ -4002,7 +4378,7 @@ export async function registerRoutes(
 
   app.get("/api/staff/elite-vs-grinder-metrics", requireOwner, async (req, res) => {
     const allGrinders = await storage.getGrinders();
-    const allUsers = await db.select().from(users);
+    const allUsers = isDevNoDb() ? [] : await db!.select().from(users);
     const ownerStaffIds = new Set(
       allUsers.filter(u => u.role === "owner" || u.role === "staff").map(u => u.id)
     );
@@ -4149,9 +4525,8 @@ export async function registerRoutes(
 
   app.get("/api/grinder/me/checkpoints/:assignmentId", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
 
       const checkpoints = await storage.getActivityCheckpoints(req.params.assignmentId);
@@ -4224,7 +4599,7 @@ export async function registerRoutes(
         details: JSON.stringify({ message, orderId }),
       });
 
-      const staffUsers = await db.select().from(users).where(or(eq(users.role, "staff"), eq(users.role, "owner")));
+      const staffUsers = isDevNoDb() ? [] : await db!.select().from(users).where(or(eq(users.role, "staff"), eq(users.role, "owner")));
       for (const staff of staffUsers) {
         const staffIdentifier = staff.discordId || staff.id;
         if (staffIdentifier === grinderId) continue;
@@ -4246,9 +4621,8 @@ export async function registerRoutes(
 
   app.post("/api/grinder/me/checkpoints", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
 
       const { assignmentId, orderId, type, response, note } = req.body;
@@ -4325,7 +4699,11 @@ export async function registerRoutes(
       if (type === "start_order") {
         await storage.updateAssignment(assignmentId, { startedAt: new Date() } as any);
         if (orderId) {
+          const order = await storage.getOrder(orderId);
           await storage.updateOrderStatus(orderId, "In Progress");
+          if (order && !order.startDate) {
+            await storage.updateOrder(orderId, { startDate: new Date() });
+          }
         }
       }
 
@@ -4340,8 +4718,7 @@ export async function registerRoutes(
           userId: myGrinder.discordUserId,
           type: "replacement_no_penalty",
           title: "Order Declined",
-          message: `You declined the ticket for order ${order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId}. You have been unassigned.`,
-          relatedId: orderId,
+          body: `You declined the ticket for order ${order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId}. You have been unassigned.`,
         });
         await storage.createAuditLog({
           id: `AL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
@@ -4421,10 +4798,10 @@ export async function registerRoutes(
 
   app.post("/api/grinder/me/request-replacement", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
+      await ensureDevGrinderInDb(myGrinder);
 
       const { assignmentId, orderId, reason } = req.body;
       if (!assignmentId || !orderId || !reason) {
@@ -4570,7 +4947,7 @@ export async function registerRoutes(
       const allGrinders = await storage.getGrinders();
       const isStaff = user?.role === "staff" || user?.role === "owner";
       if (!isStaff) {
-        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        const myGrinder = resolveMyGrinder(req, allGrinders);
         if (!myGrinder) return res.status(403).json({ message: "Not authorized" });
         const isAssigned = orderAssignments.some((a: any) => a.grinderId === myGrinder.id);
         if (!isAssigned) return res.status(403).json({ message: "Not authorized for this order" });
@@ -4973,9 +5350,8 @@ export async function registerRoutes(
 
   app.get("/api/grinder/me/performance-reports", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
 
       const reports = await storage.getPerformanceReports(myGrinder.id);
@@ -4988,9 +5364,8 @@ export async function registerRoutes(
 
   app.get("/api/grinder/me/scorecard", async (req, res) => {
     try {
-      const userId = (req as any).userId;
       const allGrinders = await storage.getGrinders();
-      let myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      let myGrinder = resolveMyGrinder(req, allGrinders);
       if (!myGrinder) return res.status(403).json({ message: "Grinder profile not found" });
 
       const recalcResult = await recalcGrinderStats(myGrinder.id);
@@ -5126,7 +5501,7 @@ export async function registerRoutes(
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
     const userId = user.discordId || user.id;
-    const staffUsers = await db.select().from(users)
+    const staffUsers = isDevNoDb() ? [] : await db!.select().from(users)
       .where(or(eq(users.role, "staff"), eq(users.role, "owner")));
     const allGrinders = await storage.getGrinders();
     const members: Array<{ id: string; name: string; role: string; avatarUrl: string | null; type: string }> = [];
@@ -5140,6 +5515,36 @@ export async function registerRoutes(
         avatarUrl: s.discordAvatar ? `https://cdn.discordapp.com/avatars/${s.discordId}/${s.discordAvatar}.png` : s.profileImageUrl || null,
         type: "staff",
       });
+    }
+    if (isDevNoDb() && process.env.NODE_ENV !== "production") {
+      const devStaffRoles = ["owner", "staff"] as const;
+      for (const role of devStaffRoles) {
+        const devId = DEV_USER_ID(role);
+        if (devId === userId) continue;
+        const profile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.owner;
+        members.push({
+          id: devId,
+          name: profile.name,
+          role,
+          avatarUrl: null,
+          type: "staff",
+        });
+      }
+    }
+    if (process.env.NODE_ENV !== "production" && staffUsers.length === 0 && !isDevNoDb()) {
+      for (const role of ["owner", "staff"] as const) {
+        const devId = DEV_USER_ID(role);
+        if (devId === userId) continue;
+        if (members.some(m => m.id === devId)) continue;
+        const profile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.owner;
+        members.push({
+          id: devId,
+          name: profile.name,
+          role,
+          avatarUrl: null,
+          type: "staff",
+        });
+      }
     }
     for (const g of allGrinders) {
       if (g.isRemoved) continue;
@@ -5304,7 +5709,8 @@ export async function registerRoutes(
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
     const userId = user.discordId || user.id;
-    const [msg] = await db.select().from(messagesTable).where(eq(messagesTable.id, req.params.messageId));
+    if (isDevNoDb()) return res.status(404).json({ error: "Message not found" });
+    const [msg] = await db!.select().from(messagesTable).where(eq(messagesTable.id, req.params.messageId));
     if (!msg) return res.status(404).json({ error: "Message not found" });
     if (msg.senderUserId !== userId && user.role !== "owner" && user.role !== "staff") {
       return res.status(403).json({ error: "You can only delete your own messages" });
@@ -5345,7 +5751,7 @@ export async function registerRoutes(
       const url = await uploadToObjectStorage(file.path, file.filename, "proofs", file.mimetype);
 
       const allGrinders = await storage.getGrinders();
-      const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+      const myGrinder = resolveMyGrinder(req, allGrinders);
       if (myGrinder) {
         await storage.createAuditLog({
           id: `AL-${Date.now().toString(36)}`,
@@ -5434,19 +5840,18 @@ export async function registerRoutes(
   });
 
   app.get("/api/grinder/me/tasks", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
     const tasks = await storage.getGrinderTasks(myGrinder.id);
     res.json(tasks);
   });
 
   app.patch("/api/grinder/me/tasks/:taskId/complete", async (req, res) => {
-    const userId = (req as any).userId;
     const allGrinders = await storage.getGrinders();
-    const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+    const myGrinder = resolveMyGrinder(req, allGrinders);
     if (!myGrinder) return res.status(404).json({ message: "Grinder profile not found" });
+    await ensureDevGrinderInDb(myGrinder);
     const task = await storage.getGrinderTask(req.params.taskId);
     if (!task || task.grinderId !== myGrinder.id) return res.status(404).json({ message: "Task not found" });
     const updated = await storage.updateGrinderTask(req.params.taskId, { status: "completed", completedAt: new Date() });
@@ -5484,6 +5889,11 @@ export async function registerRoutes(
     const user = (req as any).user;
     const { grinderId, assignmentId, orderId, title, description, priority } = req.body;
     if (!grinderId || !title) return res.status(400).json({ error: "grinderId and title are required" });
+    if (isDevGrinder(grinderId)) {
+      const role = grinderId.replace(/^dev-grinder-/, "") as keyof typeof DEV_PROFILE_GRINDERS;
+      const devProfile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.grinder;
+      await ensureDevGrinderInDb({ id: grinderId, name: devProfile.name, discordUsername: devProfile.discordUsername, category: devProfile.category, tier: devProfile.tier, capacity: devProfile.capacity, discordUserId: DEV_USER_ID(role) } as any);
+    }
     const grinder = await storage.getGrinder(grinderId);
     if (!grinder) return res.status(404).json({ error: "Grinder not found" });
     const task = await storage.createGrinderTask({
@@ -5525,6 +5935,11 @@ export async function registerRoutes(
     const user = (req as any).user;
     const { grinderId, badgeId, note } = req.body;
     if (!grinderId || !badgeId) return res.status(400).json({ error: "grinderId and badgeId are required" });
+    if (isDevGrinder(grinderId)) {
+      const role = grinderId.replace(/^dev-grinder-/, "") as keyof typeof DEV_PROFILE_GRINDERS;
+      const devProfile = DEV_PROFILE_GRINDERS[role] || DEV_PROFILE_GRINDERS.grinder;
+      await ensureDevGrinderInDb({ id: grinderId, name: devProfile.name, discordUsername: devProfile.discordUsername, category: devProfile.category, tier: devProfile.tier, capacity: devProfile.capacity, discordUserId: DEV_USER_ID(role) } as any);
+    }
 
     const existing = await storage.getGrinderBadges(grinderId);
     if (existing.some(b => b.badgeId === badgeId)) {
@@ -5575,7 +5990,8 @@ export async function registerRoutes(
   });
 
   async function checkAndAwardAutoBadges(userId: string) {
-    const targetUser = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
+    if (isDevNoDb()) return;
+    const targetUser = await db!.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
     if (!targetUser || (targetUser.role !== "staff" && targetUser.role !== "owner")) return;
 
     const existing = await storage.getStaffBadges(userId);
@@ -5676,7 +6092,35 @@ export async function registerRoutes(
   app.get("/api/staff/scorecard/:userId", requireStaff, async (req, res) => {
     try {
       const { userId } = req.params;
-      const targetUser = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
+      const sessionUser = (req as any).user;
+      if (process.env.NODE_ENV !== "production" && isDevUser(sessionUser?.id) && userId === sessionUser.id) {
+        const profile = DEV_PROFILE_GRINDERS[sessionUser.role === "owner" ? "owner" : "staff"];
+        const allAuditLogs = await storage.getAuditLogs();
+        const devActor = (profile?.discordUsername || "").toLowerCase();
+        const devLogs = allAuditLogs
+          .filter((l: any) => (l.actor?.toLowerCase() || "") === devActor)
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const now = Date.now();
+        const actionsLast24h = devLogs.filter((l: any) => now - new Date(l.createdAt).getTime() < 86400000).length;
+        const actionsLast7d = devLogs.filter((l: any) => now - new Date(l.createdAt).getTime() < 604800000).length;
+        const lastAction = devLogs.length > 0 ? devLogs[0].createdAt : null;
+        const actionBreakdown: Record<string, number> = {};
+        devLogs.forEach((l: any) => { const a = l.action || "unknown"; actionBreakdown[a] = (actionBreakdown[a] || 0) + 1; });
+        const ordersManaged = actionBreakdown["order_created"] || 0;
+        const bidsReviewed = (actionBreakdown["bid_accepted_by_staff"] || 0) + (actionBreakdown["bid_denied_by_staff"] || 0) + (actionBreakdown["bid_rejected_by_staff"] || 0);
+        const assignmentsMade = (actionBreakdown["staff_override_assign"] || 0) + (actionBreakdown["order_assigned"] || 0);
+        const payoutsProcessed = (actionBreakdown["payout_approved"] || 0) + (actionBreakdown["payout_paid"] || 0) + (actionBreakdown["payout_denied"] || 0);
+        const recentLogs = devLogs.slice(0, 50).map((l: any) => ({ id: l.id, action: l.action, entityType: l.entityType, entityId: l.entityId, details: l.details, createdAt: l.createdAt }));
+        return res.json({
+          profile: { id: sessionUser.id, discordId: sessionUser.id, name: profile?.name || "Dev Staff", firstName: profile?.name, discordUsername: profile?.discordUsername, role: sessionUser.role, avatarUrl: null, createdAt: new Date() },
+          badges: [],
+          stats: { totalActions: devLogs.length, actionsLast24h, actionsLast7d, lastAction, ordersManaged, bidsReviewed, assignmentsMade, payoutsProcessed },
+          actionBreakdown,
+          recentLogs,
+        });
+      }
+      if (isDevNoDb()) return res.status(404).json({ error: "Staff member not found" });
+      const targetUser = await db!.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
       if (!targetUser) return res.status(404).json({ error: "Staff member not found" });
       if (targetUser.role !== "staff" && targetUser.role !== "owner") {
         return res.status(404).json({ error: "Not a staff member" });
@@ -5726,8 +6170,8 @@ export async function registerRoutes(
       }));
 
       const ordersManaged = actionBreakdown["order_created"] || 0;
-      const bidsReviewed = (actionBreakdown["bid_accepted"] || 0) + (actionBreakdown["bid_denied"] || 0) + (actionBreakdown["bid_rejected"] || 0);
-      const assignmentsMade = (actionBreakdown["grinder_assigned"] || 0) + (actionBreakdown["order_assigned"] || 0);
+      const bidsReviewed = (actionBreakdown["bid_accepted_by_staff"] || 0) + (actionBreakdown["bid_denied_by_staff"] || 0) + (actionBreakdown["bid_rejected_by_staff"] || 0);
+      const assignmentsMade = (actionBreakdown["staff_override_assign"] || 0) + (actionBreakdown["order_assigned"] || 0);
       const payoutsProcessed = (actionBreakdown["payout_approved"] || 0) + (actionBreakdown["payout_paid"] || 0) + (actionBreakdown["payout_denied"] || 0);
 
       res.json({
@@ -6752,9 +7196,8 @@ export async function registerRoutes(
       if (req.body.grinderId) {
         grinderId = req.body.grinderId;
       } else {
-        const userId = (req as any).userId;
         const allGrinders = await storage.getGrinders();
-        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        const myGrinder = resolveMyGrinder(req, allGrinders);
         if (myGrinder) grinderId = myGrinder.id;
       }
 
@@ -6806,10 +7249,9 @@ export async function registerRoutes(
     try {
       const user = (req as any).user;
       let grinderId = req.query.grinderId as string | undefined;
-      if (!grinderId && (user.role === "grinder" || !grinderId)) {
-        const userId = (req as any).userId;
+      if (!grinderId && (user.role === "grinder" || user.role === "elite" || !grinderId)) {
         const allGrinders = await storage.getGrinders();
-        const myGrinder = allGrinders.find((g: any) => g.discordUserId === userId);
+        const myGrinder = resolveMyGrinder(req, allGrinders);
         if (myGrinder) grinderId = myGrinder.id;
       }
       const codes = await storage.getReviewAccessCodes(grinderId);
@@ -6826,8 +7268,9 @@ export async function registerRoutes(
       const code = await storage.getReviewAccessCode(req.params.id);
       if (!code) return res.status(404).json({ error: "Access request not found" });
 
-      if (user.role === "grinder") {
-        const myGrinder = await storage.getGrinderByDiscordId(user.id);
+      if (user.role === "grinder" || user.role === "elite") {
+        const allGrinders = await storage.getGrinders();
+        const myGrinder = resolveMyGrinder(req, allGrinders) || await storage.getGrinderByDiscordId(user.discordId || user.id);
         if (!myGrinder || code.grinderId !== myGrinder.id) {
           return res.status(403).json({ error: "Not your access request" });
         }
@@ -6865,8 +7308,9 @@ export async function registerRoutes(
       const code = await storage.getReviewAccessCode(req.params.id);
       if (!code) return res.status(404).json({ error: "Access request not found" });
 
-      if (user.role === "grinder") {
-        const myGrinder = await storage.getGrinderByDiscordId(user.id);
+      if (user.role === "grinder" || user.role === "elite") {
+        const allGrinders = await storage.getGrinders();
+        const myGrinder = resolveMyGrinder(req, allGrinders) || await storage.getGrinderByDiscordId(user.discordId || user.id);
         if (!myGrinder || code.grinderId !== myGrinder.id) {
           return res.status(403).json({ error: "Not your access request" });
         }
@@ -7384,12 +7828,13 @@ export async function registerRoutes(
 
   app.get("/api/site-alerts", isAuthenticated, async (req, res) => {
     try {
+      if (isDevNoDb()) return res.json([]);
       const userRole = (req.user as any)?.role || "none";
       const discordId = (req.user as any)?.discordId || "";
       const odId = (req.user as any)?.id || "";
       const isStaffOrOwner = userRole === "staff" || userRole === "owner";
 
-      const allAlerts = await db.select().from(siteAlerts).where(eq(siteAlerts.enabled, true)).orderBy(desc(siteAlerts.createdAt));
+      const allAlerts = await db!.select().from(siteAlerts).where(eq(siteAlerts.enabled, true)).orderBy(desc(siteAlerts.createdAt));
 
       let userGrinderRoles: string[] = [];
       if (userRole === "grinder") {
@@ -7417,7 +7862,8 @@ export async function registerRoutes(
 
   app.get("/api/site-alerts/all", requireOwner, async (req, res) => {
     try {
-      const allAlerts = await db.select().from(siteAlerts).orderBy(desc(siteAlerts.createdAt));
+      if (isDevNoDb()) return res.json([]);
+      const allAlerts = await db!.select().from(siteAlerts).orderBy(desc(siteAlerts.createdAt));
       res.json(allAlerts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch site alerts" });
@@ -7432,11 +7878,13 @@ export async function registerRoutes(
       if (target === "user" && !targetUserId) return res.status(400).json({ error: "Target user ID is required" });
       if (target === "roles" && (!Array.isArray(targetRoles) || targetRoles.length === 0)) return res.status(400).json({ error: "At least one role must be selected" });
 
+      const id = `alert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      if (isDevNoDb()) return res.json({ success: true, id });
+
       const actorName = (req.user as any)?.discordUsername || (req.user as any)?.firstName || "Owner";
       const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
 
-      const id = `alert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await db.insert(siteAlerts).values({
+      await db!.insert(siteAlerts).values({
         id,
         message: message.trim(),
         target,
@@ -7473,7 +7921,8 @@ export async function registerRoutes(
       if (typeof enabled === "boolean") updates.enabled = enabled;
       if (typeof message === "string" && message.trim()) updates.message = message.trim();
 
-      await db.update(siteAlerts).set(updates).where(eq(siteAlerts.id, req.params.id));
+      if (isDevNoDb()) return res.json({ success: true });
+      await db!.update(siteAlerts).set(updates).where(eq(siteAlerts.id, req.params.id));
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to update site alert" });
@@ -7482,7 +7931,8 @@ export async function registerRoutes(
 
   app.delete("/api/site-alerts/:id", requireOwner, async (req, res) => {
     try {
-      await db.delete(siteAlerts).where(eq(siteAlerts.id, req.params.id));
+      if (isDevNoDb()) return res.json({ success: true });
+      await db!.delete(siteAlerts).where(eq(siteAlerts.id, req.params.id));
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete site alert" });
@@ -7583,7 +8033,7 @@ export async function registerRoutes(
             title: `Link Discord ticket for ${orderLabel}`,
             description: `${serviceName} order is ${order.status} but has no Discord ticket channel linked.`,
             orderId: order.id,
-            linkUrl: "/orders",
+            linkUrl: `/admin?linkOrderId=${order.id}`,
           });
         }
 
@@ -7812,6 +8262,17 @@ export async function registerRoutes(
         completedAt: new Date(),
       });
       if (!task) return res.status(404).json({ message: "Task not found" });
+      const completerId = (req as any).user?.discordId || (req as any).user?.id;
+      if (task.assignedBy && task.assignedBy !== completerId) {
+        await createSystemNotification({
+          userId: task.assignedBy,
+          type: "task_completed",
+          title: "Task completed",
+          body: `${getActorName(req)} marked your task "${task.title}" as done.`,
+          linkUrl: "/todo",
+          severity: "info",
+        });
+      }
       res.json(task);
     } catch (error) {
       res.status(500).json({ message: "Failed to complete task" });
@@ -8511,8 +8972,9 @@ export async function registerRoutes(
 
   app.get("/api/wallet/payout-recipients", requireOwner, async (req, res) => {
     try {
+      if (isDevNoDb()) return res.json([]);
       const role = (req.query.role as string || "").toLowerCase();
-      const allUsers = await db.select().from(users);
+      const allUsers = await db!.select().from(users);
       const allGrinders = await storage.getGrinders();
       const recipients: { name: string; discordId?: string; source: string }[] = [];
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,6 +20,7 @@ import {
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
   Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette,
 } from "lucide-react";
+import { useSearch } from "wouter";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { OperationsContent, ServiceManagement, DeletionRequestsPanel, ClearDataPanel } from "./operations";
@@ -339,6 +340,8 @@ export default function StaffAdmin() {
   const actorDiscordId = (user as any)?.discordId || (user as any)?.id || "";
   const isImjustmar = actorUsername === "imjustmar" || actorUsername === "demoowner" || actorDiscordId === "172526626888876032";
 
+  const searchString = useSearch();
+  const linkOrderIdFromUrl = new URLSearchParams(searchString.startsWith("?") ? searchString.slice(1) : searchString).get("linkOrderId") || undefined;
   const [activeTab, setActiveTab] = useState("operations");
 
   const [alertMessage, setAlertMessage] = useState("");
@@ -506,7 +509,7 @@ export default function StaffAdmin() {
         </TabsList>
 
         <TabsContent value="operations" className="mt-5">
-          <OperationsContent embedded />
+          <OperationsContent embedded initialLinkOrderId={linkOrderIdFromUrl} />
         </TabsContent>
 
         <TabsContent value="management" className="mt-5 space-y-5 sm:space-y-6">
@@ -1121,7 +1124,7 @@ export default function StaffAdmin() {
               <Users className="w-4 h-4 text-purple-400" />
             </div>
             Grinder Order Limits
-            <Badge className="bg-purple-500/15 text-purple-400 border border-purple-500/20 ml-auto text-xs">{allGrinders.length} grinders</Badge>
+            <Badge className="bg-purple-500/15 text-purple-400 border border-purple-500/20 ml-auto text-xs">{pluralize(allGrinders.length, "grinder")}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="relative">

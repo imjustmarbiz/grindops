@@ -10,18 +10,50 @@ export interface IAuthStorage {
   upsertUser(user: UpsertUser): Promise<User>;
 }
 
+const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+
+const DEV_USER: User = {
+  id: "dev-user",
+  email: "dev@example.com",
+  firstName: "Dev",
+  lastName: null,
+  profileImageUrl: null,
+  discordId: "dev-user",
+  discordUsername: "devuser",
+  discordAvatar: null,
+  role: "owner",
+  discordRoles: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 class AuthStorage implements IAuthStorage {
   async getUser(id: string): Promise<User | undefined> {
+    if (process.env.NODE_ENV !== "production" && id?.startsWith?.("dev-user")) {
+      return { ...DEV_USER, id, discordId: id };
+    }
+    if (isDevNoDb() || !db) {
+      return id?.startsWith?.("dev-user") ? { ...DEV_USER, id, discordId: id } : undefined;
+    }
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async getUserByDiscordId(discordId: string): Promise<User | undefined> {
+    if (process.env.NODE_ENV !== "production" && discordId?.startsWith?.("dev-user")) {
+      return { ...DEV_USER, id: discordId, discordId };
+    }
+    if (isDevNoDb() || !db) {
+      return discordId?.startsWith?.("dev-user") ? { ...DEV_USER, id: discordId, discordId } : undefined;
+    }
     const [user] = await db.select().from(users).where(eq(users.discordId, discordId));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    if (isDevNoDb() || !db) {
+      return { ...DEV_USER, ...userData } as User;
+    }
     const [user] = await db
       .insert(users)
       .values(userData)

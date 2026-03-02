@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useStaffData } from "@/hooks/use-staff-data";
-import { formatCurrency } from "@/lib/staff-utils";
+import { formatCurrency, pluralize } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -382,10 +382,10 @@ export default function BusinessPerformance() {
         <FadeInUp delay={0.03}>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <KpiCard title="Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} iconColor="bg-emerald-500/20 text-emerald-400"
-              subtitle={`${filteredOrders.length} orders`}
+              subtitle={pluralize(filteredOrders.length, "order")}
               trend={previousRange ? { current: totalRevenue, previous: prevRevenue } : undefined} />
             <KpiCard title="Grinder Costs" value={formatCurrency(totalGrinderCost)} icon={Users} iconColor="bg-blue-500/20 text-blue-400"
-              subtitle={`${filteredAssignments.length} assignments`}
+              subtitle={pluralize(filteredAssignments.length, "assignment")}
               trend={previousRange ? { current: totalGrinderCost, previous: prevGrinderCost } : undefined} />
             <KpiCard title="Net Profit" value={formatCurrency(totalCompanyProfit)} icon={TrendingUp} iconColor={totalCompanyProfit >= 0 ? "bg-purple-500/20 text-purple-400" : "bg-red-500/20 text-red-400"}
               subtitle={`${avgMarginPct.toFixed(1)}% avg margin`}
@@ -398,7 +398,7 @@ export default function BusinessPerformance() {
               subtitle={`${formatCurrency(totalPending)} pending${totalDisputed > 0 ? ` · ${formatCurrency(totalDisputed)} disputed` : ""}`} />
             {totalRefunds > 0 && (
               <KpiCard title="Refunds" value={formatCurrency(totalRefunds)} icon={ArrowDownRight} iconColor="bg-orange-500/20 text-orange-400"
-                subtitle={`${refundedOrders.length} order${refundedOrders.length !== 1 ? "s" : ""} refunded`} />
+                subtitle={refundedOrders.length ? `${pluralize(refundedOrders.length, "order")} refunded` : undefined} />
             )}
           </div>
         </FadeInUp>
@@ -533,19 +533,19 @@ export default function BusinessPerformance() {
                     <div className="rounded-xl p-3 border border-emerald-500/20 bg-emerald-500/5">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Paid Out</p>
                       <p className="text-lg font-bold text-emerald-400 mt-1">{formatCurrency(totalPaidOut)}</p>
-                      <p className="text-[10px] text-muted-foreground">{paidPayouts.length} payouts completed</p>
+                      <p className="text-[10px] text-muted-foreground">{pluralize(paidPayouts.length, "payout")} completed</p>
                     </div>
                     <div className="rounded-xl p-3 border border-yellow-500/20 bg-yellow-500/5">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pending Payouts</p>
                       <p className="text-lg font-bold text-yellow-400 mt-1">{formatCurrency(totalPending)}</p>
-                      <p className="text-[10px] text-muted-foreground">{pendingPayouts.length} awaiting action</p>
+                      <p className="text-[10px] text-muted-foreground">{pluralize(pendingPayouts.length, "payout")} awaiting action</p>
                     </div>
                   </div>
                   {totalDisputed > 0 && (
                     <div className="rounded-xl p-3 border border-red-500/20 bg-red-500/5">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Disputed Payouts</p>
                       <p className="text-lg font-bold text-red-400 mt-1">{formatCurrency(totalDisputed)}</p>
-                      <p className="text-[10px] text-muted-foreground">{disputedPayouts.length} disputes requiring resolution</p>
+                      <p className="text-[10px] text-muted-foreground">{pluralize(disputedPayouts.length, "dispute")} requiring resolution</p>
                     </div>
                   )}
                   <div className="rounded-xl p-3 border border-blue-500/20 bg-blue-500/5">

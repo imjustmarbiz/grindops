@@ -1,6 +1,7 @@
 import type { Express, RequestHandler } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import MemoryStore from "memorystore";
 import crypto from "crypto";
 import { authStorage } from "../replit_integrations/auth/storage";
 import { getDiscordBotClient } from "./bot";
@@ -23,13 +24,18 @@ const ALL_GRINDER_ROLES = [
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000;
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  const useMemoryStore = !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+  const sessionStore = useMemoryStore
+    ? new (MemoryStore(session))({ checkPeriod: 86400000 })
+    : new (connectPg(session))({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: false,
+        ttl: sessionTtl,
+        tableName: "sessions",
+      });
+  if (useMemoryStore) {
+    console.log("[session] Using MemoryStore (no DATABASE_URL)");
+  }
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -194,6 +200,11 @@ export function setupDiscordAuth(app: Express) {
   });
 
   app.get("/api/auth/user", async (req, res) => {
+    // 🔥 DEV MODE: use session.user directly (from dev login)
+    if (process.env.NODE_ENV !== "production" && (req.session as any)?.user) {
+      return res.json((req.session as any).user);
+    }
+
     const userId = (req.session as any)?.userId;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -315,47 +326,51 @@ export function setupDiscordAuth(app: Express) {
   });
 
   if (process.env.NODE_ENV === "development") {
-    const DEV_ROLES: Record<string, { userId: string; email: string; firstName: string; lastName: string; discordId: string; discordUsername: string; sessionRole: string; discordRoleIds?: string[] }> = {
-      owner: { userId: "dev-owner-user", email: "dev-owner@test.local", firstName: "DemoOwner", lastName: "", discordId: "dev-owner-discord", discordUsername: "DemoOwner", sessionRole: "owner" },
-      staff: { userId: "dev-staff-user", email: "dev-staff@test.local", firstName: "DemoStaff", lastName: "", discordId: "dev-staff-discord", discordUsername: "DemoStaff", sessionRole: "staff" },
-      grinder: { userId: "dev-grinder-user", email: "dev-grinder@test.local", firstName: "DemoGrinder", lastName: "", discordId: "dev-grinder-discord", discordUsername: "DemoGrinder", sessionRole: "grinder" },
-      elite: { userId: "dev-elite-user", email: "dev-elite@test.local", firstName: "DemoElite", lastName: "", discordId: "dev-elite-discord", discordUsername: "DemoElite", sessionRole: "grinder", discordRoleIds: [GRINDER_ROLES.ELITE] },
+    const DEV_PROFILES: Record<string, { firstName: string; discordUsername: string }> = {
+      owner: { firstName: "DemoOwner", discordUsername: "demoowner" },
+      staff: { firstName: "DemoStaff", discordUsername: "demostaff" },
+      grinder: { firstName: "DemoGrinder", discordUsername: "demogrinder" },
+      elite: { firstName: "DemoElite", discordUsername: "demoelite" },
     };
-
     app.get("/api/auth/dev/login", async (req, res) => {
-      const roleKey = (req.query.role as string) || "grinder";
-      const config = DEV_ROLES[roleKey];
-      if (!config) {
-        return res.status(400).json({ message: `Invalid role. Use: owner, staff, grinder, elite` });
-      }
-      try {
-        const user = await authStorage.upsertUser({
-          id: config.userId,
-          email: config.email,
-          firstName: config.firstName,
-          lastName: config.lastName,
-          profileImageUrl: null,
-          discordId: config.discordId,
-          discordUsername: config.discordUsername,
-          discordAvatar: null,
-          role: config.sessionRole,
-          discordRoles: config.discordRoleIds || [],
+      const role = (req.query.role as string) || "owner";
+      const profile = DEV_PROFILES[role] || DEV_PROFILES.owner;
+
+      const devUserId = `dev-user-${role}`;
+      (req.session as any).user = {
+        id: devUserId,
+        email: "dev@example.com",
+        role,
+        firstName: profile.firstName,
+        discordUsername: profile.discordUsername,
+        discordId: devUserId,
+      };
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("[dev-auth] Session save error:", err);
+          return res.status(500).json({ message: "Dev login failed" });
+        }
+        res.json({
+          message: "Dev login success",
+          user: (req.session as any).user,
         });
-        (req.session as any).userId = user.id;
-        (req.session as any).userRole = config.sessionRole;
-        req.session.save(() => {
-          const redirect = (req.query.redirect as string) || "/";
-          res.redirect(redirect);
-        });
-      } catch (error) {
-        console.error("[dev-auth] Error:", error);
-        res.status(500).json({ message: "Dev login failed" });
-      }
+      });
     });
   }
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // 🔥 DEV MODE: use session.user directly (id/discordId are dev-user-{role} for per-profile isolation)
+  if (process.env.NODE_ENV !== "production" && (req.session as any)?.user) {
+    const devUser = (req.session as any).user;
+    (req as any).userId = devUser.id;
+    (req as any).userRole = devUser.role || "none";
+    (req as any).user = devUser;
+    return next();
+  }
+
+  // 🔒 PRODUCTION MODE: use database lookup
   const userId = (req.session as any)?.userId;
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -392,7 +407,7 @@ export const requireOwner: RequestHandler = async (req, res, next) => {
 
 export const requireGrinderOrStaff: RequestHandler = async (req, res, next) => {
   const userRole = (req as any).userRole;
-  if (userRole !== "staff" && userRole !== "grinder" && userRole !== "owner") {
+  if (userRole !== "staff" && userRole !== "grinder" && userRole !== "owner" && userRole !== "elite") {
     return res.status(403).json({ message: "Access denied. You need a Staff or Grinder role in Discord." });
   }
   next();

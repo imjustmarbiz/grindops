@@ -1,6 +1,6 @@
 import { useStaffData } from "@/hooks/use-staff-data";
 import { useAuth } from "@/hooks/use-auth";
-import { formatCurrency } from "@/lib/staff-utils";
+import { formatCurrency, pluralize } from "@/lib/staff-utils";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -258,8 +258,8 @@ export default function StaffServices() {
               ) : (
                 <StatCard label="Total Orders" value={totalOrders} icon={ListOrdered} color="bg-blue-500/20 text-blue-400" />
               )}
-              <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${totalOrders} orders`} />
-              <StatCard label="Top Service" value={topService?.name?.replace(/\s*[^\w\s]+$/g, '').trim() || "N/A"} icon={TrendingUp} color="bg-blue-500/20 text-blue-400" subtitle={topServiceOrders > 0 ? `${topServiceOrders} orders` : undefined} />
+              <StatCard label="Completion Rate" value={`${overallCompletionRate.toFixed(0)}%`} icon={CheckCircle} color="bg-green-500/20 text-green-400" subtitle={`${completedOrders} of ${pluralize(totalOrders, "order")}`} />
+              <StatCard label="Top Service" value={topService?.name?.replace(/\s*[^\w\s]+$/g, '').trim() || "N/A"} icon={TrendingUp} color="bg-blue-500/20 text-blue-400" subtitle={topServiceOrders > 0 ? pluralize(topServiceOrders, "order") : undefined} />
             </div>
 
           <Card className="bg-card/50 border-border/30 lg:min-w-[320px]">

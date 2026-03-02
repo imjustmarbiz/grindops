@@ -3,36 +3,45 @@ import { orders, bids, assignments, orderUpdates, payoutRequests, strikeLogs, fi
 import { eq, sql, count } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
+const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+
 function pad(n: number, width = 2): string {
   return String(n).padStart(width, "0");
 }
 
+let _devOrderSeq = 0;
 async function getNextOrderNumber(): Promise<number> {
+  if (isDevNoDb() || !db) return ++_devOrderSeq;
   const result = await db.select({ max: sql<number>`COALESCE(MAX(mgt_order_number), 0)` }).from(orders);
   return (result[0]?.max || 0) + 1;
 }
 
 async function countBidsForOrder(orderId: string): Promise<number> {
+  if (isDevNoDb() || !db) return 0;
   const result = await db.select({ cnt: count() }).from(bids).where(eq(bids.orderId, orderId));
   return result[0]?.cnt || 0;
 }
 
 async function countAssignmentsForOrder(orderId: string): Promise<number> {
+  if (isDevNoDb() || !db) return 0;
   const result = await db.select({ cnt: count() }).from(assignments).where(eq(assignments.orderId, orderId));
   return result[0]?.cnt || 0;
 }
 
 async function countUpdatesForOrder(orderId: string): Promise<number> {
+  if (isDevNoDb() || !db) return 0;
   const result = await db.select({ cnt: count() }).from(orderUpdates).where(eq(orderUpdates.orderId, orderId));
   return result[0]?.cnt || 0;
 }
 
 async function countPayoutsForOrder(orderId: string): Promise<number> {
+  if (isDevNoDb() || !db) return 0;
   const result = await db.select({ cnt: count() }).from(payoutRequests).where(eq(payoutRequests.orderId, orderId));
   return result[0]?.cnt || 0;
 }
 
 async function getGlobalCount(table: any): Promise<number> {
+  if (isDevNoDb() || !db) return 0;
   const result = await db.select({ cnt: count() }).from(table);
   return result[0]?.cnt || 0;
 }
@@ -46,30 +55,55 @@ export async function generateOrderDisplayId(mgtOrderNumber?: number): Promise<{
   return { displayId: `ORD-${getOrderPad(orderNum)}`, mgtOrderNumber: orderNum };
 }
 
+function devOrderNumFromId(orderId: string): number {
+  const m = orderId.match(/^MGT-(\d+)$/);
+  return m ? parseInt(m[1], 10) : (_devOrderSeq || 1);
+}
+
 export async function generateBidDisplayId(orderId: string): Promise<string> {
-  const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
-  const orderNum = order[0]?.mgtOrderNumber || 0;
+  let orderNum = 0;
+  if (!isDevNoDb() && db) {
+    const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
+    orderNum = order[0]?.mgtOrderNumber || 0;
+  } else {
+    orderNum = devOrderNumFromId(orderId);
+  }
   const existingCount = await countBidsForOrder(orderId);
   return `BID-${getOrderPad(orderNum)}-${existingCount + 1}`;
 }
 
 export async function generateAssignmentDisplayId(orderId: string): Promise<string> {
-  const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
-  const orderNum = order[0]?.mgtOrderNumber || 0;
+  let orderNum = 0;
+  if (!isDevNoDb() && db) {
+    const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
+    orderNum = order[0]?.mgtOrderNumber || 0;
+  } else {
+    orderNum = devOrderNumFromId(orderId);
+  }
   const existingCount = await countAssignmentsForOrder(orderId);
   return `ASN-${getOrderPad(orderNum)}-${pad(existingCount + 1)}`;
 }
 
 export async function generateUpdateDisplayId(orderId: string): Promise<string> {
-  const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
-  const orderNum = order[0]?.mgtOrderNumber || 0;
+  let orderNum = 0;
+  if (!isDevNoDb() && db) {
+    const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
+    orderNum = order[0]?.mgtOrderNumber || 0;
+  } else {
+    orderNum = devOrderNumFromId(orderId);
+  }
   const existingCount = await countUpdatesForOrder(orderId);
   return `UPD-${getOrderPad(orderNum)}-${pad(existingCount + 1)}`;
 }
 
 export async function generatePayoutDisplayId(orderId: string): Promise<string> {
-  const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
-  const orderNum = order[0]?.mgtOrderNumber || 0;
+  let orderNum = 0;
+  if (!isDevNoDb() && db) {
+    const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
+    orderNum = order[0]?.mgtOrderNumber || 0;
+  } else {
+    orderNum = devOrderNumFromId(orderId);
+  }
   const existingCount = await countPayoutsForOrder(orderId);
   return `PAY-${getOrderPad(orderNum)}-${pad(existingCount + 1)}`;
 }
@@ -91,10 +125,17 @@ export async function generateEventDisplayId(): Promise<string> {
 
 export async function generateReviewDisplayId(orderId?: string | null): Promise<string> {
   if (orderId) {
-    const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
-    const orderNum = order[0]?.mgtOrderNumber || 0;
-    const cnt = await db.select({ cnt: count() }).from(customerReviews).where(eq(customerReviews.orderId, orderId));
-    return `REV-${getOrderPad(orderNum)}-${(cnt[0]?.cnt || 0) + 1}`;
+    let orderNum = 0;
+    let cnt = 0;
+    if (!isDevNoDb() && db) {
+      const order = await db.select({ mgtOrderNumber: orders.mgtOrderNumber }).from(orders).where(eq(orders.id, orderId)).limit(1);
+      orderNum = order[0]?.mgtOrderNumber || 0;
+      const res = await db.select({ cnt: count() }).from(customerReviews).where(eq(customerReviews.orderId, orderId));
+      cnt = res[0]?.cnt || 0;
+    } else {
+      orderNum = devOrderNumFromId(orderId);
+    }
+    return `REV-${getOrderPad(orderNum)}-${cnt + 1}`;
   }
   const cnt = await getGlobalCount(customerReviews);
   return `REV-${pad(cnt + 1)}`;

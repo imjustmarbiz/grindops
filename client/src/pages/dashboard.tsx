@@ -198,6 +198,10 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bidding-timers"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setAssignOrderId("");
       setAssignGrinderId("");
       setAssignBidAmount("");
@@ -249,6 +253,10 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setManualOrderService("");
       setManualOrderPrice("");
       setManualOrderPlatform("");
@@ -544,7 +552,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Grinder Payouts</p>
                 <p className="text-2xl font-bold text-blue-400" data-testid="text-grinder-payouts">{formatCurrency(payouts)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{allGrinders.length} grinders</p>
+                <p className="text-xs text-muted-foreground mt-1">{pluralize(allGrinders.length, "grinder")}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
                 <Users className="w-6 h-6 text-blue-400" />
@@ -1589,7 +1597,7 @@ export default function Dashboard() {
           <CardTitle className="text-lg flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-400" />
             Grinder Order Limits
-            <Badge className="bg-purple-500/20 text-purple-400 ml-auto">{allGrinders.length} grinders</Badge>
+            <Badge className="bg-purple-500/20 text-purple-400 ml-auto">{pluralize(allGrinders.length, "grinder")}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1662,7 +1670,7 @@ export default function Dashboard() {
             <CardTitle className="text-lg flex items-center gap-2">
               <Shield className="w-5 h-5 text-amber-400" />
               Edit Grinder Profiles
-              <Badge className="bg-amber-500/20 text-amber-400 ml-auto">{allGrinders.length} grinders</Badge>
+              <Badge className="bg-amber-500/20 text-amber-400 ml-auto">{pluralize(allGrinders.length, "grinder")}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>

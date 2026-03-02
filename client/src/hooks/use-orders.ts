@@ -19,6 +19,10 @@ export function useCreateOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
     },
   });
 }
@@ -33,6 +37,10 @@ export function useUpdateOrderStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
     },
   });
 }

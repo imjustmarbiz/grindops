@@ -366,7 +366,7 @@ export default function StaffOverview() {
             <StatCard label="Total Revenue" value={formatCurrency(revenue)} subtitle={pluralize(nonCancelledOrders.length, 'order')} icon={DollarSign}
               gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400"
               onClick={() => navigate("/business")} linkLabel="Business Performance" />
-            <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${completedPayoutsCount} paid to ${payoutGrinderIds.size} grinders`} icon={Users}
+            <StatCard label="Grinder Payouts" value={formatCurrency(payouts)} subtitle={`${completedPayoutsCount} paid to ${payoutGrinderIds.size} ${payoutGrinderIds.size === 1 ? "grinder" : "grinders"}`} icon={Users}
               gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent" iconBg="bg-blue-500/20" textColor="text-blue-400"
               onClick={() => navigate("/grinders")} linkLabel="Grinders" />
             <StatCard label="Company Profit" value={formatCurrency(profit)} subtitle={`${profitMarginPct.toFixed(1)}% margin`} icon={TrendingUp}
@@ -387,7 +387,7 @@ export default function StaffOverview() {
             <StatCard label="Grinder Availability" value={`${availableGrinders}/${allGrinders.length}`} subtitle={`${atCapacity} at capacity`} icon={Users}
               gradient="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent" iconBg="bg-emerald-500/20" textColor="text-emerald-400"
               onClick={() => navigate("/grinders")} linkLabel="Grinders" />
-            <StatCard label="Pending Payouts" value={String(pendingPayouts)} subtitle={`${suspendedGrinders.length} suspended grinders`} icon={ClipboardList}
+            <StatCard label="Pending Payouts" value={String(pendingPayouts)} subtitle={pluralize(suspendedGrinders.length, "suspended grinder", "suspended grinders")} icon={ClipboardList}
               gradient="bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent" iconBg="bg-purple-500/20" textColor="text-purple-400"
               onClick={() => navigate("/payouts")} linkLabel="Payouts" />
           </>

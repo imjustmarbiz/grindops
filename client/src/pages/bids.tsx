@@ -55,6 +55,9 @@ export default function Bids() {
       queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
       if (data.status === "Accepted") {
         const order = (orders || []).find(o => o.id === data.orderId);
         setTicketDialog({ orderId: data.orderId, orderLabel: order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : data.orderId });
@@ -71,6 +74,9 @@ export default function Bids() {
       queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
       toast({ title: `Bid status overridden to ${data.status}` });
       if (data.status === "Accepted") {
         const order = (orders || []).find(o => o.id === data.orderId);
@@ -264,7 +270,7 @@ export default function Bids() {
               </Select>
             </div>
             <p className="text-xs text-muted-foreground mt-3" data-testid="text-showing-count">
-              Showing {filteredBids.length} of {(bids || []).length} bids
+              Showing {filteredBids.length} of {(bids || []).length} {(bids || []).length === 1 ? "bid" : "bids"}
             </p>
           </div>
         </FadeInUp>

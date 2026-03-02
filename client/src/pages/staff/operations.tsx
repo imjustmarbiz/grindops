@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,9 +15,15 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus, Target, Bell, Send, Trash2, Loader2, ToggleLeft, ToggleRight,
   CheckCircle, X, CreditCard, Package, Zap, AlertTriangle, Link2, ExternalLink, Unlink, Wrench,
-  DatabaseZap, Settings, Pencil, Save,
+  DatabaseZap, Settings, Pencil, Save, ChevronDown, MessageSquare, User,
 } from "lucide-react";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -505,7 +511,7 @@ function ServiceManagement({ services }: { services: Service[] }) {
   );
 }
 
-export function OperationsContent({ embedded = false }: { embedded?: boolean }) {
+export function OperationsContent({ embedded = false, initialLinkOrderId }: { embedded?: boolean; initialLinkOrderId?: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -541,6 +547,10 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
   const [ticketChannelId, setTicketChannelId] = useState("");
   const [ticketCustomerDiscordId, setTicketCustomerDiscordId] = useState("");
 
+  useEffect(() => {
+    if (initialLinkOrderId) setTicketOrderId(initialLinkOrderId);
+  }, [initialLinkOrderId]);
+
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertSeverity, setAlertSeverity] = useState("info");
@@ -556,6 +566,10 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setManualOrderService("");
       setManualOrderPrice("");
       setManualOrderPlatform("");
@@ -591,6 +605,10 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/audit-logs?limit=15"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bidding-timers"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setAssignOrderId("");
       setAssignGrinderId("");
       setAssignBidAmount("");
@@ -611,35 +629,49 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
   });
 
   const linkTicketMutation = useMutation({
-    mutationFn: async (data: { orderId: string; discordTicketChannelId: string; customerDiscordId?: string }) => {
-      const body: Record<string, string> = { discordTicketChannelId: data.discordTicketChannelId };
-      if (data.customerDiscordId) body.customerDiscordId = data.customerDiscordId;
+    mutationFn: async (data: { orderId: string; discordTicketChannelId?: string; customerDiscordId?: string }) => {
+      const body: Record<string, string | null> = {};
+      if (data.discordTicketChannelId) body.discordTicketChannelId = data.discordTicketChannelId;
+      if (data.customerDiscordId !== undefined) body.customerDiscordId = data.customerDiscordId || null;
       const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/customer-discord`, body);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
       setTicketOrderId("");
       setTicketChannelId("");
       setTicketCustomerDiscordId("");
-      toast({ title: "Ticket linked", description: "Discord ticket has been linked to the order." });
+      const linked = [vars.discordTicketChannelId && "ticket", vars.customerDiscordId && "customer"].filter(Boolean).join(" and ");
+      toast({ title: "Linked", description: `Linked ${linked} to the order.` });
     },
     onError: (err: any) => {
-      toast({ title: "Failed to link ticket", description: err.message || "Something went wrong", variant: "destructive" });
+      toast({ title: "Failed to link", description: err.message || "Something went wrong", variant: "destructive" });
     },
   });
 
-  const unlinkTicketMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const res = await apiRequest("DELETE", `/api/orders/${orderId}/ticket`);
+  const unlinkMutation = useMutation({
+    mutationFn: async (data: { orderId: string; discordTicketChannelId?: null; customerDiscordId?: null }) => {
+      const body: Record<string, null> = {};
+      if (data.discordTicketChannelId === null) body.discordTicketChannelId = null;
+      if (data.customerDiscordId === null) body.customerDiscordId = null;
+      const res = await apiRequest("PATCH", `/api/orders/${data.orderId}/customer-discord`, body);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      toast({ title: "Ticket unlinked" });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      const unlinked = [vars.discordTicketChannelId === null && "ticket", vars.customerDiscordId === null && "customer"].filter(Boolean).join(" and ");
+      toast({ title: "Unlinked", description: `Unlinked ${unlinked}` });
     },
     onError: (err: any) => {
-      toast({ title: "Failed to unlink ticket", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to unlink", description: err.message, variant: "destructive" });
     },
   });
 
@@ -839,8 +871,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
       </Card>
       </FadeInUp>
 
-      {assignableOrders.length > 0 && (
-        <FadeInUp>
+      <FadeInUp>
         <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-staff-assign">
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
           <CardHeader className="pb-3">
@@ -849,10 +880,17 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                 <Target className="w-4 h-4 text-cyan-400" />
               </div>
               Staff Override Assign
-              <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 ml-auto text-xs">{assignableOrders.length} assignable</Badge>
+              {assignableOrders.length > 0 && (
+                <Badge className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 ml-auto text-xs">{assignableOrders.length} assignable</Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="relative">
+            {assignableOrders.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">
+                No orders available to assign. Create a manual order above with <strong>Manual Assign Only</strong> enabled, then refresh to assign a grinder.
+              </p>
+            ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -993,10 +1031,10 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                 )}
               </div>
             </div>
+            )}
           </CardContent>
         </Card>
-        </FadeInUp>
-      )}
+      </FadeInUp>
 
       <FadeInUp>
       <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-link-ticket">
@@ -1006,7 +1044,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
             <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
               <Link2 className="w-4 h-4 text-purple-400" />
             </div>
-            Link Discord Ticket
+            Link Ticket & Customer
           </CardTitle>
         </CardHeader>
         <CardContent className="relative">
@@ -1032,7 +1070,7 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-muted-foreground font-medium">Discord Channel ID</label>
+                <label className="text-xs text-muted-foreground font-medium">Discord Channel ID <span className="text-muted-foreground/50">(optional)</span></label>
                 <Input
                   placeholder="Paste the ticket channel ID"
                   value={ticketChannelId}
@@ -1058,14 +1096,21 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
               const order = allOrders.find(o => o.id === ticketOrderId);
               const existingTicket = (order as any)?.discordTicketChannelId;
               const existingCustomer = (order as any)?.customerDiscordId;
-              return existingTicket ? (
+              return (existingTicket || existingCustomer) ? (
                 <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link2 className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm text-purple-300">Ticket linked: <span className="font-mono text-xs">{existingTicket}</span></span>
-                    {existingCustomer && <span className="text-xs text-blue-400">Customer: <span className="font-mono">{existingCustomer}</span></span>}
+                    {existingTicket && <span className="text-sm text-purple-300">Ticket: <span className="font-mono text-xs">{existingTicket}</span></span>}
+                    {existingCustomer && (
+                      <span className="text-sm text-blue-400">
+                        Customer: {(order as any)?.customerDiscordDisplayName != null && (order as any)?.customerDiscordUsername != null
+                          ? `${(order as any).customerDiscordDisplayName} (@${(order as any).customerDiscordUsername})`
+                          : <span className="font-mono text-xs">{existingCustomer}</span>}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {existingTicket && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -1084,16 +1129,49 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
                     >
                       <ExternalLink className="w-3 h-3" /> View
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="gap-1 text-xs text-red-400 hover:text-red-300"
-                      disabled={unlinkTicketMutation.isPending}
-                      onClick={() => unlinkTicketMutation.mutate(ticketOrderId)}
-                      data-testid="button-unlink-ticket"
-                    >
-                      <Unlink className="w-3 h-3" /> Unlink
-                    </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 text-xs text-red-400 hover:text-red-300"
+                          disabled={unlinkMutation.isPending}
+                          data-testid="button-unlink-menu"
+                        >
+                          <Unlink className="w-3 h-3" /> Unlink <ChevronDown className="w-3 h-3 opacity-70" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {existingTicket && (
+                        <DropdownMenuItem
+                          className="text-red-400 focus:text-red-400"
+                          onClick={() => unlinkMutation.mutate({ orderId: ticketOrderId, discordTicketChannelId: null })}
+                          data-testid="dropdown-unlink-ticket"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-2" /> Unlink ticket only
+                        </DropdownMenuItem>
+                        )}
+                        {existingCustomer && (
+                          <>
+                            <DropdownMenuItem
+                              className="text-red-400 focus:text-red-400"
+                              onClick={() => unlinkMutation.mutate({ orderId: ticketOrderId, customerDiscordId: null })}
+                              data-testid="dropdown-unlink-customer"
+                            >
+                              <User className="w-3.5 h-3.5 mr-2" /> Unlink customer only
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-400 focus:text-red-400"
+                              onClick={() => unlinkMutation.mutate({ orderId: ticketOrderId, discordTicketChannelId: null, customerDiscordId: null })}
+                              data-testid="dropdown-unlink-both"
+                            >
+                              <Unlink className="w-3.5 h-3.5 mr-2" /> Unlink both
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ) : null;
@@ -1101,17 +1179,18 @@ export function OperationsContent({ embedded = false }: { embedded?: boolean }) 
 
             <Button
               className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/20 sm:hover:-translate-y-0.5 transition-all duration-300"
-              disabled={!ticketOrderId || !ticketChannelId || linkTicketMutation.isPending}
+              disabled={!ticketOrderId || (!ticketChannelId && !ticketCustomerDiscordId) || linkTicketMutation.isPending}
               data-testid="button-link-ticket"
               onClick={() => {
                 linkTicketMutation.mutate({
                   orderId: ticketOrderId,
-                  discordTicketChannelId: ticketChannelId,
+                  ...(ticketChannelId && { discordTicketChannelId: ticketChannelId }),
+                  ...(ticketCustomerDiscordId && { customerDiscordId: ticketCustomerDiscordId }),
                 });
               }}
             >
               {linkTicketMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Link2 className="w-4 h-4 mr-2" />}
-              Link Ticket
+              Link
             </Button>
           </div>
         </CardContent>

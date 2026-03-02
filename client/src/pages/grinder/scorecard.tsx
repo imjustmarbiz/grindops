@@ -11,6 +11,7 @@ import {
   TrendingUp, Award, ShieldCheck, Package
 } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
+import { pluralize } from "@/lib/staff-utils";
 import { HelpTip } from "@/components/help-tip";
 
 import type { CustomerReview } from "@shared/schema";
@@ -196,7 +197,7 @@ export default function GrinderScorecard() {
       <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4">
         {[
           { label: "Active / Capacity", value: `${activeOrders} / ${capacity}`, sub: `${utilization.toFixed(0)}% utilization` },
-          { label: "Tier", value: tier, sub: freshGrinder.ordersAssignedL7D != null ? `${freshGrinder.ordersAssignedL7D} orders (7d)` : undefined },
+          { label: "Tier", value: tier, sub: freshGrinder.ordersAssignedL7D != null ? `${pluralize(freshGrinder.ordersAssignedL7D, "order")} (7d)` : undefined },
           { label: "Total Orders", value: String(freshGrinder.totalOrders || 0), sub: `${freshGrinder.completedOrders || 0} completed` },
           { label: "Total Earnings", value: `$${totalEarnings.toFixed(2)}`, sub: undefined },
         ].map((stat, i) => (

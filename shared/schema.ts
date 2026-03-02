@@ -105,6 +105,7 @@ export const orders = pgTable("orders", {
   platform: text("platform"),
   gamertag: text("gamertag"),
   orderDueDate: timestamp("order_due_date").notNull(),
+  startDate: timestamp("start_date"),
   isRush: boolean("is_rush").notNull().default(false),
   isEmergency: boolean("is_emergency").notNull().default(false),
   complexity: integer("complexity").notNull().default(1),

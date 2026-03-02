@@ -469,7 +469,12 @@ export default function GrinderOrders() {
                     </p>
                   </div>
                 </>
-              ) : null}
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground" data-testid="queue-standing-unavailable">
+                  <p>Queue standing unavailable.</p>
+                  <p className="mt-1">Place bids on orders to see your position in the queue.</p>
+                </div>
+              )}
             </CardContent>
           )}
         </Card>

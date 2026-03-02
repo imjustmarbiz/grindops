@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useStaffData } from "@/hooks/use-staff-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,12 +15,16 @@ import {
 
 export default function StaffOverviewPage() {
   const { user } = useAuth();
-  const { auditLogs, auditLogsUpdatedAt } = useStaffData();
   const [perfUserId, setPerfUserId] = useState<string | null>(null);
   const [perfOpen, setPerfOpen] = useState(false);
 
   const { data: staffMembers = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/owner/staff-members"],
+    refetchInterval: 30000,
+  });
+
+  const { data: auditLogs = [], dataUpdatedAt: auditLogsUpdatedAt } = useQuery<any[]>({
+    queryKey: ["/api/audit-logs?limit=100"],
     refetchInterval: 30000,
   });
 
@@ -45,7 +48,8 @@ export default function StaffOverviewPage() {
     return staffMembers.some((m: any) => {
       const actor = log.actor?.toLowerCase() || "";
       const username = (m.name || "").toLowerCase();
-      return actor === username || actor === m.discordId;
+      const discordUser = (m.discordUsername || "").toLowerCase();
+      return actor === username || actor === discordUser || actor === (m.discordId || "").toLowerCase();
     });
   }).slice(0, 20);
 

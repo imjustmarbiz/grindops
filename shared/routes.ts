@@ -58,7 +58,7 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/orders' as const,
-      input: insertOrderSchema,
+      input: insertOrderSchema.omit({ id: true }),
     },
     updateStatus: {
       method: 'PATCH' as const,
@@ -82,6 +82,7 @@ export const api = {
         platform: z.string().nullable().optional(),
         gamertag: z.string().nullable().optional(),
         orderDueDate: z.string().optional(),
+        startDate: z.string().nullable().optional(),
         completedAt: z.string().nullable().optional(),
         isRush: z.boolean().optional(),
         isEmergency: z.boolean().optional(),

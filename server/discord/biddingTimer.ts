@@ -4,6 +4,8 @@ import { db } from "../db";
 import { orders, bids, grinders } from "@shared/schema";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
 
+const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
 const GRINDERS_ROLE_ID = "1466369179648004224";
 
@@ -12,11 +14,13 @@ const CHECK_INTERVAL_MS = 60_000;
 type NotificationStage = "open" | "first_bid" | "5min" | "2min" | "1min" | "closed";
 
 async function getOrderBidCount(orderId: string): Promise<number> {
+  if (isDevNoDb() || !db) return 0;
   const result = await db.select({ count: sql<number>`count(*)::int` }).from(bids).where(eq(bids.orderId, orderId));
   return result[0]?.count ?? 0;
 }
 
 async function markStageNotified(orderId: string, stage: NotificationStage, currentStages: string[]): Promise<void> {
+  if (isDevNoDb() || !db) return;
   const updated = [...currentStages, stage];
   await db.update(orders).set({ biddingNotifiedStages: updated }).where(eq(orders.id, orderId));
 }
@@ -88,6 +92,7 @@ async function sendBiddingNotification(orderId: string, mgtOrderNumber: number |
 }
 
 async function checkBiddingTimers(): Promise<void> {
+  if (isDevNoDb() || !db) return;
   try {
     const openOrders = await db.select().from(orders).where(
       and(

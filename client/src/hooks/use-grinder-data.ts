@@ -21,7 +21,7 @@ export function useGrinderData() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery<any>({
+  const { data: profile, isLoading, isError: profileError } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
     refetchInterval: 30000,
   });
@@ -207,6 +207,7 @@ export function useGrinderData() {
     queryClient,
     profile,
     isLoading,
+    profileError,
     services,
     serviceName,
     grinder,

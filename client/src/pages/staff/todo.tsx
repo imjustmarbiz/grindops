@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +15,7 @@ import {
   Plus, ChevronDown, ChevronRight, User, ExternalLink, AlertTriangle,
   Zap, Eye, EyeOff, X, Hash
 } from "lucide-react";
+import { FaDiscord } from "react-icons/fa6";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { Link } from "wouter";
 
@@ -84,7 +85,21 @@ export default function StaffTodo() {
     queryKey: ["/api/chat/members"],
   });
 
-  const staffMembers = chatMembers.filter((m) => m.type === "staff");
+  const staffMembers = useMemo(() => {
+    const fromChat = chatMembers.filter((m) => m.type === "staff" || m.type === "owner");
+    const isStaffOrOwner = user?.role === "staff" || user?.role === "owner";
+    const myId = user?.discordId || user?.id;
+    if (!isStaffOrOwner || !myId) return fromChat;
+    if (fromChat.some((m) => m.id === myId)) return fromChat;
+    const selfOption: StaffMember = {
+      id: myId,
+      name: user?.discordUsername || user?.firstName || "Myself",
+      role: user.role || "staff",
+      avatarUrl: null,
+      type: "staff",
+    };
+    return [selfOption, ...fromChat];
+  }, [chatMembers, user]);
 
   const dismissMutation = useMutation({
     mutationFn: async (actionKey: string) => {
@@ -216,6 +231,8 @@ export default function StaffTodo() {
       return <AlertTriangle className="w-3.5 h-3.5 text-red-400" />;
     if (category === "Stalled Orders" || category === "Pending Payouts" || category === "Missing Payouts")
       return <Clock className="w-3.5 h-3.5 text-amber-400" />;
+    if (category === "Discord Setup")
+      return <FaDiscord className="w-3.5 h-3.5 text-[#5865F2]" />;
     return <Zap className="w-3.5 h-3.5 text-blue-400" />;
   };
 
@@ -570,8 +587,8 @@ export default function StaffTodo() {
             <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
               <Card className="border-white/[0.06] bg-white/[0.02]" data-testid="card-completed-tasks">
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="pb-3 cursor-pointer">
-                    <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <CardHeader className="flex flex-row items-center pb-3 cursor-pointer">
+                    <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground w-full">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                       Completed Tasks
                       <Badge variant="outline" className="ml-auto border-emerald-500/20 text-emerald-400/60 bg-emerald-500/5 text-[10px]">

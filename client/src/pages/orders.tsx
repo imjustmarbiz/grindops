@@ -6,11 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, ListOrdered, DollarSign, AlertTriangle, Pencil, Check, X, Trash2, User, StickyNote, Gauge, Package, Clock, TrendingUp, FileText, UserMinus, RefreshCw, ShieldAlert, ShieldX, ShieldCheck, Search } from "lucide-react";
+import { FaDiscord } from "react-icons/fa6";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -27,6 +31,13 @@ import { HelpTip } from "@/components/help-tip";
 import { usePlatforms } from "@/hooks/use-platforms";
 import { useAuth } from "@/hooks/use-auth";
 import { moneyColorClass } from "@/lib/staff-utils";
+import { GUILD_ID } from "@/hooks/use-grinder-data";
+
+function getDiscordChannelUrl(order: Order): string | null {
+  if (order.discordBidLink && /^https?:\/\//i.test(order.discordBidLink)) return order.discordBidLink;
+  if (order.discordTicketChannelId) return `https://discord.com/channels/${GUILD_ID}/${order.discordTicketChannelId}`;
+  return null;
+}
 import type { Order, Service, Grinder, Bid } from "@shared/schema";
 
 import { Link } from "wouter";
@@ -42,6 +53,66 @@ const formSchema = z.object({
   platform: z.string().nullable().optional(),
   gamertag: z.string().nullable().optional(),
 });
+
+function DatePickerField({ value, onChange, placeholder = "Pick a date" }: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  // value is "YYYY-MM-DDTHH:mm" or "YYYY-MM-DD"
+  const datePart = value ? value.slice(0, 10) : "";
+  const timePart = value && value.length > 10 && value.includes("T") ? value.slice(11, 16) : "12:00";
+  const date = datePart ? new Date(datePart + "T12:00:00") : undefined;
+  const displayStr = datePart
+    ? (timePart && timePart !== "12:00"
+      ? `${format(date!, "MMM d, yyyy")} ${timePart}`
+      : format(date!, "MMM d, yyyy"))
+    : "";
+
+  const apply = (d: Date | null, t: string) => {
+    if (!d) return;
+    const [h = 12, m = 0] = t.split(":").map(Number);
+    const combined = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0);
+    onChange(combined.toISOString().slice(0, 16));
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="mt-1 h-9 w-full justify-start text-left font-normal bg-background/50 border-white/10 text-sm hover:bg-white/10 min-w-0 overflow-hidden"
+        >
+          <CalendarIcon className="mr-2 h-4 w-4 opacity-70 shrink-0" />
+          <span className="truncate">{displayStr || <span className="text-muted-foreground">{placeholder}</span>}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => {
+            if (d) apply(d, timePart);
+          }}
+          initialFocus
+        />
+        <div className="p-2 border-t border-border flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground whitespace-nowrap">Time</Label>
+          <Input
+            type="time"
+            value={timePart}
+            onChange={(e) => {
+              const t = e.target.value;
+              if (date) apply(date, t);
+            }}
+            className="h-8 text-sm bg-background/50 border-white/10"
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
   value: string | null;
@@ -105,52 +176,185 @@ function InlineTextEdit({ value, orderId, field, placeholder, onSave }: {
   );
 }
 
+function toLocalDatetimeStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function InlineDateEdit({ value, orderId, onSave }: {
   value: Date | string | null;
   orderId: string;
   onSave: (id: string, data: Record<string, any>) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const dateStr = value ? new Date(value).toISOString().slice(0, 16) : "";
-  const [editValue, setEditValue] = useState(dateStr);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const initialPending = value ? toLocalDatetimeStr(new Date(value)) : "";
+  const [pending, setPending] = useState(initialPending);
+  const datePart = pending ? pending.slice(0, 10) : "";
+  const timePart = pending && pending.includes("T") ? pending.slice(11, 16) : "12:00";
+  const selectedDate = datePart ? new Date(datePart + "T12:00:00") : undefined;
 
-  useEffect(() => {
-    if (editing && inputRef.current) inputRef.current.focus();
-  }, [editing]);
-
-  const save = () => {
-    if (editValue && editValue !== dateStr) {
-      onSave(orderId, { orderDueDate: new Date(editValue).toISOString() });
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (pending && pending !== initialPending) {
+        onSave(orderId, { orderDueDate: new Date(pending).toISOString() });
+      }
+      setEditing(false);
+    } else {
+      setPending(value ? toLocalDatetimeStr(new Date(value)) : "");
     }
-    setEditing(false);
+  };
+
+  const setDate = (d: Date) => {
+    setPending(toLocalDatetimeStr(new Date(d.getFullYear(), d.getMonth(), d.getDate(), parseInt(timePart.slice(0, 2), 10) || 12, parseInt(timePart.slice(3, 5), 10) || 0, 0)));
+  };
+  const setTime = (t: string) => {
+    if (!datePart) return;
+    const [h, m] = t.split(":").map(Number);
+    setPending(`${datePart}T${String(h ?? 12).padStart(2, "0")}:${String(m ?? 0).padStart(2, "0")}`);
   };
 
   if (editing) {
     return (
-      <Input
-        ref={inputRef}
-        type="datetime-local"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        className="text-sm bg-background/50 border-white/10 w-44"
-        data-testid={`input-edit-duedate-${orderId}`}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") save();
-          if (e.key === "Escape") { setEditValue(dateStr); setEditing(false); }
-        }}
-        onBlur={save}
-      />
+      <Popover open={editing} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="min-w-0 max-w-full flex items-center justify-start gap-1 min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 text-left text-sm border border-white/20 bg-background/50"
+            data-testid={`input-edit-duedate-${orderId}`}
+          >
+            <CalendarIcon className="h-3.5 w-3.5 opacity-70 flex-shrink-0" />
+            {value ? (
+              <>
+                {format(new Date(value), "MMM d,")}
+                <br />
+                {format(new Date(value), "h:mm a")}
+              </>
+            ) : "Pick due date"}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(d) => d && setDate(d)}
+            initialFocus
+          />
+          <div className="p-2 border-t border-border flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Time</Label>
+            <Input
+              type="time"
+              value={timePart}
+              onChange={(e) => setTime(e.target.value)}
+              className="h-8 text-sm bg-background/50 border-white/10"
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   }
 
   return (
     <div
-      className="group flex items-center gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
-      onClick={() => { setEditValue(dateStr); setEditing(true); }}
+      className="group flex items-center justify-start gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors min-w-0 text-left"
+      onClick={() => { setPending(value ? toLocalDatetimeStr(new Date(value)) : ""); setEditing(true); }}
       data-testid={`editable-duedate-${orderId}`}
     >
-      <span className="text-sm">{value ? format(new Date(value), "MMM d, yyyy") : "N/A"}</span>
+      {value ? (
+        <span className="text-sm flex flex-col leading-tight">
+          <span>{format(new Date(value), "MMM d,")}</span>
+          <span className="text-muted-foreground">{format(new Date(value), "h:mm a")}</span>
+        </span>
+      ) : (
+        <span className="text-sm text-muted-foreground">N/A</span>
+      )}
+      <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+    </div>
+  );
+}
+
+function InlineStartDateEdit({ value, orderId, onSave, canEdit }: {
+  value: Date | string | null;
+  orderId: string;
+  onSave: (id: string, data: Record<string, any>) => void;
+  canEdit: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const initialPending = value ? toLocalDatetimeStr(new Date(value)) : "";
+  const [pending, setPending] = useState(initialPending);
+  const datePart = pending ? pending.slice(0, 10) : "";
+  const timePart = pending && pending.includes("T") ? pending.slice(11, 16) : "12:00";
+  const selectedDate = datePart ? new Date(datePart + "T12:00:00") : undefined;
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (pending && pending !== initialPending) {
+        onSave(orderId, { startDate: new Date(pending).toISOString() });
+      }
+      setEditing(false);
+    } else {
+      setPending(value ? toLocalDatetimeStr(new Date(value)) : "");
+    }
+  };
+
+  const setDate = (d: Date) => {
+    setPending(toLocalDatetimeStr(new Date(d.getFullYear(), d.getMonth(), d.getDate(), parseInt(timePart.slice(0, 2), 10) || 12, parseInt(timePart.slice(3, 5), 10) || 0, 0)));
+  };
+  const setTime = (t: string) => {
+    if (!datePart) return;
+    const [h, m] = t.split(":").map(Number);
+    setPending(`${datePart}T${String(h ?? 12).padStart(2, "0")}:${String(m ?? 0).padStart(2, "0")}`);
+  };
+
+  if (!canEdit) {
+    return <span className="text-sm flex flex-col leading-tight">{value ? (<><span>{format(new Date(value), "MMM d,")}</span><span className="text-muted-foreground">{format(new Date(value), "h:mm a")}</span></>) : "—"}</span>;
+  }
+
+  if (editing) {
+    return (
+      <Popover open={editing} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="min-w-0 max-w-full flex items-center justify-start gap-1 min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 text-left text-sm border border-white/20 bg-background/50"
+            data-testid={`input-edit-startdate-${orderId}`}
+          >
+            <CalendarIcon className="h-3.5 w-3.5 opacity-70 flex-shrink-0" />
+            {value ? (
+              <>
+                {format(new Date(value), "MMM d,")}
+                <br />
+                {format(new Date(value), "h:mm a")}
+              </>
+            ) : "Pick start date"}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(d) => d && setDate(d)}
+            initialFocus
+          />
+          <div className="p-2 border-t border-border flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Time</Label>
+            <Input
+              type="time"
+              value={timePart}
+              onChange={(e) => setTime(e.target.value)}
+              className="h-8 text-sm bg-background/50 border-white/10"
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <div
+      className="group flex items-center justify-start gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors text-left"
+      onClick={() => { setPending(value ? toLocalDatetimeStr(new Date(value)) : ""); setEditing(true); }}
+      data-testid={`editable-startdate-${orderId}`}
+    >
+      <span className="text-sm flex flex-col leading-tight">{value ? (<><span>{format(new Date(value), "MMM d,")}</span><span className="text-muted-foreground">{format(new Date(value), "h:mm a")}</span></>) : <span className="text-muted-foreground italic text-xs">—</span>}</span>
       <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
     </div>
   );
@@ -163,19 +367,30 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
   onSave: (id: string, data: Record<string, any>) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const dateStr = value ? new Date(value).toISOString().slice(0, 16) : "";
-  const [editValue, setEditValue] = useState(dateStr);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const initialPending = value ? toLocalDatetimeStr(new Date(value)) : "";
+  const [pending, setPending] = useState(initialPending);
+  const datePart = pending ? pending.slice(0, 10) : "";
+  const timePart = pending && pending.includes("T") ? pending.slice(11, 16) : "12:00";
+  const selectedDate = datePart ? new Date(datePart + "T12:00:00") : undefined;
 
-  useEffect(() => {
-    if (editing && inputRef.current) inputRef.current.focus();
-  }, [editing]);
-
-  const save = () => {
-    if (editValue !== dateStr) {
-      onSave(orderId, { completedAt: editValue ? new Date(editValue).toISOString() : null });
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (pending && pending !== initialPending) {
+        onSave(orderId, { completedAt: new Date(pending).toISOString() });
+      }
+      setEditing(false);
+    } else {
+      setPending(value ? toLocalDatetimeStr(new Date(value)) : "");
     }
-    setEditing(false);
+  };
+
+  const setDate = (d: Date) => {
+    setPending(toLocalDatetimeStr(new Date(d.getFullYear(), d.getMonth(), d.getDate(), parseInt(timePart.slice(0, 2), 10) || 12, parseInt(timePart.slice(3, 5), 10) || 0, 0)));
+  };
+  const setTime = (t: string) => {
+    if (!datePart) return;
+    const [h, m] = t.split(":").map(Number);
+    setPending(`${datePart}T${String(h ?? 12).padStart(2, "0")}:${String(m ?? 0).padStart(2, "0")}`);
   };
 
   const clear = () => {
@@ -185,30 +400,47 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-1">
-        <Input
-          ref={inputRef}
-          type="datetime-local"
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          className="text-sm bg-background/50 border-white/10 w-44"
-          data-testid={`input-edit-completed-${orderId}`}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") save();
-            if (e.key === "Escape") { setEditValue(dateStr); setEditing(false); }
-          }}
-          onBlur={save}
-        />
-        {value && (
+      <Popover open={editing} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
           <button
-            className="text-[10px] text-red-400 hover:text-red-300 text-left"
-            onMouseDown={(e) => { e.preventDefault(); clear(); }}
-            data-testid={`button-clear-completed-${orderId}`}
+            type="button"
+            className="min-w-0 max-w-full flex items-center gap-1 min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 text-left text-sm border border-white/20 bg-background/50"
+            data-testid={`input-edit-completed-${orderId}`}
           >
-            Clear date
+            <CalendarIcon className="h-3.5 w-3.5 opacity-70 flex-shrink-0" />
+            {value ? format(new Date(value), "MMM d, h:mm a") : "Pick completed date"}
           </button>
-        )}
-      </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(d) => d && setDate(d)}
+            initialFocus
+          />
+          <div className="p-2 border-t border-border flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">Time</Label>
+              <Input
+                type="time"
+                value={timePart}
+                onChange={(e) => setTime(e.target.value)}
+                className="h-8 text-sm bg-background/50 border-white/10"
+              />
+            </div>
+            {value && (
+              <button
+                type="button"
+                className="text-[10px] text-red-400 hover:text-red-300 text-left"
+                onClick={clear}
+                data-testid={`button-clear-completed-${orderId}`}
+              >
+                Clear date
+              </button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   }
 
@@ -216,7 +448,7 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
     return (
       <div
         className="group flex items-center gap-1 cursor-pointer min-h-[28px] rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
-        onClick={() => { setEditValue(""); setEditing(true); }}
+        onClick={() => setEditing(true)}
         data-testid={`editable-completed-${orderId}`}
       >
         <span className="text-muted-foreground">-</span>
@@ -231,16 +463,169 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
   return (
     <div
       className="group flex flex-col cursor-pointer rounded px-1 -mx-1 hover:bg-white/5 transition-colors"
-      onClick={() => { setEditValue(dateStr); setEditing(true); }}
+      onClick={() => { setPending(toLocalDatetimeStr(new Date(value))); setEditing(true); }}
       data-testid={`editable-completed-${orderId}`}
     >
       <div className="flex items-center gap-1">
-        <span className="text-xs text-emerald-400">{format(completedDate, "MMM d, yyyy")}</span>
+        <span className="text-xs text-emerald-400 whitespace-nowrap">{format(completedDate, "MMM d, h:mm a")}</span>
         <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
       </div>
-      <span className="text-[10px] text-muted-foreground">{format(completedDate, "h:mm a")}</span>
       {isOnTime === true && <span className="text-[10px] text-emerald-400 font-medium">On Time</span>}
       {isOnTime === false && <span className="text-[10px] text-red-400 font-medium">Late</span>}
+    </div>
+  );
+}
+
+const STATUS_OPTIONS = ["Open", "Bidding Open", "Bidding Closed", "Assigned", "In Progress", "Completed", "Paid Out", "Need Replacement", "Refunded", "Cancelled"];
+
+function MobileOrderEditForm({
+  order,
+  services,
+  grinders,
+  platforms,
+  onSave,
+  onStatusChange,
+  onCancel,
+  isSaving,
+}: {
+  order: Order;
+  services: Service[];
+  grinders: Grinder[];
+  platforms: string[];
+  onSave: (id: string, data: Record<string, any>) => void;
+  onStatusChange: (id: string, status: string) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) {
+  const [orderId, setOrderId] = useState(order.mgtOrderNumber != null ? String(order.mgtOrderNumber) : "");
+  const [serviceId, setServiceId] = useState(order.serviceId);
+  const [platform, setPlatform] = useState(order.platform || "");
+  const [gamertag, setGamertag] = useState(order.gamertag || "");
+  const [complexity, setComplexity] = useState(order.complexity ?? 1);
+  const [startDate, setStartDate] = useState(order.startDate ? new Date(order.startDate).toISOString().slice(0, 16) : "");
+  const [orderDueDate, setOrderDueDate] = useState(order.orderDueDate ? new Date(order.orderDueDate).toISOString().slice(0, 16) : "");
+  const [completedAt, setCompletedAt] = useState(order.completedAt ? new Date(order.completedAt).toISOString().slice(0, 16) : "");
+  const [customerPrice, setCustomerPrice] = useState(String(order.customerPrice || ""));
+  const [status, setStatus] = useState(order.status);
+
+  useEffect(() => {
+    setOrderId(order.mgtOrderNumber != null ? String(order.mgtOrderNumber) : "");
+    setServiceId(order.serviceId);
+    setPlatform(order.platform || "");
+    setGamertag(order.gamertag || "");
+    setComplexity(order.complexity ?? 1);
+    setStartDate(order.startDate ? new Date(order.startDate).toISOString().slice(0, 16) : "");
+    setOrderDueDate(order.orderDueDate ? new Date(order.orderDueDate).toISOString().slice(0, 16) : "");
+    setCompletedAt(order.completedAt ? new Date(order.completedAt).toISOString().slice(0, 16) : "");
+    setCustomerPrice(String(order.customerPrice || ""));
+    setStatus(order.status);
+  }, [order.id]);
+
+  const handleSubmit = () => {
+    const data: Record<string, any> = {};
+    const newMgt = orderId.trim() ? Number(orderId.trim()) : null;
+    const curMgt = order.mgtOrderNumber != null ? order.mgtOrderNumber : null;
+    if (newMgt !== curMgt && (newMgt === null || !isNaN(newMgt))) data.mgtOrderNumber = newMgt;
+    if (serviceId !== order.serviceId) data.serviceId = serviceId;
+    if (platform !== (order.platform || "")) data.platform = platform || null;
+    if (gamertag !== (order.gamertag || "")) data.gamertag = gamertag || null;
+    if (complexity !== (order.complexity ?? 1)) data.complexity = complexity;
+    if (startDate !== (order.startDate ? new Date(order.startDate).toISOString().slice(0, 16) : "")) data.startDate = startDate ? new Date(startDate).toISOString() : null;
+    if (orderDueDate !== (order.orderDueDate ? new Date(order.orderDueDate).toISOString().slice(0, 16) : "")) data.orderDueDate = orderDueDate ? new Date(orderDueDate).toISOString() : null;
+    if (completedAt !== (order.completedAt ? new Date(order.completedAt).toISOString().slice(0, 16) : "")) data.completedAt = completedAt ? new Date(completedAt).toISOString() : null;
+    if (customerPrice !== String(order.customerPrice || "")) data.customerPrice = customerPrice;
+    if (Object.keys(data).length > 0) onSave(order.id, data);
+    if (status !== order.status) onStatusChange(order.id, status);
+    if (Object.keys(data).length === 0 && status === order.status) onCancel();
+  };
+
+  return (
+    <div className="space-y-4 mt-2">
+      <div className="grid gap-3">
+        <div>
+          <Label className="text-xs text-muted-foreground">Order ID (MGT #)</Label>
+          <Input
+            className="mt-1 h-9 bg-background/50 border-white/10 font-mono"
+            value={orderId}
+            onChange={(e) => setOrderId(e.target.value)}
+            placeholder="e.g. 276"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Service</Label>
+          <Select value={serviceId} onValueChange={setServiceId}>
+            <SelectTrigger className="mt-1 h-9 bg-background/50 border-white/10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="min-w-[14rem]">
+              {services.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Platform</Label>
+          <Select value={platform} onValueChange={setPlatform}>
+            <SelectTrigger className="mt-1 h-9 bg-background/50 border-white/10">
+              <SelectValue placeholder="Platform" />
+            </SelectTrigger>
+            <SelectContent>
+              {platforms.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Gamertag</Label>
+          <Input className="mt-1 h-9 bg-background/50 border-white/10" value={gamertag} onChange={(e) => setGamertag(e.target.value)} placeholder="Gamertag" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Complexity (1–5)</Label>
+          <Select value={String(complexity)} onValueChange={(v) => setComplexity(Number(v))}>
+            <SelectTrigger className="mt-1 h-9 bg-background/50 border-white/10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[1, 2, 3, 4, 5].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="min-w-0">
+            <Label className="text-xs text-muted-foreground">Start</Label>
+            <DatePickerField value={startDate} onChange={setStartDate} placeholder="Start date" />
+          </div>
+          <div className="min-w-0">
+            <Label className="text-xs text-muted-foreground">Due</Label>
+            <DatePickerField value={orderDueDate} onChange={setOrderDueDate} placeholder="Due date" />
+          </div>
+          <div className="min-w-0">
+            <Label className="text-xs text-muted-foreground">Done</Label>
+            <DatePickerField value={completedAt} onChange={setCompletedAt} placeholder="Done date" />
+          </div>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Price ($)</Label>
+          <Input type="number" step="0.01" className="mt-1 h-9 bg-background/50 border-white/10" value={customerPrice} onChange={(e) => setCustomerPrice(e.target.value)} placeholder="0" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Status</Label>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="mt-1 h-9 bg-background/50 border-white/10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex gap-2 pt-2">
+        <Button onClick={handleSubmit} disabled={isSaving} className="flex-1">
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+        <Button variant="outline" className="border-white/10" onClick={onCancel} disabled={isSaving}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }
@@ -248,6 +633,7 @@ function InlineCompletionDateEdit({ value, orderId, orderDueDate, onSave }: {
 export default function Orders() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
+  const isStaffOrOwner = user?.role === "staff" || user?.role === "owner";
   const platforms = usePlatforms();
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
@@ -277,6 +663,7 @@ export default function Orders() {
   const [refundCustomer, setRefundCustomer] = useState("");
   const [refundGrinder, setRefundGrinder] = useState("");
   const [refundCompany, setRefundCompany] = useState("");
+  const [editOrderMobile, setEditOrderMobile] = useState<Order | null>(null);
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -655,19 +1042,19 @@ export default function Orders() {
 
       <FadeInUp>
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="relative lg:col-span-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search by order ID, gamertag, or service..."
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
-              className="pl-9 bg-white/[0.03] border-white/[0.08]"
+              className="pl-9 w-full bg-white/[0.03] border-white/[0.08]"
               data-testid="input-filter-search"
             />
           </div>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-status">
+            <SelectTrigger className="w-full min-w-0 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -680,10 +1067,10 @@ export default function Orders() {
             </SelectContent>
           </Select>
           <Select value={filterService} onValueChange={setFilterService}>
-            <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-service">
+            <SelectTrigger className="w-full min-w-0 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-service">
               <SelectValue placeholder="Service" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[14rem]">
               <SelectItem value="all">All Services</SelectItem>
               {(services || []).map((s: Service) => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -691,7 +1078,7 @@ export default function Orders() {
             </SelectContent>
           </Select>
           <Select value={filterPlatform} onValueChange={setFilterPlatform}>
-            <SelectTrigger className="w-[160px] bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-platform">
+            <SelectTrigger className="w-full min-w-0 bg-white/[0.03] border-white/[0.08]" data-testid="select-filter-platform">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -721,7 +1108,7 @@ export default function Orders() {
               }
               return true;
             }).length;
-          })()} of {(orders || []).length} orders
+          })()} of {(orders || []).length} {(orders || []).length === 1 ? "order" : "orders"}
         </p>
       </div>
       </FadeInUp>
@@ -747,38 +1134,106 @@ export default function Orders() {
               }
               return true;
             });
-            return filteredOrders.map((order) => (
+            return filteredOrders.map((order) => {
+              const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
+              const acceptedBid = order.acceptedBidId ? (bids || []).find((b: Bid) => b.id === order.acceptedBidId) : null;
+              return (
               <Card key={order.id} className="bg-white/[0.02] border-white/[0.06] p-4 space-y-3" data-testid={`card-order-${order.id}`}>
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-primary">#{order.mgtOrderNumber || order.id}</h3>
                     <p className="text-[10px] text-muted-foreground">{(services || []).find(s => s.id === order.serviceId)?.name || "Order"}</p>
                   </div>
-                  <Badge variant="outline" className={`h-5 text-[10px] ${
-                    order.status === "Open" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
-                    order.status === "Assigned" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
-                    order.status === "In Progress" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" :
-                    order.status === "Completed" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
-                    "border-white/10 text-muted-foreground"
-                  }`}>
-                    {order.status}
-                  </Badge>
+                  <div className="flex flex-col w-28 gap-2 shrink-0">
+                    <Badge variant="outline" className={`h-5 text-[10px] flex w-full justify-center ${
+                      order.status === "Open" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                      order.status === "Assigned" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
+                      order.status === "In Progress" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" :
+                      order.status === "Completed" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
+                      "border-white/10 text-muted-foreground"
+                    }`}>
+                      {order.status}
+                    </Badge>
+                    <div className="flex flex-col gap-1 w-full min-w-0">
+                      {(order.discordBidLink || order.discordTicketChannelId) && (() => {
+                        const url = getDiscordChannelUrl(order);
+                        const badge = (
+                          <Badge variant="outline" className={`h-4 px-1.5 text-[9px] gap-0.5 flex w-full justify-center bg-blue-500/15 text-blue-400 border-blue-500/20 ${url ? "cursor-pointer hover:bg-blue-500/25 transition-colors" : ""}`} data-testid={`mobile-badge-discord-${order.id}`}>
+                            <FaDiscord className="w-2.5 h-2.5 shrink-0" />
+                            Discord
+                          </Badge>
+                        );
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild className="w-full min-w-0">
+                              {url ? (
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="flex w-full min-w-0">
+                                  {badge}
+                                </a>
+                              ) : (
+                                <span className="flex w-full min-w-0">{badge}</span>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>{url ? "Open Discord channel" : "Discord ticket linked"}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
+                      {order.customerDiscordId && (
+                        <Tooltip>
+                          <TooltipTrigger asChild className="w-full min-w-0">
+                            <span className="flex w-full min-w-0">
+                            <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-0.5 flex w-full justify-center bg-purple-500/15 text-purple-400 border-purple-500/20" data-testid={`mobile-badge-customer-${order.id}`}>
+                              <User className="w-2.5 h-2.5 shrink-0" />
+                              Customer
+                            </Badge>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>Customer linked</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Customer</p>
-                    <p className="font-medium truncate">{order.customerDiscordUsername || "Unknown"}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Price</p>
-                    <p className="font-medium text-emerald-400">${order.customerPrice || "0"}</p>
+                <div className="flex gap-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs flex-1 min-w-0">
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Assigned Grinder</p>
+                      {assignedGrinder ? (
+                        <Link href={`/grinders?scorecard=${assignedGrinder.id}`}>
+                          <p className="font-medium truncate hover:text-primary hover:underline cursor-pointer transition-colors">{assignedGrinder.name}</p>
+                        </Link>
+                      ) : order.assignedGrinderId ? (
+                        <Link href={`/grinders?scorecard=${order.assignedGrinderId}`}>
+                          <p className="font-medium truncate text-muted-foreground hover:text-primary hover:underline cursor-pointer transition-colors">{order.assignedGrinderId}</p>
+                        </Link>
+                      ) : (
+                        <p className="font-medium truncate">—</p>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Price</p>
+                      <p className="font-medium text-emerald-400">${order.customerPrice || "0"}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Bid</p>
+                      <p className="font-medium text-muted-foreground">${acceptedBid?.bidAmount ?? "—"}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground uppercase tracking-wider text-[9px]">Profit</p>
+                      <p className={`font-medium ${moneyColorClass(Number(order.companyProfit || 0))}`}>${order.companyProfit ?? "—"}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/[0.04] flex justify-between items-center">
+                <div className="pt-2 border-t border-white/[0.04] flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-white/10" onClick={() => setViewOrder(order)}>
+                      {isStaffOrOwner && (
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-white/10" onClick={() => setEditOrderMobile(order)} data-testid={`button-edit-order-mobile-${order.id}`}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-white/10" onClick={() => { setBriefOrder(order); setBriefText(order.orderBrief || ""); setBriefLink(order.discordBidLink || ""); }}>
                         <FileText className="w-4 h-4" />
                       </Button>
                       {isOwner && (
@@ -787,30 +1242,33 @@ export default function Orders() {
                         </Button>
                       )}
                    </div>
-                   <div className="text-[10px] text-muted-foreground">
-                      {order.orderDate ? format(new Date(order.orderDate), "MMM d") : "-"}
+                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+                      <span><span className="uppercase tracking-wider text-[9px] mr-0.5">Start</span>{order.startDate ? format(new Date(order.startDate), "MMM d") : "—"}</span>
+                      <span><span className="uppercase tracking-wider text-[9px] mr-0.5">Due</span>{order.orderDueDate ? format(new Date(order.orderDueDate), "MMM d") : "—"}</span>
+                      <span><span className="uppercase tracking-wider text-[9px] mr-0.5">Done</span>{order.completedAt ? format(new Date(order.completedAt), "MMM d") : "—"}</span>
                    </div>
                 </div>
               </Card>
-            ));
+            );
+            });
           })()}
         </div>
-        <div className="hidden md:block overflow-auto max-h-[calc(100vh-200px)]">
-        <Table className="min-w-[1200px] table-fixed w-full">
+        <div className="hidden md:block overflow-auto max-h-[calc(100vh-200px)] px-1 w-full">
+        <Table className="min-w-[1200px] table-fixed w-full" style={{ minWidth: 'max(1200px, 100%)' }}>
           <colgroup>
-            <col className="w-[6%]" />
-            <col className="w-[11%]" />
-            <col className="w-[8%]" />
-            <col className="w-[8%]" />
-            <col className="w-[5%]" />
-            <col className="w-[10%]" />
-            <col className="w-[8%]" />
-            <col className="w-[8%]" />
-            <col className="w-[6%]" />
-            <col className="w-[7%]" />
-            <col className="w-[7%]" />
-            <col className="w-[10%]" />
-            <col className="w-[4%]" />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "13%" }} />
+            <col style={{ width: "4%" }} />
+            <col style={{ width: "2%" }} />
           </colgroup>
           <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: "hsl(240 10% 6.5%)" }}>
             <TableRow className="border-white/[0.06]">
@@ -818,15 +1276,14 @@ export default function Orders() {
               <SortableHeader label="Service" sortKey="serviceId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Platform" sortKey="platform" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <TableHead className="whitespace-nowrap">Gamertag</TableHead>
-              <SortableHeader label="Cmplx" sortKey="complexity" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-center" tooltip="Order complexity rating (1-5). Higher values indicate more difficult or time-consuming orders." />
-              <SortableHeader label="Assigned To" sortKey="assignedGrinderId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
+              <SortableHeader label="Assigned" sortKey="assignedGrinderId" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-center" />
+              <SortableHeader label="Start Date" sortKey="startDate" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Due Date" sortKey="orderDueDate" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
-              <SortableHeader label="Completed" sortKey="completedAt" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
               <SortableHeader label="Price" sortKey="customerPrice" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-right" />
               <TableHead className="text-right whitespace-nowrap">Bid</TableHead>
               <SortableHeader label="Profit" sortKey="companyProfit" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} className="text-right" />
               <SortableHeader label="Status" sortKey="status" currentSortKey={currentSortKey} currentSortDir={currentSortDir} onToggle={toggleSort} />
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-10 bg-[hsl(240_10%_6.5%)]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -849,7 +1306,7 @@ export default function Orders() {
                 return true;
               });
               return isLoading ? (
-              <TableRow><TableCell colSpan={11} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={12} className="text-center h-24">Loading...</TableCell></TableRow>
             ) : filteredOrders.length > 0 ? filteredOrders.map((order: Order) => {
               const service = (services || []).find((s: Service) => s.id === order.serviceId);
               const assignedGrinder = order.assignedGrinderId ? (grinders || []).find((g: Grinder) => g.id === order.assignedGrinderId) : null;
@@ -867,29 +1324,28 @@ export default function Orders() {
                 "hover:bg-white/[0.03]";
               return (
                 <TableRow key={order.id} className={`${orderRowStyle} border-white/[0.04] transition-all`} data-testid={`row-order-${order.id}`}>
-                  <TableCell className="font-mono font-medium max-w-[130px]" data-testid={`text-order-id-${order.id}`}>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="flex flex-col min-w-0 flex-1">
-                        {isOwner ? (
-                          <InlineTextEdit
-                            value={order.mgtOrderNumber ? String(order.mgtOrderNumber) : ""}
-                            orderId={order.id}
-                            field="mgtOrderNumber"
-                            placeholder={order.id}
-                            onSave={(id, data) => {
-                              const val = data.mgtOrderNumber;
-                              saveField(id, { mgtOrderNumber: val ? Number(val) : null });
-                            }}
-                          />
-                        ) : (
-                          <span className="truncate">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : (order.displayId || order.id)}</span>
-                        )}
-                        {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
-                      </div>
-                      <Tooltip>
+                  <TableCell className="font-mono font-medium max-w-[130px] min-w-0" data-testid={`text-order-id-${order.id}`}>
+                    <div className="flex flex-row items-center gap-1.5 min-w-0">
+                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1 min-w-0">
+                          {isOwner ? (
+                            <InlineTextEdit
+                              value={order.mgtOrderNumber ? String(order.mgtOrderNumber) : ""}
+                              orderId={order.id}
+                              field="mgtOrderNumber"
+                              placeholder={order.id}
+                              onSave={(id, data) => {
+                                const val = data.mgtOrderNumber;
+                                saveField(id, { mgtOrderNumber: val ? Number(val) : null });
+                              }}
+                            />
+                          ) : (
+                            <span className="truncate block text-sm">{order.mgtOrderNumber ? `#${order.mgtOrderNumber}` : (order.displayId || order.id)}</span>
+                          )}
+                          <Tooltip>
                         <TooltipTrigger asChild>
                           <button
-                            className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${order.orderBrief ? "text-primary hover:text-primary/80 bg-primary/10" : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/5"}`}
+                            className={`h-6 w-6 flex-shrink-0 flex items-center justify-center rounded transition-colors ${order.orderBrief ? "text-primary hover:text-primary/80 bg-primary/10" : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-white/5"}`}
                             onClick={() => {
                               setBriefOrder(order);
                               setBriefText(order.orderBrief || "");
@@ -901,27 +1357,30 @@ export default function Orders() {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>{order.orderBrief ? "View/Edit Brief" : "Add Brief"}</TooltipContent>
-                      </Tooltip>
+                          </Tooltip>
+                        </div>
+                        {order.createdAt && <span className="text-[10px] text-muted-foreground">{format(new Date(order.createdAt), "MMM d")}</span>}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="overflow-hidden">
+                  <TableCell className="min-w-0">
                     <div className="flex flex-col gap-1">
                       <Select
                         value={order.serviceId}
                         onValueChange={(val) => saveField(order.id, { serviceId: val })}
                       >
-                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 w-full -mx-1 transition-colors" data-testid={`select-edit-service-${order.id}`}>
-                          <SelectValue><span className="truncate block">{service?.name || order.serviceId}</span></SelectValue>
+                        <SelectTrigger className="h-7 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 w-full -mx-1 transition-colors min-w-0" data-testid={`select-edit-service-${order.id}`}>
+                          <SelectValue><span className="block min-w-0 truncate">{service?.name || order.serviceId}</span></SelectValue>
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="min-w-[14rem]">
                           {(services || []).map((s: Service) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                      <div className="flex gap-1 items-center">
+                      <div className="flex flex-wrap gap-1 items-center">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${!order.isRush ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
+                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer shrink-0 ${!order.isRush ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
                               onClick={() => saveField(order.id, { isRush: false })}
                               data-testid={`toggle-standard-${order.id}`}
                             >
@@ -933,7 +1392,7 @@ export default function Orders() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer ${order.isRush ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
+                              className={`text-[10px] h-4 px-1.5 rounded-sm border transition-colors cursor-pointer shrink-0 ${order.isRush ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30" : "bg-transparent text-muted-foreground border-dashed border-white/10 hover:border-white/30 hover:text-foreground"}`}
                               onClick={() => saveField(order.id, { isRush: true })}
                               data-testid={`toggle-rush-${order.id}`}
                             >
@@ -958,33 +1417,43 @@ export default function Orders() {
                   <TableCell>
                     <InlineTextEdit value={order.gamertag} orderId={order.id} field="gamertag" placeholder="Gamertag" onSave={saveField} />
                   </TableCell>
-                  <TableCell className="text-center">
-                    <Select
-                      value={String(order.complexity)}
-                      onValueChange={(val) => saveField(order.id, { complexity: Number(val) })}
-                    >
-                      <SelectTrigger className={`h-7 w-14 text-sm bg-transparent border-transparent hover:border-white/10 hover:bg-white/5 mx-auto transition-colors font-mono font-bold ${complexityColor(order.complexity)}`} data-testid={`select-edit-complexity-${order.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5].map(c => (
-                          <SelectItem key={c} value={String(c)}>
-                            <span className={complexityColor(c)}>{c}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
                   <TableCell className="overflow-hidden">
                     <div className="flex flex-col gap-1">
                       {assignedGrinder ? (
-                        <div className="flex items-center gap-1 min-w-0">
-                          <User className="w-3 h-3 text-primary shrink-0" />
-                          <span className="text-sm font-medium truncate">{assignedGrinder.name}</span>
-                        </div>
+                        <Link href={`/grinders?scorecard=${assignedGrinder.id}`}>
+                          <div className="flex items-center gap-1 min-w-0 cursor-pointer hover:text-primary transition-colors group/link">
+                            <User className="w-3 h-3 text-primary shrink-0" />
+                            <span className="text-sm font-medium group-hover/link:underline">{assignedGrinder.name}</span>
+                          </div>
+                        </Link>
                       ) : order.assignedGrinderId ? (
-                        <span className="text-xs text-muted-foreground truncate block">{order.assignedGrinderId}</span>
+                        <Link href={`/grinders?scorecard=${order.assignedGrinderId}`}>
+                          <span className="text-xs text-muted-foreground truncate block hover:text-primary hover:underline cursor-pointer transition-colors">{order.assignedGrinderId}</span>
+                        </Link>
                       ) : <span className="text-muted-foreground">-</span>}
+                      {(order.discordBidLink || order.discordTicketChannelId) && (() => {
+                        const url = getDiscordChannelUrl(order);
+                        const badge = (
+                          <Badge variant="outline" className="bg-blue-500/15 text-blue-400 border-blue-500/20 text-[10px] gap-1 w-fit shrink-0 cursor-pointer hover:bg-blue-500/25 transition-colors" data-testid={`badge-discord-ticket-${order.id}`}>
+                            <FaDiscord className="w-2.5 h-2.5" />
+                            Discord
+                          </Badge>
+                        );
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {url ? (
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex">
+                                  {badge}
+                                </a>
+                              ) : (
+                                badge
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>{url ? "Open Discord channel" : "Discord ticket linked"}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                       {order.customerDiscordId && (
                         <Badge className="bg-purple-500/15 text-purple-400 border border-purple-500/20 text-[10px] gap-1 w-fit" data-testid={`badge-customer-linked-${order.id}`}>
                           <User className="w-2.5 h-2.5" />
@@ -993,16 +1462,11 @@ export default function Orders() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <InlineDateEdit value={order.orderDueDate} orderId={order.id} onSave={saveField} />
+                  <TableCell className="min-w-0 text-left">
+                    <InlineStartDateEdit value={order.startDate} orderId={order.id} onSave={saveField} canEdit={isStaffOrOwner} />
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <InlineCompletionDateEdit
-                      value={order.completedAt}
-                      orderId={order.id}
-                      orderDueDate={order.orderDueDate}
-                      onSave={saveField}
-                    />
+                  <TableCell className="min-w-0 text-left">
+                    <InlineDateEdit value={order.orderDueDate} orderId={order.id} onSave={saveField} />
                   </TableCell>
                   <TableCell className="text-right">
                     {editingPriceId === order.id ? (
@@ -1122,8 +1586,24 @@ export default function Orders() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="pr-4">
+                  <TableCell className="pr-4 bg-inherit">
                     <div className="flex items-center justify-center gap-1">
+                      {isStaffOrOwner && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                              onClick={() => setEditOrderMobile(order)}
+                              data-testid={`button-edit-order-${order.id}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit order</TooltipContent>
+                        </Tooltip>
+                      )}
                       {order.status === "Need Replacement" && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1243,6 +1723,37 @@ export default function Orders() {
               </Button>
             </div>
           </div>
+        )}
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={!!editOrderMobile} onOpenChange={(open) => { if (!open) setEditOrderMobile(null); }}>
+      <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[420px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Pencil className="w-4 h-4 text-primary" />
+            </div>
+            Edit Order {editOrderMobile?.mgtOrderNumber ? `#${editOrderMobile.mgtOrderNumber}` : ""}
+          </DialogTitle>
+        </DialogHeader>
+        {editOrderMobile && (
+          <MobileOrderEditForm
+            order={editOrderMobile}
+            services={services || []}
+            grinders={grinders || []}
+            platforms={platforms}
+            onSave={(id, data) => {
+              saveField(id, data);
+              setEditOrderMobile(null);
+            }}
+            onStatusChange={(id, status) => {
+              statusMutation.mutate({ id, status });
+              setEditOrderMobile(null);
+            }}
+            onCancel={() => setEditOrderMobile(null)}
+            isSaving={updateFieldMutation.isPending || statusMutation.isPending}
+          />
         )}
       </DialogContent>
     </Dialog>

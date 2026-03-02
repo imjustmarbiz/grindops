@@ -44,6 +44,9 @@ export default function StaffPayouts() {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet-summary"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
       toast({ title: "Payout request updated" });
       setMarkPaidDialog(null);
       setProofUrl("");
@@ -92,6 +95,9 @@ export default function StaffPayouts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
       toast({ title: isOwner ? "Payout reduced" : "Reduction submitted for owner approval" });
       setReduceDialog(null);
       setReduceAmount("");
@@ -127,6 +133,9 @@ export default function StaffPayouts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/payout-requests"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/staff/scorecard") });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/staff-members"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith?.("/api/audit-logs") });
       toast({ title: "Dispute resolved" });
     },
   });
