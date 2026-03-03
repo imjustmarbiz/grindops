@@ -43,6 +43,7 @@ import {
   type WalletTransfer, type InsertWalletTransfer,
   type OrderPaymentLink, type InsertOrderPaymentLink,
   type UserActivityLog, type InsertUserActivityLog, userActivityLogs,
+  type Creator, type InsertCreator, creators,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -235,6 +236,11 @@ export interface IStorage {
 
   getUserActivityLogs(filters?: { userId?: string; category?: string; action?: string; limit?: number }): Promise<UserActivityLog[]>;
   createUserActivityLog(log: InsertUserActivityLog): Promise<UserActivityLog>;
+
+  getCreatorByUserId(userId: string): Promise<Creator | undefined>;
+  createCreator(creator: InsertCreator): Promise<Creator>;
+  updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator | undefined>;
+  getCreators(): Promise<Creator[]>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -688,6 +694,8 @@ export class DatabaseStorage implements IStorage {
         emergencyBoost: "0.25",
         largeOrderThreshold: "500",
         largeOrderEliteBoost: "0.15",
+        creatorCommissionPercent: "10",
+        creatorPayoutMethods: ["paypal"],
       }).returning();
       return created;
     }
@@ -1672,6 +1680,26 @@ export class DatabaseStorage implements IStorage {
   async createUserActivityLog(log: InsertUserActivityLog): Promise<UserActivityLog> {
     const [created] = await db.insert(userActivityLogs).values(log).returning();
     return created;
+  }
+
+  async getCreatorByUserId(userId: string): Promise<Creator | undefined> {
+    const [row] = await db.select().from(creators).where(eq(creators.userId, userId)).limit(1);
+    return row;
+  }
+
+  async createCreator(creator: InsertCreator): Promise<Creator> {
+    const [created] = await db.insert(creators).values(creator).returning();
+    return created;
+  }
+
+  async updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator | undefined> {
+    const updateData = { ...data, updatedAt: new Date() } as Partial<Creator>;
+    const [updated] = await db.update(creators).set(updateData).where(eq(creators.id, id)).returning();
+    return updated;
+  }
+
+  async getCreators(): Promise<Creator[]> {
+    return await db.select().from(creators).orderBy(creators.displayName);
   }
 }
 

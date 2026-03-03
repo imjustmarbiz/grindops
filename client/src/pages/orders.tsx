@@ -52,6 +52,7 @@ const formSchema = z.object({
   isEmergency: z.boolean().default(false),
   platform: z.string().nullable().optional(),
   gamertag: z.string().nullable().optional(),
+  creatorCode: z.string().nullable().optional(),
 });
 
 function DatePickerField({ value, onChange, placeholder = "Pick a date" }: {
@@ -501,6 +502,7 @@ function MobileOrderEditForm({
   const [serviceId, setServiceId] = useState(order.serviceId);
   const [platform, setPlatform] = useState(order.platform || "");
   const [gamertag, setGamertag] = useState(order.gamertag || "");
+  const [creatorCode, setCreatorCode] = useState((order as any).creatorCode || "");
   const [complexity, setComplexity] = useState(order.complexity ?? 1);
   const [startDate, setStartDate] = useState(order.startDate ? new Date(order.startDate).toISOString().slice(0, 16) : "");
   const [orderDueDate, setOrderDueDate] = useState(order.orderDueDate ? new Date(order.orderDueDate).toISOString().slice(0, 16) : "");
@@ -513,6 +515,7 @@ function MobileOrderEditForm({
     setServiceId(order.serviceId);
     setPlatform(order.platform || "");
     setGamertag(order.gamertag || "");
+    setCreatorCode((order as any).creatorCode || "");
     setComplexity(order.complexity ?? 1);
     setStartDate(order.startDate ? new Date(order.startDate).toISOString().slice(0, 16) : "");
     setOrderDueDate(order.orderDueDate ? new Date(order.orderDueDate).toISOString().slice(0, 16) : "");
@@ -529,6 +532,7 @@ function MobileOrderEditForm({
     if (serviceId !== order.serviceId) data.serviceId = serviceId;
     if (platform !== (order.platform || "")) data.platform = platform || null;
     if (gamertag !== (order.gamertag || "")) data.gamertag = gamertag || null;
+    if (creatorCode !== ((order as any).creatorCode || "")) data.creatorCode = creatorCode.trim() || null;
     if (complexity !== (order.complexity ?? 1)) data.complexity = complexity;
     if (startDate !== (order.startDate ? new Date(order.startDate).toISOString().slice(0, 16) : "")) data.startDate = startDate ? new Date(startDate).toISOString() : null;
     if (orderDueDate !== (order.orderDueDate ? new Date(order.orderDueDate).toISOString().slice(0, 16) : "")) data.orderDueDate = orderDueDate ? new Date(orderDueDate).toISOString() : null;
@@ -605,6 +609,10 @@ function MobileOrderEditForm({
         <div>
           <Label className="text-xs text-muted-foreground">Price ($)</Label>
           <Input type="number" step="0.01" className="mt-1 h-9 bg-background/50 border-white/10" value={customerPrice} onChange={(e) => setCustomerPrice(e.target.value)} placeholder="0" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Creator code</Label>
+          <Input className="mt-1 h-9 bg-background/50 border-white/10 font-mono" value={creatorCode} onChange={(e) => setCreatorCode(e.target.value)} placeholder="e.g. DEVCODE (optional)" />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Status</Label>
@@ -981,6 +989,13 @@ export default function Orders() {
                     <FormItem>
                       <FormLabel>Gamertag</FormLabel>
                       <FormControl><Input placeholder="Customer gamertag" {...field} value={field.value || ""} className="bg-background/50 border-white/10" data-testid="input-order-gamertag" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="creatorCode" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Creator code</FormLabel>
+                      <FormControl><Input placeholder="e.g. DEVCODE (optional)" {...field} value={field.value || ""} className="bg-background/50 border-white/10 font-mono" /></FormControl>
+                      <FormMessage />
                     </FormItem>
                   )} />
                 </div>

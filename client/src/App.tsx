@@ -50,6 +50,13 @@ import GrinderTodo from "@/pages/grinder/todo";
 import GrinderStrikes from "@/pages/grinder/strikes";
 import GrinderNotifications from "@/pages/grinder/notifications";
 
+import CreatorOverview from "@/pages/creator/overview";
+import CreatorPromote from "@/pages/creator/promote";
+import CreatorPayouts from "@/pages/creator/payouts";
+import CreatorRules from "@/pages/creator/rules";
+import CreatorNotifications from "@/pages/creator/notifications";
+import CreatorTodo from "@/pages/creator/todo";
+
 import CustomerReviewPage from "@/pages/customer-review";
 import StaffNotifications from "@/pages/staff/notifications";
 import StaffTodo from "@/pages/staff/todo";
@@ -96,7 +103,7 @@ function hasEliteRole(user: any): boolean {
   return discordRoles.includes(GRINDER_ROLES.ELITE);
 }
 
-function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; blockedDiscordIds?: string[] }) {
+function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, creatorOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; creatorOnly?: boolean; blockedDiscordIds?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
     queryKey: ["/api/config/maintenance"],
@@ -136,6 +143,10 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
   }
 
   if (ownerOnly && user?.role !== "owner") {
+    return <Redirect to="/" />;
+  }
+
+  if (creatorOnly && user?.role !== "creator") {
     return <Redirect to="/" />;
   }
 
@@ -202,6 +213,10 @@ function HomeRedirect() {
     );
   }
 
+  if (user?.role === "creator") {
+    return <Redirect to="/creator" />;
+  }
+
   return (
     <AppLayout>
       <GrinderOverview />
@@ -263,6 +278,13 @@ function Router() {
       <Route path="/grinder/todo" component={() => <ProtectedRoute component={GrinderTodo} />} />
       <Route path="/grinder/strikes" component={() => <ProtectedRoute component={GrinderStrikes} />} />
       <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
+
+      <Route path="/creator" component={() => <ProtectedRoute component={CreatorOverview} creatorOnly />} />
+      <Route path="/creator/promote" component={() => <ProtectedRoute component={CreatorPromote} creatorOnly />} />
+      <Route path="/creator/payouts" component={() => <ProtectedRoute component={CreatorPayouts} creatorOnly />} />
+      <Route path="/creator/rules" component={() => <ProtectedRoute component={CreatorRules} creatorOnly />} />
+      <Route path="/creator/notifications" component={() => <ProtectedRoute component={CreatorNotifications} creatorOnly />} />
+      <Route path="/creator/todo" component={() => <ProtectedRoute component={CreatorTodo} creatorOnly />} />
       
       <Route path="/customer-review" component={CustomerReviewPage} />
 

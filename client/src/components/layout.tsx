@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Megaphone } from "lucide-react";
 import spLogo from "@assets/image_1771930905137.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,26 +88,41 @@ export const grinderNavItems = [
   { title: "Staff Notes", url: "/grinder/patch-notes", icon: Newspaper },
 ];
 
+export const creatorNavItems = [
+  { title: "Overview", url: "/creator", icon: LayoutDashboard },
+  { title: "Notifications", url: "/creator/notifications", icon: Bell },
+  { title: "To-Do List", url: "/creator/todo", icon: ClipboardList },
+  { title: "Promote", url: "/creator/promote", icon: Megaphone },
+  { title: "Payouts", url: "/creator/payouts", icon: Banknote },
+  { title: "Rules & Policy", url: "/creator/rules", icon: ScrollText },
+];
+
 function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
   const isStaff = user?.role === "staff" || user?.role === "owner";
+  const isCreator = user?.role === "creator";
   const isOwner = user?.role === "owner";
   const userId = (user as any)?.discordId || user?.id || "";
   const { data: grinderProfile } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
-    enabled: !isStaff,
+    enabled: !isStaff && !isCreator,
+  });
+  const { data: creatorProfile } = useQuery<{ creator: { displayName: string; code: string } }>({
+    queryKey: ["/api/creator/me"],
+    enabled: isCreator,
   });
   const { data: sidebarNotifs = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
     refetchInterval: 15000,
-    enabled: isStaff,
+    enabled: isStaff || isCreator,
   });
   const unreadNotifCount = sidebarNotifs.filter(n => {
     const readBy = (n.readBy as string[]) || [];
     return !readBy.includes(userId);
   }).length;
+  const creatorUnreadNotifCount = isCreator ? unreadNotifCount : 0;
   const { data: staffActionItems = [] } = useQuery<any[]>({
     queryKey: ["/api/staff/action-items"],
     refetchInterval: 30000,
@@ -119,13 +134,28 @@ function AppSidebar() {
     enabled: isStaff,
   });
   const staffTodoCount = staffActionItems.filter((i: any) => !i.dismissed).length + staffTasks.filter((t: any) => t.status === "pending").length;
+  const creatorTodoIncomplete = (() => {
+    if (!isCreator) return 0;
+    try {
+      const s = typeof localStorage !== "undefined" ? localStorage.getItem("grindops-creator-todo") : null;
+      const completed: Record<string, boolean> = s ? JSON.parse(s) : {};
+      const creator = creatorProfile?.creator as { youtubeUrl?: string | null; twitchUrl?: string | null; tiktokUrl?: string | null; instagramUrl?: string | null; xUrl?: string | null } | undefined;
+      const hasLinked = creator && [creator.youtubeUrl, creator.twitchUrl, creator.tiktokUrl, creator.instagramUrl, creator.xUrl].some(Boolean);
+      const tutorialDone = completed["tutorial"] ?? false;
+      const linkSocialDone = completed["link-social"] || !!hasLinked;
+      const rulesDone = completed["review-rules"] ?? false;
+      return 3 - (tutorialDone ? 1 : 0) - (linkSocialDone ? 1 : 0) - (rulesDone ? 1 : 0);
+    } catch {
+      return 3;
+    }
+  })();
   const { data: grinderTasks = [] } = useQuery<any[]>({
     queryKey: ["/api/grinder/me/tasks"],
     refetchInterval: 30000,
     enabled: !isStaff,
   });
   const grinderTodoCount = grinderTasks.filter((t: any) => t.status === "pending").length;
-  const isElite = !isStaff && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
+  const isElite = !isStaff && !isCreator && (grinderProfile?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
   const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
   const WALLET_RESTRICTED_IDS = ["872820240139046952"];
   const canSeeBusiness = isOwner && !BUSINESS_BLOCKED_IDS.includes(userId);
@@ -140,31 +170,36 @@ function AppSidebar() {
         if (item.url === "/wallets" && (!isOwner || isWalletRestricted)) return { ...item, title: "My Wallet" };
         return item;
       })
+    : isCreator
+    ? creatorNavItems
     : grinderNavItems;
-  const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
+  const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isCreator ? "Creator" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
   const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || undefined;
 
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
       <SidebarContent>
-        <div className="p-6 flex items-center gap-3">
-          <img src={spLogo} alt="SP Logo" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
-          <span className="font-display font-bold text-2xl tracking-tight text-glow">GrindOps</span>
+        <div className="p-4 sm:p-5 flex items-center gap-3 shrink-0">
+          <img src={spLogo} alt="SP Logo" className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
+          <span className="font-display font-bold text-xl sm:text-2xl tracking-tight text-glow truncate">GrindOps</span>
         </div>
         
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground font-medium">
-            {isStaff ? "MANAGEMENT" : "NAVIGATION"}
+            {isStaff ? "Management" : isCreator ? "Creator" : "Navigation"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive = location === item.url;
-                const unreadAlerts = !isStaff && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
+                const unreadAlerts = !isStaff && !isCreator && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
                 const staffUnreadNotifs = isStaff && item.url === "/notifications" ? unreadNotifCount : 0;
+                const creatorUnreadNotifs = isCreator && item.url === "/creator/notifications" ? creatorUnreadNotifCount : 0;
                 const todoCount = isStaff && item.url === "/todo" ? staffTodoCount
-                  : !isStaff && item.url === "/grinder/todo" ? grinderTodoCount : 0;
-                const badgeCount = unreadAlerts || staffUnreadNotifs || todoCount;
+                  : !isStaff && item.url === "/grinder/todo" ? grinderTodoCount
+                  : isCreator && item.url === "/creator/todo" ? creatorTodoIncomplete
+                  : 0;
+                const badgeCount = unreadAlerts || staffUnreadNotifs || creatorUnreadNotifs || todoCount;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
@@ -174,15 +209,16 @@ function AppSidebar() {
                         data-nav-url={item.url}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           isActive 
-                            ? "font-medium" 
+                            ? (isCreator ? "bg-emerald-500/20 text-emerald-400 font-medium" : "font-medium")
                             : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
                         }`}
                       >
-                        <item.icon className="w-5 h-5" />
-                        <span className="flex-1">{item.title}</span>
+                        <item.icon className="w-5 h-5 shrink-0" />
+                        <span className="flex-1 min-w-0 truncate">{item.title}</span>
                         {badgeCount > 0 && (
-                          <Badge className={`border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse ${
-                            todoCount > 0 ? "bg-amber-500/20 text-amber-400" : "bg-blue-500/20 text-blue-400"
+                          <Badge className={`border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center ${
+                            isCreator ? "animate-badge-flash bg-emerald-500/25 text-emerald-400" :
+                            todoCount > 0 ? "animate-pulse bg-amber-500/20 text-amber-400" : "animate-pulse bg-blue-500/20 text-blue-400"
                           }`}>{badgeCount}</Badge>
                         )}
                       </Link>
@@ -194,8 +230,8 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mt-auto p-4">
-          <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-4">
+        <div className="mt-auto p-3 sm:p-4 shrink-0">
+          <div className="p-3 sm:p-4 rounded-xl bg-white/5 border border-border flex flex-col gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10 border border-primary/20">
                 <AvatarImage src={avatarUrl} />
@@ -205,9 +241,13 @@ function AppSidebar() {
               </Avatar>
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-sm font-medium truncate" data-testid="text-user-name">
-                  {grinderProfile?.grinder?.name || user?.firstName || user?.discordUsername || "User"}
-                  {(grinderProfile?.grinder?.discordUsername || user?.discordUsername) && (
-                    <span className="text-[11px] font-normal text-muted-foreground ml-1">(@{grinderProfile?.grinder?.discordUsername || user?.discordUsername})</span>
+                  {isCreator
+                    ? (creatorProfile?.creator?.displayName || user?.firstName || user?.discordUsername || "Creator")
+                    : (grinderProfile?.grinder?.name || user?.firstName || user?.discordUsername || "User")}
+                  {(isCreator
+                    ? (creatorProfile?.creator?.code && ` (${creatorProfile.creator.code})`)
+                    : (grinderProfile?.grinder?.discordUsername || user?.discordUsername)) && (
+                    <span className="text-[11px] font-normal text-muted-foreground ml-1">@{isCreator ? user?.discordUsername : (grinderProfile?.grinder?.discordUsername || user?.discordUsername)}</span>
                   )}
                 </span>
                 <Badge 
@@ -215,12 +255,13 @@ function AppSidebar() {
                   className={`w-fit text-[10px] px-1.5 py-0 ${
                     isOwner ? "bg-red-500/20 text-red-400 border-red-500/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
+                    isCreator ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
                     isElite ? "bg-cyan-950 text-cyan-300 border-cyan-500/40" :
                     "bg-[#1a1a3e] text-[#8b9aff] border-[#5865F2]/40"
                   }`}
                   data-testid="text-user-role"
                 >
-                  {isOwner ? <Crown className="w-3 h-3 mr-1" /> : isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
+                  {isOwner ? <Crown className="w-3 h-3 mr-1" /> : isCreator ? <Star className="w-3 h-3 mr-1" /> : isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
                   {roleBadge}
                 </Badge>
               </div>
@@ -250,10 +291,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useLoginTracker();
   const { data: grinderProfileForTheme } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
-    enabled: !isStaffOrOwner,
+    enabled: !isStaffOrOwner && user?.role !== "creator",
   });
-  const isEliteGrinder = !isStaffOrOwner && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
-  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : isEliteGrinder ? "theme-elite" : "theme-grinder";
+  const isEliteGrinder = !isStaffOrOwner && user?.role !== "creator" && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
+  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : user?.role === "creator" ? "theme-creator" : isEliteGrinder ? "theme-elite" : "theme-grinder";
 
   const { data: siteConfig } = useQuery<{ holidayTheme?: string; gameTheme?: string }>({
     queryKey: ["/api/config/maintenance"],
@@ -267,7 +308,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("theme-owner", "theme-staff", "theme-grinder", "theme-elite");
+    root.classList.remove("theme-owner", "theme-staff", "theme-grinder", "theme-elite", "theme-creator");
     root.classList.add(themeClass);
     return () => root.classList.remove(themeClass);
   }, [themeClass]);
@@ -308,21 +349,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30 text-foreground">
+      <div className="flex h-dvh min-h-dvh max-h-dvh w-full bg-background overflow-hidden selection:bg-primary/30 text-foreground">
         <AppSidebar />
-        <div className="flex flex-col flex-1 w-full relative">
+        <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
           
-          <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-6 backdrop-blur-md bg-background/50 relative z-10">
-            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors" />
-            <div className="ml-auto flex items-center gap-2 sm:gap-4">
-              <SoundAlertsHelper />
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-5 md:px-6 backdrop-blur-md bg-background/50 relative z-10">
+            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors size-9 flex items-center justify-center shrink-0" />
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              {user?.role !== "creator" && <SoundAlertsHelper />}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setChatOpen(true)}
-                className="relative hover-elevate hover:bg-white/10"
+                className="relative size-9 shrink-0 hover-elevate hover:bg-white/10"
                 data-testid="button-open-chat"
               >
                 <MessageCircle className="w-5 h-5" />
@@ -335,8 +376,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9"
-                onClick={() => setLocation(user?.role === "staff" || user?.role === "owner" ? "/notifications" : "/grinder/notifications")}
+                className="relative size-9"
+                onClick={() => setLocation(user?.role === "staff" || user?.role === "owner" ? "/notifications" : user?.role === "creator" ? "/creator/notifications" : "/grinder/notifications")}
                 data-testid="button-notifications"
               >
                 <Bell className="w-5 h-5 text-muted-foreground" />
@@ -348,8 +389,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Button>
             </div>
           </header>
-          <main className="flex-1 min-h-0 overflow-auto p-4 sm:p-6 md:p-8 relative z-10">
-            <div className="max-w-7xl mx-auto">
+          <main className="flex-1 min-h-0 overflow-auto p-3 sm:p-5 md:p-6 relative z-10">
+            <div className="max-w-7xl mx-auto w-full min-w-0">
               {children}
             </div>
           </main>
@@ -357,7 +398,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
       <ThemeDecorations theme={activeDecoration} />
       <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
-      <LowerThirdNotifications />
+      {user?.role !== "creator" && <LowerThirdNotifications />}
       <SiteAlertTicker />
       <InteractiveTutorial />
       <TutorialTrigger />

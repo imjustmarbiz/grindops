@@ -3934,6 +3934,214 @@ export async function registerRoutes(
     }
   });
 
+  // --- Creator dashboard (role === "creator") ---
+  const SOCIAL_URL_PATTERNS: Record<string, RegExp> = {
+    youtubeUrl: /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i,
+    twitchUrl: /^(https?:\/\/)?(www\.)?twitch\.tv\/.+$/i,
+    tiktokUrl: /^(https?:\/\/)?(www\.)?(tiktok\.com|vm\.tiktok\.com)\/.+$/i,
+    instagramUrl: /^(https?:\/\/)?(www\.)?instagram\.com\/.+$/i,
+    xUrl: /^(https?:\/\/)?(www\.)?(x\.com|twitter\.com)\/.+$/i,
+  };
+  function validateSocialUrl(key: keyof typeof SOCIAL_URL_PATTERNS, value: string | null | undefined): string | null {
+    if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) return null;
+    const s = String(value).trim();
+    if (!s) return null;
+    const normalized = /^https?:\/\//i.test(s) ? s : `https://${s}`;
+    const pattern = SOCIAL_URL_PATTERNS[key];
+    if (!pattern) return normalized;
+    if (!pattern.test(normalized)) return null;
+    try {
+      new URL(normalized);
+      return normalized;
+    } catch { return null; }
+  }
+
+  app.get("/api/creator/me", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    const userId = (req as any).userId;
+    const sessionUser = (req as any).user;
+    let creator = await storage.getCreatorByUserId(userId);
+    if (!creator && userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    if (!creator) {
+      const code = "CR" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const displayName = sessionUser?.firstName || sessionUser?.discordUsername || "Creator";
+      creator = await storage.createCreator({
+        id: `creator-${userId}`,
+        userId,
+        code,
+        displayName,
+        youtubeUrl: null,
+        twitchUrl: null,
+        tiktokUrl: null,
+        instagramUrl: null,
+        xUrl: null,
+        payoutMethod: null,
+        payoutDetail: null,
+      });
+    }
+    const config = await storage.getQueueConfig();
+    const creatorPayoutMethods = Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"];
+    res.json({ creator, creatorPayoutMethods });
+  });
+
+  app.get("/api/creator/dashboard", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    const userId = (req as any).userId;
+    const sessionUser = (req as any).user;
+    let creator = await storage.getCreatorByUserId(userId);
+    if (!creator && userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    if (!creator) {
+      const code = "CR" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const displayName = sessionUser?.firstName || sessionUser?.discordUsername || "Creator";
+      creator = await storage.createCreator({
+        id: `creator-${userId}`,
+        userId,
+        code,
+        displayName,
+        youtubeUrl: null,
+        twitchUrl: null,
+        tiktokUrl: null,
+        instagramUrl: null,
+        xUrl: null,
+        payoutMethod: null,
+        payoutDetail: null,
+      });
+    }
+    const config = await storage.getQueueConfig();
+    const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
+    const allOrders = await storage.getOrders();
+    const completedWithCode = allOrders.filter(
+      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
+    );
+    const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
+    const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
+    const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator!.displayName);
+    const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const recentOrders = completedWithCode
+      .slice(0, 5)
+      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
+    const payoutRequests = minePayouts.map((p: any) => ({
+      id: p.id,
+      amount: p.amount,
+      status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
+      createdAt: p.createdAt,
+    }));
+    res.json({
+      creator,
+      commissionPercent: Number(config?.creatorCommissionPercent ?? 10),
+      availableBalance: availableBalance.toFixed(2),
+      totalEarned: totalEarned.toFixed(2),
+      ordersWithCodeCount: completedWithCode.length,
+      totalOrdersCount: allOrders.length,
+      paidOut: paidOut.toFixed(2),
+      recentOrders,
+      payoutRequests,
+      creatorPayoutMethods: Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"],
+    });
+  });
+
+  app.get("/api/creator/payouts", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    const creator = await storage.getCreatorByUserId((req as any).userId);
+    if (!creator) return res.status(404).json({ message: "Creator profile not found" });
+    const allCreatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
+    const mine = allCreatorPayouts.filter((p: any) => p.recipientName === creator.displayName).map((p: any) => ({
+      id: p.id,
+      amount: p.amount,
+      status: p.status === "paid" ? "paid" : (p.status || "").toLowerCase(),
+      createdAt: p.createdAt,
+    }));
+    res.json(mine);
+  });
+
+  app.patch("/api/creator/me", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    const userId = (req as any).userId;
+    const creator = await storage.getCreatorByUserId(userId);
+    if (!creator) return res.status(404).json({ message: "Creator profile not found" });
+    const body = req.body || {};
+    const updates: Record<string, string | null> = {};
+    const keys = ["youtubeUrl", "twitchUrl", "tiktokUrl", "instagramUrl", "xUrl"] as const;
+    for (const key of keys) {
+      const raw = body[key];
+      const validated = validateSocialUrl(key, raw);
+      if (raw !== undefined) updates[key] = validated;
+    }
+    if (body.payoutMethod !== undefined || body.payoutDetail !== undefined) {
+      const config = await storage.getQueueConfig();
+      const allowedMethods: string[] = Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"];
+      const method = body.payoutMethod === "" || body.payoutMethod === null ? null : body.payoutMethod;
+      const detail = body.payoutDetail === "" || body.payoutDetail === null ? null : (typeof body.payoutDetail === "string" ? body.payoutDetail.trim() : null);
+      if (method !== null && !allowedMethods.includes(method)) {
+        return res.status(400).json({ message: `Payout method must be one of: ${allowedMethods.join(", ")}` });
+      }
+      if (method === "paypal" && detail !== null) {
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRe.test(detail)) return res.status(400).json({ message: "Enter a valid PayPal email address" });
+      }
+      if (method === null) {
+        updates.payoutMethod = null;
+        updates.payoutDetail = null;
+      } else {
+        updates.payoutMethod = method;
+        updates.payoutDetail = detail;
+      }
+    }
+    if (Object.keys(updates).length === 0) return res.json(creator);
+    const updated = await storage.updateCreator(creator.id, updates);
+    if (!updated) return res.status(500).json({ message: "Failed to update" });
+    res.json(updated);
+  });
+
+  app.post("/api/creator/request-payout", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    const userId = (req as any).userId;
+    const creator = await storage.getCreatorByUserId(userId);
+    if (!creator) return res.status(404).json({ message: "Creator profile not found" });
+    if (!creator.payoutMethod || !creator.payoutDetail) {
+      return res.status(400).json({ message: "Add your payout details (e.g. PayPal email) before requesting a payout." });
+    }
+    const config = await storage.getQueueConfig();
+    const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
+    const allOrders = await storage.getOrders();
+    const completedWithCode = allOrders.filter(
+      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
+    );
+    const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
+    const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
+    const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator.displayName);
+    const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const requestedAmount = req.body?.amount != null ? parseFloat(String(req.body.amount)) : availableBalance;
+    if (Number.isNaN(requestedAmount) || requestedAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+    if (requestedAmount > availableBalance) {
+      return res.status(400).json({ message: "Amount exceeds your available balance." });
+    }
+    const id = `BPO-${Date.now().toString(36)}`;
+    const description = `${creator.payoutMethod === "paypal" ? "PayPal" : creator.payoutMethod}: ${creator.payoutDetail}`;
+    const payout = await storage.createBusinessPayout({
+      id,
+      walletId: null,
+      recipientName: creator.displayName,
+      recipientRole: "Creator",
+      category: "Creator Commission",
+      amount: requestedAmount.toFixed(2),
+      description,
+      orderId: null,
+      proofUrl: null,
+      status: "pending",
+      requestedBy: userId,
+      requestedByName: creator.displayName,
+    });
+    res.status(201).json(payout);
+  });
+
   app.get("/api/staff/elite-requests", requireStaff, async (req, res) => {
     const requests = await storage.getEliteRequests();
     const allGrinders = await storage.getGrinders();
@@ -3964,6 +4172,11 @@ export async function registerRoutes(
     });
 
     res.json(updated);
+  });
+
+  app.get("/api/staff/creators", requireStaff, async (req, res) => {
+    const list = await storage.getCreators();
+    res.json(list);
   });
 
   app.get("/api/staff/alerts", requireStaff, async (req, res) => {
@@ -7762,6 +7975,36 @@ export async function registerRoutes(
       res.json({ success: true, theme });
     } catch (error) {
       res.status(500).json({ error: "Failed to update holiday theme" });
+    }
+  });
+
+  app.patch("/api/config/creator-commission", requireOwner, async (req, res) => {
+    try {
+      const { percent } = req.body;
+      const p = typeof percent === "number" ? percent : parseFloat(percent);
+      if (Number.isNaN(p) || p < 0 || p > 100) return res.status(400).json({ error: "creator commission percent must be 0–100" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, creatorCommissionPercent: String(p) });
+      res.json({ success: true, creatorCommissionPercent: p });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update creator commission" });
+    }
+  });
+
+  const CREATOR_PAYOUT_METHOD_OPTIONS = ["paypal"];
+  app.patch("/api/config/creator-payout-methods", requireOwner, async (req, res) => {
+    try {
+      const { methods } = req.body;
+      if (!Array.isArray(methods)) return res.status(400).json({ error: "methods must be an array" });
+      const valid = methods.filter((m: string) => typeof m === "string" && CREATOR_PAYOUT_METHOD_OPTIONS.includes(m.toLowerCase()));
+      const unique = [...new Set(valid)];
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, creatorPayoutMethods: unique } as any);
+      res.json({ success: true, creatorPayoutMethods: unique });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update creator payout methods" });
     }
   });
 

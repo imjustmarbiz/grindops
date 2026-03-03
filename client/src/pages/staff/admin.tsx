@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette, Star, ExternalLink, Percent, CreditCard,
 } from "lucide-react";
 import { useSearch } from "wouter";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
@@ -104,6 +104,10 @@ export default function StaffAdmin() {
 
   const { data: staffTasks = [] } = useQuery<any[]>({
     queryKey: ["/api/staff/grinder-tasks"],
+  });
+
+  const { data: creatorsList = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/creators"],
   });
 
   const sendTaskMutation = useMutation({
@@ -330,10 +334,35 @@ export default function StaffAdmin() {
     },
     onSuccess: (_, theme) => {
       queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
       const label = HOLIDAY_THEMES.find(t => t.value === theme)?.label || theme;
       toast({ title: theme === "none" ? "Holiday theme disabled" : `Holiday theme set to ${label}` });
     },
     onError: () => toast({ title: "Failed to update holiday theme", variant: "destructive" }),
+  });
+
+  const setCreatorCommissionMutation = useMutation({
+    mutationFn: async (percent: number) => {
+      const res = await apiRequest("PATCH", "/api/config/creator-commission", { percent });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Creator commission % updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update creator commission", description: e.message, variant: "destructive" }),
+  });
+
+  const setCreatorPayoutMethodsMutation = useMutation({
+    mutationFn: async (methods: string[]) => {
+      const res = await apiRequest("PATCH", "/api/config/creator-payout-methods", { methods });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Creator payout methods updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
   });
 
   const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
@@ -354,6 +383,7 @@ export default function StaffAdmin() {
   const [newPlatform, setNewPlatform] = useState("");
   const [editingPlatforms, setEditingPlatforms] = useState<string[] | null>(null);
   const activePlatforms = editingPlatforms || platformsList;
+  const [creatorCommissionInput, setCreatorCommissionInput] = useState<string>("");
 
   const updatePlatformsMutation = useMutation({
     mutationFn: async (platforms: string[]) => {
@@ -500,6 +530,10 @@ export default function StaffAdmin() {
             <span className="hidden sm:inline">Management</span>
             <span className="sm:hidden">Mgmt</span>
           </TabsTrigger>
+          <TabsTrigger value="creators" className="gap-1.5" data-testid="tab-creators">
+            <Star className="w-3.5 h-3.5" />
+            Creators
+          </TabsTrigger>
           {isOwner && (
             <TabsTrigger value="system" className="gap-1.5" data-testid="tab-system">
               <Settings className="w-3.5 h-3.5" />
@@ -510,6 +544,45 @@ export default function StaffAdmin() {
 
         <TabsContent value="operations" className="mt-5">
           <OperationsContent embedded initialLinkOrderId={linkOrderIdFromUrl} />
+        </TabsContent>
+
+        <TabsContent value="creators" className="mt-5 space-y-5">
+          <FadeInUp>
+            <Card className="border border-border bg-card overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Star className="w-5 h-5 text-emerald-400" />
+                  Creators
+                  <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">{creatorsList.length}</Badge>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Creator codes and linked socials. Use these for referral attribution and payouts (Business Wallet → Creator).</p>
+              </CardHeader>
+              <CardContent>
+                {creatorsList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No creators yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {creatorsList.map((c: any) => (
+                      <div key={c.id} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{c.displayName}</p>
+                          <code className="text-sm text-emerald-400 font-mono">{c.code}</code>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {c.youtubeUrl && <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-red-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> YouTube</a>}
+                          {c.twitchUrl && <a href={c.twitchUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Twitch</a>}
+                          {c.tiktokUrl && <a href={c.tiktokUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-pink-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> TikTok</a>}
+                          {c.instagramUrl && <a href={c.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-rose-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Instagram</a>}
+                          {c.xUrl && <a href={c.xUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> X</a>}
+                          {!c.youtubeUrl && !c.twitchUrl && !c.tiktokUrl && !c.instagramUrl && !c.xUrl && <span className="text-xs text-muted-foreground">No socials linked</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </FadeInUp>
         </TabsContent>
 
         <TabsContent value="management" className="mt-5 space-y-5 sm:space-y-6">
@@ -1778,6 +1851,95 @@ export default function StaffAdmin() {
               </Card>
             </FadeInUp>
 
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-creator-commission">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                      <Percent className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    Creator Commission
+                    <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                      {queueConfig?.creatorCommissionPercent ?? 10}%
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">Commission rate applied to creator codes when orders are completed. Orders can be linked to a creator code when creating or editing an order (staff).</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      className="w-20"
+                      value={creatorCommissionInput !== "" ? creatorCommissionInput : (queueConfig?.creatorCommissionPercent ?? 10)}
+                      onChange={(e) => setCreatorCommissionInput(e.target.value)}
+                      onBlur={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+                          setCreatorCommissionMutation.mutate(v);
+                          setCreatorCommissionInput("");
+                        }
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        const v = parseFloat(creatorCommissionInput || String(queueConfig?.creatorCommissionPercent ?? 10));
+                        if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+                          setCreatorCommissionMutation.mutate(v);
+                          setCreatorCommissionInput("");
+                        }
+                      }}
+                      disabled={setCreatorCommissionMutation.isPending}
+                    >
+                      {setCreatorCommissionMutation.isPending ? "Saving…" : "Save"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-creator-payout-methods">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    Creator Payout Methods
+                    <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                      {(queueConfig?.creatorPayoutMethods as string[] | undefined)?.length ?? 1} enabled
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">Choose which payout methods creators can use when requesting commission payouts. PayPal is available now; more options can be added in code and enabled here later.</p>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(queueConfig?.creatorPayoutMethods as string[] | undefined)?.includes("paypal") !== false}
+                        onChange={(e) => {
+                          const current = (queueConfig?.creatorPayoutMethods as string[] | undefined) ?? ["paypal"];
+                          const next = e.target.checked ? [...new Set([...current, "paypal"])] : current.filter((m: string) => m !== "paypal");
+                          setCreatorPayoutMethodsMutation.mutate(next.length ? next : ["paypal"]);
+                        }}
+                        disabled={setCreatorPayoutMethodsMutation.isPending}
+                        className="rounded border-white/20 bg-white/5"
+                      />
+                      <span className="text-sm text-foreground">PayPal</span>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeInUp>
 
             <FadeInUp>
               <Card className="border-0 bg-gradient-to-br from-pink-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-holiday-theme">

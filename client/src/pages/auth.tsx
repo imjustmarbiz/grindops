@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2, BarChart3, ClipboardList, Bell } from "lucide-react";
+import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2, BarChart3, ClipboardList, Bell, Megaphone } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 import spLogo from "@assets/image_1771930905137.png";
@@ -140,6 +140,7 @@ export default function AuthPage() {
                   { role: "staff", label: "Staff", icon: Wrench, color: "from-blue-500/20 to-blue-600/10 hover:from-blue-500/30 hover:to-blue-600/20 border-blue-500/30 text-blue-400" },
                   { role: "grinder", label: "Grinder", icon: Gamepad2, color: "from-[#5865F2]/20 to-[#5865F2]/10 hover:from-[#5865F2]/30 hover:to-[#5865F2]/20 border-[#5865F2]/30 text-[#5865F2]" },
                   { role: "elite", label: "Elite Grinder", icon: Shield, color: "from-cyan-500/20 to-teal-500/10 hover:from-cyan-500/30 hover:to-teal-500/20 border-cyan-500/30 text-cyan-400" },
+                  { role: "creator", label: "DemoCreator", icon: Megaphone, color: "from-emerald-500/20 to-green-600/10 hover:from-emerald-500/30 hover:to-green-600/20 border-emerald-500/30 text-emerald-400" },
                 ].map((dev) => (
                   <a
                     key={dev.role}

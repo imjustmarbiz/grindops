@@ -15,11 +15,11 @@
 
     --card: 240 10% 6%;
     --card-foreground: 210 40% 98%;
-    --card-border: 0 0% 25%;
+    --card-border: 0 0% 14%;
 
     --popover: 240 10% 6%;
     --popover-foreground: 210 40% 98%;
-    --popover-border: 0 0% 25%;
+    --popover-border: 0 0% 14%;
 
     /* Primary - Electric Violet */
     --primary: 262 83% 58%;
@@ -39,7 +39,7 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 22%;
+    --border: 0 0% 14%;
     --input: 0 0% 22%;
     --ring: 262 83% 58%;
 
@@ -49,7 +49,7 @@
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 240 10% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 0 0% 25%;
+    --sidebar-border: 0 0% 14%;
     --sidebar-ring: 262 83% 58%;
 
     --radius: 0.5rem;
@@ -74,8 +74,8 @@
     --accent: 45 100% 51%;
     --accent-foreground: 240 10% 4%;
     --card: 240 12% 7%;
-    --card-border: 0 0% 25%;
-    --border: 0 0% 25%;
+    --card-border: 0 0% 14%;
+    --border: 0 0% 14%;
     --input: 0 0% 25%;
     --sidebar-background: 240 14% 5%;
   }
@@ -105,6 +105,15 @@
     --sidebar-ring: 187 80% 55%;
     --sidebar-accent: 187 35% 12%;
     --sidebar-accent-foreground: 187 80% 55%;
+  }
+
+  .theme-creator {
+    --primary: 142 71% 45%;
+    --ring: 142 71% 45%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-ring: 142 71% 45%;
+    --sidebar-accent: 142 35% 12%;
+    --sidebar-accent-foreground: 142 71% 45%;
   }
 
   .holiday-christmas {
@@ -262,6 +271,11 @@
 }
 
 @layer utilities {
+  /* Use dark border for any white-border classes (cards and panels) */
+  [class*="border-white"] {
+    border-color: hsl(var(--border));
+  }
+
   .font-display {
     font-family: var(--font-display);
   }
@@ -407,4 +421,13 @@
 
 .nba2k-scanline {
   animation: nba2k-scanline 8s linear infinite;
+}
+
+@keyframes badge-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-badge-flash {
+  animation: badge-flash 1.2s ease-in-out infinite;
 }

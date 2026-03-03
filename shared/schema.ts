@@ -130,6 +130,7 @@ export const orders = pgTable("orders", {
   refundToCustomer: numeric("refund_to_customer"),
   refundToGrinder: numeric("refund_to_grinder"),
   refundToCompany: numeric("refund_to_company"),
+  creatorCode: varchar("creator_code"),
 });
 
 export const bids = pgTable("bids", {
@@ -212,6 +213,8 @@ export const queueConfig = pgTable("queue_config", {
   platforms: jsonb("platforms").$type<string[]>().default(["Xbox", "PS5"]),
   holidayTheme: varchar("holiday_theme").default("none"),
   gameTheme: varchar("game_theme").default("none"),
+  creatorCommissionPercent: numeric("creator_commission_percent").notNull().default("10"),
+  creatorPayoutMethods: jsonb("creator_payout_methods").$type<string[]>().default(["paypal"]),
 });
 
 export const orderUpdates = pgTable("order_updates", {
@@ -966,6 +969,26 @@ export const userActivityLogs = pgTable("user_activity_logs", {
 export const insertUserActivityLogSchema = createInsertSchema(userActivityLogs).omit({ createdAt: true });
 export type UserActivityLog = typeof userActivityLogs.$inferSelect;
 export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
+
+export const creators = pgTable("creators", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  code: varchar("code").notNull(),
+  displayName: text("display_name").notNull(),
+  youtubeUrl: text("youtube_url"),
+  twitchUrl: text("twitch_url"),
+  tiktokUrl: text("tiktok_url"),
+  instagramUrl: text("instagram_url"),
+  xUrl: text("x_url"),
+  payoutMethod: text("payout_method"),
+  payoutDetail: text("payout_detail"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCreatorSchema = createInsertSchema(creators).omit({ createdAt: true, updatedAt: true });
+export type Creator = typeof creators.$inferSelect;
+export type InsertCreator = z.infer<typeof insertCreatorSchema>;
 
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";

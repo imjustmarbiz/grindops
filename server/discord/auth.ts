@@ -331,6 +331,7 @@ export function setupDiscordAuth(app: Express) {
       staff: { firstName: "DemoStaff", discordUsername: "demostaff" },
       grinder: { firstName: "DemoGrinder", discordUsername: "demogrinder" },
       elite: { firstName: "DemoElite", discordUsername: "demoelite" },
+      creator: { firstName: "DemoCreator", discordUsername: "democreator" },
     };
     app.get("/api/auth/dev/login", async (req, res) => {
       const role = (req.query.role as string) || "owner";

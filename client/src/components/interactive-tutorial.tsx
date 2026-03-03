@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { staffNavItems, grinderNavItems, getFilteredStaffNavItems } from "@/components/layout";
+import { staffNavItems, grinderNavItems, creatorNavItems, getFilteredStaffNavItems } from "@/components/layout";
 import {
   ChevronRight, ChevronLeft, X, GraduationCap, MousePointerClick, Eye, Zap,
   FileCheck, Gavel, Banknote, LayoutDashboard, Bell, MessageCircle, Brain,
@@ -12,7 +12,7 @@ import {
   BookOpen, ScrollText, Wrench, Package, Award, TrendingUp, ClipboardList,
   FileBarChart, Wallet, DollarSign, UserCheck, Calendar, Shield, Upload,
   Sparkles, LogIn, LogOut, Clock, Monitor, ArrowRight, Timer, Hash,
-  Gamepad2, Video, CircleDot, Activity
+  Gamepad2, Video, CircleDot, Activity, Megaphone,
 } from "lucide-react";
 
 type DemoStep = { label: string; icon: any; color: string };
@@ -1054,6 +1054,58 @@ const grinderPageDescriptions: Record<string, PageMeta> = {
   },
 };
 
+const creatorPageDescriptions: Record<string, PageMeta> = {
+  "/creator": {
+    description: "Your creator dashboard — welcome banner with your code and commission %, KPI cards for Available Balance, Total Earned, Orders with Code, and Paid Out. Recent orders linked to your code and payout requests in one view.",
+    demoSteps: [
+      { label: "Your code and commission % in the welcome banner", icon: Star, color: "text-emerald-400" },
+      { label: "Available Balance — ready to request payout", icon: Banknote, color: "text-green-400" },
+      { label: "Total Earned from completed orders with your code", icon: TrendingUp, color: "text-cyan-400" },
+      { label: "Orders with Code count and Payout history", icon: Package, color: "text-blue-400" },
+    ],
+  },
+  "/creator/promote": {
+    description: "Promote your creator code — link your YouTube, Twitch, TikTok, Instagram, and X profiles. Share your code so fans can use it at checkout; you earn commission on every completed order.",
+    demoSteps: [
+      { label: "Link socials — each platform has its own field", icon: Megaphone, color: "text-red-400" },
+      { label: "Share your code in streams and bios", icon: Star, color: "text-emerald-400" },
+      { label: "Staff see your links in Admin → Creators", icon: Eye, color: "text-blue-400" },
+      { label: "Earn commission when orders use your code", icon: DollarSign, color: "text-green-400" },
+    ],
+  },
+  "/creator/payouts": {
+    description: "Commission payouts — view total paid out, payout history, and request a payout when you have available balance. Staff process payouts from the Business Wallet.",
+    demoSteps: [
+      { label: "Total paid out and payout count", icon: Banknote, color: "text-emerald-400" },
+      { label: "Request payout when balance is available", icon: DollarSign, color: "text-green-400" },
+      { label: "Payout history with status (pending/paid)", icon: ClipboardList, color: "text-blue-400" },
+      { label: "Staff process from Business Wallet", icon: Shield, color: "text-cyan-400" },
+    ],
+  },
+  "/creator/rules": {
+    description: "Rules & Policy — program guidelines, code of conduct, and referral terms. Stay compliant and know what's expected of creators.",
+    demoSteps: [
+      { label: "Program guidelines and eligibility", icon: ScrollText, color: "text-blue-400" },
+      { label: "Code of conduct for creators", icon: Shield, color: "text-amber-400" },
+      { label: "Referral terms and commission rules", icon: FileCheck, color: "text-green-400" },
+    ],
+  },
+  "/creator/notifications": {
+    description: "Your notifications — updates about payouts, program changes, and messages from staff. Keep track of what matters for your creator account.",
+    demoSteps: [
+      { label: "Payout and program updates", icon: Bell, color: "text-blue-400" },
+      { label: "Read and dismiss notifications", icon: CheckCircle2, color: "text-green-400" },
+    ],
+  },
+  "/creator/todo": {
+    description: "Your to-do list — action items and tasks from staff. Complete any required steps to keep your creator account in good standing.",
+    demoSteps: [
+      { label: "Tasks and action items", icon: ClipboardList, color: "text-blue-400" },
+      { label: "Mark items complete as you go", icon: CheckCircle2, color: "text-emerald-400" },
+    ],
+  },
+};
+
 interface TutorialStep {
   id: string;
   title: string;
@@ -1070,17 +1122,20 @@ interface TutorialStep {
 function buildTutorialSteps(
   navItems: typeof staffNavItems,
   pageDescriptions: Record<string, PageMeta>,
-  isStaff: boolean
+  isStaff: boolean,
+  isCreator?: boolean
 ): TutorialStep[] {
   const steps: TutorialStep[] = [];
 
   steps.push({
     id: "welcome",
-    title: isStaff ? "Welcome to GrindOps Command Center" : "Welcome to GrindOps",
-    description: isStaff
+    title: isCreator ? "Welcome to the Creator Dashboard" : isStaff ? "Welcome to GrindOps Command Center" : "Welcome to GrindOps",
+    description: isCreator
+      ? "Your hub for sharing your creator code and earning commission. This tour covers your Overview with KPIs, Promote (link socials), Payouts, and more. Use arrow keys or the buttons to navigate."
+      : isStaff
       ? "Your centralized dashboard for managing the entire gaming service operation. This tour will walk you through every tool at your disposal. Use arrow keys or the buttons to navigate."
       : "Your command center for managing gaming service orders. This quick tour will show you how everything works so you can start earning right away. Use arrow keys or buttons to navigate.",
-    icon: isStaff ? Crown : Sparkles,
+    icon: isCreator ? Star : isStaff ? Crown : Sparkles,
     targetArea: "full",
     position: "center",
   });
@@ -1115,17 +1170,24 @@ function buildTutorialSteps(
   steps.push({
     id: "notifications-header",
     title: "Quick Notifications",
-    description: "The bell icon in the header shows a quick preview of your latest notifications. Tap it for instant access without leaving your current page.",
+    description: isCreator
+      ? "The bell icon in the header shows your notifications. Tap it to see updates about payouts and program messages."
+      : "The bell icon in the header shows a quick preview of your latest notifications. Tap it for instant access without leaving your current page.",
     icon: Bell,
     targetSelector: '[data-testid="button-notifications"]',
     targetArea: "header",
     position: "bottom",
-    demoSteps: [
-      { label: "Unread count badge appears on bell", icon: Bell, color: "text-yellow-400" },
-      { label: "Click to expand notification panel", icon: Eye, color: "text-blue-400" },
-      { label: "Quick-read without leaving your page", icon: CheckCircle2, color: "text-green-400" },
-      { label: "Sound alerts for urgent notifications", icon: Zap, color: "text-purple-400" },
-    ],
+    demoSteps: isCreator
+      ? [
+          { label: "Payout and program updates", icon: Bell, color: "text-yellow-400" },
+          { label: "Click to open notification panel", icon: Eye, color: "text-blue-400" },
+        ]
+      : [
+          { label: "Unread count badge appears on bell", icon: Bell, color: "text-yellow-400" },
+          { label: "Click to expand notification panel", icon: Eye, color: "text-blue-400" },
+          { label: "Quick-read without leaving your page", icon: CheckCircle2, color: "text-green-400" },
+          { label: "Sound alerts for urgent notifications", icon: Zap, color: "text-purple-400" },
+        ],
   });
 
   steps.push({
@@ -1146,8 +1208,10 @@ function buildTutorialSteps(
 
   steps.push({
     id: "complete",
-    title: isStaff ? "You're All Set!" : "You're Ready to Grind!",
-    description: isStaff
+    title: isCreator ? "You're All Set!" : isStaff ? "You're All Set!" : "You're Ready to Grind!",
+    description: isCreator
+      ? "You've seen the creator dashboard. Share your code on Promote, track earnings on Overview, and request payouts when you have balance. Good luck!"
+      : isStaff
       ? "You've seen every tool in your arsenal. Dive into the Command Center and start managing operations. Check the Operations Guide for detailed workflows!"
       : "That covers every page! Check Available Orders to find your first job, or explore the Operations Guide for detailed tips. Good luck out there!",
     icon: Rocket,
@@ -1355,7 +1419,8 @@ function clearTutorialSession() {
 export function TutorialTrigger() {
   const { user } = useAuth();
   const isStaff = user?.role === "staff" || user?.role === "owner";
-  const storageKey = `grindops-tutorial-${isStaff ? "staff" : "grinder"}-v2-completed`;
+  const isCreator = user?.role === "creator";
+  const storageKey = `grindops-tutorial-${isCreator ? "creator" : isStaff ? "staff" : "grinder"}-v2-completed`;
   
   const [showReplayLabel, setShowReplayLabel] = useState(false);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(true);
@@ -1419,8 +1484,10 @@ function useThemeColor() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
   const isStaff = user?.role === "staff";
+  const isCreator = user?.role === "creator";
   if (isOwner) return { stroke: "hsl(0, 72%, 50%)", glow: "rgba(239, 68, 68, 0.4)" };
   if (isStaff) return { stroke: "hsl(193, 55%, 55%)", glow: "rgba(76, 173, 208, 0.4)" };
+  if (isCreator) return { stroke: "hsl(142, 71%, 45%)", glow: "rgba(43, 183, 103, 0.4)" };
   return { stroke: "hsl(262, 83%, 58%)", glow: "rgba(124, 58, 237, 0.4)" };
 }
 
@@ -1428,6 +1495,7 @@ export function InteractiveTutorial() {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
   const isStaff = user?.role === "staff" || user?.role === "owner";
+  const isCreator = user?.role === "creator";
   const dialogRef = useRef<HTMLDivElement>(null);
   const themeColor = useThemeColor();
 
@@ -1436,14 +1504,15 @@ export function InteractiveTutorial() {
 
   const steps = useMemo(
     () => buildTutorialSteps(
-      isStaff ? getFilteredStaffNavItems(isOwner, userId) : grinderNavItems,
-      isStaff ? staffPageDescriptions : grinderPageDescriptions,
-      isStaff
+      isCreator ? creatorNavItems : isStaff ? getFilteredStaffNavItems(isOwner, userId) : grinderNavItems,
+      isCreator ? creatorPageDescriptions : isStaff ? staffPageDescriptions : grinderPageDescriptions,
+      isStaff,
+      isCreator
     ),
-    [isStaff, isOwner, userId]
+    [isStaff, isCreator, isOwner, userId]
   );
 
-  const storageKey = `grindops-tutorial-${isStaff ? "staff" : "grinder"}-v2-completed`;
+  const storageKey = `grindops-tutorial-${isCreator ? "creator" : isStaff ? "staff" : "grinder"}-v2-completed`;
 
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);

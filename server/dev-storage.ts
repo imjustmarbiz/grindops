@@ -20,7 +20,7 @@ import type {
   BusinessWallet, InsertBusinessWallet, WalletTransaction, InsertWalletTransaction,
   BusinessPayout, InsertBusinessPayout, WalletTransfer, InsertWalletTransfer,
   OrderPaymentLink, InsertOrderPaymentLink, UserActivityLog, InsertUserActivityLog,
-  AnalyticsSummary, SuggestionResult, DashboardStats,
+  Creator, InsertCreator, AnalyticsSummary, SuggestionResult, DashboardStats,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 
@@ -43,6 +43,8 @@ const DEFAULT_QUEUE_CONFIG: QueueConfig = {
   marginWeight: '0.20', capacityWeight: '0.15', tierWeight: '0.10', fairnessWeight: '0.15',
   newGrinderWeight: '0.10', reliabilityWeight: '0.10', qualityWeight: '0.10', riskWeight: '0.10',
   emergencyBoost: '0.25', largeOrderThreshold: '500', largeOrderEliteBoost: '0.15',
+  creatorCommissionPercent: '10',
+  creatorPayoutMethods: ['paypal'],
   dailyCheckupsEnabled: true, mgtBotEnabled: true, maintenanceMode: false, maintenanceModeSetBy: null,
   customerUpdatesEnabled: true, embedThumbnailUrl: null, earlyAccessMode: false,
   customPayoutRoles: null, customPayoutCategories: null, platforms: ['Xbox', 'PS5'],
@@ -372,4 +374,24 @@ export class DevStorage implements IStorage {
 
   async getUserActivityLogs() { return []; }
   async createUserActivityLog(l: InsertUserActivityLog) { return l as UserActivityLog; }
+
+  private devCreators = new Map<string, Creator>();
+  async getCreatorByUserId(userId: string): Promise<Creator | undefined> {
+    return Array.from(this.devCreators.values()).find((c) => c.userId === userId);
+  }
+  async createCreator(c: InsertCreator): Promise<Creator> {
+    const created = { ...c, createdAt: new Date(), updatedAt: new Date() } as Creator;
+    this.devCreators.set(c.id, created);
+    return created;
+  }
+  async updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator | undefined> {
+    const existing = this.devCreators.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...data, updatedAt: new Date() } as Creator;
+    this.devCreators.set(id, updated);
+    return updated;
+  }
+  async getCreators(): Promise<Creator[]> {
+    return Array.from(this.devCreators.values());
+  }
 }

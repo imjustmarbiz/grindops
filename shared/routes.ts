@@ -96,6 +96,7 @@ export const api = {
         assignedGrinderId: z.string().nullable().optional(),
         mgtOrderNumber: z.number().nullable().optional(),
         customerPrice: z.string().optional(),
+        creatorCode: z.string().nullable().optional(),
       }),
     },
     linkTicket: {
