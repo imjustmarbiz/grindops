@@ -8,12 +8,12 @@ const { Pool } = pg;
 const isProduction = process.env.NODE_ENV === "production";
 
 const connectionString = isProduction
-  ? process.env.DATABASE_URL_PROD
-  : process.env.DATABASE_URL_DEV;
+  ? (process.env.DATABASE_URL_PROD || process.env.DATABASE_URL)
+  : (process.env.DATABASE_URL_DEV || process.env.DATABASE_URL);
 
 if (!connectionString) {
   throw new Error(
-    `Database URL not set for ${isProduction ? "production" : "development"}`
+    `Database URL not set for ${isProduction ? "production" : "development"}. Set DATABASE_URL, or DATABASE_URL_DEV / DATABASE_URL_PROD in .env or Secrets.`
   );
 }
 
