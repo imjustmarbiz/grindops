@@ -401,7 +401,7 @@ export default function Dashboard() {
       <FadeInUp>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" />
+          <img src={spLogo} alt="SP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain logo-glow" />
           <div>
             <h1 className="text-xl sm:text-3xl font-display font-bold text-glow" data-testid="text-page-title">
               {isOwner ? "Owner Command Center" : "Staff Command Center"}

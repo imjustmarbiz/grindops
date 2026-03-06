@@ -128,7 +128,7 @@ export default function CustomerReviewPage() {
     <div className="min-h-screen bg-[#07070b] text-foreground flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex items-center justify-center gap-3 mb-2">
-          <img src={spLogo} alt="Logo" className="w-8 h-8 object-contain" />
+          <img src={spLogo} alt="Logo" className="w-8 h-8 object-contain logo-glow" />
           <span className="font-bold text-lg tracking-tight text-white">GrindOps</span>
         </div>
 

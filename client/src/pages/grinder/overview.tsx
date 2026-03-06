@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import {
   TrendingUp, FileCheck, Ban, X, Lightbulb, Clock, CheckCircle, Gavel, Target, BarChart3,
-  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight, Coins, Landmark, Globe, MessageSquare
+  Signal, ScrollText, Sparkles, Crown, ShieldCheck, ChevronRight, Coins, Landmark, Globe, MessageSquare, Star
 } from "lucide-react";
 import { FaXbox } from "react-icons/fa6";
 import { SiPlaystation } from "react-icons/si";
@@ -228,8 +228,14 @@ export default function GrinderOverview() {
     <AnimatedPage className="space-y-6">
       <FadeInUp>
       <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${eliteGradient} border ${eliteBorder} ${eliteGlow}`}>
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/[0.02] -translate-y-16 translate-x-16" />
-        <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6 relative">
+        <div
+          className="absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
+        >
+          <div className={`absolute inset-0 rounded-full flex items-center justify-center opacity-30 ${isElite ? "bg-cyan-500/20" : "bg-[#5865F2]/20"}`}>
+            {isElite ? <Crown className="w-32 h-32 text-cyan-400" /> : <Star className="w-32 h-32 text-[#8b9aff]" />}
+          </div>
+        </div>
+        <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10">
           <Avatar className={`h-20 w-20 border-2 ${isElite ? "border-cyan-500/40" : "border-[#5865F2]/40"} shadow-lg`}>
             <AvatarImage src={avatarUrl} />
             <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
@@ -406,24 +412,31 @@ export default function GrinderOverview() {
               { label: "Total Bids", value: stats.totalBids, icon: Gavel, gradient: "bg-gradient-to-br from-purple-500/[0.08] via-background to-purple-500/[0.04]", iconBg: "bg-purple-500/15", textColor: "text-purple-400", path: "/grinder/bids" },
               { label: "Pending Bids", value: stats.pendingBids, icon: Target, gradient: "bg-gradient-to-br from-blue-500/[0.08] via-background to-blue-500/[0.04]", iconBg: "bg-blue-500/15", textColor: "text-blue-400", path: "/grinder/bids" },
               { label: "Order Limit", value: `${grinder.activeOrders}/${grinder.capacity}`, icon: BarChart3, gradient: isElite ? "bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-500/[0.04]" : "bg-gradient-to-br from-[#5865F2]/[0.08] via-background to-[#5865F2]/[0.04]", iconBg: isElite ? "bg-cyan-500/15" : "bg-[#5865F2]/15", textColor: isElite ? "text-cyan-400" : "text-[#5865F2]", path: "/grinder/queue" },
-            ].map((stat, i) => (
-              <Link key={i} href={stat.path}>
-                <Card className={`${stat.gradient} border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300 cursor-pointer`}>
-                  <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/[0.02] -translate-y-6 translate-x-6" />
-                  <CardContent className="p-4 sm:p-5">
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              const isLast = i === 4;
+              return (
+              <Link key={i} href={stat.path} className={`block ${isLast ? "col-span-2 lg:col-span-1" : ""}`}>
+                <Card className={`${stat.gradient} border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full`}>
+                  <div
+                    className="absolute top-0 right-0 w-32 h-32 -translate-y-4 translate-x-4 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
+                  >
+                    <div className={`absolute inset-0 rounded-full ${stat.iconBg} flex items-center justify-center opacity-30`}>
+                      <Icon className={`w-16 h-16 ${stat.textColor}`} />
+                    </div>
+                  </div>
+                  <CardContent className="p-4 sm:p-5 relative z-10">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <p className={`text-xl sm:text-2xl font-bold ${stat.textColor} tracking-tight`} data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>{stat.value}</p>
-                        <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-white/40">{stat.label}</p>
-                      </div>
-                      <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${stat.iconBg} flex items-center justify-center backdrop-blur-sm`}>
-                        <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.textColor}`} />
+                        <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-white">{stat.label}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </Link>
-            ))}
+            );
+            })}
           </div>
       </FadeInUp>
 

@@ -306,7 +306,13 @@
   }
   
   .text-glow {
-    text-shadow: 0 0 20px hsla(var(--primary)/0.5);
+    /* Subtle neutral glow on dark; avoids primary-colored halo that reads as highlight */
+    text-shadow: 0 0 24px rgba(255, 255, 255, 0.08), 0 0 8px rgba(255, 255, 255, 0.04);
+  }
+
+  /* Logo glow: consistent amber/gold glow for SP logo on all dashboards */
+  .logo-glow {
+    filter: drop-shadow(0 0 6px rgba(234, 179, 8, 0.5)) drop-shadow(0 0 16px rgba(234, 179, 8, 0.28));
   }
 }
 

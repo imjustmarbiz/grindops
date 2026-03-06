@@ -1,9 +1,10 @@
-import { db } from "./db";
+import { db, pool } from "./db";
 import { 
   services, grinders, orders, bids, assignments, queueConfig, auditLogs,
   orderUpdates, payoutRequests, eliteRequests, staffAlerts, strikeLogs, grinderPayoutMethods,
   activityCheckpoints, performanceReports, messageThreads, threadParticipants, messages, notifications, events,
   patchNotes, customerReviews, orderClaimRequests, reviewAccessCodes, grinderTasks, grinderBadges, staffBadges, staffTasks, staffActionDismissals,
+  creatorBadges,
   deletionRequests, finePayments, businessWallets, walletTransactions, businessPayouts, walletTransfers, orderPaymentLinks,
   type Service, type InsertService,
   type Grinder, type InsertGrinder,
@@ -34,6 +35,7 @@ import {
   type GrinderTask, type InsertGrinderTask,
   type GrinderBadge, type InsertGrinderBadge,
   type StaffBadge, type InsertStaffBadge,
+  type CreatorBadge, type InsertCreatorBadge,
   type StaffTask, type InsertStaffTask, type StaffActionDismissal,
   type DeletionRequest, type InsertDeletionRequest,
   type FinePayment, type InsertFinePayment,
@@ -44,6 +46,7 @@ import {
   type OrderPaymentLink, type InsertOrderPaymentLink,
   type UserActivityLog, type InsertUserActivityLog, userActivityLogs,
   type Creator, type InsertCreator, creators,
+  type CreatorPayoutDetailRequest, type InsertCreatorPayoutDetailRequest, creatorPayoutDetailRequests,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -199,6 +202,10 @@ export interface IStorage {
   createStaffBadge(badge: InsertStaffBadge): Promise<StaffBadge>;
   deleteStaffBadge(id: string): Promise<boolean>;
 
+  getCreatorBadges(creatorId?: string): Promise<CreatorBadge[]>;
+  createCreatorBadge(badge: InsertCreatorBadge): Promise<CreatorBadge>;
+  deleteCreatorBadge(id: string): Promise<boolean>;
+
   getStaffTasks(assignedTo?: string): Promise<StaffTask[]>;
   createStaffTask(task: InsertStaffTask): Promise<StaffTask>;
   updateStaffTask(id: string, data: Partial<StaffTask>): Promise<StaffTask | undefined>;
@@ -241,6 +248,11 @@ export interface IStorage {
   createCreator(creator: InsertCreator): Promise<Creator>;
   updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator | undefined>;
   getCreators(): Promise<Creator[]>;
+
+  getCreatorPayoutDetailRequests(creatorId?: string): Promise<CreatorPayoutDetailRequest[]>;
+  getCreatorPayoutDetailRequest(id: string): Promise<CreatorPayoutDetailRequest | undefined>;
+  createCreatorPayoutDetailRequest(data: InsertCreatorPayoutDetailRequest): Promise<CreatorPayoutDetailRequest>;
+  updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -1496,6 +1508,43 @@ export class DatabaseStorage implements IStorage {
     return (result?.rowCount ?? 0) > 0;
   }
 
+  async getCreatorBadges(creatorId?: string): Promise<CreatorBadge[]> {
+    const run = () =>
+      creatorId
+        ? db.select().from(creatorBadges).where(eq(creatorBadges.creatorId, creatorId)).orderBy(desc(creatorBadges.createdAt))
+        : db.select().from(creatorBadges).orderBy(desc(creatorBadges.createdAt));
+    try {
+      return await run();
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      if (e.code === "42P01") {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS creator_badges (
+            id varchar PRIMARY KEY NOT NULL,
+            creator_id varchar NOT NULL REFERENCES creators(id),
+            badge_id varchar NOT NULL,
+            awarded_by varchar,
+            awarded_by_name text,
+            note text,
+            created_at timestamp DEFAULT now() NOT NULL
+          )
+        `);
+        return await run();
+      }
+      throw err;
+    }
+  }
+
+  async createCreatorBadge(badge: InsertCreatorBadge): Promise<CreatorBadge> {
+    const [created] = await db.insert(creatorBadges).values(badge).returning();
+    return created;
+  }
+
+  async deleteCreatorBadge(id: string): Promise<boolean> {
+    const result = await db.delete(creatorBadges).where(eq(creatorBadges.id, id));
+    return (result?.rowCount ?? 0) > 0;
+  }
+
   async getStaffTasks(assignedTo?: string): Promise<StaffTask[]> {
     if (assignedTo) {
       return await db.select().from(staffTasks).where(eq(staffTasks.assignedTo, assignedTo)).orderBy(desc(staffTasks.createdAt));
@@ -1700,6 +1749,27 @@ export class DatabaseStorage implements IStorage {
 
   async getCreators(): Promise<Creator[]> {
     return await db.select().from(creators).orderBy(creators.displayName);
+  }
+
+  async getCreatorPayoutDetailRequests(creatorId?: string): Promise<CreatorPayoutDetailRequest[]> {
+    const base = db.select().from(creatorPayoutDetailRequests).orderBy(desc(creatorPayoutDetailRequests.createdAt));
+    if (creatorId) return base.where(eq(creatorPayoutDetailRequests.creatorId, creatorId));
+    return base;
+  }
+
+  async getCreatorPayoutDetailRequest(id: string): Promise<CreatorPayoutDetailRequest | undefined> {
+    const [row] = await db.select().from(creatorPayoutDetailRequests).where(eq(creatorPayoutDetailRequests.id, id)).limit(1);
+    return row;
+  }
+
+  async createCreatorPayoutDetailRequest(data: InsertCreatorPayoutDetailRequest): Promise<CreatorPayoutDetailRequest> {
+    const [created] = await db.insert(creatorPayoutDetailRequests).values(data).returning();
+    return created;
+  }
+
+  async updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined> {
+    const [updated] = await db.update(creatorPayoutDetailRequests).set(data).where(eq(creatorPayoutDetailRequests.id, id)).returning();
+    return updated;
   }
 }
 

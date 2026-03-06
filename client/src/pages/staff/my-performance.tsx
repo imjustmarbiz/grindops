@@ -11,7 +11,7 @@ import type { StaffBadge as StaffBadgeType } from "@shared/schema";
 import {
   Loader2, Crown, Shield, Calendar, Activity, ClipboardList, Gavel,
   DollarSign, ListOrdered, BarChart3, Zap, Clock, Target, TrendingUp,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, Star
 } from "lucide-react";
 
 function formatLabel(action: string) {
@@ -106,11 +106,15 @@ export default function MyPerformance() {
             ? "border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30"
             : "border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5"
         }`}>
-          <div className={`absolute top-0 right-0 w-64 h-64 rounded-full -translate-y-16 translate-x-16 ${
-            isOwner ? "bg-red-500/[0.06]" : "bg-primary/[0.04]"
-          }`} />
+          <div
+            className="absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
+          >
+            <div className={`absolute inset-0 rounded-full flex items-center justify-center opacity-30 ${isOwner ? "bg-red-500/20" : "bg-primary/20"}`}>
+              <Star className={`w-32 h-32 ${isOwner ? "text-red-400" : "text-primary"}`} />
+            </div>
+          </div>
 
-          <div className="relative">
+          <div className="relative z-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <div className="relative">
                 <Avatar className={`h-14 w-14 sm:h-20 sm:w-20 border-2 shadow-lg ${

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { copyToClipboard as copyText } from "@/lib/utils";
 import type { CustomerReview, ReviewAccessCode } from "@shared/schema";
 import {
   Star, Check, X, Send, MessageSquare, ExternalLink,
@@ -191,8 +192,7 @@ export default function GrinderReviews() {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied to clipboard" });
+    copyText(text).then((ok) => ok && toast({ title: "Copied to clipboard" }));
   };
 
   const pendingRequests = accessCodes.filter(c => c.status === "pending_approval");

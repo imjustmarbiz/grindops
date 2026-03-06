@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2, BarChart3, ClipboardList, Bell, Megaphone } from "lucide-react";
+import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2, BarChart3, ClipboardList, Bell, Megaphone, Star } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 import spLogo from "@assets/image_1771930905137.png";
@@ -30,7 +30,7 @@ export default function AuthPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-16">
-            <img src={spLogo} alt="SP Logo" className="w-14 h-14 object-contain drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />
+            <img src={spLogo} alt="SP Logo" className="w-14 h-14 object-contain logo-glow" />
             <span className="font-display font-bold text-3xl tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
               GrindOps
             </span>
@@ -86,7 +86,7 @@ export default function AuthPage() {
           className="w-full max-w-md space-y-8 relative z-10"
         >
           <div className="flex items-center gap-3 mb-12 lg:hidden justify-center">
-            <img src={spLogo} alt="SP Logo" className="w-11 h-11 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
+            <img src={spLogo} alt="SP Logo" className="w-11 h-11 object-contain logo-glow" />
             <span className="font-display font-bold text-2xl tracking-tight text-white">GrindOps</span>
           </div>
 
@@ -136,11 +136,11 @@ export default function AuthPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { role: "owner", label: "Owner", icon: Crown, color: "from-amber-500/20 to-amber-600/10 hover:from-amber-500/30 hover:to-amber-600/20 border-amber-500/30 text-amber-400" },
+                  { role: "owner", label: "Owner", icon: Crown, color: "from-red-500/20 to-amber-950/30 hover:from-red-500/30 hover:to-amber-900/20 border-red-500/30 text-red-400" },
                   { role: "staff", label: "Staff", icon: Wrench, color: "from-blue-500/20 to-blue-600/10 hover:from-blue-500/30 hover:to-blue-600/20 border-blue-500/30 text-blue-400" },
                   { role: "grinder", label: "Grinder", icon: Gamepad2, color: "from-[#5865F2]/20 to-[#5865F2]/10 hover:from-[#5865F2]/30 hover:to-[#5865F2]/20 border-[#5865F2]/30 text-[#5865F2]" },
                   { role: "elite", label: "Elite Grinder", icon: Shield, color: "from-cyan-500/20 to-teal-500/10 hover:from-cyan-500/30 hover:to-teal-500/20 border-cyan-500/30 text-cyan-400" },
-                  { role: "creator", label: "DemoCreator", icon: Megaphone, color: "from-emerald-500/20 to-green-600/10 hover:from-emerald-500/30 hover:to-green-600/20 border-emerald-500/30 text-emerald-400" },
+                  { role: "creator", label: "Creator", icon: Star, color: "from-emerald-500/20 to-green-600/10 hover:from-emerald-500/30 hover:to-green-600/20 border-emerald-500/30 text-emerald-400" },
                 ].map((dev) => (
                   <a
                     key={dev.role}

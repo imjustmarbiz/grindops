@@ -10,7 +10,7 @@ import { sendCustomerUpdate, sendCompletionApprovalRequest } from "./discord/cus
 import { generateOrderDisplayId, generateBidDisplayId, generateAssignmentDisplayId, generateUpdateDisplayId, generatePayoutDisplayId, generateStrikeDisplayId, generateFineDisplayId, generateEventDisplayId, generateReviewDisplayId, generateClaimDisplayId, generateShortId } from "./display-id";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
-import { siteAlerts, GRINDER_ROLES } from "@shared/schema";
+import { siteAlerts, GRINDER_ROLES, ALL_CREATOR_BADGE_IDS, CREATOR_AUTO_BADGE_IDS } from "@shared/schema";
 import { or, eq, sql, desc, and } from "drizzle-orm";
 import multer from "multer";
 
@@ -3978,10 +3978,13 @@ export async function registerRoutes(
         payoutMethod: null,
         payoutDetail: null,
       });
+    } else if (process.env.NODE_ENV === "development" && sessionUser?.firstName && creator.displayName !== sessionUser.firstName) {
+      creator = await storage.updateCreator(creator.id, { displayName: sessionUser.firstName }) ?? creator;
     }
+    const displayName = process.env.NODE_ENV === "development" && sessionUser?.firstName ? sessionUser.firstName : creator.displayName;
     const config = await storage.getQueueConfig();
     const creatorPayoutMethods = Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"];
-    res.json({ creator, creatorPayoutMethods });
+    res.json({ creator: { ...creator, displayName }, creatorPayoutMethods });
   });
 
   app.get("/api/creator/dashboard", isAuthenticated, async (req, res) => {
@@ -4006,7 +4009,11 @@ export async function registerRoutes(
         payoutMethod: null,
         payoutDetail: null,
       });
+    } else if (process.env.NODE_ENV === "development" && sessionUser?.firstName && creator.displayName !== sessionUser.firstName) {
+      creator = await storage.updateCreator(creator.id, { displayName: sessionUser.firstName }) ?? creator;
     }
+    const displayName = process.env.NODE_ENV === "development" && sessionUser?.firstName ? sessionUser.firstName : creator.displayName;
+    const creatorForResponse = { ...creator, displayName };
     const config = await storage.getQueueConfig();
     const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
@@ -4027,8 +4034,63 @@ export async function registerRoutes(
       status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
       createdAt: p.createdAt,
     }));
+    const creatorBadgesList = await storage.getCreatorBadges(creator.id);
+    const hasBadge = (id: string) => creatorBadgesList.some((b: any) => b.badgeId === id);
+    const linkedCount = [creator.youtubeUrl, creator.twitchUrl, creator.tiktokUrl, creator.instagramUrl, creator.xUrl].filter(Boolean).length;
+    const createdDays = creator.createdAt ? Math.floor((Date.now() - new Date(creator.createdAt).getTime()) / 86400000) : 0;
+    const paidCount = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").length;
+    const toAward: { id: string }[] = [];
+    if (!hasBadge("creator-base")) toAward.push({ id: "creator-base" });
+    if (!hasBadge("creator-star")) toAward.push({ id: "creator-star" });
+    if (creator.youtubeUrl && !hasBadge("creator-youtube")) toAward.push({ id: "creator-youtube" });
+    if (creator.twitchUrl && !hasBadge("creator-twitch")) toAward.push({ id: "creator-twitch" });
+    if (creator.tiktokUrl && !hasBadge("creator-tiktok")) toAward.push({ id: "creator-tiktok" });
+    if (creator.instagramUrl && !hasBadge("creator-instagram")) toAward.push({ id: "creator-instagram" });
+    if (creator.xUrl && !hasBadge("creator-x")) toAward.push({ id: "creator-x" });
+    if (completedWithCode.length >= 1 && !hasBadge("creator-first-order")) toAward.push({ id: "creator-first-order" });
+    if (completedWithCode.length >= 5 && !hasBadge("creator-orders-5")) toAward.push({ id: "creator-orders-5" });
+    if (completedWithCode.length >= 10 && !hasBadge("creator-orders-10")) toAward.push({ id: "creator-orders-10" });
+    if (completedWithCode.length >= 25 && !hasBadge("creator-orders-25")) toAward.push({ id: "creator-orders-25" });
+    if (completedWithCode.length >= 50 && !hasBadge("creator-orders-50")) toAward.push({ id: "creator-orders-50" });
+    if (completedWithCode.length >= 100 && !hasBadge("creator-orders-100")) toAward.push({ id: "creator-orders-100" });
+    if (paidCount >= 1 && !hasBadge("creator-first-payout")) toAward.push({ id: "creator-first-payout" });
+    if (paidCount >= 5 && !hasBadge("creator-payouts-5")) toAward.push({ id: "creator-payouts-5" });
+    if (paidCount >= 10 && !hasBadge("creator-payouts-10")) toAward.push({ id: "creator-payouts-10" });
+    if (totalEarned >= 100 && !hasBadge("creator-earned-100")) toAward.push({ id: "creator-earned-100" });
+    if (totalEarned >= 500 && !hasBadge("creator-earned-500")) toAward.push({ id: "creator-earned-500" });
+    if (totalEarned >= 1000 && !hasBadge("creator-earned-1k")) toAward.push({ id: "creator-earned-1k" });
+    if (totalEarned >= 5000 && !hasBadge("creator-earned-5k")) toAward.push({ id: "creator-earned-5k" });
+    if (totalEarned >= 10000 && !hasBadge("creator-earned-10k")) toAward.push({ id: "creator-earned-10k" });
+    if (totalEarned >= 25000 && !hasBadge("creator-earned-25k")) toAward.push({ id: "creator-earned-25k" });
+    if (totalEarned >= 50000 && !hasBadge("creator-earned-50k")) toAward.push({ id: "creator-earned-50k" });
+    if (totalEarned >= 100000 && !hasBadge("creator-earned-100k")) toAward.push({ id: "creator-earned-100k" });
+    if (availableBalance >= 100 && !hasBadge("creator-balance-100")) toAward.push({ id: "creator-balance-100" });
+    if (createdDays >= 7 && !hasBadge("creator-7d")) toAward.push({ id: "creator-7d" });
+    if (createdDays >= 30 && !hasBadge("creator-30d")) toAward.push({ id: "creator-30d" });
+    if (createdDays >= 90 && !hasBadge("creator-90d")) toAward.push({ id: "creator-90d" });
+    if (createdDays >= 365 && !hasBadge("creator-365d")) toAward.push({ id: "creator-365d" });
+    if (createdDays >= 180 && !hasBadge("creator-6m")) toAward.push({ id: "creator-6m" });
+    if (createdDays >= 730 && !hasBadge("creator-2y")) toAward.push({ id: "creator-2y" });
+    if (completedWithCode.length >= 250 && !hasBadge("creator-orders-250")) toAward.push({ id: "creator-orders-250" });
+    if (totalEarned >= 250000 && !hasBadge("creator-earned-250k")) toAward.push({ id: "creator-earned-250k" });
+    if (paidCount >= 25 && !hasBadge("creator-payouts-25")) toAward.push({ id: "creator-payouts-25" });
+    if (availableBalance >= 500 && !hasBadge("creator-balance-500")) toAward.push({ id: "creator-balance-500" });
+    if (linkedCount >= 2 && !hasBadge("creator-social-2")) toAward.push({ id: "creator-social-2" });
+    if (linkedCount >= 3 && !hasBadge("creator-social-3")) toAward.push({ id: "creator-social-3" });
+    if (linkedCount >= 5 && !hasBadge("creator-social-all")) toAward.push({ id: "creator-social-all" });
+    for (const { id } of toAward) {
+      await storage.createCreatorBadge({
+        id: `CRBDG-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        creatorId: creator.id,
+        badgeId: id,
+        awardedBy: "system",
+        awardedByName: "System",
+        note: "Auto-awarded",
+      });
+    }
+    const badges = toAward.length > 0 ? await storage.getCreatorBadges(creator.id) : creatorBadgesList;
     res.json({
-      creator,
+      creator: creatorForResponse,
       commissionPercent: Number(config?.creatorCommissionPercent ?? 10),
       availableBalance: availableBalance.toFixed(2),
       totalEarned: totalEarned.toFixed(2),
@@ -4037,8 +4099,171 @@ export async function registerRoutes(
       paidOut: paidOut.toFixed(2),
       recentOrders,
       payoutRequests,
-      creatorPayoutMethods: Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"],
+      badges,
     });
+  });
+
+  app.get("/api/creator/payouts", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    const userId = (req as any).userId;
+    const sessionUser = (req as any).user;
+    let creator = await storage.getCreatorByUserId(userId);
+    if (!creator && userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    if (!creator) {
+      const code = "CR" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const displayName = sessionUser?.firstName || sessionUser?.discordUsername || "Creator";
+      creator = await storage.createCreator({
+        id: `creator-${userId}`,
+        userId,
+        code,
+        displayName,
+        youtubeUrl: null,
+        twitchUrl: null,
+        tiktokUrl: null,
+        instagramUrl: null,
+        xUrl: null,
+        payoutMethod: null,
+        payoutDetail: null,
+      });
+    } else if (process.env.NODE_ENV === "development" && sessionUser?.firstName && creator.displayName !== sessionUser.firstName) {
+      creator = await storage.updateCreator(creator.id, { displayName: sessionUser.firstName }) ?? creator;
+    }
+    const displayName = process.env.NODE_ENV === "development" && sessionUser?.firstName ? sessionUser.firstName : creator.displayName;
+    const creatorForResponse = { ...creator, displayName };
+    const config = await storage.getQueueConfig();
+    const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
+    const allOrders = await storage.getOrders();
+    const completedWithCode = allOrders.filter(
+      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
+    );
+    const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
+    const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
+    const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator!.displayName);
+    const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const recentOrders = completedWithCode
+      .slice(0, 5)
+      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
+    const payoutRequests = minePayouts.map((p: any) => ({
+      id: p.id,
+      amount: p.amount,
+      status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
+      createdAt: p.createdAt,
+    }));
+    const allDetailRequests = await storage.getCreatorPayoutDetailRequests(creator!.id);
+    const pendingPayoutDetailRequest = allDetailRequests.find((r: any) => r.status === "pending") || null;
+
+    const creatorBadgesList = await storage.getCreatorBadges(creator.id);
+    const hasBadge = (id: string) => creatorBadgesList.some((b: any) => b.badgeId === id);
+    const linkedCount = [creator.youtubeUrl, creator.twitchUrl, creator.tiktokUrl, creator.instagramUrl, creator.xUrl].filter(Boolean).length;
+    const createdDays = creator.createdAt ? Math.floor((Date.now() - new Date(creator.createdAt).getTime()) / 86400000) : 0;
+    const paidCount = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").length;
+    const toAward: { id: string }[] = [];
+    if (!hasBadge("creator-base")) toAward.push({ id: "creator-base" });
+    if (!hasBadge("creator-star")) toAward.push({ id: "creator-star" });
+    if (creator.youtubeUrl && !hasBadge("creator-youtube")) toAward.push({ id: "creator-youtube" });
+    if (creator.twitchUrl && !hasBadge("creator-twitch")) toAward.push({ id: "creator-twitch" });
+    if (creator.tiktokUrl && !hasBadge("creator-tiktok")) toAward.push({ id: "creator-tiktok" });
+    if (creator.instagramUrl && !hasBadge("creator-instagram")) toAward.push({ id: "creator-instagram" });
+    if (creator.xUrl && !hasBadge("creator-x")) toAward.push({ id: "creator-x" });
+    if (completedWithCode.length >= 1 && !hasBadge("creator-first-order")) toAward.push({ id: "creator-first-order" });
+    if (completedWithCode.length >= 5 && !hasBadge("creator-orders-5")) toAward.push({ id: "creator-orders-5" });
+    if (completedWithCode.length >= 10 && !hasBadge("creator-orders-10")) toAward.push({ id: "creator-orders-10" });
+    if (completedWithCode.length >= 25 && !hasBadge("creator-orders-25")) toAward.push({ id: "creator-orders-25" });
+    if (completedWithCode.length >= 50 && !hasBadge("creator-orders-50")) toAward.push({ id: "creator-orders-50" });
+    if (completedWithCode.length >= 100 && !hasBadge("creator-orders-100")) toAward.push({ id: "creator-orders-100" });
+    if (paidCount >= 1 && !hasBadge("creator-first-payout")) toAward.push({ id: "creator-first-payout" });
+    if (paidCount >= 5 && !hasBadge("creator-payouts-5")) toAward.push({ id: "creator-payouts-5" });
+    if (paidCount >= 10 && !hasBadge("creator-payouts-10")) toAward.push({ id: "creator-payouts-10" });
+    if (totalEarned >= 100 && !hasBadge("creator-earned-100")) toAward.push({ id: "creator-earned-100" });
+    if (totalEarned >= 500 && !hasBadge("creator-earned-500")) toAward.push({ id: "creator-earned-500" });
+    if (totalEarned >= 1000 && !hasBadge("creator-earned-1k")) toAward.push({ id: "creator-earned-1k" });
+    if (totalEarned >= 5000 && !hasBadge("creator-earned-5k")) toAward.push({ id: "creator-earned-5k" });
+    if (totalEarned >= 10000 && !hasBadge("creator-earned-10k")) toAward.push({ id: "creator-earned-10k" });
+    if (availableBalance >= 100 && !hasBadge("creator-balance-100")) toAward.push({ id: "creator-balance-100" });
+    if (createdDays >= 7 && !hasBadge("creator-7d")) toAward.push({ id: "creator-7d" });
+    if (createdDays >= 30 && !hasBadge("creator-30d")) toAward.push({ id: "creator-30d" });
+    if (createdDays >= 90 && !hasBadge("creator-90d")) toAward.push({ id: "creator-90d" });
+    if (createdDays >= 365 && !hasBadge("creator-365d")) toAward.push({ id: "creator-365d" });
+    if (createdDays >= 180 && !hasBadge("creator-6m")) toAward.push({ id: "creator-6m" });
+    if (createdDays >= 730 && !hasBadge("creator-2y")) toAward.push({ id: "creator-2y" });
+    if (completedWithCode.length >= 250 && !hasBadge("creator-orders-250")) toAward.push({ id: "creator-orders-250" });
+    if (totalEarned >= 250000 && !hasBadge("creator-earned-250k")) toAward.push({ id: "creator-earned-250k" });
+    if (paidCount >= 25 && !hasBadge("creator-payouts-25")) toAward.push({ id: "creator-payouts-25" });
+    if (availableBalance >= 500 && !hasBadge("creator-balance-500")) toAward.push({ id: "creator-balance-500" });
+    if (linkedCount >= 2 && !hasBadge("creator-social-2")) toAward.push({ id: "creator-social-2" });
+    if (linkedCount >= 3 && !hasBadge("creator-social-3")) toAward.push({ id: "creator-social-3" });
+    if (linkedCount >= 5 && !hasBadge("creator-social-all")) toAward.push({ id: "creator-social-all" });
+    if (totalEarned >= 25000 && !hasBadge("creator-earned-25k")) toAward.push({ id: "creator-earned-25k" });
+    if (totalEarned >= 50000 && !hasBadge("creator-earned-50k")) toAward.push({ id: "creator-earned-50k" });
+    if (totalEarned >= 100000 && !hasBadge("creator-earned-100k")) toAward.push({ id: "creator-earned-100k" });
+    for (const { id } of toAward) {
+      await storage.createCreatorBadge({
+        id: `CRBDG-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        creatorId: creator.id,
+        badgeId: id,
+        awardedBy: "system",
+        awardedByName: "System",
+        note: "Auto-awarded",
+      });
+    }
+    const badges = toAward.length > 0 ? await storage.getCreatorBadges(creator.id) : creatorBadgesList;
+
+    res.json({
+      creator: creatorForResponse,
+      commissionPercent: Number(config?.creatorCommissionPercent ?? 10),
+      availableBalance: availableBalance.toFixed(2),
+      totalEarned: totalEarned.toFixed(2),
+      ordersWithCodeCount: completedWithCode.length,
+      totalOrdersCount: allOrders.length,
+      paidOut: paidOut.toFixed(2),
+      recentOrders,
+      payoutRequests,
+      pendingPayoutDetailRequest,
+      creatorPayoutMethods: Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"],
+      badges,
+    });
+  });
+
+  app.get("/api/creator/me/badges", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    const creator = await storage.getCreatorByUserId((req as any).userId);
+    if (!creator) return res.status(404).json({ message: "Creator profile not found" });
+    const badges = await storage.getCreatorBadges(creator.id);
+    res.json(badges);
+  });
+
+  app.get("/api/staff/creator-badges/:creatorId", requireStaff, async (req, res) => {
+    const { creatorId } = req.params;
+    const creators = await storage.getCreators?.() ?? [];
+    const creator = creators.find((c: any) => c.id === creatorId);
+    if (!creator) return res.status(404).json({ error: "Creator not found" });
+    const badges = await storage.getCreatorBadges(creatorId);
+    res.json(badges);
+  });
+
+  app.post("/api/creator/badges", requireStaff, async (req, res) => {
+    const user = (req as any).user;
+    const { creatorId, badgeId, note } = req.body;
+    if (!creatorId || !badgeId) return res.status(400).json({ error: "creatorId and badgeId are required" });
+    if (!ALL_CREATOR_BADGE_IDS.includes(badgeId)) return res.status(400).json({ error: "Invalid badgeId" });
+    const allCreators = await storage.getCreators?.() ?? [];
+    const creator = allCreators.find((c: any) => c.id === creatorId);
+    if (!creator) return res.status(404).json({ error: "Creator not found" });
+    const existing = await storage.getCreatorBadges(creatorId);
+    if (existing.some((b: any) => b.badgeId === badgeId)) {
+      return res.status(409).json({ error: "Badge already assigned to this creator" });
+    }
+    const badge = await storage.createCreatorBadge({
+      id: `CRBDG-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      creatorId,
+      badgeId,
+      awardedBy: user?.discordId || user?.id,
+      awardedByName: user?.displayName || user?.discordUsername || "Staff",
+      note: note || null,
+    });
+    res.status(201).json(badge);
   });
 
   app.get("/api/creator/payouts", isAuthenticated, async (req, res) => {
@@ -4142,6 +4367,44 @@ export async function registerRoutes(
     res.status(201).json(payout);
   });
 
+  app.post("/api/creator/request-payout-detail-change", isAuthenticated, async (req, res) => {
+    const userRole = (req as any).userRole;
+    if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
+    const userId = (req as any).userId;
+    const creator = await storage.getCreatorByUserId(userId);
+    if (!creator) return res.status(404).json({ message: "Creator profile not found" });
+    const config = await storage.getQueueConfig();
+    const allowedMethods: string[] = Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"];
+    const payoutMethod = req.body?.payoutMethod ?? "paypal";
+    const payoutDetail = typeof req.body?.payoutDetail === "string" ? req.body.payoutDetail.trim() : "";
+    if (!allowedMethods.includes(payoutMethod)) {
+      return res.status(400).json({ message: `Payout method must be one of: ${allowedMethods.join(", ")}` });
+    }
+    if (payoutMethod === "paypal") {
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRe.test(payoutDetail)) return res.status(400).json({ message: "Enter a valid PayPal email address" });
+    }
+    const existing = await storage.getCreatorPayoutDetailRequests(creator.id);
+    if (existing.some((r: any) => r.status === "pending")) {
+      return res.status(400).json({ message: "You already have a pending request to change payout details. Wait for staff to review it." });
+    }
+    const id = `CPDR-${Date.now().toString(36)}`;
+    const request = await storage.createCreatorPayoutDetailRequest({
+      id,
+      creatorId: creator.id,
+      requestedMethod: payoutMethod,
+      requestedDetail: payoutDetail,
+      status: "pending",
+      requestedBy: userId,
+      requestedByName: creator.displayName,
+      reviewedBy: null,
+      reviewedByName: null,
+      reviewedAt: null,
+      rejectionReason: null,
+    });
+    res.status(201).json(request);
+  });
+
   app.get("/api/staff/elite-requests", requireStaff, async (req, res) => {
     const requests = await storage.getEliteRequests();
     const allGrinders = await storage.getGrinders();
@@ -4177,6 +4440,52 @@ export async function registerRoutes(
   app.get("/api/staff/creators", requireStaff, async (req, res) => {
     const list = await storage.getCreators();
     res.json(list);
+  });
+
+  app.get("/api/staff/creator-payout-detail-requests", requireStaff, async (req, res) => {
+    const statusFilter = req.query.status as string | undefined;
+    let list = await storage.getCreatorPayoutDetailRequests();
+    if (statusFilter === "pending") list = list.filter((r: any) => r.status === "pending");
+    const creators = await storage.getCreators();
+    const byId = new Map(creators.map((c: any) => [c.id, c]));
+    const enriched = list.map((r: any) => {
+      const c = byId.get(r.creatorId);
+      return {
+        ...r,
+        creatorDisplayName: c?.displayName ?? r.creatorId,
+        currentPayoutMethod: c?.payoutMethod ?? null,
+        currentPayoutDetail: c?.payoutDetail ?? null,
+      };
+    });
+    res.json(enriched);
+  });
+
+  app.patch("/api/staff/creator-payout-detail-requests/:id", requireStaff, async (req, res) => {
+    const { action, rejectionReason } = req.body || {};
+    if (action !== "approve" && action !== "reject") {
+      return res.status(400).json({ message: "action must be 'approve' or 'reject'" });
+    }
+    const request = await storage.getCreatorPayoutDetailRequest(req.params.id as string);
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.status !== "pending") {
+      return res.status(400).json({ message: "Request has already been reviewed" });
+    }
+    const staffUserId = (req as any).userId ?? "staff";
+    const staffName = (req as any).user?.firstName ?? (req as any).user?.discordUsername ?? "Staff";
+    if (action === "approve") {
+      await storage.updateCreator(request.creatorId, {
+        payoutMethod: request.requestedMethod,
+        payoutDetail: request.requestedDetail,
+      });
+    }
+    const updated = await storage.updateCreatorPayoutDetailRequest(request.id, {
+      status: action === "approve" ? "approved" : "rejected",
+      reviewedBy: staffUserId,
+      reviewedByName: staffName,
+      reviewedAt: new Date(),
+      rejectionReason: action === "reject" ? (rejectionReason ?? "No reason provided") : null,
+    });
+    res.json(updated);
   });
 
   app.get("/api/staff/alerts", requireStaff, async (req, res) => {

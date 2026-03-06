@@ -1,0 +1,75 @@
+/**
+ * Creator badge IDs — used by server for auto-award and validation.
+ * Keep in sync with client CREATOR_BADGE_META.
+ */
+export const CREATOR_AUTO_BADGE_IDS = [
+  "creator-base",
+  "creator-youtube",
+  "creator-twitch",
+  "creator-tiktok",
+  "creator-instagram",
+  "creator-x",
+  "creator-first-order",
+  "creator-orders-5",
+  "creator-orders-10",
+  "creator-orders-25",
+  "creator-orders-50",
+  "creator-orders-100",
+  "creator-first-payout",
+  "creator-payouts-5",
+  "creator-payouts-10",
+  "creator-earned-100",
+  "creator-earned-500",
+  "creator-earned-1k",
+  "creator-earned-5k",
+  "creator-earned-10k",
+  "creator-earned-25k",
+  "creator-earned-50k",
+  "creator-earned-100k",
+  "creator-balance-100",
+  "creator-7d",
+  "creator-30d",
+  "creator-90d",
+  "creator-365d",
+  "creator-social-2",
+  "creator-social-3",
+  "creator-social-all",
+  "creator-6m",
+  "creator-2y",
+  "creator-orders-250",
+  "creator-earned-250k",
+  "creator-payouts-25",
+  "creator-balance-500",
+  "creator-star",
+] as const;
+
+export const CREATOR_MANUAL_BADGE_IDS = [
+  "creator-ambassador",
+  "creator-top-promoter",
+  "creator-early-adopter",
+  "creator-community-star",
+  "creator-quality-partner",
+  "creator-mvp",
+  "creator-innovator",
+  "creator-support-champ",
+  "creator-growth-driver",
+  "creator-communicator",
+  "creator-team-player",
+  "creator-mentor",
+  "creator-above-beyond",
+  "creator-founding-creator",
+  "creator-reliable",
+  "creator-rising-star",
+  "creator-trendsetter",
+  "creator-influencer",
+  "creator-partner",
+  "creator-visionary",
+  "creator-pioneer",
+] as const;
+
+export const ALL_CREATOR_BADGE_IDS = [
+  ...CREATOR_AUTO_BADGE_IDS,
+  ...CREATOR_MANUAL_BADGE_IDS,
+] as const;
+
+export type CreatorBadgeId = (typeof ALL_CREATOR_BADGE_IDS)[number];

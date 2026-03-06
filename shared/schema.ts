@@ -559,6 +559,20 @@ export const insertStaffBadgeSchema = createInsertSchema(staffBadges).omit({ cre
 export type InsertStaffBadge = z.infer<typeof insertStaffBadgeSchema>;
 export type StaffBadge = typeof staffBadges.$inferSelect;
 
+export const creatorBadges = pgTable("creator_badges", {
+  id: varchar("id").primaryKey(),
+  creatorId: varchar("creator_id").references(() => creators.id).notNull(),
+  badgeId: varchar("badge_id").notNull(),
+  awardedBy: varchar("awarded_by"),
+  awardedByName: text("awarded_by_name"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCreatorBadgeSchema = createInsertSchema(creatorBadges).omit({ createdAt: true });
+export type InsertCreatorBadge = z.infer<typeof insertCreatorBadgeSchema>;
+export type CreatorBadge = typeof creatorBadges.$inferSelect;
+
 export const deletionRequests = pgTable("deletion_requests", {
   id: varchar("id").primaryKey(),
   entityType: text("entity_type").notNull(),
@@ -990,6 +1004,24 @@ export const insertCreatorSchema = createInsertSchema(creators).omit({ createdAt
 export type Creator = typeof creators.$inferSelect;
 export type InsertCreator = z.infer<typeof insertCreatorSchema>;
 
+export const creatorPayoutDetailRequests = pgTable("creator_payout_detail_requests", {
+  id: varchar("id").primaryKey(),
+  creatorId: varchar("creator_id").notNull().references(() => creators.id),
+  requestedMethod: text("requested_method").notNull(),
+  requestedDetail: text("requested_detail").notNull(),
+  status: text("status").notNull().default("pending"),
+  requestedBy: varchar("requested_by").notNull(),
+  requestedByName: text("requested_by_name").notNull(),
+  reviewedBy: varchar("reviewed_by"),
+  reviewedByName: text("reviewed_by_name"),
+  reviewedAt: timestamp("reviewed_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type CreatorPayoutDetailRequest = typeof creatorPayoutDetailRequests.$inferSelect;
+const insertCreatorPayoutDetailRequestSchema = createInsertSchema(creatorPayoutDetailRequests).omit({ createdAt: true });
+export type InsertCreatorPayoutDetailRequest = z.infer<typeof insertCreatorPayoutDetailRequestSchema>;
+
 export function normalizePlatform(platform: string | null | undefined): string {
   if (!platform) return "Unknown";
   const lower = platform.toLowerCase().trim();
@@ -999,3 +1031,5 @@ export function normalizePlatform(platform: string | null | undefined): string {
   if (lower.includes("switch") || lower.includes("nintendo")) return "Nintendo";
   return platform;
 }
+
+export { ALL_CREATOR_BADGE_IDS, CREATOR_AUTO_BADGE_IDS, CREATOR_MANUAL_BADGE_IDS } from "./creator-badges";

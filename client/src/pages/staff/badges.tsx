@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, Loader2, Plus, Trash2, Sparkles, Star, Shield, Users } from "lucide-react";
+import { Award, Loader2, Plus, Trash2, Sparkles, Star, Shield, Users, Megaphone } from "lucide-react";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { HelpTip } from "@/components/help-tip";
 import { BADGE_COMPONENTS, BADGE_META, MANUAL_BADGE_IDS, AUTO_BADGE_IDS, TIER_LABELS, TIER_COLORS, type BadgeId, type BadgeTier } from "@/components/achievement-badges";
@@ -19,6 +19,11 @@ import {
   STAFF_TIER_LABELS, STAFF_TIER_COLORS, type StaffBadgeId, type StaffBadgeTier,
 } from "@/components/staff-achievement-badges";
 import type { Grinder, GrinderBadge, StaffBadge as StaffBadgeType } from "@shared/schema";
+import { CREATOR_MANUAL_BADGE_IDS, CREATOR_AUTO_BADGE_IDS } from "@shared/creator-badges";
+import {
+  CREATOR_BADGE_COMPONENTS, CREATOR_BADGE_META, CREATOR_TIER_LABELS, CREATOR_TIER_COLORS,
+  type CreatorBadgeId,
+} from "@/components/creator-achievement-badges";
 
 function BadgeCatalogueSection({ title, icon, badgeIds, components, meta, tierLabels, tierColors, color }: {
   title: string; icon: React.ReactNode;
@@ -28,7 +33,7 @@ function BadgeCatalogueSection({ title, icon, badgeIds, components, meta, tierLa
 }) {
   return (
     <div>
-      <h3 className={`text-sm font-medium uppercase tracking-wider mb-3 flex items-center gap-2 ${color}`}>
+      <h3 className={`text-base font-medium uppercase tracking-wider mb-3 flex items-center gap-2 ${color}`}>
         {icon}
         {title} ({badgeIds.length})
       </h3>
@@ -37,7 +42,7 @@ function BadgeCatalogueSection({ title, icon, badgeIds, components, meta, tierLa
         if (tierBadges.length === 0) return null;
         return (
           <div key={tier} className="mb-4">
-            <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${tierColors[tier] || "text-muted-foreground"}`}>{tierLabels[tier] || tier}</p>
+            <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${tierColors[tier] || "text-muted-foreground"}`}>{tierLabels[tier] || tier}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {tierBadges.map(id => {
                 const BadgeComp = components[id];
@@ -45,10 +50,18 @@ function BadgeCatalogueSection({ title, icon, badgeIds, components, meta, tierLa
                 if (!BadgeComp || !m) return null;
                 return (
                   <div key={id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]" data-testid={`catalogue-badge-${id}`}>
-                    <div className="shrink-0"><BadgeComp /></div>
+                    <div className="shrink-0 w-16 h-16 flex items-center justify-center">
+                      <BadgeComp />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{m.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{m.tooltip}</p>
+                      <p className="text-base font-medium">{m.label}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{m.tooltip}</p>
+                      {m.category != null && (
+                        <p className="text-xs text-muted-foreground/80 mt-1">
+                          {m.category === "auto" ? "Auto-Earned" : m.category === "manual" ? "Staff awarded" : m.category === "both" ? "Auto or Staff" : ""}
+                          {m.tier ? ` · ${tierLabels[m.tier] || m.tier}` : ""}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
@@ -57,6 +70,168 @@ function BadgeCatalogueSection({ title, icon, badgeIds, components, meta, tierLa
           </div>
         );
       })}
+    </div>
+  );
+}
+
+type CreatorBadgeRow = { id: string; creatorId: string; badgeId: string; awardedBy?: string; awardedByName?: string; note?: string | null; awardedAt?: string };
+
+function CreatorBadgesSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedCreatorId, setSelectedCreatorId] = useState<string>("");
+  const [selectedBadge, setSelectedBadge] = useState<CreatorBadgeId | "">("");
+  const [badgeNote, setBadgeNote] = useState("");
+
+  const { data: creators = [], isLoading: creatorsLoading } = useQuery<any[]>({
+    queryKey: ["/api/staff/creators"],
+  });
+
+  const selectedCreator = creators.find((c: any) => c.id === selectedCreatorId) || null;
+
+  const { data: assignedBadges = [], isLoading: badgesLoading } = useQuery<CreatorBadgeRow[]>({
+    queryKey: ["/api/staff/creator-badges", selectedCreatorId],
+    queryFn: async () => {
+      if (!selectedCreatorId) return [];
+      const res = await apiRequest("GET", `/api/staff/creator-badges/${selectedCreatorId}`);
+      return res.json();
+    },
+    enabled: !!selectedCreatorId,
+  });
+
+  const assignedIds = new Set(assignedBadges.map(b => b.badgeId));
+  const availableManualBadges = CREATOR_MANUAL_BADGE_IDS.filter(id => !assignedIds.has(id));
+
+  const assignMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/creator/badges", {
+        creatorId: selectedCreatorId,
+        badgeId: selectedBadge,
+        note: badgeNote || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creator-badges", selectedCreatorId] });
+      toast({
+        title: "Creator badge awarded",
+        description: `${CREATOR_BADGE_META[selectedBadge as CreatorBadgeId]?.label} given to ${selectedCreator?.displayName || selectedCreator?.id}`,
+      });
+      setSelectedBadge("");
+      setBadgeNote("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: (err as Error).message || "Failed to assign badge", variant: "destructive" });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <FadeInUp delay={0.03}>
+        <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.06] via-background to-background overflow-hidden relative" data-testid="card-creator-badge-management">
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.03] -translate-y-16 translate-x-16" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                <Megaphone className="w-4 h-4 text-emerald-400" />
+              </div>
+              Award Creator Badges
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Select Creator</label>
+              <Select value={selectedCreatorId} onValueChange={setSelectedCreatorId}>
+                <SelectTrigger className="w-full h-10 text-sm bg-white/[0.03] border-white/10" data-testid="select-creator">
+                  <SelectValue placeholder="Choose a creator..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {creators.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id} data-testid={`creator-option-${c.id}`}>
+                      {c.displayName || c.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {creatorsLoading || (selectedCreatorId && badgesLoading) ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : !selectedCreatorId ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Megaphone className="w-12 h-12 opacity-30 mb-2" />
+                <p className="text-sm">Select a creator above to manage their badges</p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Assigned badges</p>
+                  <div className="flex flex-wrap gap-3">
+                    {assignedBadges.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No badges yet</p>
+                    ) : (
+                      assignedBadges.map((b) => {
+                        const Comp = CREATOR_BADGE_COMPONENTS[b.badgeId as CreatorBadgeId];
+                        const m = CREATOR_BADGE_META[b.badgeId as CreatorBadgeId];
+                        if (!Comp) return null;
+                        return (
+                          <Tooltip key={b.id}>
+                            <TooltipTrigger asChild>
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="shrink-0"><Comp /></div>
+                                {m && <span className="text-xs text-muted-foreground max-w-[80px] truncate">{m.label}</span>}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-sm">
+                              <p className="font-medium">{m?.label ?? b.badgeId}</p>
+                              {m?.tooltip && <p className="text-muted-foreground mt-0.5 leading-relaxed">{m.tooltip}</p>}
+                              <p className="text-xs text-muted-foreground/80 mt-1">{m?.category === "auto" ? "Auto-Earned" : "Staff awarded"} · {m?.tier ? CREATOR_TIER_LABELS[m.tier] : ""}</p>
+                              {b.awardedByName && <p className="text-xs mt-1">Awarded by {b.awardedByName}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+                {availableManualBadges.length > 0 && (
+                  <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-white/10">
+                    <div className="flex-1 min-w-[140px]">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Award new badge</label>
+                      <Select value={selectedBadge} onValueChange={(v) => setSelectedBadge(v as CreatorBadgeId)}>
+                        <SelectTrigger className="h-9 text-sm bg-white/[0.03] border-white/10">
+                          <SelectValue placeholder="Choose badge..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableManualBadges.map((id) => (
+                            <SelectItem key={id} value={id}>{CREATOR_BADGE_META[id]?.label ?? id}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      placeholder="Note (optional)"
+                      value={badgeNote}
+                      onChange={(e) => setBadgeNote(e.target.value)}
+                      className="h-9 max-w-[180px] bg-white/[0.03] border-white/10 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-500"
+                      disabled={!selectedBadge || assignMutation.isPending}
+                      onClick={() => assignMutation.mutate()}
+                      data-testid="btn-award-creator-badge"
+                    >
+                      {assignMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                      Award
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </FadeInUp>
     </div>
   );
 }
@@ -489,10 +664,14 @@ export default function StaffBadges() {
           {isOwner ? (
             <Tabs defaultValue="grinders" className="w-full">
               <FadeInUp delay={0.02}>
-                <TabsList className="grid w-full grid-cols-2 bg-white/[0.03] border border-white/[0.06]">
+                <TabsList className="grid w-full grid-cols-3 bg-white/[0.03] border border-white/[0.06]">
                   <TabsTrigger value="grinders" className="gap-2 data-[state=active]:bg-primary/20" data-testid="tab-grinder-badges">
                     <Users className="w-4 h-4" />
                     Grinder Badges
+                  </TabsTrigger>
+                  <TabsTrigger value="creator" className="gap-2 data-[state=active]:bg-emerald-500/20" data-testid="tab-creator-badges">
+                    <Megaphone className="w-4 h-4" />
+                    Creator Badges
                   </TabsTrigger>
                   <TabsTrigger value="staff" className="gap-2 data-[state=active]:bg-red-500/20" data-testid="tab-staff-badges">
                     <Shield className="w-4 h-4" />
@@ -500,6 +679,41 @@ export default function StaffBadges() {
                   </TabsTrigger>
                 </TabsList>
               </FadeInUp>
+
+              <TabsContent value="creator" className="space-y-6 mt-6">
+                <CreatorBadgesSection />
+                <Card className="border-0 bg-white/[0.02]">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-amber-400" />
+                      Creator Badge Catalogue
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">All available creator badges and how they are earned</p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <BadgeCatalogueSection
+                      title="Staff-Awarded Badges"
+                      icon={<Star className="w-4 h-4" />}
+                      badgeIds={[...CREATOR_MANUAL_BADGE_IDS]}
+                      components={CREATOR_BADGE_COMPONENTS}
+                      meta={CREATOR_BADGE_META as Record<string, { label: string; tooltip: string; category: string; tier: string }>}
+                      tierLabels={CREATOR_TIER_LABELS}
+                      tierColors={CREATOR_TIER_COLORS}
+                      color="text-amber-400"
+                    />
+                    <BadgeCatalogueSection
+                      title="Auto-Earned Badges"
+                      icon={<Sparkles className="w-4 h-4" />}
+                      badgeIds={[...CREATOR_AUTO_BADGE_IDS]}
+                      components={CREATOR_BADGE_COMPONENTS}
+                      meta={CREATOR_BADGE_META as Record<string, { label: string; tooltip: string; category: string; tier: string }>}
+                      tierLabels={CREATOR_TIER_LABELS}
+                      tierColors={CREATOR_TIER_COLORS}
+                      color="text-emerald-400"
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="grinders" className="space-y-6 mt-6">
                 <FadeInUp delay={0.03}>

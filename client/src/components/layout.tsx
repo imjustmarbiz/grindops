@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Megaphone } from "lucide-react";
-import spLogo from "@assets/image_1771930905137.png";
+import grindopsLogo from "@assets/grindops-sp-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChatDrawer } from "@/components/chat-drawer";
@@ -179,14 +179,13 @@ function AppSidebar() {
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
       <SidebarContent>
-        <div className="p-4 sm:p-5 flex items-center gap-3 shrink-0">
-          <img src={spLogo} alt="SP Logo" className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
-          <span className="font-display font-bold text-xl sm:text-2xl tracking-tight text-glow truncate">GrindOps</span>
+        <div className="p-4 sm:p-5 flex items-center shrink-0 isolate rounded-none [box-shadow:0_0_28px_rgba(0,0,0,0.45)]" style={{ background: 'hsl(var(--sidebar-background))' }}>
+          <img src={grindopsLogo} alt="GrindOps" className="h-[3.78rem] w-auto max-w-full object-contain object-left sm:h-[4.32rem] border-0 bg-transparent [filter:contrast(1.15)] [mix-blend-mode:lighten]" />
         </div>
         
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground font-medium">
-            {isStaff ? "Management" : isCreator ? "Creator" : "Navigation"}
+            {isStaff ? "Management" : isCreator ? "Creator Dashboard" : "Navigation"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -209,7 +208,7 @@ function AppSidebar() {
                         data-nav-url={item.url}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           isActive 
-                            ? (isCreator ? "bg-emerald-500/20 text-emerald-400 font-medium" : "font-medium")
+                            ? (isCreator ? "bg-primary/20 text-primary font-medium" : "font-medium")
                             : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
                         }`}
                       >
@@ -217,7 +216,7 @@ function AppSidebar() {
                         <span className="flex-1 min-w-0 truncate">{item.title}</span>
                         {badgeCount > 0 && (
                           <Badge className={`border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center ${
-                            isCreator ? "animate-badge-flash bg-emerald-500/25 text-emerald-400" :
+                            isCreator ? "animate-badge-flash bg-primary/25 text-primary" :
                             todoCount > 0 ? "animate-pulse bg-amber-500/20 text-amber-400" : "animate-pulse bg-blue-500/20 text-blue-400"
                           }`}>{badgeCount}</Badge>
                         )}
@@ -231,11 +230,11 @@ function AppSidebar() {
         </SidebarGroup>
 
         <div className="mt-auto p-3 sm:p-4 shrink-0">
-          <div className="p-3 sm:p-4 rounded-xl bg-white/5 border border-border flex flex-col gap-3 sm:gap-4">
+          <div className="p-3.5 rounded-xl bg-[#141414] border border-white/10 flex flex-col gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border border-primary/20">
+              <Avatar className="h-10 w-10 border border-emerald-500/30 shrink-0">
                 <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="bg-primary/20 text-primary">
+                <AvatarFallback className="bg-emerald-500/20 text-emerald-400">
                   {user?.firstName?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
@@ -252,7 +251,7 @@ function AppSidebar() {
                 </span>
                 <Badge 
                   variant={isStaff ? "default" : "secondary"} 
-                  className={`w-fit text-[10px] px-1.5 py-0 ${
+                  className={`w-fit text-[10px] px-1.5 py-0 mt-0.5 ${
                     isOwner ? "bg-red-500/20 text-red-400 border-red-500/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
                     isCreator ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
@@ -269,7 +268,7 @@ function AppSidebar() {
             <Button 
               variant="outline" 
               data-testid="button-logout"
-              className="w-full justify-start gap-2 border-white/10 hover:bg-white/10 hover:text-destructive transition-colors hover-elevate" 
+              className="w-full justify-start gap-2 !border-black/40 bg-black/50 hover:bg-primary hover:!border-primary hover:text-primary-foreground text-white transition-all" 
               onClick={() => logout()}
             >
               <LogOut className="w-4 h-4" />
@@ -359,6 +358,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors size-9 flex items-center justify-center shrink-0" />
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               {user?.role !== "creator" && <SoundAlertsHelper />}
+              <TutorialTrigger variant="inline" />
               <Button
                 variant="ghost"
                 size="icon"
@@ -401,7 +401,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {user?.role !== "creator" && <LowerThirdNotifications />}
       <SiteAlertTicker />
       <InteractiveTutorial />
-      <TutorialTrigger />
     </SidebarProvider>
   );
 }

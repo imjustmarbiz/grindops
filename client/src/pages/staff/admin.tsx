@@ -24,6 +24,8 @@ import { useSearch } from "wouter";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { OperationsContent, ServiceManagement, DeletionRequestsPanel, ClearDataPanel } from "./operations";
+import { CREATOR_MANUAL_BADGE_IDS } from "@shared/creator-badges";
+import { CREATOR_BADGE_META } from "@/components/creator-achievement-badges";
 
 export default function StaffAdmin() {
   const { toast } = useToast();
@@ -44,6 +46,9 @@ export default function StaffAdmin() {
   const [denyEliteDialogOpen, setDenyEliteDialogOpen] = useState(false);
   const [denyEliteReqId, setDenyEliteReqId] = useState("");
   const [denyEliteReason, setDenyEliteReason] = useState("");
+  const [rejectPayoutDetailReqId, setRejectPayoutDetailReqId] = useState("");
+  const [rejectPayoutDetailReason, setRejectPayoutDetailReason] = useState("");
+  const [rejectPayoutDetailDialogOpen, setRejectPayoutDetailDialogOpen] = useState(false);
   const [editLimitGrinderId, setEditLimitGrinderId] = useState("");
   const [editLimitValue, setEditLimitValue] = useState("");
   const [removeGrinder, setRemoveGrinder] = useState<any>(null);
@@ -61,6 +66,10 @@ export default function StaffAdmin() {
   const [taskDescription, setTaskDescription] = useState("");
   const [taskPriority, setTaskPriority] = useState("normal");
   const [taskOrderId, setTaskOrderId] = useState("");
+
+  const [assignCreatorBadgeCreator, setAssignCreatorBadgeCreator] = useState<any>(null);
+  const [assignCreatorBadgeId, setAssignCreatorBadgeId] = useState("");
+  const [assignCreatorBadgeNote, setAssignCreatorBadgeNote] = useState("");
 
   const { data: checkupConfig } = useQuery<{ enabled: boolean; skippedOrders: string[] }>({
     queryKey: ["/api/daily-checkups/config"],
@@ -108,6 +117,47 @@ export default function StaffAdmin() {
 
   const { data: creatorsList = [] } = useQuery<any[]>({
     queryKey: ["/api/staff/creators"],
+  });
+
+  const { data: creatorPayoutDetailRequestsList = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff/creator-payout-detail-requests"],
+  });
+
+  const payoutDetailRequestMutation = useMutation({
+    mutationFn: async ({ id, action, rejectionReason }: { id: string; action: "approve" | "reject"; rejectionReason?: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/creator-payout-detail-requests/${id}`, { action, rejectionReason });
+      return res.json();
+    },
+    onSuccess: (_, { action }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creator-payout-detail-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      toast({ title: action === "approve" ? "Payout details approved and updated" : "Request rejected" });
+      setRejectPayoutDetailDialogOpen(false);
+      setRejectPayoutDetailReqId("");
+      setRejectPayoutDetailReason("");
+    },
+    onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
+  });
+
+  const assignCreatorBadgeMutation = useMutation({
+    mutationFn: async ({ creatorId, badgeId, note }: { creatorId: string; badgeId: string; note?: string }) => {
+      const res = await apiRequest("POST", "/api/creator/badges", { creatorId, badgeId, note: note || undefined });
+      return res.json();
+    },
+    onSuccess: () => {
+      setAssignCreatorBadgeCreator(null);
+      setAssignCreatorBadgeId("");
+      setAssignCreatorBadgeNote("");
+      toast({ title: "Creator badge assigned" });
+    },
+    onError: (e: any) => {
+      const msg = e?.message || (e && typeof e === "object" && "message" in e ? String((e as Error).message) : "");
+      if (msg.includes("409") || msg.includes("already assigned")) {
+        toast({ title: "Badge already assigned", description: "This creator already has this badge.", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to assign badge", description: msg, variant: "destructive" });
+      }
+    },
   });
 
   const sendTaskMutation = useMutation({
@@ -547,6 +597,59 @@ export default function StaffAdmin() {
         </TabsContent>
 
         <TabsContent value="creators" className="mt-5 space-y-5">
+          {creatorPayoutDetailRequestsList.filter((r: any) => r.status === "pending").length > 0 && (
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-creator-payout-detail-requests">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-amber-400" />
+                    Creator Payout Detail Requests
+                    <Badge className="ml-auto text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                      {creatorPayoutDetailRequestsList.filter((r: any) => r.status === "pending").length} pending
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Approve or reject creators’ requests to change their PayPal (or other) payout details. On approve, their profile is updated.</p>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  {creatorPayoutDetailRequestsList.filter((r: any) => r.status === "pending").map((req: any) => (
+                    <div key={req.id} className="p-4 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">{req.creatorDisplayName ?? req.creatorId}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          Requested: <span className="text-amber-200">{req.requestedMethod === "paypal" ? "PayPal" : req.requestedMethod}</span> — <code className="text-emerald-400">{req.requestedDetail}</code>
+                        </p>
+                        {req.currentPayoutDetail != null && req.currentPayoutDetail !== "" && (
+                          <p className="text-xs text-muted-foreground mt-1">Current on profile: <code className="text-white/70">{req.currentPayoutDetail}</code></p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">Requested {req.createdAt ? new Date(req.createdAt).toLocaleString() : ""}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          className="bg-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30"
+                          disabled={payoutDetailRequestMutation.isPending}
+                          onClick={() => payoutDetailRequestMutation.mutate({ id: req.id, action: "approve" })}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-500/30 text-red-300 hover:bg-red-500/20"
+                          disabled={payoutDetailRequestMutation.isPending}
+                          onClick={() => { setRejectPayoutDetailReqId(req.id); setRejectPayoutDetailReason(""); setRejectPayoutDetailDialogOpen(true); }}
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </FadeInUp>
+          )}
           <FadeInUp>
             <Card className="border border-border bg-card overflow-hidden">
               <CardHeader className="pb-2">
@@ -568,13 +671,28 @@ export default function StaffAdmin() {
                           <p className="font-medium">{c.displayName}</p>
                           <code className="text-sm text-emerald-400 font-mono">{c.code}</code>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
                           {c.youtubeUrl && <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-red-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> YouTube</a>}
                           {c.twitchUrl && <a href={c.twitchUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Twitch</a>}
                           {c.tiktokUrl && <a href={c.tiktokUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-pink-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> TikTok</a>}
                           {c.instagramUrl && <a href={c.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-rose-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Instagram</a>}
                           {c.xUrl && <a href={c.xUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> X</a>}
                           {!c.youtubeUrl && !c.twitchUrl && !c.tiktokUrl && !c.instagramUrl && !c.xUrl && <span className="text-xs text-muted-foreground">No socials linked</span>}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10"
+                            onClick={() => {
+                              setAssignCreatorBadgeCreator(c);
+                              setAssignCreatorBadgeId("");
+                              setAssignCreatorBadgeNote("");
+                            }}
+                            data-testid={`button-assign-creator-badge-${c.id}`}
+                          >
+                            <Star className="w-3.5 h-3.5 mr-1" />
+                            Assign badge
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -796,6 +914,100 @@ export default function StaffAdmin() {
                   }}
                 >
                   {eliteReqMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Deny Request"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={rejectPayoutDetailDialogOpen} onOpenChange={setRejectPayoutDetailDialogOpen}>
+          <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-red-400" />
+                </div>
+                Reject Payout Detail Change Request
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Reason (optional, visible to creator)</label>
+                <Textarea
+                  value={rejectPayoutDetailReason}
+                  onChange={(e) => setRejectPayoutDetailReason(e.target.value)}
+                  placeholder="e.g. Invalid email, use business account..."
+                  className="mt-1.5 bg-background/50 border-white/10 min-h-[80px]"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setRejectPayoutDetailDialogOpen(false)} className="border-white/10">
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25"
+                  disabled={payoutDetailRequestMutation.isPending}
+                  onClick={() => payoutDetailRequestMutation.mutate({ id: rejectPayoutDetailReqId, action: "reject", rejectionReason: rejectPayoutDetailReason.trim() || undefined })}
+                >
+                  {payoutDetailRequestMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject Request"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!assignCreatorBadgeCreator} onOpenChange={(open) => { if (!open) { setAssignCreatorBadgeCreator(null); setAssignCreatorBadgeId(""); setAssignCreatorBadgeNote(""); } }}>
+          <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[420px]" data-testid="dialog-assign-creator-badge">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg flex items-center gap-2">
+                <Star className="w-5 h-5 text-emerald-400" />
+                Assign Creator Badge
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Assign a manual badge to {assignCreatorBadgeCreator?.displayName ?? "creator"} ({assignCreatorBadgeCreator?.code ?? ""}).
+              </p>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Badge</label>
+                <Select value={assignCreatorBadgeId} onValueChange={setAssignCreatorBadgeId}>
+                  <SelectTrigger className="mt-1.5 bg-background/50 border-white/10">
+                    <SelectValue placeholder="Select a badge..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CREATOR_MANUAL_BADGE_IDS.map((id) => {
+                      const meta = CREATOR_BADGE_META[id];
+                      return (
+                        <SelectItem key={id} value={id}>
+                          {meta?.label ?? id}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Note (optional)</label>
+                <Input
+                  value={assignCreatorBadgeNote}
+                  onChange={(e) => setAssignCreatorBadgeNote(e.target.value)}
+                  placeholder="e.g. Top promoter Q1"
+                  className="mt-1.5 bg-background/50 border-white/10"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setAssignCreatorBadgeCreator(null); setAssignCreatorBadgeId(""); setAssignCreatorBadgeNote(""); }} className="border-white/10">
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"
+                  disabled={!assignCreatorBadgeId || assignCreatorBadgeMutation.isPending}
+                  onClick={() => assignCreatorBadgeCreator && assignCreatorBadgeMutation.mutate({ creatorId: assignCreatorBadgeCreator.id, badgeId: assignCreatorBadgeId, note: assignCreatorBadgeNote.trim() || undefined })}
+                  data-testid="button-submit-assign-creator-badge"
+                >
+                  {assignCreatorBadgeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Assign"}
                 </Button>
               </div>
             </div>

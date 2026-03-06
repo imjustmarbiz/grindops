@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { copyToClipboard as copyText } from "@/lib/utils";
 import type { OrderClaimRequest, Service, Grinder } from "@shared/schema";
 import { Label } from "@/components/ui/label";
 import {
@@ -64,8 +65,7 @@ function TicketSearch({ ticketName }: { ticketName: string }) {
   };
 
   const copyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    toast({ title: "Channel ID copied" });
+    copyText(id).then((ok) => ok && toast({ title: "Channel ID copied" }));
   };
 
   return (

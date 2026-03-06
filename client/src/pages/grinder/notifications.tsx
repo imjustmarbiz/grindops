@@ -125,49 +125,61 @@ export default function GrinderNotifications() {
 
   return (
     <AnimatedPage>
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Hero */}
         <FadeInUp delay={0}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <Bell className={`w-7 h-7 shrink-0 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Notifications</h1>
-                <p className="text-muted-foreground text-sm mt-1">Alerts and messages from staff</p>
+          <div className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 ${unreadAlertCount > 0 ? "border-amber-500/20 bg-gradient-to-r from-amber-950/30 via-background to-amber-900/10" : isElite ? "border-cyan-500/20 bg-gradient-to-r from-cyan-950/40 via-cyan-900/20 to-cyan-950/30" : "border-blue-500/20 bg-gradient-to-r from-blue-950/40 via-blue-900/20 to-blue-950/30"}`}>
+            <div
+              className="absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
+            >
+              <div className={`absolute inset-0 rounded-full flex items-center justify-center opacity-30 ${unreadAlertCount > 0 ? "bg-amber-500/20" : isElite ? "bg-cyan-500/20" : "bg-blue-500/20"}`}>
+                <Bell className={`w-32 h-32 ${unreadAlertCount > 0 ? "text-amber-400" : isElite ? "text-cyan-400" : "text-blue-400"}`} />
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className={`h-8 w-8 p-0 relative ${filtersOpen || hasActiveFilters ? (isElite ? "border-cyan-500/40 text-cyan-400" : "border-blue-500/40 text-blue-400") : ""}`}
-                onClick={() => setFiltersOpen(!filtersOpen)}
-                data-testid="button-toggle-filters"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                {activeFilterCount > 0 && (
-                  <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center ${isElite ? "bg-cyan-500 text-black" : "bg-blue-500 text-white"}`}>
-                    {activeFilterCount}
-                  </span>
-                )}
-              </Button>
-              {unreadItems.length > 0 && (
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center border shrink-0 ${unreadAlertCount > 0 ? "bg-amber-500/20 border-amber-500/30" : isElite ? "bg-cyan-500/20 border-cyan-500/30" : "bg-blue-500/20 border-blue-500/30"}`}>
+                  <Bell className={`w-6 h-6 sm:w-7 sm:h-7 ${unreadAlertCount > 0 ? "text-amber-400" : isElite ? "text-cyan-400" : "text-blue-400"}`} />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold font-display tracking-tight text-white">Notifications</h1>
+                  <p className="text-sm text-white/80 mt-0.5">Alerts and messages from staff. Tap an item to open the related page.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1 text-xs h-8 px-2.5"
-                  onClick={handleMarkAllRead}
-                  data-testid="button-mark-all-read"
+                  className={`h-9 w-9 p-0 relative ${filtersOpen || hasActiveFilters ? (unreadAlertCount > 0 ? "border-amber-500/40 text-amber-400" : isElite ? "border-cyan-500/40 text-cyan-400" : "border-blue-500/40 text-blue-400") : "border-white/20 text-white/80 hover:bg-white/10"}`}
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                  data-testid="button-toggle-filters"
                 >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Mark All Read</span>
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {activeFilterCount > 0 && (
+                    <span className={`absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center ${isElite ? "bg-cyan-500 text-black" : "bg-blue-500 text-white"}`}>
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </Button>
-              )}
+                {unreadItems.length > 0 && (
+                  <Badge className={unreadAlertCount > 0 ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : isElite ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" : "bg-blue-500/20 text-blue-400 border-blue-500/30"}>
+                    {unreadItems.length} unread
+                  </Badge>
+                )}
+                {unreadItems.length > 0 && (
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 border-white/20 text-white/90 hover:bg-white/10" onClick={handleMarkAllRead} data-testid="button-mark-all-read">
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Mark all read</span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </FadeInUp>
 
         {filtersOpen && (
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
+            <FadeInUp>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Filters</span>
                 <div className="flex items-center gap-1.5">
@@ -211,6 +223,7 @@ export default function GrinderNotifications() {
                 </div>
               </div>
             </div>
+            </FadeInUp>
         )}
 
         {hasActiveFilters && !filtersOpen && (
@@ -234,22 +247,22 @@ export default function GrinderNotifications() {
         )}
 
         <FadeInUp delay={0.03}>
-          <Card className={`border-0 bg-gradient-to-br ${unreadAlertCount > 0 ? "from-blue-500/[0.08] via-background to-blue-900/[0.04]" : "from-background to-background"} overflow-hidden relative`} data-testid="card-notifications">
+          <Card className={`border overflow-hidden relative ${unreadAlertCount > 0 ? "border-amber-500/20 bg-gradient-to-br from-amber-500/[0.06] via-background to-transparent" : isElite ? "border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.06] via-background to-transparent" : "border-blue-500/20 bg-gradient-to-br from-blue-500/[0.06] via-background to-transparent"}`} data-testid="card-notifications">
             <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-12 translate-x-12" />
-            <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg ${isElite ? "bg-cyan-500/15" : "bg-blue-500/15"} flex items-center justify-center`}>
-                  <Bell className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isElite ? "text-cyan-400" : "text-blue-400"}`} />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${unreadAlertCount > 0 ? "bg-amber-500/15" : isElite ? "bg-cyan-500/15" : "bg-blue-500/15"}`}>
+                  <Bell className={`w-4 h-4 ${unreadAlertCount > 0 ? "text-amber-400" : isElite ? "text-cyan-400" : "text-blue-400"}`} />
                 </div>
                 Alerts Inbox
                 {unreadAlertCount > 0 && (
-                  <Badge className="bg-blue-500/20 text-blue-400 border-0 ml-auto text-[10px] sm:text-xs animate-pulse">
+                  <Badge className={`ml-auto text-[10px] sm:text-xs border-0 ${unreadAlertCount > 0 ? "bg-amber-500/20 text-amber-400" : isElite ? "bg-cyan-500/20 text-cyan-400" : "bg-blue-500/20 text-blue-400"} animate-pulse`}>
                     {unreadAlertCount} unread
                   </Badge>
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
               {allItems.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 rounded-xl bg-white/[0.05] flex items-center justify-center mx-auto mb-3">

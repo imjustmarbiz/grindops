@@ -75,31 +75,45 @@ export default function StaffNotifications() {
   return (
     <AnimatedPage>
       <div className="space-y-6">
+        {/* Hero */}
         <FadeInUp delay={0}>
-          <div className="flex items-center gap-3">
-            <Bell className="w-7 h-7 text-primary" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight" data-testid="text-page-title">Notifications</h1>
-              <p className="text-sm text-muted-foreground mt-1">System alerts and updates</p>
+          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 sm:p-6">
+            <div
+              className="absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
+            >
+              <div className="absolute inset-0 rounded-full bg-primary/20 flex items-center justify-center opacity-30">
+                <Bell className="w-32 h-32 text-primary" />
+              </div>
             </div>
-            {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-auto gap-2"
-                onClick={markAllRead}
-                disabled={markReadMutation.isPending}
-                data-testid="button-mark-all-read"
-              >
-                <CheckCheck className="w-4 h-4" />
-                Mark all read
-              </Button>
-            )}
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
+                  <Bell className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold font-display tracking-tight" data-testid="text-page-title">Notifications</h1>
+                  <p className="text-sm text-muted-foreground mt-0.5">System alerts and updates. Filter by status or severity.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {unreadCount > 0 && (
+                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" data-testid="badge-unread-hero">
+                    {unreadCount} unread
+                  </Badge>
+                )}
+                {unreadCount > 0 && (
+                  <Button variant="outline" size="sm" className="gap-2 border-white/20" onClick={markAllRead} disabled={markReadMutation.isPending} data-testid="button-mark-all-read">
+                    <CheckCheck className="w-4 h-4" />
+                    Mark all read
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </FadeInUp>
 
         <FadeInUp delay={0.03}>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
             <Filter className="w-4 h-4 text-muted-foreground" />
             <Select value={severityFilter} onValueChange={setSeverityFilter}>
               <SelectTrigger className="w-[130px] h-8 text-xs bg-white/[0.03] border-white/10" data-testid="filter-severity">
@@ -135,16 +149,16 @@ export default function StaffNotifications() {
         </FadeInUp>
 
         <FadeInUp delay={0.05}>
-          <Card className={`border-0 bg-gradient-to-br ${unreadCount > 0 ? "from-primary/[0.08] via-background to-primary/[0.04]" : "from-background to-background"} overflow-hidden relative`} data-testid="card-notifications">
+          <Card className={`border overflow-hidden relative ${unreadCount > 0 ? "border-amber-500/20 bg-gradient-to-br from-amber-500/[0.06] via-background to-transparent" : "border-primary/20 bg-gradient-to-br from-primary/[0.06] via-background to-transparent"}`} data-testid="card-notifications">
             <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/[0.02] -translate-y-12 translate-x-12" />
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
               <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
-                <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
-                  <Bell className="w-4 h-4 text-primary" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${unreadCount > 0 ? "bg-amber-500/15" : "bg-primary/15"}`}>
+                  <Bell className={`w-4 h-4 ${unreadCount > 0 ? "text-amber-400" : "text-primary"}`} />
                 </div>
                 Alerts Inbox
                 {unreadCount > 0 && (
-                  <Badge className="bg-primary/20 text-primary border-0 ml-auto text-xs animate-pulse" data-testid="badge-unread-count">
+                  <Badge className="bg-amber-500/20 text-amber-400 border-0 ml-auto text-xs animate-pulse" data-testid="badge-unread-count">
                     {unreadCount} unread
                   </Badge>
                 )}

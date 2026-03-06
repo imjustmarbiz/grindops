@@ -94,24 +94,14 @@ app.use((req, res, next) => {
 
   const port = parseInt(process.env.PORT || "5050", 10);
 
-  // 🔥 Cross-platform safe server binding
-  if (process.platform === "win32") {
-    httpServer.listen(port, () => {
-      log(`serving on http://localhost:${port}`);
+  // Bind to 0.0.0.0 so the server is reachable via LAN IP (e.g. 192.168.x.x:5050)
+  httpServer.listen(
+    { port, host: "0.0.0.0" },
+    () => {
+      log(`serving on http://0.0.0.0:${port} (localhost:${port} or LAN IP)`);
       initializeBackgroundServices();
-    });
-  } else {
-    httpServer.listen(
-      {
-        port,
-        host: "0.0.0.0",
-      },
-      () => {
-        log(`serving on port ${port}`);
-        initializeBackgroundServices();
-      },
-    );
-  }
+    },
+  );
 })();
 
 function logMemory(label: string) {
@@ -131,6 +121,13 @@ function delay(ms: number) {
 
 async function initializeBackgroundServices() {
   logMemory("before background services");
+
+  try {
+    const { ensureCreatorPayoutDetailRequestsTable } = await import("./ensure-tables");
+    await ensureCreatorPayoutDetailRequestsTable();
+  } catch (e) {
+    console.error("Failed to ensure creator_payout_detail_requests table:", e);
+  }
 
   try {
     const { seedDatabase } = await import("./routes");

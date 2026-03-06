@@ -15,7 +15,7 @@ import {
   Loader2, DollarSign, TrendingUp, Users, Package, AlertTriangle,
   CheckCircle, Clock, Search, X, BarChart3, Gauge, Target, Timer,
   Zap, Crown, ArrowUpRight, ArrowDownRight, ShieldAlert, Flame, Activity, LayoutDashboard, Wallet,
-  Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList, Settings, Layers
+  Shield, Calendar, ListOrdered, Gavel, UserCheck, ClipboardList, Settings, Layers, Star
 } from "lucide-react";
 import { type StaffBadgeId } from "@/components/staff-achievement-badges";
 import { StaffBadgeGrid } from "@/components/staff-badge-grid";
@@ -45,11 +45,17 @@ function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textCo
       data-testid={testId}
       {...(onClick ? { role: "button", tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } } : {})}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/[0.03] -translate-y-8 translate-x-8" />
-      <CardContent className="p-4">
+      <div
+        className="absolute top-0 right-0 w-32 h-32 -translate-y-4 translate-x-4 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
+      >
+        <div className={`absolute inset-0 rounded-full ${iconBg} flex items-center justify-center opacity-30`}>
+          <Icon className={`w-16 h-16 ${textColor}`} />
+        </div>
+      </div>
+      <CardContent className="p-4 relative z-10">
         <div className="flex items-start justify-between">
-          <div className="space-y-0.5">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">{label}</p>
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white">{label}</p>
             <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${textColor} tracking-tight truncate`} data-testid={`text-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
             <div className="flex items-center gap-2">
               <p className="text-[10px] text-white/40">{subtitle}</p>
@@ -60,9 +66,6 @@ function StatCard({ label, value, subtitle, icon: Icon, gradient, iconBg, textCo
                 </span>
               )}
             </div>
-          </div>
-          <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center backdrop-blur-sm`}>
-            <Icon className={`w-4 h-4 ${textColor}`} />
           </div>
         </div>
         {linkLabel && (
@@ -165,11 +168,15 @@ export default function StaffOverview() {
             ? "border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30" 
             : "border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5"
         }`}>
-          <div className={`absolute top-0 right-0 w-64 h-64 rounded-full -translate-y-16 translate-x-16 ${
-            isOwner ? "bg-red-500/[0.06]" : "bg-primary/[0.04]"
-          }`} />
+          <div
+            className={`absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]`}
+          >
+            <div className={`absolute inset-0 rounded-full flex items-center justify-center opacity-30 ${isOwner ? "bg-red-500/20" : "bg-primary/20"}`}>
+              {isOwner ? <Crown className="w-32 h-32 text-red-400" /> : <Star className="w-32 h-32 text-primary" />}
+            </div>
+          </div>
           
-          <div className="relative">
+          <div className="relative z-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <div className="relative">
                 <Avatar className={`h-14 w-14 sm:h-20 sm:w-20 border-2 shadow-lg ${
@@ -195,17 +202,19 @@ export default function StaffOverview() {
                   {user?.discordUsername && user?.firstName && user.firstName !== user.discordUsername && (
                     <span className="text-base sm:text-lg text-muted-foreground font-medium" data-testid="text-discord-username">(@{user.discordUsername})</span>
                   )}
-                  <Badge className={`gap-1 ${
-                    isOwner 
-                      ? "bg-red-500/20 text-red-400 border-red-500/30" 
-                      : "bg-primary/20 text-primary border-primary/30"
-                  }`}>
-                    {isOwner ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
-                    {isOwner ? "Owner" : "Staff"}
-                  </Badge>
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge className={`gap-1 ${
+                      isOwner 
+                        ? "bg-red-500/20 text-red-400 border-red-500/30" 
+                        : "bg-primary/20 text-primary border-primary/30"
+                    }`}>
+                      {isOwner ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                      {isOwner ? "Owner" : "Staff"}
+                    </Badge>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">Live</span>
+                    </div>
                   </div>
                 </div>
                 

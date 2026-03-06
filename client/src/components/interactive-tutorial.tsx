@@ -1416,7 +1416,7 @@ function clearTutorialSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
-export function TutorialTrigger() {
+export function TutorialTrigger({ variant = "floating" }: { variant?: "floating" | "inline" }) {
   const { user } = useAuth();
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const isCreator = user?.role === "creator";
@@ -1455,6 +1455,36 @@ export function TutorialTrigger() {
     setShowReplayLabel(false);
   };
 
+  const triggerButton = (
+    <button
+      onClick={() => setShowReplayLabel(!showReplayLabel)}
+      className="group relative"
+      data-testid="button-start-tutorial"
+      aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
+    >
+      <div className={`rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""} ${variant === "inline" ? "w-9 h-9" : "w-12 h-12"}`}>
+        <GraduationCap className={variant === "inline" ? "w-4 h-4 text-white" : "w-5 h-5 text-white"} />
+      </div>
+    </button>
+  );
+
+  if (variant === "inline") {
+    return (
+      <div className="flex items-center gap-2 group/container" ref={containerRef}>
+        <button
+          onClick={handleStartTutorial}
+          className={`bg-card border border-border px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap shadow transition-all duration-300 ${
+            showReplayLabel ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 translate-x-2 pointer-events-none"
+          } group-hover/container:opacity-100 group-hover/container:translate-x-0 group-hover/container:pointer-events-auto`}
+          data-testid="button-replay-tutorial-confirm"
+        >
+          {hasSeenTutorial ? "Replay" : "Start"}
+        </button>
+        {triggerButton}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed bottom-24 right-4 z-[50] flex items-center gap-3 group/container" ref={containerRef}>
       <button
@@ -1466,16 +1496,7 @@ export function TutorialTrigger() {
       >
         {hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
       </button>
-      <button
-        onClick={() => setShowReplayLabel(!showReplayLabel)}
-        className="group relative"
-        data-testid="button-start-tutorial"
-        aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
-      >
-        <div className={`w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""}`}>
-          <GraduationCap className="w-5 h-5 text-white" />
-        </div>
-      </button>
+      {triggerButton}
     </div>
   );
 }

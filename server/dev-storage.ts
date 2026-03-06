@@ -16,11 +16,12 @@ import type {
   OrderClaimRequest, InsertOrderClaimRequest, ReviewAccessCode, InsertReviewAccessCode,
   GrinderTask, InsertGrinderTask, GrinderBadge, InsertGrinderBadge,
   StaffBadge, InsertStaffBadge, StaffTask, InsertStaffTask, StaffActionDismissal,
+  CreatorBadge, InsertCreatorBadge,
   DeletionRequest, InsertDeletionRequest, FinePayment, InsertFinePayment,
   BusinessWallet, InsertBusinessWallet, WalletTransaction, InsertWalletTransaction,
   BusinessPayout, InsertBusinessPayout, WalletTransfer, InsertWalletTransfer,
   OrderPaymentLink, InsertOrderPaymentLink, UserActivityLog, InsertUserActivityLog,
-  Creator, InsertCreator, AnalyticsSummary, SuggestionResult, DashboardStats,
+  Creator, InsertCreator, CreatorPayoutDetailRequest, InsertCreatorPayoutDetailRequest, AnalyticsSummary, SuggestionResult, DashboardStats,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 
@@ -337,6 +338,10 @@ export class DevStorage implements IStorage {
   async createStaffBadge(b: InsertStaffBadge) { return b as StaffBadge; }
   async deleteStaffBadge() { return false; }
 
+  async getCreatorBadges() { return []; }
+  async createCreatorBadge(b: InsertCreatorBadge) { return b as CreatorBadge; }
+  async deleteCreatorBadge() { return false; }
+
   async getStaffTasks() { return []; }
   async createStaffTask(t: InsertStaffTask) { return t as StaffTask; }
   async updateStaffTask() { return undefined; }
@@ -376,6 +381,8 @@ export class DevStorage implements IStorage {
   async createUserActivityLog(l: InsertUserActivityLog) { return l as UserActivityLog; }
 
   private devCreators = new Map<string, Creator>();
+  private devCreatorPayoutDetailRequests = new Map<string, CreatorPayoutDetailRequest>();
+
   async getCreatorByUserId(userId: string): Promise<Creator | undefined> {
     return Array.from(this.devCreators.values()).find((c) => c.userId === userId);
   }
@@ -393,5 +400,29 @@ export class DevStorage implements IStorage {
   }
   async getCreators(): Promise<Creator[]> {
     return Array.from(this.devCreators.values());
+  }
+
+  async getCreatorPayoutDetailRequests(creatorId?: string): Promise<CreatorPayoutDetailRequest[]> {
+    const list = Array.from(this.devCreatorPayoutDetailRequests.values());
+    if (creatorId) return list.filter((r) => r.creatorId === creatorId).sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+    return list.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+  }
+
+  async getCreatorPayoutDetailRequest(id: string): Promise<CreatorPayoutDetailRequest | undefined> {
+    return this.devCreatorPayoutDetailRequests.get(id);
+  }
+
+  async createCreatorPayoutDetailRequest(data: InsertCreatorPayoutDetailRequest): Promise<CreatorPayoutDetailRequest> {
+    const created = { ...data, createdAt: new Date() } as CreatorPayoutDetailRequest;
+    this.devCreatorPayoutDetailRequests.set(data.id, created);
+    return created;
+  }
+
+  async updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined> {
+    const existing = this.devCreatorPayoutDetailRequests.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...data } as CreatorPayoutDetailRequest;
+    this.devCreatorPayoutDetailRequests.set(id, updated);
+    return updated;
   }
 }
