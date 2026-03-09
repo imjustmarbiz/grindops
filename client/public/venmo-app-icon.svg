@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Emerald theme to match PayPal, Zelle, Cash App icons (emerald-500/20 bg, emerald-300 V) -->
+  <rect width="1024" height="1024" rx="228" ry="228" fill="rgba(16, 185, 129, 0.2)"/>
+  <path fill="#6ee7b7" d="M 260 200 L 512 824 Q 900 480 764 200 Z"/>
+</svg>
