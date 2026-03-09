@@ -303,7 +303,14 @@ export function setupDiscordAuth(app: Express) {
         user = await authStorage.getUser(targetId);
       }
       if (!user) {
-        return res.status(404).json({ message: `No user found for ID: ${targetId}` });
+        const role = (req.query.role as string) || "grinder";
+        user = await authStorage.upsertUser({
+          discordId: targetId,
+          discordUsername: `user-${targetId}`,
+          firstName: `User`,
+          role,
+        });
+        console.log(`[impersonate] Auto-created user for Discord ID ${targetId} with role=${role}`);
       }
 
       (req.session as any).userId = user.id;
