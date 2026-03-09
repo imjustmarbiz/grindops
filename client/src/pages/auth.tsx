@@ -1,22 +1,9 @@
-import { lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Zap, Target, Crown, Users, Wrench, Gamepad2, BarChart3, ClipboardList, Bell, Megaphone, Star } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 import spLogo from "@assets/image_1771930905137.png";
-
-const DevProfilesLazy = import.meta.env.DEV
-  ? lazy(() => import("@/components/dev-profiles"))
-  : () => null;
-
-function DevProfiles() {
-  if (!import.meta.env.DEV) return null;
-  return (
-    <Suspense fallback={null}>
-      <DevProfilesLazy />
-    </Suspense>
-  );
-}
+import DevProfiles from "@/components/dev-profiles";
 
 export default function AuthPage() {
   const handleLogin = () => {

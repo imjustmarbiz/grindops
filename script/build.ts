@@ -36,6 +36,7 @@ async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");
+  process.env.NODE_ENV = "production";
   await viteBuild({ mode: "production" });
 
   console.log("building server...");

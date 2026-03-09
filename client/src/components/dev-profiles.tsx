@@ -1,7 +1,14 @@
 import { Shield, Crown, Wrench, Gamepad2, Star } from "lucide-react";
 import { motion } from "framer-motion";
 
+function isDevEnvironment(): boolean {
+  const hostname = window.location.hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".replit.dev");
+}
+
 export default function DevProfilesPanel() {
+  if (!isDevEnvironment()) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
