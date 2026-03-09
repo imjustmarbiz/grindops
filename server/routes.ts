@@ -5603,13 +5603,15 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       const order = await storage.getOrder(orderId);
       const orderRef = order?.mgtOrderNumber ? `#${order.mgtOrderNumber}` : orderId;
 
-      const staffNotif = await storage.createNotification({
+      await storage.createNotification({
         id: `N-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
         type: "replacement_request",
         title: "Replacement Requested",
-        message: `${myGrinder.name} is requesting a replacement on order ${orderRef}. Reason: ${reason}`,
-        userId: "staff",
-        relatedId: orderId,
+        body: `${myGrinder.name} is requesting a replacement on order ${orderRef}. Reason: ${reason}`,
+        linkUrl: `/queue?orderId=${orderId}`,
+        roleScope: "staff",
+        userId: null,
+        readBy: [],
       });
 
       await storage.createAuditLog({
@@ -7776,7 +7778,7 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
                 ? `A completed order has been backlogged to your profile. Order: ${resolvedOrderId}. Earnings: $${parseFloat(claim.grinderAmount || "0").toFixed(2)}. Your stats have been updated.`
                 : `A missing order (${resolvedOrderId}) has been claimed and linked to your profile.`,
               type: "success",
-              roleScope: "all",
+              roleScope: "user",
               userId: repairGrinder.discordUserId,
               readBy: [],
             });
