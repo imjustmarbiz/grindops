@@ -4,7 +4,6 @@ import { SiDiscord } from "react-icons/si";
 import { motion } from "framer-motion";
 import spLogo from "@assets/image_1771930905137.png";
 
-const isDev = import.meta.env.DEV;
 
 export default function AuthPage() {
   const handleLogin = () => {
@@ -122,7 +121,7 @@ export default function AuthPage() {
             </p>
           </div>
 
-          {isDev && (
+          {import.meta.env.DEV && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
