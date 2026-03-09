@@ -13,6 +13,10 @@ import { users } from "@shared/models/auth";
 import { siteAlerts, GRINDER_ROLES, ALL_CREATOR_BADGE_IDS, CREATOR_AUTO_BADGE_IDS } from "@shared/schema";
 import { or, eq, sql, desc, and } from "drizzle-orm";
 import multer from "multer";
+import { buildQuoteDiscordMessage } from "@shared/quote-discord-message";
+import { mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-settings";
+import { mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
+import { mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
 
 const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
 
@@ -4015,7 +4019,7 @@ export async function registerRoutes(
     const displayName = process.env.NODE_ENV === "development" && sessionUser?.firstName ? sessionUser.firstName : creator.displayName;
     const creatorForResponse = { ...creator, displayName };
     const config = await storage.getQueueConfig();
-    const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
+    const commissionPercent = Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
     const completedWithCode = allOrders.filter(
       (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
@@ -4091,7 +4095,7 @@ export async function registerRoutes(
     const badges = toAward.length > 0 ? await storage.getCreatorBadges(creator.id) : creatorBadgesList;
     res.json({
       creator: creatorForResponse,
-      commissionPercent: Number(config?.creatorCommissionPercent ?? 10),
+      commissionPercent: Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10),
       availableBalance: availableBalance.toFixed(2),
       totalEarned: totalEarned.toFixed(2),
       ordersWithCodeCount: completedWithCode.length,
@@ -4211,7 +4215,7 @@ export async function registerRoutes(
 
     res.json({
       creator: creatorForResponse,
-      commissionPercent: Number(config?.creatorCommissionPercent ?? 10),
+      commissionPercent: Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10),
       availableBalance: availableBalance.toFixed(2),
       totalEarned: totalEarned.toFixed(2),
       ordersWithCodeCount: completedWithCode.length,
@@ -4303,9 +4307,13 @@ export async function registerRoutes(
       if (method !== null && !allowedMethods.includes(method)) {
         return res.status(400).json({ message: `Payout method must be one of: ${allowedMethods.join(", ")}` });
       }
-      if (method === "paypal" && detail !== null) {
-        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRe.test(detail)) return res.status(400).json({ message: "Enter a valid PayPal email address" });
+      if (method !== null && detail !== null && detail !== "") {
+        if (["paypal", "zelle", "applepay"].includes(method)) {
+          const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRe.test(detail)) return res.status(400).json({ message: `Enter a valid email for ${method === "paypal" ? "PayPal" : method === "zelle" ? "Zelle" : "Apple Pay"}` });
+        } else if (method === "venmo" || method === "cashapp") {
+          if (detail.length < 2) return res.status(400).json({ message: method === "venmo" ? "Enter your Venmo username (e.g. @username)" : "Enter your Cash App $cashtag" });
+        }
       }
       if (method === null) {
         updates.payoutMethod = null;
@@ -4331,7 +4339,7 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Add your payout details (e.g. PayPal email) before requesting a payout." });
     }
     const config = await storage.getQueueConfig();
-    const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
+    const commissionPercent = Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
     const completedWithCode = allOrders.filter(
       (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
@@ -4349,7 +4357,9 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Amount exceeds your available balance." });
     }
     const id = `BPO-${Date.now().toString(36)}`;
-    const description = `${creator.payoutMethod === "paypal" ? "PayPal" : creator.payoutMethod}: ${creator.payoutDetail}`;
+    const methodLabels: Record<string, string> = { paypal: "PayPal", zelle: "Zelle", applepay: "Apple Pay", venmo: "Venmo", cashapp: "Cash App" };
+    const label = methodLabels[creator.payoutMethod ?? ""] ?? creator.payoutMethod ?? "Payout";
+    const description = `${label}: ${creator.payoutDetail}`;
     const payout = await storage.createBusinessPayout({
       id,
       walletId: null,
@@ -4380,9 +4390,13 @@ export async function registerRoutes(
     if (!allowedMethods.includes(payoutMethod)) {
       return res.status(400).json({ message: `Payout method must be one of: ${allowedMethods.join(", ")}` });
     }
-    if (payoutMethod === "paypal") {
-      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRe.test(payoutDetail)) return res.status(400).json({ message: "Enter a valid PayPal email address" });
+    if (payoutDetail) {
+      if (["paypal", "zelle", "applepay"].includes(payoutMethod)) {
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRe.test(payoutDetail)) return res.status(400).json({ message: `Enter a valid email for ${payoutMethod === "paypal" ? "PayPal" : payoutMethod === "zelle" ? "Zelle" : "Apple Pay"}` });
+      } else if ((payoutMethod === "venmo" || payoutMethod === "cashapp") && payoutDetail.length < 2) {
+        return res.status(400).json({ message: payoutMethod === "venmo" ? "Enter your Venmo username" : "Enter your Cash App $cashtag" });
+      }
     }
     const existing = await storage.getCreatorPayoutDetailRequests(creator.id);
     if (existing.some((r: any) => r.status === "pending")) {
@@ -4440,6 +4454,253 @@ export async function registerRoutes(
   app.get("/api/staff/creators", requireStaff, async (req, res) => {
     const list = await storage.getCreators();
     res.json(list);
+  });
+
+  /** List all saved quotes — visible to owners and staff (Carmax-style: see if customer was already quoted). */
+  app.get("/api/staff/quotes", requireStaff, async (req, res) => {
+    const limit = Math.min(parseInt(String(req.query.limit || "100"), 10) || 100, 200);
+    const list = await storage.getQuotes(limit);
+    res.json(list);
+  });
+
+  app.get("/api/staff/quotes/:id", requireStaff, async (req, res) => {
+    const quote = await storage.getQuote(req.params.id);
+    if (!quote) return res.status(404).json({ message: "Quote not found" });
+    res.json(quote);
+  });
+
+  app.patch("/api/staff/quotes/:id", requireStaff, async (req, res) => {
+    try {
+      const quote = await storage.getQuote(req.params.id);
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+      const { customerIdentifier, inputs, results, discordMessage, aiSuggestion } = req.body || {};
+      const update: Record<string, unknown> = {};
+      if (customerIdentifier !== undefined) update.customerIdentifier = typeof customerIdentifier === "string" ? customerIdentifier.trim() || null : null;
+      if (inputs != null && typeof inputs === "object") update.inputs = inputs;
+      if (results != null && typeof results === "object") update.results = results;
+      if (discordMessage !== undefined) update.discordMessage = typeof discordMessage === "string" ? discordMessage.trim() || null : null;
+      if (aiSuggestion !== undefined) update.aiSuggestion = typeof aiSuggestion === "string" ? aiSuggestion.trim() || null : null;
+      const user = (req as any).user;
+      const userId = (req as any).userId || user?.id || "unknown";
+      update.updatedById = userId;
+      update.updatedByName = getActorName(req);
+      update.updatedAt = new Date();
+      const updated = await storage.updateQuote(req.params.id, update as Partial<typeof quote>);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to update quote" });
+    }
+  });
+
+  app.delete("/api/staff/quotes/:id", requireStaff, async (req, res) => {
+    try {
+      const ok = await storage.deleteQuote(req.params.id);
+      if (!ok) return res.status(404).json({ message: "Quote not found" });
+      res.status(204).send();
+    } catch (e) {
+      res.status(500).json({ message: "Failed to delete quote" });
+    }
+  });
+
+  app.post("/api/staff/quotes", requireStaff, async (req, res) => {
+    try {
+      const { action, serviceType, customerIdentifier, inputs, results, discordMessage, aiSuggestion, customerPrice: bodyCustomerPrice } = req.body || {};
+      if (action === "ai-suggestion") {
+        try {
+          if (!inputs || !results) return res.status(400).json({ message: "inputs and results are required" });
+          const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+          const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+          if (!apiKey) {
+            return res.json({ suggestion: "AI suggestions are not configured. You can still save and share this quote." });
+          }
+          const OpenAI = (await import("openai")).default;
+          const openai = new OpenAI({ apiKey, baseURL: baseUrl || undefined });
+          const recommended = Number(results.recommendedQuote) ?? Number(results.aiSuggestedQuote) ?? 0;
+          const market = Number(results.marketQuote) ?? 0;
+          const aiLow = Number(results.aiLowQuote) ?? 0;
+          const aiHigh = Number(results.aiHighQuote) ?? 0;
+          const route = `${inputs?.startTier || ""} ${inputs?.startLvl || ""} → ${inputs?.targetTier || ""} ${inputs?.targetLvl || ""}`;
+          const prompt = `You are a helpful sales assistant for a rep grinding service. A customer was quoted $${recommended} for: ${route}.
+Market value: $${market}. AI band: $${aiLow}–$${aiHigh}.
+Write ONE short, friendly sentence (max 100 chars) suggesting EITHER:
+- How they could save money (e.g. if they can do a smaller grind, or choose slower delivery)
+- OR how spending a bit more could get them something better (e.g. higher tier, faster delivery)
+Pick the most relevant tip. Be concise and casual. No emojis.`;
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 120,
+          });
+          const suggestion = completion.choices[0]?.message?.content?.trim() || "";
+          return res.json({ suggestion: suggestion || "Quote looks good. Let us know if you have questions!" });
+        } catch (e) {
+          console.error("[quotes/ai-suggestion]", e);
+          return res.json({ suggestion: "Could not generate AI suggestion. You can still save and share this quote." });
+        }
+      }
+      if (!inputs || !results) return res.status(400).json({ message: "inputs and results are required" });
+      const user = (req as any).user;
+      const createdById = (req as any).userId || user?.id || "unknown";
+      const createdByName = getActorName(req);
+      const id = `quote-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const customerPrice = typeof bodyCustomerPrice === "number" && bodyCustomerPrice > 0
+        ? bodyCustomerPrice
+        : Number(results.recommendedQuote ?? results.aiSuggestedQuote ?? results.marketQuote ?? 0);
+      const route = `${inputs.startTier || ""} ${inputs.startLvl || ""} → ${inputs.targetTier || ""} ${inputs.targetLvl || ""}`;
+      const discountUsed = Number(results?.discountUsed ?? 0);
+      const msg = typeof discordMessage === "string" && discordMessage.trim()
+        ? discordMessage.trim()
+        : buildQuoteDiscordMessage({
+          customerPrice,
+          estimatedTimeframe: results.estimatedTimeframe || "",
+          timeframeText: results.timeframeText,
+          customerIdentifier: typeof customerIdentifier === "string" ? customerIdentifier.trim() || null : null,
+          route,
+          urgency: inputs.urgency || "Normal",
+          creatorCode: inputs.creatorCode || null,
+          startTier: inputs.startTier,
+          startLvl: inputs.startLvl,
+          startPct: inputs.startPct ?? 0,
+          targetTier: inputs.targetTier,
+          targetLvl: inputs.targetLvl,
+          targetPct: inputs.targetPct ?? 0,
+          ...(discountUsed > 0 && { discountPercent: discountUsed * 100 }),
+        });
+      const quote = await storage.createQuote({
+        id,
+        serviceType: typeof serviceType === "string" ? serviceType : "rep_grinding",
+        customerIdentifier: typeof customerIdentifier === "string" ? customerIdentifier.trim() || null : null,
+        inputs,
+        results,
+        discordMessage: msg,
+        aiSuggestion: typeof aiSuggestion === "string" ? aiSuggestion.trim() || null : null,
+        createdById,
+        createdByName,
+      });
+      res.status(201).json(quote);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to save quote" });
+    }
+  });
+
+  app.post("/api/staff/creators", requireOwner, async (req, res) => {
+    try {
+      const { code, displayName, discordUserId } = req.body || {};
+      const rawCode = typeof code === "string" ? code.trim() : "";
+      const name = typeof displayName === "string" ? displayName.trim() : "";
+      const discordId = typeof discordUserId === "string" ? discordUserId.trim() : "";
+      if (!rawCode) return res.status(400).json({ message: "Creator code is required" });
+      if (!name) return res.status(400).json({ message: "Display name is required" });
+      const codeUpper = rawCode.toUpperCase();
+      const existing = await storage.getCreators();
+      if (existing.some((c: any) => (c.code || "").toUpperCase() === codeUpper)) {
+        return res.status(400).json({ message: "A creator with this code already exists" });
+      }
+      if (discordId) {
+        const existingByUserId = await storage.getCreatorByUserId(discordId);
+        if (existingByUserId) {
+          return res.status(400).json({ message: "This Discord User ID is already linked to another creator" });
+        }
+      }
+      const id = `creator-manual-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const creator = await storage.createCreator({
+        id,
+        userId: discordId || id,
+        code: codeUpper,
+        displayName: name,
+        youtubeUrl: null,
+        twitchUrl: null,
+        tiktokUrl: null,
+        instagramUrl: null,
+        xUrl: null,
+        payoutMethod: null,
+        payoutDetail: null,
+      });
+      res.status(201).json(creator);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to create creator" });
+    }
+  });
+
+  app.patch("/api/staff/creators/:id", requireOwner, async (req, res) => {
+    const id = req.params.id as string;
+    const { quoteDiscountPercent, commissionPercent, userId: bodyUserId } = req.body || {};
+    if (quoteDiscountPercent !== undefined && quoteDiscountPercent !== null) {
+      const pct = Number(quoteDiscountPercent);
+      if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+        return res.status(400).json({ message: "quoteDiscountPercent must be a number between 0 and 100" });
+      }
+    }
+    if (commissionPercent !== undefined && commissionPercent !== null) {
+      const pct = Number(commissionPercent);
+      if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+        return res.status(400).json({ message: "commissionPercent must be a number between 0 and 100" });
+      }
+    }
+    let userIdUpdate: string | undefined;
+    if (bodyUserId !== undefined) {
+      const trimmed = typeof bodyUserId === "string" ? bodyUserId.trim() : "";
+      if (trimmed) {
+        const existingByUserId = await storage.getCreatorByUserId(trimmed);
+        if (existingByUserId && existingByUserId.id !== id) {
+          return res.status(400).json({ message: "This Discord User ID is already linked to another creator" });
+        }
+        userIdUpdate = trimmed;
+      } else {
+        userIdUpdate = id;
+      }
+    }
+    const updated = await storage.updateCreator(id, {
+      ...(quoteDiscountPercent !== undefined && {
+        quoteDiscountPercent: quoteDiscountPercent === null ? null : String(Number(quoteDiscountPercent)),
+      }),
+      ...(commissionPercent !== undefined && {
+        commissionPercent: commissionPercent === null ? null : String(Number(commissionPercent)),
+      }),
+      ...(userIdUpdate !== undefined && { userId: userIdUpdate }),
+    });
+    if (!updated) return res.status(404).json({ message: "Creator not found" });
+    res.json(updated);
+  });
+
+  /** Staff view of a creator's dashboard data (same shape as /api/creator/dashboard). Used for Admin Creators → View dashboard. */
+  app.get("/api/staff/creators/:id/dashboard", requireStaff, async (req, res) => {
+    const creatorId = req.params.id as string;
+    const creator = await storage.getCreator(creatorId);
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+    const config = await storage.getQueueConfig();
+    const commissionPercent = Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10) / 100;
+    const allOrders = await storage.getOrders();
+    const completedWithCode = allOrders.filter(
+      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
+    );
+    const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
+    const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
+    const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator.displayName);
+    const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const recentOrders = completedWithCode
+      .slice(0, 10)
+      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
+    const payoutRequests = minePayouts.map((p: any) => ({
+      id: p.id,
+      amount: p.amount,
+      status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
+      createdAt: p.createdAt,
+    }));
+    const badges = await storage.getCreatorBadges(creator.id);
+    res.json({
+      creator: { code: creator.code, displayName: creator.displayName },
+      commissionPercent: (creator.commissionPercent != null ? Number(creator.commissionPercent) : Number(config?.creatorCommissionPercent ?? 10)),
+      availableBalance: availableBalance.toFixed(2),
+      totalEarned: totalEarned.toFixed(2),
+      ordersWithCodeCount: completedWithCode.length,
+      totalOrdersCount: allOrders.length,
+      paidOut: paidOut.toFixed(2),
+      recentOrders,
+      payoutRequests,
+      badges,
+    });
   });
 
   app.get("/api/staff/creator-payout-detail-requests", requireStaff, async (req, res) => {
@@ -5023,7 +5284,11 @@ export async function registerRoutes(
 
   app.get(api.config.get.path, requireStaff, async (req, res) => {
     const config = await storage.getQueueConfig();
-    res.json(config);
+    const raw = config as Record<string, unknown> | undefined;
+    const repQuoteSettings = mergeRepQuoteSettings(raw?.repQuoteSettings as Partial<RepQuoteSettings> | null | undefined);
+    const badgeQuoteSettings = mergeBadgeQuoteSettings(raw?.badgeQuoteSettings as Partial<BadgeQuoteSettings> | null | undefined);
+    const myPlayerTypeSettings = mergeMyPlayerTypeSettings(raw?.myPlayerTypeSettings as Partial<MyPlayerTypeSettings> | null | undefined);
+    res.json({ ...raw, repQuoteSettings, badgeQuoteSettings, myPlayerTypeSettings });
   });
 
   app.put(api.config.update.path, requireStaff, async (req, res) => {
@@ -8301,7 +8566,7 @@ export async function registerRoutes(
     }
   });
 
-  const CREATOR_PAYOUT_METHOD_OPTIONS = ["paypal"];
+  const CREATOR_PAYOUT_METHOD_OPTIONS = ["paypal", "zelle", "applepay", "venmo", "cashapp"];
   app.patch("/api/config/creator-payout-methods", requireOwner, async (req, res) => {
     try {
       const { methods } = req.body;
@@ -8314,6 +8579,119 @@ export async function registerRoutes(
       res.json({ success: true, creatorPayoutMethods: unique });
     } catch (error) {
       res.status(500).json({ error: "Failed to update creator payout methods" });
+    }
+  });
+
+  app.patch("/api/config/quote-generator-split", requireOwner, async (req, res) => {
+    try {
+      const { companyPct, grinderPct } = req.body || {};
+      const company = companyPct !== undefined && companyPct !== null ? Number(companyPct) : undefined;
+      const grinder = grinderPct !== undefined && grinderPct !== null ? Number(grinderPct) : undefined;
+      if (company !== undefined && (Number.isNaN(company) || company < 0 || company > 100))
+        return res.status(400).json({ error: "companyPct must be 0–100" });
+      if (grinder !== undefined && (Number.isNaN(grinder) || grinder < 0 || grinder > 100))
+        return res.status(400).json({ error: "grinderPct must be 0–100" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      const updates: any = { ...config };
+      if (company !== undefined) updates.quoteGeneratorCompanyPct = String(company);
+      if (grinder !== undefined) updates.quoteGeneratorGrinderPct = String(grinder);
+      await storage.upsertQueueConfig(updates);
+      res.json({
+        success: true,
+        quoteGeneratorCompanyPct: company !== undefined ? company : Number(config.quoteGeneratorCompanyPct ?? 70),
+        quoteGeneratorGrinderPct: grinder !== undefined ? grinder : Number(config.quoteGeneratorGrinderPct ?? 30),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update quote generator split" });
+    }
+  });
+
+  app.patch("/api/config/rep-quote-settings", requireOwner, async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== "object") return res.status(400).json({ error: "Body must be an object" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      const merged = mergeRepQuoteSettings((config as any).repQuoteSettings);
+      const updated: RepQuoteSettings = {
+        roundBy: typeof payload.roundBy === "number" ? payload.roundBy : merged.roundBy,
+        urgencyQuoteMultipliers: typeof payload.urgencyQuoteMultipliers === "object" && payload.urgencyQuoteMultipliers
+          ? { ...merged.urgencyQuoteMultipliers, ...payload.urgencyQuoteMultipliers }
+          : merged.urgencyQuoteMultipliers,
+        urgencyDeliveryFactors: typeof payload.urgencyDeliveryFactors === "object" && payload.urgencyDeliveryFactors
+          ? { ...merged.urgencyDeliveryFactors, ...payload.urgencyDeliveryFactors }
+          : merged.urgencyDeliveryFactors,
+        volumeMultiplierByBars: typeof payload.volumeMultiplierByBars === "object" && payload.volumeMultiplierByBars
+          ? { ...merged.volumeMultiplierByBars, ...payload.volumeMultiplierByBars }
+          : merged.volumeMultiplierByBars,
+        lateEfficiencySurcharge: typeof payload.lateEfficiencySurcharge === "object" && payload.lateEfficiencySurcharge
+          ? { ...merged.lateEfficiencySurcharge, ...payload.lateEfficiencySurcharge }
+          : merged.lateEfficiencySurcharge,
+        lateEfficiencyTierFactor: typeof payload.lateEfficiencyTierFactor === "object" && payload.lateEfficiencyTierFactor
+          ? { ...merged.lateEfficiencyTierFactor, ...payload.lateEfficiencyTierFactor }
+          : merged.lateEfficiencyTierFactor,
+        repPricing: Array.isArray(payload.repPricing) && payload.repPricing.length > 0 ? payload.repPricing : merged.repPricing,
+        repDelivery: Array.isArray(payload.repDelivery) && payload.repDelivery.length > 0 ? payload.repDelivery : merged.repDelivery,
+        repMarketValue: Array.isArray(payload.repMarketValue) && payload.repMarketValue.length > 0 ? payload.repMarketValue : merged.repMarketValue,
+      };
+      await storage.upsertQueueConfig({ ...config, repQuoteSettings: updated } as any);
+      res.json({ success: true, repQuoteSettings: updated });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update rep quote settings" });
+    }
+  });
+
+  app.patch("/api/config/badge-quote-settings", requireOwner, async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== "object") return res.status(400).json({ error: "Body must be an object" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      const merged = mergeBadgeQuoteSettings((config as any).badgeQuoteSettings);
+      const updated: BadgeQuoteSettings = {
+        roundBy: typeof payload.roundBy === "number" ? payload.roundBy : merged.roundBy,
+        urgencyQuoteMultipliers: typeof payload.urgencyQuoteMultipliers === "object" && payload.urgencyQuoteMultipliers
+          ? { ...merged.urgencyQuoteMultipliers, ...payload.urgencyQuoteMultipliers }
+          : merged.urgencyQuoteMultipliers,
+        urgencyDeliveryFactors: typeof payload.urgencyDeliveryFactors === "object" && payload.urgencyDeliveryFactors
+          ? { ...merged.urgencyDeliveryFactors, ...payload.urgencyDeliveryFactors }
+          : merged.urgencyDeliveryFactors,
+        badgePricing: typeof payload.badgePricing === "object" && payload.badgePricing
+          ? { ...merged.badgePricing, ...payload.badgePricing }
+          : merged.badgePricing,
+        defaultBadgePrice: typeof payload.defaultBadgePrice === "number" ? payload.defaultBadgePrice : merged.defaultBadgePrice,
+        maxBadgesPrice: payload.maxBadgesPrice !== undefined ? payload.maxBadgesPrice : merged.maxBadgesPrice,
+        baseMinDays: typeof payload.baseMinDays === "number" ? payload.baseMinDays : merged.baseMinDays,
+        baseMaxDays: typeof payload.baseMaxDays === "number" ? payload.baseMaxDays : merged.baseMaxDays,
+      };
+      await storage.upsertQueueConfig({ ...config, badgeQuoteSettings: updated } as any);
+      res.json({ success: true, badgeQuoteSettings: updated });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update badge quote settings" });
+    }
+  });
+
+  app.patch("/api/config/my-player-type-settings", requireOwner, async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== "object") return res.status(400).json({ error: "Body must be an object" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      const merged = mergeMyPlayerTypeSettings((config as any).myPlayerTypeSettings);
+      const parseNum = (v: unknown): number | null => {
+        if (typeof v === "number" && !isNaN(v) && v >= 0) return v;
+        if (typeof v === "string") { const n = parseFloat(v); return !isNaN(n) && n >= 0 ? n : null; }
+        return null;
+      };
+      const updated: MyPlayerTypeSettings = {
+        nonRebirthAdd: parseNum(payload.nonRebirthAdd) ?? merged.nonRebirthAdd,
+        rebirthAdd: parseNum(payload.rebirthAdd) ?? parseNum((payload as any).rebirthDeduct) ?? merged.rebirthAdd,
+      };
+      await storage.upsertQueueConfig({ ...config, myPlayerTypeSettings: updated } as any);
+      res.json({ success: true, myPlayerTypeSettings: updated });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update MyPlayer Type settings" });
     }
   });
 

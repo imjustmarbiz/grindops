@@ -97,6 +97,7 @@ export const api = {
         mgtOrderNumber: z.number().nullable().optional(),
         customerPrice: z.string().optional(),
         creatorCode: z.string().nullable().optional(),
+        quoteId: z.string().nullable().optional(),
       }),
     },
     linkTicket: {

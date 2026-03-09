@@ -537,6 +537,7 @@ export function OperationsContent({ embedded = false, initialLinkOrderId }: { em
   const [manualOrderComplexity, setManualOrderComplexity] = useState("1");
   const [manualOrderTicketChannel, setManualOrderTicketChannel] = useState("");
   const [manualOrderCustomerDiscord, setManualOrderCustomerDiscord] = useState("");
+  const [manualOrderQuoteId, setManualOrderQuoteId] = useState("");
 
   const [assignOrderId, setAssignOrderId] = useState("");
   const [assignGrinderId, setAssignGrinderId] = useState("");
@@ -557,6 +558,9 @@ export function OperationsContent({ embedded = false, initialLinkOrderId }: { em
   const [alertTarget, setAlertTarget] = useState("all");
   const [alertGrinderId, setAlertGrinderId] = useState("");
 
+  const { data: staffQuotesList = [] } = useQuery<Array<{ id: string; customerIdentifier?: string | null; results?: { recommendedQuote?: number } }>>({
+    queryKey: ["/api/staff/quotes"],
+  });
   const createManualOrderMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/orders", data);
@@ -581,6 +585,7 @@ export function OperationsContent({ embedded = false, initialLinkOrderId }: { em
       setManualOrderComplexity("1");
       setManualOrderTicketChannel("");
       setManualOrderCustomerDiscord("");
+      setManualOrderQuoteId("");
       toast({ title: "Manual order created", description: manualOrderSendToGrinders ? "Order is visible to grinders for bidding." : "Order created for manual assignment only." });
     },
     onError: (err: any) => {
@@ -808,6 +813,24 @@ export function OperationsContent({ embedded = false, initialLinkOrderId }: { em
               <label className="text-xs text-muted-foreground font-medium">Customer Discord ID (optional)</label>
               <Input placeholder="Customer's Discord user ID" value={manualOrderCustomerDiscord} onChange={(e) => setManualOrderCustomerDiscord(e.target.value)} className="bg-background/50 border-white/10 font-mono" data-testid="input-manual-customer-discord" />
             </div>
+            {staffQuotesList.length > 0 && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs text-muted-foreground font-medium">Link to saved quote (optional)</label>
+                <Select value={manualOrderQuoteId || "_none"} onValueChange={(v) => setManualOrderQuoteId(v === "_none" ? "" : v)}>
+                  <SelectTrigger className="bg-background/50 border-white/10" data-testid="select-manual-quote">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">None</SelectItem>
+                    {staffQuotesList.slice(0, 20).map((q) => (
+                      <SelectItem key={q.id} value={q.id}>
+                        {q.customerIdentifier || "—"} — ${Number(q.results?.recommendedQuote ?? 0).toLocaleString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
             <div className="flex items-center gap-2 flex-1">
@@ -861,6 +884,7 @@ export function OperationsContent({ embedded = false, initialLinkOrderId }: { em
                 visibleToGrinders: manualOrderSendToGrinders,
                 discordTicketChannelId: manualOrderTicketChannel || null,
                 customerDiscordId: manualOrderCustomerDiscord || null,
+                quoteId: manualOrderQuoteId || null,
               });
             }}
           >

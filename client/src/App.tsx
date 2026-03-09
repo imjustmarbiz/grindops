@@ -61,6 +61,8 @@ import CustomerReviewPage from "@/pages/customer-review";
 import StaffNotifications from "@/pages/staff/notifications";
 import StaffTodo from "@/pages/staff/todo";
 import StaffBadges from "@/pages/staff/badges";
+import QuoteGeneratorPage from "@/pages/staff/quote-generator";
+import StaffCreatorProfile from "@/pages/staff/creator-profile";
 import StaffOverviewPage from "@/pages/staff/staff-overview";
 import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
@@ -260,6 +262,8 @@ function Router() {
       <Route path="/business" component={() => <ProtectedRoute component={BusinessPerformance} ownerOnly blockedDiscordIds={BUSINESS_BLOCKED_IDS} />} />
       <Route path="/wallets" component={() => <ProtectedRoute component={StaffWallets} staffOnly />} />
       <Route path="/badges" component={() => <ProtectedRoute component={StaffBadges} staffOnly />} />
+      <Route path="/quote-generator" component={() => <ProtectedRoute component={QuoteGeneratorPage} staffOnly />} />
+      <Route path="/staff/creators/:id" component={() => <ProtectedRoute component={StaffCreatorProfile} staffOnly />} />
       <Route path="/my-performance" component={() => <ProtectedRoute component={MyPerformance} staffOnly />} />
       
       <Route path="/grinder/orders" component={() => <ProtectedRoute component={GrinderOrders} />} />

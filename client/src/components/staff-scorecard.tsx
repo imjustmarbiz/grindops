@@ -71,7 +71,7 @@ export function StaffPerformanceContent({ userId }: { userId: string }) {
             {profile.discordUsername && profile.firstName && profile.firstName !== profile.discordUsername && (
               <span className="text-sm text-muted-foreground">(@{profile.discordUsername})</span>
             )}
-            <Badge className={`gap-1 ${isOwnerProfile ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-teal-500/20 text-teal-400 border-teal-500/30"}`}>
+            <Badge className={`gap-1 ${isOwnerProfile ? "bg-primary/20 text-primary border-primary/30" : "bg-teal-500/20 text-teal-400 border-teal-500/30"}`}>
               {isOwnerProfile ? <Crown className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
               {isOwnerProfile ? "Owner" : "Staff"}
             </Badge>

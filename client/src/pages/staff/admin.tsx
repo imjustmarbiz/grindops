@@ -4,12 +4,17 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useStaffData } from "@/hooks/use-staff-data";
 import { ROLE_LABELS } from "@shared/schema";
+import { getDefaultRepQuoteSettings, mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-settings";
+import { getDefaultBadgeQuoteSettings, mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
+import { getDefaultMyPlayerTypeSettings, mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
+import { ALL_BADGES } from "@shared/badge-data";
 import { formatCurrency, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,15 +22,172 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
-  ArrowRight, CheckCircle, Loader2, Zap, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette, Star, ExternalLink, Percent, CreditCard,
+  ArrowRight, CheckCircle, Loader2, Zap, Medal, Clock, Search, Settings, UserPlus, Hash,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette, Star, ExternalLink, Percent, CreditCard, Calculator, LayoutDashboard,
 } from "lucide-react";
-import { useSearch } from "wouter";
+import { useSearch, Link } from "wouter";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 import { OperationsContent, ServiceManagement, DeletionRequestsPanel, ClearDataPanel } from "./operations";
 import { CREATOR_MANUAL_BADGE_IDS } from "@shared/creator-badges";
 import { CREATOR_BADGE_META } from "@/components/creator-achievement-badges";
+import { SiPaypal, SiApple, SiApplepay, SiVenmo, SiCashapp, SiZelle } from "react-icons/si";
+
+const CREATOR_PAYOUT_METHOD_LABELS: Record<string, string> = { paypal: "PayPal", zelle: "Zelle", applepay: "Apple Pay", venmo: "Venmo", cashapp: "Cash App" };
+
+/** Apple logo only — matches button green (emerald) when enabled */
+function ApplePayVerticalLogo({ className }: { className?: string }) {
+  return <SiApple className={className} style={{ color: "currentColor" }} aria-hidden />;
+}
+
+/** Venmo — Apple App Store style icon (blue squircle, white V) */
+function VenmoVerticalLogo({ className }: { className?: string }) {
+  return (
+    <img
+      src="/venmo-app-icon.svg"
+      alt=""
+      className={className}
+      width={20}
+      height={20}
+      style={{ flexShrink: 0, objectFit: "contain" }}
+      aria-hidden
+    />
+  );
+}
+
+function CreatorRow({ c, isOwner, editingCreatorQuoteDiscountId, editingCreatorQuoteDiscountValue, setEditingCreatorQuoteDiscountId, setEditingCreatorQuoteDiscountValue, updateCreatorQuoteDiscountMutation, editingCreatorCommissionId, editingCreatorCommissionValue, setEditingCreatorCommissionId, setEditingCreatorCommissionValue, updateCreatorCommissionMutation, editingCreatorUserIdId, editingCreatorUserIdValue, setEditingCreatorUserIdId, setEditingCreatorUserIdValue, updateCreatorUserIdMutation, setAssignCreatorBadgeCreator, setAssignCreatorBadgeId, setAssignCreatorBadgeNote }: {
+  c: any;
+  isOwner: boolean;
+  editingCreatorQuoteDiscountId: string | null;
+  editingCreatorQuoteDiscountValue: string;
+  setEditingCreatorQuoteDiscountId: (id: string | null) => void;
+  setEditingCreatorQuoteDiscountValue: (v: string) => void;
+  updateCreatorQuoteDiscountMutation: any;
+  editingCreatorCommissionId: string | null;
+  editingCreatorCommissionValue: string;
+  setEditingCreatorCommissionId: (id: string | null) => void;
+  setEditingCreatorCommissionValue: (v: string) => void;
+  updateCreatorCommissionMutation: any;
+  editingCreatorUserIdId: string | null;
+  editingCreatorUserIdValue: string;
+  setEditingCreatorUserIdId: (id: string | null) => void;
+  setEditingCreatorUserIdValue: (v: string) => void;
+  updateCreatorUserIdMutation: any;
+  setAssignCreatorBadgeCreator: (c: any) => void;
+  setAssignCreatorBadgeId: (id: string) => void;
+  setAssignCreatorBadgeNote: (note: string) => void;
+}) {
+  return (
+    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+      <div className="flex-1 min-w-0">
+        <p className="font-medium">{c.displayName}</p>
+        <code className="text-sm text-emerald-400 font-mono">{c.code}</code>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href={`/staff/creators/${c.id}`}>
+          <Button variant="outline" size="sm" className="shrink-0 border-blue-500/30 text-blue-400 hover:bg-blue-500/10" data-testid={`button-view-creator-dashboard-${c.id}`}>
+            <LayoutDashboard className="w-3.5 h-3.5 mr-1" />
+            View dashboard
+          </Button>
+        </Link>
+        {isOwner && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Quote %</label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={0.5}
+                placeholder="—"
+                className="w-20 h-8 text-sm"
+                value={editingCreatorQuoteDiscountId === c.id ? editingCreatorQuoteDiscountValue : (c.quoteDiscountPercent ?? "")}
+                onChange={(e) => { setEditingCreatorQuoteDiscountId(c.id); setEditingCreatorQuoteDiscountValue(e.target.value); }}
+                onFocus={() => { setEditingCreatorQuoteDiscountId(c.id); setEditingCreatorQuoteDiscountValue(String(c.quoteDiscountPercent ?? "")); }}
+                onBlur={() => {
+                  if (editingCreatorQuoteDiscountId !== c.id) return;
+                  const v = editingCreatorQuoteDiscountValue.trim();
+                  const num = v === "" ? null : parseFloat(v);
+                  if (v === "" || (num !== null && !Number.isNaN(num) && num >= 0 && num <= 100)) {
+                    updateCreatorQuoteDiscountMutation.mutate({ creatorId: c.id, quoteDiscountPercent: num });
+                    setEditingCreatorQuoteDiscountId(null);
+                    setEditingCreatorQuoteDiscountValue("");
+                  }
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Commission %</label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={0.5}
+                placeholder="Default"
+                className="w-20 h-8 text-sm"
+                value={editingCreatorCommissionId === c.id ? editingCreatorCommissionValue : (c.commissionPercent ?? "")}
+                onChange={(e) => { setEditingCreatorCommissionId(c.id); setEditingCreatorCommissionValue(e.target.value); }}
+                onFocus={() => { setEditingCreatorCommissionId(c.id); setEditingCreatorCommissionValue(String(c.commissionPercent ?? "")); }}
+                onBlur={() => {
+                  if (editingCreatorCommissionId !== c.id) return;
+                  const v = editingCreatorCommissionValue.trim();
+                  const num = v === "" ? null : parseFloat(v);
+                  if (v === "" || (num !== null && !Number.isNaN(num) && num >= 0 && num <= 100)) {
+                    updateCreatorCommissionMutation.mutate({ creatorId: c.id, commissionPercent: num });
+                    setEditingCreatorCommissionId(null);
+                    setEditingCreatorCommissionValue("");
+                  }
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Discord ID</label>
+              <Input
+                placeholder="Not linked"
+                className="w-36 h-8 text-sm font-mono"
+                value={editingCreatorUserIdId === c.id ? editingCreatorUserIdValue : (c.userId && c.userId !== c.id ? c.userId : "")}
+                onChange={(e) => { setEditingCreatorUserIdId(c.id); setEditingCreatorUserIdValue(e.target.value); }}
+                onFocus={() => { setEditingCreatorUserIdId(c.id); setEditingCreatorUserIdValue(c.userId && c.userId !== c.id ? c.userId : ""); }}
+                onBlur={() => {
+                  if (editingCreatorUserIdId !== c.id) return;
+                  const v = editingCreatorUserIdValue.trim();
+                  const current = c.userId && c.userId !== c.id ? c.userId : "";
+                  if (v !== current) {
+                    updateCreatorUserIdMutation.mutate({ creatorId: c.id, userId: v });
+                    setEditingCreatorUserIdId(null);
+                    setEditingCreatorUserIdValue("");
+                  }
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2 items-center">
+          {c.youtubeUrl && <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-red-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> YouTube</a>}
+          {c.twitchUrl && <a href={c.twitchUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Twitch</a>}
+          {c.tiktokUrl && <a href={c.tiktokUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-pink-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> TikTok</a>}
+          {c.instagramUrl && <a href={c.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-rose-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Instagram</a>}
+          {c.xUrl && <a href={c.xUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> X</a>}
+          {!c.youtubeUrl && !c.twitchUrl && !c.tiktokUrl && !c.instagramUrl && !c.xUrl && <span className="text-xs text-muted-foreground">No socials linked</span>}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10"
+            onClick={() => { setAssignCreatorBadgeCreator(c); setAssignCreatorBadgeId(""); setAssignCreatorBadgeNote(""); }}
+            data-testid={`button-assign-creator-badge-${c.id}`}
+          >
+            <Star className="w-3.5 h-3.5 mr-1" />
+            Assign badge
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function StaffAdmin() {
   const { toast } = useToast();
@@ -148,6 +310,7 @@ export default function StaffAdmin() {
       setAssignCreatorBadgeCreator(null);
       setAssignCreatorBadgeId("");
       setAssignCreatorBadgeNote("");
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
       toast({ title: "Creator badge assigned" });
     },
     onError: (e: any) => {
@@ -408,11 +571,162 @@ export default function StaffAdmin() {
       const res = await apiRequest("PATCH", "/api/config/creator-payout-methods", { methods });
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async (methods) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/config"] });
+      const prev = queryClient.getQueryData<any>(["/api/config"]);
+      queryClient.setQueryData(["/api/config"], (old: any) => (old ? { ...old, creatorPayoutMethods: methods } : old));
+      return { prev };
+    },
+    onError: (_err, _methods, ctx) => {
+      if (ctx?.prev != null) queryClient.setQueryData(["/api/config"], ctx.prev);
+      toast({ title: "Failed to update", description: "Could not save payout methods.", variant: "destructive" });
+    },
+    onSuccess: (data: { success?: boolean; creatorPayoutMethods?: string[] }) => {
+      const methods = Array.isArray(data?.creatorPayoutMethods) ? data.creatorPayoutMethods : undefined;
+      if (methods != null) {
+        queryClient.setQueryData(["/api/config"], (prev: any) => prev ? { ...prev, creatorPayoutMethods: methods } : prev);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/config"] });
       toast({ title: "Creator payout methods updated" });
     },
-    onError: (e: any) => toast({ title: "Failed to update", description: e?.message, variant: "destructive" }),
+  });
+
+  const setQuoteGeneratorSplitMutation = useMutation({
+    mutationFn: async ({ companyPct, grinderPct }: { companyPct?: number; grinderPct?: number }) => {
+      const res = await apiRequest("PATCH", "/api/config/quote-generator-split", { companyPct, grinderPct });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Quote generator split updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update quote generator split", description: e?.message, variant: "destructive" }),
+  });
+
+  const [repQuoteSettingsLocal, setRepQuoteSettingsLocal] = useState<RepQuoteSettings | null>(null);
+  const [badgeQuoteSettingsLocal, setBadgeQuoteSettingsLocal] = useState<BadgeQuoteSettings | null>(null);
+  const [myPlayerTypeSettingsLocal, setMyPlayerTypeSettingsLocal] = useState<MyPlayerTypeSettings | null>(null);
+  const [adminQuoteGenTab, setAdminQuoteGenTab] = useState<"rep" | "badge">("rep");
+
+  const saveRepQuoteSettingsMutation = useMutation({
+    mutationFn: async (payload: RepQuoteSettings) => {
+      const res = await apiRequest("PATCH", "/api/config/rep-quote-settings", payload);
+      return res.json();
+    },
+    onSuccess: (data: { repQuoteSettings?: RepQuoteSettings }) => {
+      const saved = data?.repQuoteSettings ? mergeRepQuoteSettings(data.repQuoteSettings) : null;
+      if (saved) setRepQuoteSettingsLocal(saved);
+      queryClient.setQueryData(["/api/config"], (prev: Record<string, unknown> | undefined) =>
+        prev && saved ? { ...prev, repQuoteSettings: saved } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Rep quote settings saved" });
+    },
+    onError: (e: any) => toast({ title: "Failed to save rep quote settings", description: e?.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (queueConfig?.repQuoteSettings && repQuoteSettingsLocal === null) setRepQuoteSettingsLocal(mergeRepQuoteSettings(queueConfig.repQuoteSettings));
+  }, [queueConfig?.repQuoteSettings, repQuoteSettingsLocal]);
+
+  const saveBadgeQuoteSettingsMutation = useMutation({
+    mutationFn: async (s: BadgeQuoteSettings) => {
+      const res = await apiRequest("PATCH", "/api/config/badge-quote-settings", s);
+      const data = await res.json();
+      if (!data.success) throw new Error("Failed to save");
+      return data;
+    },
+    onSuccess: (data) => {
+      const saved = data?.badgeQuoteSettings ? mergeBadgeQuoteSettings(data.badgeQuoteSettings) : null;
+      if (saved) setBadgeQuoteSettingsLocal(saved);
+      queryClient.setQueryData(["/api/config"], (prev: Record<string, unknown> | undefined) =>
+        prev && saved ? { ...prev, badgeQuoteSettings: saved } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Badge quote settings saved" });
+    },
+  });
+
+  useEffect(() => {
+    if (queueConfig?.badgeQuoteSettings && badgeQuoteSettingsLocal === null) setBadgeQuoteSettingsLocal(mergeBadgeQuoteSettings(queueConfig.badgeQuoteSettings));
+  }, [queueConfig?.badgeQuoteSettings, badgeQuoteSettingsLocal]);
+
+  const saveMyPlayerTypeSettingsMutation = useMutation({
+    mutationFn: async (s: MyPlayerTypeSettings) => {
+      const res = await apiRequest("PATCH", "/api/config/my-player-type-settings", s);
+      const data = await res.json();
+      if (!data.success) throw new Error("Failed to save");
+      return data;
+    },
+    onSuccess: (data) => {
+      const saved = data?.myPlayerTypeSettings ? mergeMyPlayerTypeSettings(data.myPlayerTypeSettings) : null;
+      if (saved) setMyPlayerTypeSettingsLocal(saved);
+      queryClient.setQueryData(["/api/config"], (prev: Record<string, unknown> | undefined) =>
+        prev && saved ? { ...prev, myPlayerTypeSettings: saved } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "MyPlayer Type settings saved" });
+    },
+    onError: (e: any) => toast({ title: "Failed to save MyPlayer Type settings", description: e?.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (queueConfig?.myPlayerTypeSettings != null && myPlayerTypeSettingsLocal === null) setMyPlayerTypeSettingsLocal(mergeMyPlayerTypeSettings(queueConfig.myPlayerTypeSettings));
+  }, [queueConfig?.myPlayerTypeSettings, myPlayerTypeSettingsLocal]);
+
+  const updateCreatorQuoteDiscountMutation = useMutation({
+    mutationFn: async ({ creatorId, quoteDiscountPercent }: { creatorId: string; quoteDiscountPercent: number | null }) => {
+      const res = await apiRequest("PATCH", `/api/staff/creators/${creatorId}`, { quoteDiscountPercent });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Creator quote discount % updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update creator quote discount", description: e?.message, variant: "destructive" }),
+  });
+
+  const updateCreatorCommissionMutation = useMutation({
+    mutationFn: async ({ creatorId, commissionPercent }: { creatorId: string; commissionPercent: number | null }) => {
+      const res = await apiRequest("PATCH", `/api/staff/creators/${creatorId}`, { commissionPercent });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      toast({ title: "Creator commission % updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update creator commission", description: e?.message, variant: "destructive" }),
+  });
+
+  const updateCreatorUserIdMutation = useMutation({
+    mutationFn: async ({ creatorId, userId }: { creatorId: string; userId: string }) => {
+      const res = await apiRequest("PATCH", `/api/staff/creators/${creatorId}`, { userId: userId.trim() });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      toast({ title: "Creator Discord link updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update Discord link", description: e?.message, variant: "destructive" }),
+  });
+
+  const createCreatorMutation = useMutation({
+    mutationFn: async ({ code, displayName, discordUserId }: { code: string; displayName: string; discordUserId?: string }) => {
+      const body: { code: string; displayName: string; discordUserId?: string } = { code: code.trim(), displayName: displayName.trim() };
+      if (discordUserId != null && discordUserId.trim() !== "") body.discordUserId = discordUserId.trim();
+      const res = await apiRequest("POST", "/api/staff/creators", body);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      setAddCreatorOpen(false);
+      setAddCreatorCode("");
+      setAddCreatorDisplayName("");
+      setAddCreatorDiscordUserId("");
+      toast({ title: "Creator added" });
+    },
+    onError: (e: any) => toast({ title: "Failed to add creator", description: e?.message, variant: "destructive" }),
   });
 
   const actorUsername = ((user as any)?.discordUsername || (user as any)?.firstName || "").toLowerCase();
@@ -434,6 +748,18 @@ export default function StaffAdmin() {
   const [editingPlatforms, setEditingPlatforms] = useState<string[] | null>(null);
   const activePlatforms = editingPlatforms || platformsList;
   const [creatorCommissionInput, setCreatorCommissionInput] = useState<string>("");
+  const [quoteGeneratorCompanyInput, setQuoteGeneratorCompanyInput] = useState<string>("");
+  const [quoteGeneratorGrinderInput, setQuoteGeneratorGrinderInput] = useState<string>("");
+  const [editingCreatorQuoteDiscountId, setEditingCreatorQuoteDiscountId] = useState<string | null>(null);
+  const [editingCreatorQuoteDiscountValue, setEditingCreatorQuoteDiscountValue] = useState<string>("");
+  const [editingCreatorCommissionId, setEditingCreatorCommissionId] = useState<string | null>(null);
+  const [editingCreatorCommissionValue, setEditingCreatorCommissionValue] = useState<string>("");
+  const [editingCreatorUserIdId, setEditingCreatorUserIdId] = useState<string | null>(null);
+  const [editingCreatorUserIdValue, setEditingCreatorUserIdValue] = useState<string>("");
+  const [addCreatorOpen, setAddCreatorOpen] = useState(false);
+  const [addCreatorCode, setAddCreatorCode] = useState("");
+  const [addCreatorDisplayName, setAddCreatorDisplayName] = useState("");
+  const [addCreatorDiscordUserId, setAddCreatorDiscordUserId] = useState("");
 
   const updatePlatformsMutation = useMutation({
     mutationFn: async (platforms: string[]) => {
@@ -585,6 +911,13 @@ export default function StaffAdmin() {
             Creators
           </TabsTrigger>
           {isOwner && (
+            <TabsTrigger value="quote-generator" className="gap-1.5" data-testid="tab-quote-generator">
+              <Calculator className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Quote Generator</span>
+              <span className="sm:hidden">Quotes</span>
+            </TabsTrigger>
+          )}
+          {isOwner && (
             <TabsTrigger value="system" className="gap-1.5" data-testid="tab-system">
               <Settings className="w-3.5 h-3.5" />
               System
@@ -597,6 +930,123 @@ export default function StaffAdmin() {
         </TabsContent>
 
         <TabsContent value="creators" className="mt-5 space-y-5">
+          <FadeInUp>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-4">
+              <p className="text-sm text-white/90">
+                <strong className="text-emerald-400">Creator management.</strong> Add creators and assign codes for quote attribution, order linking, and commission. Set default commission below; override per creator. Use <strong className="text-emerald-400">View dashboard</strong> for earnings, orders, and payouts.
+              </p>
+            </div>
+          </FadeInUp>
+          {isOwner && (
+          <FadeInUp>
+            <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-default-commission">
+              <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                    <Percent className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  Default commission % (orders)
+                  <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                    {queueConfig?.creatorCommissionPercent ?? 10}%
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="relative space-y-3">
+                <p className="text-xs text-muted-foreground">Applied to completed orders with a creator code when the creator has no custom %. Also used for Creator dashboard earnings.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  className="w-20 h-9"
+                  value={creatorCommissionInput !== "" ? creatorCommissionInput : (queueConfig?.creatorCommissionPercent ?? 10)}
+                  onChange={(e) => setCreatorCommissionInput(e.target.value)}
+                  onBlur={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+                      setCreatorCommissionMutation.mutate(v);
+                      setCreatorCommissionInput("");
+                    }
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+                <Button size="sm" variant="secondary" onClick={() => {
+                  const v = parseFloat(creatorCommissionInput || String(queueConfig?.creatorCommissionPercent ?? 10));
+                  if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+                    setCreatorCommissionMutation.mutate(v);
+                    setCreatorCommissionInput("");
+                  }
+                }} disabled={setCreatorCommissionMutation.isPending}>
+                  {setCreatorCommissionMutation.isPending ? "Saving…" : "Save"}
+                </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeInUp>
+          )}
+          {isOwner && (
+          <FadeInUp>
+            <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-creator-payout-methods">
+              <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  Creator Payout Methods
+                  <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                  {(Array.isArray(queueConfig?.creatorPayoutMethods) ? (queueConfig.creatorPayoutMethods as string[]).length : 1)} enabled
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="relative space-y-3">
+                <p className="text-xs text-muted-foreground">Choose which payout methods creators can use when requesting commission payouts. Click to enable or disable.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: "paypal", label: "PayPal", Icon: SiPaypal, VerticalLogo: null as React.ComponentType<{ className?: string }> | null },
+                    { id: "zelle", label: "Zelle", Icon: SiZelle, VerticalLogo: null as React.ComponentType<{ className?: string }> | null },
+                    { id: "applepay", label: "Apple Pay", Icon: SiApplepay, VerticalLogo: ApplePayVerticalLogo },
+                    { id: "venmo", label: "Venmo", Icon: SiVenmo, VerticalLogo: VenmoVerticalLogo },
+                    { id: "cashapp", label: "Cash App", Icon: SiCashapp, VerticalLogo: null as React.ComponentType<{ className?: string }> | null },
+                  ].map(({ id, label, Icon, VerticalLogo }) => {
+                    const raw = queueConfig?.creatorPayoutMethods;
+                    const current = Array.isArray(raw) ? raw : ["paypal"];
+                    const isChecked = current.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          const next = isChecked ? current.filter((m: string) => m !== id) : Array.from(new Set([...current, id]));
+                          setCreatorPayoutMethodsMutation.mutate(next.length ? next : ["paypal"]);
+                        }}
+                        disabled={setCreatorPayoutMethodsMutation.isPending}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                          isChecked
+                            ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/25"
+                            : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        data-testid={`payout-method-${id}`}
+                      >
+                        {isChecked ? (
+                          VerticalLogo ? (
+                            <VerticalLogo className="h-5 w-auto shrink-0 min-w-[24px]" />
+                          ) : (
+                            <Icon className="w-4 h-4 shrink-0" aria-hidden />
+                          )
+                        ) : null}
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </FadeInUp>
+          )}
           {creatorPayoutDetailRequestsList.filter((r: any) => r.status === "pending").length > 0 && (
             <FadeInUp>
               <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-creator-payout-detail-requests">
@@ -616,7 +1066,7 @@ export default function StaffAdmin() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium">{req.creatorDisplayName ?? req.creatorId}</p>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                          Requested: <span className="text-amber-200">{req.requestedMethod === "paypal" ? "PayPal" : req.requestedMethod}</span> — <code className="text-emerald-400">{req.requestedDetail}</code>
+                          Requested: <span className="text-amber-200">{CREATOR_PAYOUT_METHOD_LABELS[String(req.requestedMethod ?? "")] ?? req.requestedMethod}</span> — <code className="text-emerald-400">{req.requestedDetail}</code>
                         </p>
                         {req.currentPayoutDetail != null && req.currentPayoutDetail !== "" && (
                           <p className="text-xs text-muted-foreground mt-1">Current on profile: <code className="text-white/70">{req.currentPayoutDetail}</code></p>
@@ -657,50 +1107,654 @@ export default function StaffAdmin() {
                   <Star className="w-5 h-5 text-emerald-400" />
                   Creators
                   <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">{creatorsList.length}</Badge>
+                  {isOwner && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                      onClick={() => { setAddCreatorOpen(true); setAddCreatorCode(""); setAddCreatorDisplayName(""); setAddCreatorDiscordUserId(""); }}
+                      data-testid="button-add-creator"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1" />
+                      Add creator
+                    </Button>
+                  )}
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Creator codes and linked socials. Use these for referral attribution and payouts (Business Wallet → Creator).</p>
+                <p className="text-xs text-muted-foreground">Creator codes and linked socials. Use these for referral attribution and payouts (Business Wallet → Creator). Add a creator to get a code for the quote generator and orders. View dashboard shows their earnings, orders, and payouts.</p>
               </CardHeader>
               <CardContent>
-                {creatorsList.length === 0 ? (
+                {creatorsList.length === 0 && (
                   <p className="text-sm text-muted-foreground">No creators yet.</p>
-                ) : (
+                )}
+                {creatorsList.length > 0 && (
                   <div className="space-y-3">
-                    {creatorsList.map((c: any) => (
-                      <div key={c.id} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{c.displayName}</p>
-                          <code className="text-sm text-emerald-400 font-mono">{c.code}</code>
-                        </div>
-                        <div className="flex flex-wrap gap-2 items-center">
-                          {c.youtubeUrl && <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-red-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> YouTube</a>}
-                          {c.twitchUrl && <a href={c.twitchUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Twitch</a>}
-                          {c.tiktokUrl && <a href={c.tiktokUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-pink-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> TikTok</a>}
-                          {c.instagramUrl && <a href={c.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-rose-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Instagram</a>}
-                          {c.xUrl && <a href={c.xUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> X</a>}
-                          {!c.youtubeUrl && !c.twitchUrl && !c.tiktokUrl && !c.instagramUrl && !c.xUrl && <span className="text-xs text-muted-foreground">No socials linked</span>}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10"
-                            onClick={() => {
-                              setAssignCreatorBadgeCreator(c);
-                              setAssignCreatorBadgeId("");
-                              setAssignCreatorBadgeNote("");
-                            }}
-                            data-testid={`button-assign-creator-badge-${c.id}`}
-                          >
-                            <Star className="w-3.5 h-3.5 mr-1" />
-                            Assign badge
-                          </Button>
-                        </div>
-                      </div>
+                    {creatorsList.map((c) => (
+                      <CreatorRow
+                        key={c.id}
+                        c={c}
+                        isOwner={isOwner}
+                        editingCreatorQuoteDiscountId={editingCreatorQuoteDiscountId}
+                        editingCreatorQuoteDiscountValue={editingCreatorQuoteDiscountValue}
+                        setEditingCreatorQuoteDiscountId={setEditingCreatorQuoteDiscountId}
+                        setEditingCreatorQuoteDiscountValue={setEditingCreatorQuoteDiscountValue}
+                        updateCreatorQuoteDiscountMutation={updateCreatorQuoteDiscountMutation}
+                        editingCreatorCommissionId={editingCreatorCommissionId}
+                        editingCreatorCommissionValue={editingCreatorCommissionValue}
+                        setEditingCreatorCommissionId={setEditingCreatorCommissionId}
+                        setEditingCreatorCommissionValue={setEditingCreatorCommissionValue}
+                        updateCreatorCommissionMutation={updateCreatorCommissionMutation}
+                        editingCreatorUserIdId={editingCreatorUserIdId}
+                        editingCreatorUserIdValue={editingCreatorUserIdValue}
+                        setEditingCreatorUserIdId={setEditingCreatorUserIdId}
+                        setEditingCreatorUserIdValue={setEditingCreatorUserIdValue}
+                        updateCreatorUserIdMutation={updateCreatorUserIdMutation}
+                        setAssignCreatorBadgeCreator={setAssignCreatorBadgeCreator}
+                        setAssignCreatorBadgeId={setAssignCreatorBadgeId}
+                        setAssignCreatorBadgeNote={setAssignCreatorBadgeNote}
+                      />
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
           </FadeInUp>
+
+          {/* Add Creator dialog - must live inside Creators tab so it's mounted when button is clicked */}
+          <Dialog open={addCreatorOpen} onOpenChange={(open) => { if (!open) { setAddCreatorOpen(false); setAddCreatorCode(""); setAddCreatorDisplayName(""); setAddCreatorDiscordUserId(""); } }}>
+            <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[420px]" data-testid="dialog-add-creator">
+              <DialogHeader>
+                <DialogTitle className="font-display text-lg flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-emerald-400" />
+                  Add creator
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  Create a new creator code for the quote generator and orders. The code will be stored in uppercase (e.g. MYCODE). Add their Discord User ID so when they sign in with Discord they are linked to this profile and can access the creator dashboard.
+                </p>
+              </DialogHeader>
+              <div className="space-y-4 mt-2">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Creator code</label>
+                  <Input
+                    value={addCreatorCode}
+                    onChange={(e) => setAddCreatorCode(e.target.value)}
+                    placeholder="e.g. MYCODE or STREAMER1"
+                    className="mt-1.5 bg-background/50 border-white/10"
+                    data-testid="input-add-creator-code"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Display name</label>
+                  <Input
+                    value={addCreatorDisplayName}
+                    onChange={(e) => setAddCreatorDisplayName(e.target.value)}
+                    placeholder="e.g. Streamer Name"
+                    className="mt-1.5 bg-background/50 border-white/10"
+                    data-testid="input-add-creator-display-name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Discord User ID (optional)</label>
+                  <Input
+                    value={addCreatorDiscordUserId}
+                    onChange={(e) => setAddCreatorDiscordUserId(e.target.value)}
+                    placeholder="e.g. 123456789012345678"
+                    className="mt-1.5 bg-background/50 border-white/10 font-mono text-sm"
+                    data-testid="input-add-creator-discord-user-id"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Links this profile to their Discord account. When they sign in with Discord, they’ll see the creator dashboard. Right‑click their avatar in Discord → Copy User ID (enable Developer Mode in Discord settings if needed).</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { setAddCreatorOpen(false); setAddCreatorCode(""); setAddCreatorDisplayName(""); setAddCreatorDiscordUserId(""); }} className="border-white/10">
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"
+                    disabled={!addCreatorCode.trim() || !addCreatorDisplayName.trim() || createCreatorMutation.isPending}
+                    onClick={() => createCreatorMutation.mutate({ code: addCreatorCode.trim(), displayName: addCreatorDisplayName.trim(), discordUserId: addCreatorDiscordUserId.trim() || undefined })}
+                    data-testid="button-submit-add-creator"
+                  >
+                    {createCreatorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add creator"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="quote-generator" className="mt-5 space-y-5">
+          {isOwner && (
+            <>
+              <FadeInUp>
+                <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 p-4">
+                  <p className="text-sm text-white/90">
+                    <strong className="text-amber-400">Quote Generator settings.</strong> Configure default payout split and any options used on the staff Quote Generator page. Creator codes and their quote discount % are managed under the <strong className="text-amber-400">Creators</strong> tab.
+                  </p>
+                  <Link href="/quote-generator">
+                    <Button variant="outline" size="sm" className="mt-3 border-amber-500/30 text-amber-400 hover:bg-amber-500/20">
+                      <Calculator className="w-3.5 h-3.5 mr-1.5" />
+                      Open Quote Generator
+                    </Button>
+                  </Link>
+                </div>
+              </FadeInUp>
+              <Tabs value={adminQuoteGenTab} onValueChange={(v) => setAdminQuoteGenTab(v as "rep" | "badge")} className="space-y-4">
+                <TabsList className="w-full sm:w-auto grid grid-cols-2 bg-white/[0.04] border border-white/10 p-1 h-auto">
+                  <TabsTrigger value="rep" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
+                    <Zap className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    Rep Grinding
+                  </TabsTrigger>
+                  <TabsTrigger value="badge" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
+                    <span className="mr-1.5 shrink-0" aria-hidden>🎖️</span>
+                    Badge Grinding
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="rep" className="mt-0">
+              <FadeInUp>
+                <Card className="border-0 bg-white/[0.02] border border-white/[0.06] overflow-hidden relative" data-testid="card-rep-grinding-quote-settings">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-amber-400" />
+                      </div>
+                      Rep Grinding Quote Settings
+                      <Badge className="ml-auto text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20">Editable</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="relative space-y-3">
+                    <p className="text-xs text-muted-foreground">Configure rounding, urgency multipliers, volume modifier, late efficiency, and rep segment pricing. The quote generator uses these when generating quotes.</p>
+                    {(() => {
+                      const s = repQuoteSettingsLocal ?? mergeRepQuoteSettings(queueConfig?.repQuoteSettings ?? null);
+                      return (
+                        <>
+                          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                            <p className="text-xs font-medium text-primary">Rep Grinding Profit Split</p>
+                            <p className="text-[11px] text-muted-foreground leading-tight">When no grinder bid is entered, payouts use this split. Company share funds creator commission when a creator code is used.</p>
+                            <div className="flex flex-wrap items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm text-muted-foreground">Company</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  className="w-16 bg-white/[0.04] border-white/10 text-foreground"
+                                  value={quoteGeneratorCompanyInput !== "" ? quoteGeneratorCompanyInput : (queueConfig?.quoteGeneratorCompanyPct ?? 70)}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    setQuoteGeneratorCompanyInput(raw);
+                                    const v = parseFloat(raw);
+                                    if (!Number.isNaN(v) && v >= 0 && v <= 100) setQuoteGeneratorGrinderInput(String(100 - v));
+                                  }}
+                                  onBlur={() => {
+                                    const v = parseFloat(quoteGeneratorCompanyInput || String(queueConfig?.quoteGeneratorCompanyPct ?? 70));
+                                    if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+                                      const company = Math.round(v);
+                                      setQuoteGeneratorSplitMutation.mutate({ companyPct: company, grinderPct: 100 - company });
+                                      setQuoteGeneratorCompanyInput("");
+                                      setQuoteGeneratorGrinderInput("");
+                                    }
+                                  }}
+                                  onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                                />
+                                <span className="text-sm text-muted-foreground">%</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm text-muted-foreground">Grinder</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  className="w-16 bg-white/[0.04] border-white/10 text-foreground"
+                                  value={quoteGeneratorGrinderInput !== "" ? quoteGeneratorGrinderInput : (queueConfig?.quoteGeneratorGrinderPct ?? 30)}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    setQuoteGeneratorGrinderInput(raw);
+                                    const v = parseFloat(raw);
+                                    if (!Number.isNaN(v) && v >= 0 && v <= 100) setQuoteGeneratorCompanyInput(String(100 - v));
+                                  }}
+                                  onBlur={() => {
+                                    const v = parseFloat(quoteGeneratorGrinderInput || String(queueConfig?.quoteGeneratorGrinderPct ?? 30));
+                                    if (!Number.isNaN(v) && v >= 0 && v <= 100) {
+                                      const grinder = Math.round(v);
+                                      setQuoteGeneratorSplitMutation.mutate({ companyPct: 100 - grinder, grinderPct: grinder });
+                                      setQuoteGeneratorCompanyInput("");
+                                      setQuoteGeneratorGrinderInput("");
+                                    }
+                                  }}
+                                  onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                                />
+                                <span className="text-sm text-muted-foreground">%</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  const company = parseFloat(quoteGeneratorCompanyInput || String(queueConfig?.quoteGeneratorCompanyPct ?? 70));
+                                  const grinder = parseFloat(quoteGeneratorGrinderInput || String(queueConfig?.quoteGeneratorGrinderPct ?? 30));
+                                  if (!Number.isNaN(company) && company >= 0 && company <= 100) {
+                                    setQuoteGeneratorSplitMutation.mutate({ companyPct: Math.round(company), grinderPct: 100 - Math.round(company) });
+                                    setQuoteGeneratorCompanyInput("");
+                                    setQuoteGeneratorGrinderInput("");
+                                  } else if (!Number.isNaN(grinder) && grinder >= 0 && grinder <= 100) {
+                                    setQuoteGeneratorSplitMutation.mutate({ companyPct: 100 - Math.round(grinder), grinderPct: Math.round(grinder) });
+                                    setQuoteGeneratorCompanyInput("");
+                                    setQuoteGeneratorGrinderInput("");
+                                  }
+                                }}
+                                disabled={setQuoteGeneratorSplitMutation.isPending}
+                              >
+                                {setQuoteGeneratorSplitMutation.isPending ? "Saving…" : "Save"}
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Rounding ($)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Round quote amounts to the nearest $X (e.g. 5 rounds to $125, $130).</p>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={100}
+                                className="h-9 w-20 bg-white/[0.04] border-white/10"
+                                value={s.roundBy}
+                                onChange={(e) => {
+                                  const v = parseInt(e.target.value, 10);
+                                  if (!Number.isNaN(v) && v >= 1) setRepQuoteSettingsLocal((prev) => (prev ? { ...prev, roundBy: v } : getDefaultRepQuoteSettings()));
+                                }}
+                              />
+                            </div>
+                            {(["Rush", "Normal", "Slow"] as const).map((u) => (
+                              <div key={u} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Quote multiplier · {u}</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Multiplies base quote for this urgency (e.g. 1.2 = 20% more).</p>
+                                <Input
+                                  type="number"
+                                  step={0.01}
+                                  min={0.5}
+                                  max={1.5}
+                                  className="h-9 w-20 bg-white/[0.04] border-white/10"
+                                  value={s.urgencyQuoteMultipliers[u] ?? 1}
+                                  onChange={(e) => {
+                                    const v = parseFloat(e.target.value);
+                                    if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                      const next = prev ? { ...prev } : getDefaultRepQuoteSettings();
+                                      next.urgencyQuoteMultipliers = { ...next.urgencyQuoteMultipliers, [u]: v };
+                                      return next;
+                                    });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {(["Rush", "Normal", "Slow"] as const).map((u) => {
+                              const f = s.urgencyDeliveryFactors[u] ?? { min: 1, max: 1 };
+                              return (
+                                <div key={u} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                  <p className="text-xs font-medium text-primary">Delivery factor (min/max) · {u}</p>
+                                  <p className="text-[11px] text-muted-foreground leading-tight">Multipliers for min/max delivery days by urgency.</p>
+                                  <div className="flex gap-2 items-center">
+                                    <div className="flex-1 flex flex-col gap-1">
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Min</label>
+                                      <Input
+                                        type="number"
+                                        step={0.01}
+                                        className="h-9 w-full bg-white/[0.04] border-white/10"
+                                        value={f.min}
+                                        onChange={(e) => {
+                                          const v = parseFloat(e.target.value);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev } : getDefaultRepQuoteSettings();
+                                            next.urgencyDeliveryFactors = { ...next.urgencyDeliveryFactors, [u]: { ...(next.urgencyDeliveryFactors[u] ?? { min: 1, max: 1 }), min: v } };
+                                            return next;
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="flex-1 flex flex-col gap-1">
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Max</label>
+                                      <Input
+                                        type="number"
+                                        step={0.01}
+                                        className="h-9 w-full bg-white/[0.04] border-white/10"
+                                        value={f.max}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                          const next = prev ? { ...prev } : getDefaultRepQuoteSettings();
+                                          next.urgencyDeliveryFactors = { ...next.urgencyDeliveryFactors, [u]: { ...(next.urgencyDeliveryFactors[u] ?? { min: 1, max: 1 }), max: v } };
+                                          return next;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                            })}
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                            <p className="text-xs font-medium text-primary">Volume modifier (bars 1–6)</p>
+                            <p className="text-[11px] text-muted-foreground leading-tight">Multiplier per bar count (e.g. 1.1 = 10% more for that bar count).</p>
+                            <div className="flex flex-wrap gap-2">
+                              {[1, 2, 3, 4, 5, 6].map((b) => (
+                                <div key={b} className="flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground w-12">{b} bar{b > 1 ? "s" : ""}</span>
+                                  <Input
+                                    type="number"
+                                    step={0.01}
+                                    min={0.5}
+                                    max={2}
+                                    className="h-8 w-16 bg-white/[0.04] border-white/10 text-xs"
+                                    value={s.volumeMultiplierByBars[String(b)] ?? 1}
+                                    onChange={(e) => {
+                                      const v = parseFloat(e.target.value);
+                                      if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                        const next = prev ? { ...prev } : getDefaultRepQuoteSettings();
+                                        next.volumeMultiplierByBars = { ...next.volumeMultiplierByBars, [String(b)]: v };
+                                        return next;
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Late efficiency surcharge (level 1–5)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Additional % added based on late efficiency level (0.01 = 1%).</p>
+                              <div className="flex flex-wrap gap-2">
+                                {[1, 2, 3, 4, 5].map((lvl) => (
+                                  <div key={lvl} className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground w-6">L{lvl}</span>
+                                    <Input
+                                      type="number"
+                                      step={0.001}
+                                      min={0}
+                                      max={0.5}
+                                      className="h-8 w-20 bg-white/[0.04] border-white/10 text-xs"
+                                      value={s.lateEfficiencySurcharge[String(lvl)] ?? 0}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                          const next = prev ? { ...prev } : getDefaultRepQuoteSettings();
+                                          next.lateEfficiencySurcharge = { ...next.lateEfficiencySurcharge, [String(lvl)]: v };
+                                          return next;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Late efficiency tier factor</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Multiplier by rep tier (Rookie, Starter, Veteran, Legend).</p>
+                              <div className="flex flex-wrap gap-2">
+                                {["Rookie", "Starter", "Veteran", "Legend"].map((tier) => (
+                                  <div key={tier} className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground w-14">{tier}</span>
+                                    <Input
+                                      type="number"
+                                      step={0.1}
+                                      min={0}
+                                      max={2}
+                                      className="h-8 w-16 bg-white/[0.04] border-white/10 text-xs"
+                                      value={s.lateEfficiencyTierFactor[tier] ?? 1}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                          const next = prev ? { ...prev } : getDefaultRepQuoteSettings();
+                                          next.lateEfficiencyTierFactor = { ...next.lateEfficiencyTierFactor, [tier]: v };
+                                          return next;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
+                            <Button
+                              size="sm"
+                              className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30"
+                              onClick={() => saveRepQuoteSettingsMutation.mutate(s)}
+                              disabled={saveRepQuoteSettingsMutation.isPending}
+                            >
+                              {saveRepQuoteSettingsMutation.isPending ? "Saving…" : "Save all"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-white/10"
+                              onClick={() => setRepQuoteSettingsLocal(getDefaultRepQuoteSettings())}
+                            >
+                              Reset to defaults
+                            </Button>
+                          </div>
+                          <details className="group">
+                            <summary className="text-xs font-medium text-primary cursor-pointer list-none flex items-center gap-1">Rep Pricing (segment rates) — click to expand</summary>
+                              <p className="text-[11px] text-muted-foreground mt-1">Rate and full-bar value per rep segment (e.g. 0–25, 25–50).</p>
+                            <div className="mt-2 overflow-x-auto max-h-64 overflow-y-auto">
+                              <table className="text-xs w-full min-w-[280px] border border-white/10 rounded-lg overflow-hidden">
+                                <thead><tr className="bg-white/5"><th className="text-left p-1.5">From → To</th><th className="p-1.5 min-w-[5rem]">Rate</th><th className="p-1.5 min-w-[5rem]">Full bar</th></tr></thead>
+                                <tbody>
+                                  {s.repPricing.map((row, i) => (
+                                    <tr key={i} className="border-t border-white/5">
+                                      <td className="p-1.5">{row.fromLabel} → {row.toLabel}</td>
+                                      <td className="p-1.5 min-w-[5rem]">
+                                        <Input type="number" step={0.01} className="h-7 min-w-[5rem] w-20 bg-white/[0.04] border-white/10 text-xs" value={row.rate} onChange={(e) => {
+                                          const v = parseFloat(e.target.value);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev, repPricing: prev.repPricing.map((r, j) => j === i ? { ...r, rate: v } : r) } : getDefaultRepQuoteSettings();
+                                            return next;
+                                          });
+                                        }} />
+                                      </td>
+                                      <td className="p-1.5 min-w-[5rem]">
+                                        <Input type="number" className="h-7 min-w-[5rem] w-20 bg-white/[0.04] border-white/10 text-xs" value={row.fullBar} onChange={(e) => {
+                                          const v = parseInt(e.target.value, 10);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev, repPricing: prev.repPricing.map((r, j) => j === i ? { ...r, fullBar: v } : r) } : getDefaultRepQuoteSettings();
+                                            return next;
+                                          });
+                                        }} />
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </details>
+                          <details className="group">
+                            <summary className="text-xs font-medium text-primary cursor-pointer list-none flex items-center gap-1">Rep Delivery (min/max days per segment) — click to expand</summary>
+                              <p className="text-[11px] text-muted-foreground mt-1">Min and max delivery days per rep segment.</p>
+                            <div className="mt-2 overflow-x-auto max-h-64 overflow-y-auto">
+                              <table className="text-xs w-full min-w-[280px] border border-white/10 rounded-lg overflow-hidden">
+                                <thead><tr className="bg-white/5"><th className="text-left p-1.5">From → To</th><th className="p-1.5 min-w-[5rem]">Min days</th><th className="p-1.5 min-w-[5rem]">Max days</th></tr></thead>
+                                <tbody>
+                                  {s.repDelivery.map((row, i) => (
+                                    <tr key={i} className="border-t border-white/5">
+                                      <td className="p-1.5">{row.from} → {row.to}</td>
+                                      <td className="p-1.5 min-w-[5rem]">
+                                        <Input type="number" step={0.01} className="h-7 min-w-[5rem] w-20 bg-white/[0.04] border-white/10 text-xs" value={row.minDays} onChange={(e) => {
+                                          const v = parseFloat(e.target.value);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev, repDelivery: prev.repDelivery.map((r, j) => j === i ? { ...r, minDays: v } : r) } : getDefaultRepQuoteSettings();
+                                            return next;
+                                          });
+                                        }} />
+                                      </td>
+                                      <td className="p-1.5 min-w-[5rem]">
+                                        <Input type="number" step={0.01} className="h-7 min-w-[5rem] w-20 bg-white/[0.04] border-white/10 text-xs" value={row.maxDays} onChange={(e) => {
+                                          const v = parseFloat(e.target.value);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev, repDelivery: prev.repDelivery.map((r, j) => j === i ? { ...r, maxDays: v } : r) } : getDefaultRepQuoteSettings();
+                                            return next;
+                                          });
+                                        }} />
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </details>
+                          <details className="group">
+                            <summary className="text-xs font-medium text-primary cursor-pointer list-none flex items-center gap-1">Rep Market Value (for market quote) — click to expand</summary>
+                              <p className="text-[11px] text-muted-foreground mt-1">Rate and full-bar value used for market-based quotes.</p>
+                            <div className="mt-2 overflow-x-auto max-h-64 overflow-y-auto">
+                              <table className="text-xs w-full min-w-[280px] border border-white/10 rounded-lg overflow-hidden">
+                                <thead><tr className="bg-white/5"><th className="text-left p-1.5">From → To</th><th className="p-1.5 min-w-[5rem]">Rate</th><th className="p-1.5 min-w-[5rem]">Full bar</th></tr></thead>
+                                <tbody>
+                                  {s.repMarketValue.map((row, i) => (
+                                    <tr key={i} className="border-t border-white/5">
+                                      <td className="p-1.5">{row.fromLabel} → {row.toLabel}</td>
+                                      <td className="p-1.5 min-w-[5rem]">
+                                        <Input type="number" step={0.01} className="h-7 min-w-[5rem] w-20 bg-white/[0.04] border-white/10 text-xs" value={row.rate} onChange={(e) => {
+                                          const v = parseFloat(e.target.value);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev, repMarketValue: prev.repMarketValue.map((r, j) => j === i ? { ...r, rate: v } : r) } : getDefaultRepQuoteSettings();
+                                            return next;
+                                          });
+                                        }} />
+                                      </td>
+                                      <td className="p-1.5 min-w-[5rem]">
+                                        <Input type="number" className="h-7 min-w-[5rem] w-20 bg-white/[0.04] border-white/10 text-xs" value={row.fullBar} onChange={(e) => {
+                                          const v = parseInt(e.target.value, 10);
+                                          if (!Number.isNaN(v)) setRepQuoteSettingsLocal((prev) => {
+                                            const next = prev ? { ...prev, repMarketValue: prev.repMarketValue.map((r, j) => j === i ? { ...r, fullBar: v } : r) } : getDefaultRepQuoteSettings();
+                                            return next;
+                                          });
+                                        }} />
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </details>
+                        </>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </FadeInUp>
+                </TabsContent>
+                <TabsContent value="badge" className="mt-0">
+                  <FadeInUp>
+                    <Card className="border-0 bg-white/[0.02] border border-white/[0.06] overflow-hidden relative" data-testid="card-badge-grinding-quote-settings">
+                      <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Medal className="w-4 h-4 text-amber-400" />
+                      </div>
+                      Badge Grinding Quote Settings
+                      <Badge className="ml-auto text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20">Editable</Badge>
+                    </CardTitle>
+                      </CardHeader>
+                      <CardContent className="relative space-y-3">
+                    <p className="text-xs text-muted-foreground">Configure pricing per badge, max total, urgency multipliers, and delivery for the Badge Grinding tab on the Quote Generator. <a href="https://www.nba2klab.com/badge-descriptions" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">NBA 2K26 badge list</a></p>
+                    {(() => {
+                      const s = badgeQuoteSettingsLocal ?? mergeBadgeQuoteSettings(queueConfig?.badgeQuoteSettings ?? null);
+                      return (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Rounding ($)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Round quote amounts to the nearest $X.</p>
+                              <Input type="number" min={1} max={100} className="h-9 w-20 bg-white/[0.04] border-white/10" value={s.roundBy} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 1) setBadgeQuoteSettingsLocal((prev) => (prev ? { ...prev, roundBy: v } : getDefaultBadgeQuoteSettings())); }} />
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Default badge price ($)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Fallback when a badge has no custom price.</p>
+                              <Input type="number" min={0} step={1} className="h-9 w-20 bg-white/[0.04] border-white/10" value={s.defaultBadgePrice} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v) && v >= 0) setBadgeQuoteSettingsLocal((prev) => (prev ? { ...prev, defaultBadgePrice: v } : getDefaultBadgeQuoteSettings())); }} />
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Max badges price ($)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Cap total badge cost. 0 = no cap.</p>
+                              <Input type="number" min={0} step={1} className="h-9 w-20 bg-white/[0.04] border-white/10" value={s.maxBadgesPrice ?? ""} placeholder="No cap" onChange={(e) => { const v = e.target.value === "" ? null : parseFloat(e.target.value); setBadgeQuoteSettingsLocal((prev) => (prev ? { ...prev, maxBadgesPrice: v !== null && !Number.isNaN(v) ? v : null } : getDefaultBadgeQuoteSettings())); }} />
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Base delivery (days)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Min / max days before urgency.</p>
+                              <div className="flex gap-2">
+                                <Input type="number" min={1} className="h-9 w-16 bg-white/[0.04] border-white/10" placeholder="Min" value={s.baseMinDays} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 1) setBadgeQuoteSettingsLocal((prev) => (prev ? { ...prev, baseMinDays: v } : getDefaultBadgeQuoteSettings())); }} />
+                                <Input type="number" min={1} className="h-9 w-16 bg-white/[0.04] border-white/10" placeholder="Max" value={s.baseMaxDays} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 1) setBadgeQuoteSettingsLocal((prev) => (prev ? { ...prev, baseMaxDays: v } : getDefaultBadgeQuoteSettings())); }} />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {(["Rush", "Normal", "Slow"] as const).map((u) => (
+                              <div key={u} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Quote multiplier · {u}</p>
+                                <Input type="number" step={0.01} min={0.5} max={1.5} className="h-9 w-20 bg-white/[0.04] border-white/10" value={s.urgencyQuoteMultipliers[u] ?? 1} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v)) setBadgeQuoteSettingsLocal((prev) => { const next = prev ? { ...prev } : getDefaultBadgeQuoteSettings(); next.urgencyQuoteMultipliers = { ...next.urgencyQuoteMultipliers, [u]: v }; return next; }); }} />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-2">
+                            <p className="text-xs font-medium text-primary">MyPlayer Type (Badge Grinding only)</p>
+                            <p className="text-[11px] text-muted-foreground">Both Non-Rebirth and Rebirth add to cost. Prices configurable below.</p>
+                            {(() => {
+                              const mpt = myPlayerTypeSettingsLocal ?? mergeMyPlayerTypeSettings(queueConfig?.myPlayerTypeSettings ?? null);
+                              return (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px]">Non-Rebirth add ($)</Label>
+                                    <Input type="number" min={0} step={1} className="h-9 w-24 bg-white/[0.04] border-white/10" value={mpt.nonRebirthAdd} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 0) setMyPlayerTypeSettingsLocal((prev) => (prev ? { ...prev, nonRebirthAdd: v } : { ...getDefaultMyPlayerTypeSettings(), nonRebirthAdd: v })); }} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px]">Rebirth add ($)</Label>
+                                    <Input type="number" min={0} step={1} className="h-9 w-24 bg-white/[0.04] border-white/10" value={mpt.rebirthAdd} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 0) setMyPlayerTypeSettingsLocal((prev) => (prev ? { ...prev, rebirthAdd: v } : { ...getDefaultMyPlayerTypeSettings(), rebirthAdd: v })); }} />
+                                  </div>
+                                  <div className="sm:col-span-2">
+                                    <Button size="sm" variant="outline" className="border-white/10" onClick={() => saveMyPlayerTypeSettingsMutation.mutate(myPlayerTypeSettingsLocal ?? mergeMyPlayerTypeSettings(queueConfig?.myPlayerTypeSettings ?? null))} disabled={saveMyPlayerTypeSettingsMutation.isPending}>
+                                      {saveMyPlayerTypeSettingsMutation.isPending ? "Saving…" : "Save MyPlayer Type"}
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          <details className="group">
+                            <summary className="text-xs font-medium text-primary cursor-pointer list-none">Per-badge pricing — click to expand</summary>
+                            <p className="text-[11px] text-muted-foreground mt-1">Set custom $ per badge. Badges not listed use the default price.</p>
+                            <div className="mt-2 overflow-x-auto max-h-64 overflow-y-auto">
+                              <div className="flex flex-wrap gap-2 p-2">
+                                {ALL_BADGES.map((b) => {
+                                  const price = s.badgePricing[b.id] ?? s.defaultBadgePrice;
+                                  return (
+                                    <div key={b.id} className="flex items-center gap-1.5 p-1.5 rounded bg-white/[0.03] border border-white/5">
+                                      <span className="text-xs w-32 truncate">{b.name}</span>
+                                      <Input type="number" min={0} step={1} className="h-7 w-16 bg-white/[0.04] border-white/10 text-xs" value={price} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v) && v >= 0) setBadgeQuoteSettingsLocal((prev) => { const next = prev ? { ...prev } : getDefaultBadgeQuoteSettings(); next.badgePricing = { ...next.badgePricing, [b.id]: v }; return next; }); }} />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </details>
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
+                            <Button size="sm" className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30" onClick={() => saveBadgeQuoteSettingsMutation.mutate(s)} disabled={saveBadgeQuoteSettingsMutation.isPending}>
+                              {saveBadgeQuoteSettingsMutation.isPending ? "Saving…" : "Save all"}
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-white/10" onClick={() => setBadgeQuoteSettingsLocal(getDefaultBadgeQuoteSettings())}>
+                              Reset to defaults
+                            </Button>
+                          </div>
+                        </>
+                      );
+                    })()}
+                    </CardContent>
+                  </Card>
+                </FadeInUp>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="management" className="mt-5 space-y-5 sm:space-y-6">
@@ -2059,96 +3113,6 @@ export default function StaffAdmin() {
                       ? "Customer updates are active. Customers receive automated messages about their order status."
                       : "Customer updates are disabled. No automated messages will be sent to customers."}
                   </p>
-                </CardContent>
-              </Card>
-            </FadeInUp>
-
-            <FadeInUp>
-              <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-creator-commission">
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                      <Percent className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    Creator Commission
-                    <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                      {queueConfig?.creatorCommissionPercent ?? 10}%
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="relative space-y-3">
-                  <p className="text-xs text-muted-foreground">Commission rate applied to creator codes when orders are completed. Orders can be linked to a creator code when creating or editing an order (staff).</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.5}
-                      className="w-20"
-                      value={creatorCommissionInput !== "" ? creatorCommissionInput : (queueConfig?.creatorCommissionPercent ?? 10)}
-                      onChange={(e) => setCreatorCommissionInput(e.target.value)}
-                      onBlur={(e) => {
-                        const v = parseFloat(e.target.value);
-                        if (!Number.isNaN(v) && v >= 0 && v <= 100) {
-                          setCreatorCommissionMutation.mutate(v);
-                          setCreatorCommissionInput("");
-                        }
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                    />
-                    <span className="text-sm text-muted-foreground">%</span>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        const v = parseFloat(creatorCommissionInput || String(queueConfig?.creatorCommissionPercent ?? 10));
-                        if (!Number.isNaN(v) && v >= 0 && v <= 100) {
-                          setCreatorCommissionMutation.mutate(v);
-                          setCreatorCommissionInput("");
-                        }
-                      }}
-                      disabled={setCreatorCommissionMutation.isPending}
-                    >
-                      {setCreatorCommissionMutation.isPending ? "Saving…" : "Save"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </FadeInUp>
-
-            <FadeInUp>
-              <Card className="border-0 bg-gradient-to-br from-emerald-500/[0.08] via-background to-emerald-900/[0.04] overflow-hidden relative" data-testid="card-creator-payout-methods">
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-12 translate-x-12" />
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                      <CreditCard className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    Creator Payout Methods
-                    <Badge className="ml-auto text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                      {(queueConfig?.creatorPayoutMethods as string[] | undefined)?.length ?? 1} enabled
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="relative space-y-3">
-                  <p className="text-xs text-muted-foreground">Choose which payout methods creators can use when requesting commission payouts. PayPal is available now; more options can be added in code and enabled here later.</p>
-                  <div className="flex flex-wrap items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={(queueConfig?.creatorPayoutMethods as string[] | undefined)?.includes("paypal") !== false}
-                        onChange={(e) => {
-                          const current = (queueConfig?.creatorPayoutMethods as string[] | undefined) ?? ["paypal"];
-                          const next = e.target.checked ? [...new Set([...current, "paypal"])] : current.filter((m: string) => m !== "paypal");
-                          setCreatorPayoutMethodsMutation.mutate(next.length ? next : ["paypal"]);
-                        }}
-                        disabled={setCreatorPayoutMethodsMutation.isPending}
-                        className="rounded border-white/20 bg-white/5"
-                      />
-                      <span className="text-sm text-foreground">PayPal</span>
-                    </label>
-                  </div>
                 </CardContent>
               </Card>
             </FadeInUp>

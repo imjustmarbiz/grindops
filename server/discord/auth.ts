@@ -393,7 +393,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 export const requireStaff: RequestHandler = async (req, res, next) => {
   const userRole = (req as any).userRole;
   if (userRole !== "staff" && userRole !== "owner") {
-    return res.status(403).json({ message: "Staff access required" });
+    return res.status(403).json({ message: "Staff or owner access required" });
   }
   next();
 };

@@ -136,7 +136,7 @@ export default function AuthPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { role: "owner", label: "Owner", icon: Crown, color: "from-red-500/20 to-amber-950/30 hover:from-red-500/30 hover:to-amber-900/20 border-red-500/30 text-red-400" },
+                  { role: "owner", label: "Owner", icon: Crown, color: "from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/15 border-primary/30 text-primary" },
                   { role: "staff", label: "Staff", icon: Wrench, color: "from-blue-500/20 to-blue-600/10 hover:from-blue-500/30 hover:to-blue-600/20 border-blue-500/30 text-blue-400" },
                   { role: "grinder", label: "Grinder", icon: Gamepad2, color: "from-[#5865F2]/20 to-[#5865F2]/10 hover:from-[#5865F2]/30 hover:to-[#5865F2]/20 border-[#5865F2]/30 text-[#5865F2]" },
                   { role: "elite", label: "Elite Grinder", icon: Shield, color: "from-cyan-500/20 to-teal-500/10 hover:from-cyan-500/30 hover:to-teal-500/20 border-cyan-500/30 text-cyan-400" },

@@ -1463,7 +1463,7 @@ export function TutorialTrigger({ variant = "floating" }: { variant?: "floating"
       aria-label={hasSeenTutorial ? "Replay Tutorial" : "Start Tutorial"}
     >
       <div className={`rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-110 ${!hasSeenTutorial ? "animate-bounce" : ""} ${variant === "inline" ? "w-9 h-9" : "w-12 h-12"}`}>
-        <GraduationCap className={variant === "inline" ? "w-4 h-4 text-white" : "w-5 h-5 text-white"} />
+        <GraduationCap className={variant === "inline" ? "w-4 h-4 text-primary-foreground" : "w-5 h-5 text-primary-foreground"} />
       </div>
     </button>
   );

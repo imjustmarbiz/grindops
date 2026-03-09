@@ -47,6 +47,7 @@ import {
   type UserActivityLog, type InsertUserActivityLog, userActivityLogs,
   type Creator, type InsertCreator, creators,
   type CreatorPayoutDetailRequest, type InsertCreatorPayoutDetailRequest, creatorPayoutDetailRequests,
+  type Quote, type InsertQuote, quotes,
   type AnalyticsSummary, type SuggestionResult, type DashboardStats,
   GRINDER_ROLES, ROLE_CAPACITY, ROLE_LABELS,
 } from "@shared/schema";
@@ -245,6 +246,7 @@ export interface IStorage {
   createUserActivityLog(log: InsertUserActivityLog): Promise<UserActivityLog>;
 
   getCreatorByUserId(userId: string): Promise<Creator | undefined>;
+  getCreator(id: string): Promise<Creator | undefined>;
   createCreator(creator: InsertCreator): Promise<Creator>;
   updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator | undefined>;
   getCreators(): Promise<Creator[]>;
@@ -253,6 +255,12 @@ export interface IStorage {
   getCreatorPayoutDetailRequest(id: string): Promise<CreatorPayoutDetailRequest | undefined>;
   createCreatorPayoutDetailRequest(data: InsertCreatorPayoutDetailRequest): Promise<CreatorPayoutDetailRequest>;
   updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined>;
+
+  getQuotes(limit?: number): Promise<Quote[]>;
+  getQuote(id: string): Promise<Quote | undefined>;
+  createQuote(quote: InsertQuote): Promise<Quote>;
+  updateQuote(id: string, data: Partial<InsertQuote>): Promise<Quote | undefined>;
+  deleteQuote(id: string): Promise<boolean>;
 }
 
 const BIDDING_WINDOW_MS = 10 * 60 * 1000;
@@ -708,6 +716,8 @@ export class DatabaseStorage implements IStorage {
         largeOrderEliteBoost: "0.15",
         creatorCommissionPercent: "10",
         creatorPayoutMethods: ["paypal"],
+        quoteGeneratorCompanyPct: "70",
+        quoteGeneratorGrinderPct: "30",
       }).returning();
       return created;
     }
@@ -1736,6 +1746,11 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
+  async getCreator(id: string): Promise<Creator | undefined> {
+    const [row] = await db.select().from(creators).where(eq(creators.id, id)).limit(1);
+    return row;
+  }
+
   async createCreator(creator: InsertCreator): Promise<Creator> {
     const [created] = await db.insert(creators).values(creator).returning();
     return created;
@@ -1770,6 +1785,31 @@ export class DatabaseStorage implements IStorage {
   async updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined> {
     const [updated] = await db.update(creatorPayoutDetailRequests).set(data).where(eq(creatorPayoutDetailRequests.id, id)).returning();
     return updated;
+  }
+
+  async getQuotes(limit = 100): Promise<Quote[]> {
+    const rows = await db.select().from(quotes).orderBy(desc(quotes.createdAt)).limit(limit);
+    return rows;
+  }
+
+  async getQuote(id: string): Promise<Quote | undefined> {
+    const [row] = await db.select().from(quotes).where(eq(quotes.id, id)).limit(1);
+    return row;
+  }
+
+  async createQuote(quote: InsertQuote): Promise<Quote> {
+    const [created] = await db.insert(quotes).values(quote).returning();
+    return created;
+  }
+
+  async updateQuote(id: string, data: Partial<InsertQuote>): Promise<Quote | undefined> {
+    const [updated] = await db.update(quotes).set(data).where(eq(quotes.id, id)).returning();
+    return updated;
+  }
+
+  async deleteQuote(id: string): Promise<boolean> {
+    const [deleted] = await db.delete(quotes).where(eq(quotes.id, id)).returning({ id: quotes.id });
+    return !!deleted;
   }
 }
 

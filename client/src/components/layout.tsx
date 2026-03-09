@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Megaphone } from "lucide-react";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Megaphone, Calculator } from "lucide-react";
 import grindopsLogo from "@assets/grindops-sp-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +41,11 @@ export const staffNavItems = [
   { title: "Grinders", url: "/grinders", icon: Users },
   { title: "Grinders Performance", url: "/tier-progress", icon: TrendingUp },
   { title: "Badges", url: "/badges", icon: Award },
+  { title: "Quote Generator", url: "/quote-generator", icon: Calculator },
   { title: "Reports", url: "/reports", icon: FileBarChart },
   { title: "Bids", url: "/bids", icon: Gavel },
   { title: "Orders", url: "/orders", icon: ListOrdered },
-  { title: "Order Assignments", url: "/assignments", icon: FileCheck },
+  { title: "Assignments", url: "/assignments", icon: FileCheck },
   { title: "Order Updates", url: "/order-updates", icon: MessageSquare },
   { title: "Order Repairs", url: "/order-claims", icon: Wrench },
   { title: "Grinder Payouts", url: "/payouts", icon: DollarSign },
@@ -74,7 +75,7 @@ export const grinderNavItems = [
   { title: "To-Do List", url: "/grinder/todo", icon: ClipboardList },
   { title: "Available Orders", url: "/grinder/orders", icon: Zap },
   { title: "My Orders", url: "/grinder/assignments", icon: FileCheck },
-  { title: "Order Repairs", url: "/grinder/order-claims", icon: Wrench },
+  { title: "Repairs", url: "/grinder/order-claims", icon: Wrench },
   { title: "My Bids", url: "/grinder/bids", icon: Gavel },
   { title: "My Scorecard", url: "/grinder/scorecard", icon: ClipboardCheck },
   { title: "Queue", url: "/grinder/queue", icon: Brain },
@@ -252,7 +253,7 @@ function AppSidebar() {
                 <Badge 
                   variant={isStaff ? "default" : "secondary"} 
                   className={`w-fit text-[10px] px-1.5 py-0 mt-0.5 ${
-                    isOwner ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                    isOwner ? "bg-primary/20 text-primary border-primary/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
                     isCreator ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
                     isElite ? "bg-cyan-950 text-cyan-300 border-cyan-500/40" :

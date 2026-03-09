@@ -103,14 +103,14 @@ export default function MyPerformance() {
       <FadeInUp>
         <div className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 ${
           isOwner
-            ? "border-red-500/20 bg-gradient-to-r from-red-950/40 via-red-900/20 to-amber-950/30"
+            ? "border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5"
             : "border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5"
         }`}>
           <div
             className="absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)] [mask-size:100%_100%] [mask-position:center]"
           >
-            <div className={`absolute inset-0 rounded-full flex items-center justify-center opacity-30 ${isOwner ? "bg-red-500/20" : "bg-primary/20"}`}>
-              <Star className={`w-32 h-32 ${isOwner ? "text-red-400" : "text-primary"}`} />
+            <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-30 bg-primary/20">
+              <Star className="w-32 h-32 text-primary" />
             </div>
           </div>
 
@@ -118,16 +118,16 @@ export default function MyPerformance() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <div className="relative">
                 <Avatar className={`h-14 w-14 sm:h-20 sm:w-20 border-2 shadow-lg ${
-                  isOwner ? "border-red-500/40" : "border-primary/40"
+                  "border-primary/40"
                 }`}>
                   <AvatarImage src={user?.profileImageUrl || undefined} />
-                  <AvatarFallback className={`${isOwner ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"} text-2xl font-bold`}>
+                  <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                     {(user?.firstName || user?.discordUsername || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 {isOwner && (
-                  <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center shadow-lg">
-                    <Crown className="w-4 h-4 text-white" />
+                  <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                    <Crown className="w-4 h-4 text-primary-foreground" />
                   </div>
                 )}
               </div>
@@ -140,17 +140,13 @@ export default function MyPerformance() {
                   {user?.discordUsername && user?.firstName && user.firstName !== user.discordUsername && (
                     <span className="text-base sm:text-lg text-muted-foreground font-medium">(@{user.discordUsername})</span>
                   )}
-                  <Badge className={`gap-1 ${
-                    isOwner
-                      ? "bg-red-500/20 text-red-400 border-red-500/30"
-                      : "bg-primary/20 text-primary border-primary/30"
-                  }`}>
+                  <Badge className="gap-1 bg-primary/20 text-primary border-primary/30">
                     {isOwner ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
                     {isOwner ? "Owner" : "Staff"}
                   </Badge>
                 </div>
 
-                <p className={`text-sm mt-1 font-medium ${isOwner ? "text-red-400/70" : "text-primary/70"}`}>
+                <p className="text-sm mt-1 font-medium text-primary/70">
                   GrindOps by Service Plug LLC — Command Center
                 </p>
 

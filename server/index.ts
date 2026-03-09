@@ -123,10 +123,17 @@ async function initializeBackgroundServices() {
   logMemory("before background services");
 
   try {
-    const { ensureCreatorPayoutDetailRequestsTable } = await import("./ensure-tables");
+    const { ensureCreatorPayoutDetailRequestsTable, ensureQuoteGeneratorSplitColumns, ensureCreatorCommissionPercentColumn, ensureCreatorQuoteDiscountPercentColumn, ensureQuotesLastEditedColumns, ensureRepQuoteSettingsColumn, ensureBadgeQuoteSettingsColumn, ensureMyPlayerTypeSettingsColumn } = await import("./ensure-tables");
     await ensureCreatorPayoutDetailRequestsTable();
+    await ensureQuoteGeneratorSplitColumns();
+    await ensureCreatorCommissionPercentColumn();
+    await ensureCreatorQuoteDiscountPercentColumn();
+    await ensureQuotesLastEditedColumns();
+    await ensureRepQuoteSettingsColumn();
+    await ensureBadgeQuoteSettingsColumn();
+    await ensureMyPlayerTypeSettingsColumn();
   } catch (e) {
-    console.error("Failed to ensure creator_payout_detail_requests table:", e);
+    console.error("Failed to ensure tables:", e);
   }
 
   try {

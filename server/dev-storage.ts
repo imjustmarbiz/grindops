@@ -21,7 +21,8 @@ import type {
   BusinessWallet, InsertBusinessWallet, WalletTransaction, InsertWalletTransaction,
   BusinessPayout, InsertBusinessPayout, WalletTransfer, InsertWalletTransfer,
   OrderPaymentLink, InsertOrderPaymentLink, UserActivityLog, InsertUserActivityLog,
-  Creator, InsertCreator, CreatorPayoutDetailRequest, InsertCreatorPayoutDetailRequest, AnalyticsSummary, SuggestionResult, DashboardStats,
+  Creator, InsertCreator, CreatorPayoutDetailRequest, InsertCreatorPayoutDetailRequest,
+  Quote, InsertQuote, AnalyticsSummary, SuggestionResult, DashboardStats,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 
@@ -46,6 +47,8 @@ const DEFAULT_QUEUE_CONFIG: QueueConfig = {
   emergencyBoost: '0.25', largeOrderThreshold: '500', largeOrderEliteBoost: '0.15',
   creatorCommissionPercent: '10',
   creatorPayoutMethods: ['paypal'],
+  quoteGeneratorCompanyPct: '70',
+  quoteGeneratorGrinderPct: '30',
   dailyCheckupsEnabled: true, mgtBotEnabled: true, maintenanceMode: false, maintenanceModeSetBy: null,
   customerUpdatesEnabled: true, embedThumbnailUrl: null, earlyAccessMode: false,
   customPayoutRoles: null, customPayoutCategories: null, platforms: ['Xbox', 'PS5'],
@@ -382,9 +385,13 @@ export class DevStorage implements IStorage {
 
   private devCreators = new Map<string, Creator>();
   private devCreatorPayoutDetailRequests = new Map<string, CreatorPayoutDetailRequest>();
+  private devQuotes = new Map<string, Quote>();
 
   async getCreatorByUserId(userId: string): Promise<Creator | undefined> {
     return Array.from(this.devCreators.values()).find((c) => c.userId === userId);
+  }
+  async getCreator(id: string): Promise<Creator | undefined> {
+    return this.devCreators.get(id);
   }
   async createCreator(c: InsertCreator): Promise<Creator> {
     const created = { ...c, createdAt: new Date(), updatedAt: new Date() } as Creator;
@@ -424,5 +431,33 @@ export class DevStorage implements IStorage {
     const updated = { ...existing, ...data } as CreatorPayoutDetailRequest;
     this.devCreatorPayoutDetailRequests.set(id, updated);
     return updated;
+  }
+
+  async getQuotes(limit = 100): Promise<Quote[]> {
+    return Array.from(this.devQuotes.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
+  async getQuote(id: string): Promise<Quote | undefined> {
+    return this.devQuotes.get(id);
+  }
+
+  async createQuote(data: InsertQuote): Promise<Quote> {
+    const created = { ...data, createdAt: new Date() } as Quote;
+    this.devQuotes.set(data.id, created);
+    return created;
+  }
+
+  async updateQuote(id: string, data: Partial<InsertQuote>): Promise<Quote | undefined> {
+    const existing = this.devQuotes.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...data } as Quote;
+    this.devQuotes.set(id, updated);
+    return updated;
+  }
+
+  async deleteQuote(id: string): Promise<boolean> {
+    return this.devQuotes.delete(id);
   }
 }

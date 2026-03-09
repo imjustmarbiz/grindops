@@ -131,6 +131,7 @@ export const orders = pgTable("orders", {
   refundToGrinder: numeric("refund_to_grinder"),
   refundToCompany: numeric("refund_to_company"),
   creatorCode: varchar("creator_code"),
+  quoteId: varchar("quote_id"),
 });
 
 export const bids = pgTable("bids", {
@@ -188,6 +189,26 @@ export const assignments = pgTable("assignments", {
   customerIssueReportedAt: timestamp("customer_issue_reported_at"),
 });
 
+/** Saved quotes from Quote Generator. Staff can save, view, and link to orders (like Carmax). */
+export const quotes = pgTable("quotes", {
+  id: varchar("id").primaryKey(),
+  serviceType: varchar("service_type").notNull().default("rep_grinding"),
+  customerIdentifier: text("customer_identifier"),
+  inputs: jsonb("inputs").$type<Record<string, unknown>>().notNull(),
+  results: jsonb("results").$type<Record<string, unknown>>().notNull(),
+  discordMessage: text("discord_message"),
+  aiSuggestion: text("ai_suggestion"),
+  createdById: varchar("created_by_id").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedById: varchar("updated_by_id"),
+  updatedByName: text("updated_by_name"),
+  updatedAt: timestamp("updated_at"),
+});
+export const insertQuoteSchema = createInsertSchema(quotes).omit({ createdAt: true });
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+
 export const queueConfig = pgTable("queue_config", {
   id: varchar("id").primaryKey(),
   marginWeight: numeric("margin_weight").notNull().default("0.20"),
@@ -215,6 +236,16 @@ export const queueConfig = pgTable("queue_config", {
   gameTheme: varchar("game_theme").default("none"),
   creatorCommissionPercent: numeric("creator_commission_percent").notNull().default("10"),
   creatorPayoutMethods: jsonb("creator_payout_methods").$type<string[]>().default(["paypal"]),
+  /** Quote Generator: default company share (0–100). Default 70. */
+  quoteGeneratorCompanyPct: numeric("quote_generator_company_pct").notNull().default("70"),
+  /** Quote Generator: default grinder share (0–100). Default 30. */
+  quoteGeneratorGrinderPct: numeric("quote_generator_grinder_pct").notNull().default("30"),
+  /** Quote Generator: editable rep pricing (roundBy, urgency, volume, late efficiency, REP_PRICING, REP_DELIVERY, REP_MARKET_VALUE). */
+  repQuoteSettings: jsonb("rep_quote_settings").$type<unknown>(),
+  /** Quote Generator: editable badge grinding pricing (per-badge, max, urgency, delivery). */
+  badgeQuoteSettings: jsonb("badge_quote_settings").$type<unknown>(),
+  /** Quote Generator: MyPlayer Type pricing (nonRebirthAdd, rebirthAdd). */
+  myPlayerTypeSettings: jsonb("my_player_type_settings").$type<unknown>(),
 });
 
 export const orderUpdates = pgTable("order_updates", {
@@ -987,8 +1018,10 @@ export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
 export const creators = pgTable("creators", {
   id: varchar("id").primaryKey(),
   userId: varchar("user_id").notNull().unique(),
-  code: varchar("code").notNull(),
+   code: varchar("code").notNull(),
   displayName: text("display_name").notNull(),
+  quoteDiscountPercent: numeric("quote_discount_percent", { precision: 5, scale: 2 }),
+  commissionPercent: numeric("commission_percent", { precision: 5, scale: 2 }),
   youtubeUrl: text("youtube_url"),
   twitchUrl: text("twitch_url"),
   tiktokUrl: text("tiktok_url"),

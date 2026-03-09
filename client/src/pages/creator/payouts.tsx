@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Banknote, Loader2, CreditCard, Send, Clock, CheckCircle, BarChart3, Wallet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
@@ -50,15 +51,26 @@ export default function CreatorPayouts() {
   const queryClient = useQueryClient();
   const { data: dashboard, isLoading, isError, error } = useQuery<Dashboard>({ queryKey: ["/api/creator/dashboard"] });
   const creator = dashboard?.creator;
-  const [paypalEmail, setPaypalEmail] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState(creator?.payoutMethod ?? "paypal");
+  const [payoutDetail, setPayoutDetail] = useState(creator?.payoutDetail ?? "");
   const [requestAmount, setRequestAmount] = useState("");
   const hasSyncedPayoutFromServer = useRef(false);
 
-  // Sync PayPal email from server when dashboard loads (fixes "Save" reappearing after refresh)
+  const methodLabels: Record<string, string> = { paypal: "PayPal", zelle: "Zelle", applepay: "Apple Pay", venmo: "Venmo", cashapp: "Cash App" };
+  const detailPlaceholders: Record<string, string> = {
+    paypal: "PayPal email",
+    zelle: "Email or phone",
+    applepay: "Email or phone",
+    venmo: "@username",
+    cashapp: "$cashtag",
+  };
+
+  // Sync payout details from server when dashboard loads
   useEffect(() => {
-    if (creator?.payoutMethod === "paypal" && creator?.payoutDetail != null && creator.payoutDetail !== "") {
+    if (creator?.payoutMethod && creator?.payoutDetail) {
       if (!hasSyncedPayoutFromServer.current) {
-        setPaypalEmail(creator.payoutDetail);
+        setPayoutMethod(creator.payoutMethod);
+        setPayoutDetail(creator.payoutDetail);
         hasSyncedPayoutFromServer.current = true;
       }
     } else {
@@ -119,32 +131,36 @@ export default function CreatorPayouts() {
   const pending = payouts.filter((p: any) => ["pending", "approved"].includes((p.status || "").toLowerCase()));
   const totalPaid = paid.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
 
-  const savePaypal = () => {
-    const email = paypalEmail.trim();
-    if (!email) {
-      toast({ title: "Enter your PayPal email", variant: "destructive" });
+  const savePayoutDetails = () => {
+    const detail = payoutDetail.trim();
+    if (!detail) {
+      toast({ title: "Enter your payout details", variant: "destructive" });
       return;
     }
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRe.test(email)) {
-      toast({ title: "Enter a valid email address", variant: "destructive" });
-      return;
+    if (["paypal", "zelle", "applepay"].includes(payoutMethod)) {
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRe.test(detail)) {
+        toast({ title: "Enter a valid email address", variant: "destructive" });
+        return;
+      }
     }
-    updatePayoutMutation.mutate({ payoutMethod: "paypal", payoutDetail: email });
+    updatePayoutMutation.mutate({ payoutMethod, payoutDetail: detail });
   };
 
   const requestDetailChange = () => {
-    const email = paypalEmail.trim();
-    if (!email) {
-      toast({ title: "Enter your PayPal email", variant: "destructive" });
+    const detail = payoutDetail.trim();
+    if (!detail) {
+      toast({ title: "Enter your payout details", variant: "destructive" });
       return;
     }
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRe.test(email)) {
-      toast({ title: "Enter a valid email address", variant: "destructive" });
-      return;
+    if (["paypal", "zelle", "applepay"].includes(payoutMethod)) {
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRe.test(detail)) {
+        toast({ title: "Enter a valid email address", variant: "destructive" });
+        return;
+      }
     }
-    requestDetailChangeMutation.mutate({ payoutMethod: "paypal", payoutDetail: email });
+    requestDetailChangeMutation.mutate({ payoutMethod, payoutDetail: detail });
   };
 
   const submitRequestPayout = () => {
@@ -267,7 +283,7 @@ export default function CreatorPayouts() {
 
       {/* Payout Details + Request Payout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
-      {allowedMethods.includes("paypal") && (
+      {allowedMethods.length > 0 && (
         <FadeInUp className="h-full">
           <Card className={`${CARD_GRADIENT} h-full flex flex-col`}>
             <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-emerald-500/[0.04] -translate-y-10 translate-x-10" />
@@ -280,33 +296,43 @@ export default function CreatorPayouts() {
               </h2>
               <p className="text-xs text-white/60">
                 {hasPayoutDetails
-                  ? <>Your PayPal email is used for payouts. To change it, use <strong>Request Change</strong> below (staff approval).</>
-                  : "Add your PayPal email for payouts. After you save, a Request Change option will appear below if you need staff to update it later."}
+                  ? <>Your {methodLabels[creator?.payoutMethod ?? ""] ?? creator?.payoutMethod ?? "payout"} details are saved. To change them, use <strong>Request Change</strong> below (staff approval).</>
+                  : "Add your payout details below. Choose your method and enter the required info. Request Change appears after saving if you need staff to update it later."}
               </p>
             </CardHeader>
             <CardContent className="relative flex flex-col gap-2 flex-1 p-4 sm:p-6 pt-0 md:flex-row md:flex-wrap md:items-end md:gap-3">
+              <Select value={allowedMethods.includes(payoutMethod) ? payoutMethod : allowedMethods[0]} onValueChange={(v) => { setPayoutMethod(v); setPayoutDetail(""); }}>
+                <SelectTrigger className="w-full sm:max-w-[160px] bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedMethods.map((m) => (
+                    <SelectItem key={m} value={m}>{methodLabels[m] ?? m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
-                type="email"
-                placeholder="PayPal email"
-                value={paypalEmail}
-                onChange={(e) => setPaypalEmail(e.target.value)}
+                type={["paypal", "zelle", "applepay"].includes(payoutMethod) ? "email" : "text"}
+                placeholder={detailPlaceholders[payoutMethod] ?? "Details"}
+                value={payoutDetail}
+                onChange={(e) => setPayoutDetail(e.target.value)}
                 className="w-full sm:max-w-xs md:min-w-[200px] bg-white/5 border-white/10 text-white placeholder:text-white/40"
               />
               <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
                 <Button
                   size="sm"
-                  onClick={savePaypal}
+                  onClick={savePayoutDetails}
                   disabled={updatePayoutMutation.isPending}
                   className="w-full sm:w-auto border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 text-white shrink-0"
                 >
-                  {updatePayoutMutation.isPending ? "Saving…" : (creator?.payoutDetail && paypalEmail.trim() === creator.payoutDetail ? "Saved" : "Save")}
+                  {updatePayoutMutation.isPending ? "Saving…" : (creator?.payoutMethod === payoutMethod && creator?.payoutDetail && payoutDetail.trim() === creator.payoutDetail ? "Saved" : "Save")}
                 </Button>
                 {hasPayoutDetails && (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={requestDetailChange}
-                  disabled={!!pendingDetailRequest || requestDetailChangeMutation.isPending || (creator?.payoutDetail && paypalEmail.trim() === creator.payoutDetail)}
+                  disabled={!!pendingDetailRequest || requestDetailChangeMutation.isPending || (creator?.payoutMethod === payoutMethod && creator?.payoutDetail && payoutDetail.trim() === creator.payoutDetail)}
                   className="w-full sm:w-auto border-white/20 bg-white/10 hover:bg-white/20 text-white shrink-0"
                 >
                   {requestDetailChangeMutation.isPending ? "Requesting…" : "Request Change (Staff Approval)"}
@@ -315,7 +341,7 @@ export default function CreatorPayouts() {
               </div>
               {pendingDetailRequest && (
                 <p className="text-sm text-amber-200/90 w-full mt-1">
-                  You have a pending request to change payout to <strong>{pendingDetailRequest.requestedDetail}</strong>. Staff will review and update your profile when approved.
+                  You have a pending request to change payout to <strong>{methodLabels[pendingDetailRequest.requestedMethod] ?? pendingDetailRequest.requestedMethod}: {pendingDetailRequest.requestedDetail}</strong>. Staff will review and update your profile when approved.
                 </p>
               )}
             </CardContent>

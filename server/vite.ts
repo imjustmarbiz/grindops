@@ -32,6 +32,10 @@ export async function setupVite(server: Server, app: Express) {
   app.use(vite.middlewares);
 
   app.use("/{*path}", async (req, res, next) => {
+    // Never serve index.html for API paths — let them hit API routes or 404
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
     const url = req.originalUrl;
 
     try {

@@ -195,14 +195,6 @@ export default function StaffReports() {
     return g?.name || grinderId;
   };
 
-  if (analyticsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   const reportsList = reports.data || [];
   const checkpointsList = checkpoints.data || [];
   const updatesList = orderUpdates.data || [];
@@ -214,18 +206,6 @@ export default function StaffReports() {
     });
     return Array.from(ids).map(id => ({ id, name: getGrinderName(id) })).sort((a, b) => a.name.localeCompare(b.name));
   }, [reportsList, checkpointsList, updatesList, allGrinders]);
-
-  const toggleSort = <K extends string>(
-    currentKey: K, currentDir: SortDir, key: K,
-    setKey: (k: K) => void, setDir: (d: SortDir) => void
-  ) => {
-    if (currentKey === key) {
-      setDir(currentDir === "desc" ? "asc" : "desc");
-    } else {
-      setKey(key);
-      setDir("desc");
-    }
-  };
 
   const gradeOrder: Record<string, number> = { "S": 6, "A": 5, "B": 4, "C": 3, "D": 2, "F": 1 };
 
@@ -307,6 +287,18 @@ export default function StaffReports() {
     return list;
   }, [updatesList, updateGrinderFilter, updateAckFilter, updateSearch, updateSortKey, updateSortDir, allGrinders]);
 
+  const toggleSort = <K extends string>(
+    currentKey: K, currentDir: SortDir, key: K,
+    setKey: (k: K) => void, setDir: (d: SortDir) => void
+  ) => {
+    if (currentKey === key) {
+      setDir(currentDir === "desc" ? "asc" : "desc");
+    } else {
+      setKey(key);
+      setDir("desc");
+    }
+  };
+
   const hasActiveReportFilters = reportSearch || reportStatusFilter !== "all" || reportGrinderFilter !== "all";
   const hasActiveCheckpointFilters = checkpointSearch || checkpointFilter !== "all" || checkpointGrinderFilter !== "all";
   const hasActiveUpdateFilters = updateSearch || updateGrinderFilter !== "all" || updateAckFilter !== "all";
@@ -320,6 +312,14 @@ export default function StaffReports() {
     { id: "checkpoints" as const, label: "Activity Checkpoints", icon: Activity, count: filteredCheckpoints.length },
     { id: "updates" as const, label: "Order Updates", icon: MessageSquare, count: filteredUpdates.length },
   ];
+
+  if (analyticsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <AnimatedPage className="space-y-5 sm:space-y-6">
