@@ -10,8 +10,8 @@ import { sendCustomerUpdate, sendCompletionApprovalRequest } from "./discord/cus
 import { generateOrderDisplayId, generateBidDisplayId, generateAssignmentDisplayId, generateUpdateDisplayId, generatePayoutDisplayId, generateStrikeDisplayId, generateFineDisplayId, generateEventDisplayId, generateReviewDisplayId, generateClaimDisplayId, generateShortId } from "./display-id";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
-import { siteAlerts, GRINDER_ROLES, ALL_CREATOR_BADGE_IDS, CREATOR_AUTO_BADGE_IDS } from "@shared/schema";
-import { or, eq, sql, desc, and } from "drizzle-orm";
+import { siteAlerts, notifications, GRINDER_ROLES, ALL_CREATOR_BADGE_IDS, CREATOR_AUTO_BADGE_IDS } from "@shared/schema";
+import { or, eq, sql, desc, and, isNull } from "drizzle-orm";
 import multer from "multer";
 import { buildQuoteDiscordMessage } from "@shared/quote-discord-message";
 import { mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-settings";

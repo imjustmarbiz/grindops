@@ -107,9 +107,11 @@ function CreatorRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium">{c.displayName}</p>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => onEdit(c)}>
-            <Wrench className="h-3 w-3" />
-          </Button>
+          {isOwner && (
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => onEdit(c)}>
+              <Wrench className="h-3 w-3" />
+            </Button>
+          )}
         </div>
         <code className="text-sm text-emerald-400 font-mono">{c.code}</code>
       </div>
@@ -415,6 +417,7 @@ export default function StaffAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
       toast({ title: "Creator updated" });
+      setEditingCreator(null);
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -1287,6 +1290,60 @@ export default function StaffAdmin() {
                     data-testid="button-submit-add-creator"
                   >
                     {createCreatorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add creator"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Creator dialog */}
+          <Dialog open={!!editingCreator} onOpenChange={(open) => !open && setEditingCreator(null)}>
+            <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl sm:max-w-[420px]">
+              <DialogHeader>
+                <DialogTitle className="font-display text-lg flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-emerald-400" />
+                  Edit creator: {editingCreator?.displayName}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-2">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Display name</label>
+                  <Input
+                    value={editingCreator?.displayName || ""}
+                    onChange={(e) => setEditingCreator((prev: any) => ({ ...prev, displayName: e.target.value }))}
+                    className="mt-1.5 bg-background/50 border-white/10"
+                    data-testid="input-edit-creator-display-name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Creator code</label>
+                  <Input
+                    value={editingCreator?.code || ""}
+                    onChange={(e) => setEditingCreator((prev: any) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                    className="mt-1.5 bg-background/50 border-white/10"
+                    data-testid="input-edit-creator-code"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingCreator(null)} className="border-white/10">
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"
+                    disabled={!editingCreator?.code?.trim() || !editingCreator?.displayName?.trim() || updateCreatorMutation.isPending}
+                    onClick={() => {
+                      updateCreatorMutation.mutate({
+                        id: editingCreator.id,
+                        data: {
+                          displayName: editingCreator.displayName,
+                          code: editingCreator.code
+                        }
+                      });
+                    }}
+                    data-testid="button-submit-edit-creator"
+                  >
+                    {updateCreatorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save changes"}
                   </Button>
                 </div>
               </div>
