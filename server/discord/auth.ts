@@ -11,6 +11,7 @@ const DISCORD_API = "https://discord.com/api/v10";
 const OWNER_ROLE = "1466369177043599514";
 const STAFF_ROLE = "1466369178729578663";
 const GRINDER_ROLE = "1466369179648004224";
+const ELITE_GRINDER_ROLE = "1466370965016412316";
 const ALL_GRINDER_ROLES = [
   "1466369179648004224",
   "1466370965016412316",
@@ -159,6 +160,8 @@ export function setupDiscordAuth(app: Express) {
                 role = STAFF_OVERRIDE_IDS.includes(discordUser.id) ? "staff" : "owner";
               } else if (guildRoleIds.includes(STAFF_ROLE)) {
                 role = "staff";
+              } else if (guildRoleIds.includes(ELITE_GRINDER_ROLE)) {
+                role = "elite";
               } else if (guildRoleIds.some((r: string) => ALL_GRINDER_ROLES.includes(r))) {
                 role = "grinder";
               }
@@ -240,6 +243,8 @@ export function setupDiscordAuth(app: Express) {
                   newRole = STAFF_OVERRIDE_IDS.includes(user.discordId!) ? "staff" : "owner";
                 } else if (guildRoleIds.includes(STAFF_ROLE)) {
                   newRole = "staff";
+                } else if (guildRoleIds.includes(ELITE_GRINDER_ROLE)) {
+                  newRole = "elite";
                 } else if (guildRoleIds.some((r) => ALL_GRINDER_ROLES.includes(r))) {
                   newRole = "grinder";
                 }
