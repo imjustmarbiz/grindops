@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import {
   DollarSign,
@@ -100,6 +101,7 @@ function StatCard({
 
 export default function CreatorOverview() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
@@ -181,6 +183,9 @@ export default function CreatorOverview() {
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <Avatar className="h-14 w-14 sm:h-20 sm:w-20 border-2 border-emerald-500/40 shadow-lg">
+                {user?.profileImageUrl && (
+                  <AvatarImage src={user.profileImageUrl} alt={creator.displayName} />
+                )}
                 <AvatarFallback className="bg-emerald-500/20 text-emerald-400 text-2xl font-bold">
                   {creator.displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>
