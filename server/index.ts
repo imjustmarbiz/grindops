@@ -144,6 +144,36 @@ async function initializeBackgroundServices() {
     console.error("Failed to seed database:", error);
   }
 
+  try {
+    const { db } = await import("./db");
+    const { users } = await import("@shared/models/auth");
+    const { creators, creatorBadges, creatorPayoutDetailRequests } = await import("@shared/schema");
+    const { sql, eq, like } = await import("drizzle-orm");
+    if (db) {
+      const spacedUsers = await db.select().from(users).where(like(users.discordId, " %"));
+      for (const su of spacedUsers) {
+        const trimmedId = su.discordId!.trim();
+        const canonical = await db.select().from(users).where(eq(users.discordId, trimmedId));
+        if (canonical.length > 0) {
+          const dupCreatorRows = await db.select().from(creators).where(eq(creators.userId, su.id));
+          for (const dc of dupCreatorRows) {
+            await db.delete(creatorBadges).where(eq(creatorBadges.creatorId, dc.id));
+            await db.delete(creatorPayoutDetailRequests).where(eq(creatorPayoutDetailRequests.creatorId, dc.id));
+            await db.delete(creators).where(eq(creators.id, dc.id));
+            console.log(`[cleanup] Removed duplicate creator ${dc.id} (code=${dc.code}) for user ${su.id}`);
+          }
+          await db.delete(users).where(eq(users.id, su.id));
+          console.log(`[cleanup] Removed duplicate user ${su.id} (discordId had leading space)`);
+        } else {
+          await db.update(users).set({ discordId: trimmedId }).where(eq(users.id, su.id));
+          console.log(`[cleanup] Trimmed discordId whitespace for user ${su.id}`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[cleanup] Error during duplicate user cleanup:", e);
+  }
+
   logMemory("after database seed");
 
   const isDev = process.env.NODE_ENV !== "production";

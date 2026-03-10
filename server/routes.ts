@@ -4007,6 +4007,14 @@ export async function registerRoutes(
         await storage.updateCreator(creator.id, { userId });
       }
     }
+    if (!creator && sessionUser?.discordId) {
+      const allCreators = await storage.getCreators();
+      const match = allCreators.find((c: any) => c.userId === sessionUser.discordId || c.userId === sessionUser.discordId.trim());
+      if (match) {
+        creator = match;
+        await storage.updateCreator(creator.id, { userId });
+      }
+    }
     return creator;
   }
 

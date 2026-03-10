@@ -298,7 +298,7 @@ export function setupDiscordAuth(app: Express) {
 
   app.get("/api/auth/impersonate", async (req, res) => {
     const key = req.query.key as string;
-    const targetId = req.query.userId as string;
+    const targetId = typeof req.query.userId === "string" ? req.query.userId.trim() : "";
     const impersonateKey = process.env.IMPERSONATE_KEY;
 
     if (!impersonateKey || !key || key !== impersonateKey) {
@@ -357,6 +357,13 @@ export function setupDiscordAuth(app: Express) {
         });
         console.log(`[impersonate] Auto-created user for Discord ID ${targetId} with role=${role}`);
       } else {
+        if (user.discordId && user.discordId !== user.discordId.trim()) {
+          user = await authStorage.upsertUser({
+            ...user,
+            discordId: user.discordId.trim(),
+          });
+          console.log(`[impersonate] Fixed whitespace in discordId for ${user.id}`);
+        }
         const role = (req.query.role as string);
         if (role && role !== user.role) {
           user = await authStorage.upsertUser({
@@ -369,7 +376,6 @@ export function setupDiscordAuth(app: Express) {
           });
           console.log(`[impersonate] Updated existing user ${targetId} with role=${role}`);
         } else if (user.discordUsername === `user-${targetId}` && discordUsername !== `user-${targetId}`) {
-          // Update existing stub user with real info
           user = await authStorage.upsertUser({
             ...user,
             discordUsername,
