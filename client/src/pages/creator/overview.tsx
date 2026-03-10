@@ -29,6 +29,17 @@ import { CREATOR_BADGE_COMPONENTS, type CreatorBadgeId } from "@/components/crea
 
 const ACCENT_TEXT = "text-emerald-400";
 
+function serviceTypeLabel(st?: string | null): string {
+  if (!st) return "";
+  const map: Record<string, string> = {
+    rep_grinding: "Rep Grinding",
+    badge_grinding: "Badge Grinding",
+    boosting: "Boosting",
+    account_builds: "Account Builds",
+  };
+  return map[st] || st.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 type Dashboard = {
   creator: { code: string; displayName: string };
   commissionPercent: number;
@@ -37,7 +48,7 @@ type Dashboard = {
   ordersWithCodeCount: number;
   totalOrdersCount: number;
   paidOut: string;
-  recentOrders: Array<{ id: string; displayId?: string | null; customerPrice: string; completedAt?: string | null }>;
+  recentOrders: Array<{ id: string; displayId?: string | null; customerPrice: string; commission?: string; serviceType?: string | null; completedAt?: string | null }>;
   payoutRequests: Array<{ id: string; amount: string; status: string; createdAt: string }>;
   badges?: Array<{ badgeId: string; [key: string]: unknown }>;
 };
@@ -149,7 +160,8 @@ export default function CreatorOverview() {
         (o) =>
           (o.displayId ?? "").toLowerCase().includes(q) ||
           o.id.toLowerCase().includes(q) ||
-          formatCurrency(o.customerPrice).toLowerCase().includes(q)
+          formatCurrency(o.customerPrice).toLowerCase().includes(q) ||
+          serviceTypeLabel(o.serviceType).toLowerCase().includes(q)
       )
     : recentOrders;
   const filteredPayoutRequests = q
@@ -409,9 +421,22 @@ export default function CreatorOverview() {
               ) : (
                 <ul className="space-y-2">
                   {filteredRecentOrders.map((o) => (
-                    <li key={o.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.04] border border-white/10">
-                      <span className="text-sm font-mono text-white/90">{o.displayId || o.id}</span>
-                      <span className={`text-sm font-medium ${ACCENT_TEXT}`}>{formatCurrency(o.customerPrice)}</span>
+                    <li key={o.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.04] border border-white/10" data-testid={`order-row-${o.id}`}>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-sm font-mono text-white/90">{o.displayId || o.id}</span>
+                        <div className="flex items-center gap-2">
+                          {o.serviceType && (
+                            <span className="text-xs text-white/40">{serviceTypeLabel(o.serviceType)}</span>
+                          )}
+                          {o.completedAt && (
+                            <span className="text-xs text-white/30">{new Date(o.completedAt).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span className={`text-sm font-medium ${ACCENT_TEXT}`}>{formatCurrency(o.commission || "0")}</span>
+                        <span className="text-xs text-white/30">of {formatCurrency(o.customerPrice)}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>

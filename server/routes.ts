@@ -4090,7 +4090,7 @@ export async function registerRoutes(
     const availableBalance = Math.max(0, totalEarned - paidOut - pendingOrApproved);
     const recentOrders = completedWithCode
       .slice(0, 5)
-      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
+      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, commission: (Number(o.customerPrice || 0) * commissionPercent).toFixed(2), serviceType: o.serviceType || null, completedAt: o.completedAt }));
     const payoutRequests = minePayouts.map((p: any) => ({
       id: p.id,
       amount: p.amount,
@@ -4207,7 +4207,7 @@ export async function registerRoutes(
     const availableBalance = Math.max(0, totalEarned - paidOut - pendingOrApproved);
     const recentOrders = completedWithCode
       .slice(0, 5)
-      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
+      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, commission: (Number(o.customerPrice || 0) * commissionPercent).toFixed(2), serviceType: o.serviceType || null, completedAt: o.completedAt }));
     const payoutRequests = minePayouts.map((p: any) => ({
       id: p.id,
       amount: p.amount,
@@ -4780,7 +4780,7 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
     const availableBalance = Math.max(0, totalEarned - paidOut);
     const recentOrders = completedWithCode
       .slice(0, 10)
-      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
+      .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, commission: (Number(o.customerPrice || 0) * commissionPercent).toFixed(2), serviceType: o.serviceType || null, completedAt: o.completedAt }));
     const payoutRequests = minePayouts.map((p: any) => ({
       id: p.id,
       amount: p.amount,
