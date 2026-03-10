@@ -4374,6 +4374,15 @@ export async function registerRoutes(
       requestedBy: userId,
       requestedByName: creator.displayName,
     });
+    await createNotification({
+      roleScope: "owner",
+      type: "creator_payout_request",
+      title: "Creator Payout Request",
+      body: `${creator.displayName} requested a payout of $${requestedAmount.toFixed(2)} (${description}).`,
+      linkUrl: "/wallets",
+      icon: "dollar-sign",
+      severity: "info",
+    });
     res.status(201).json(payout);
   });
 
@@ -9099,6 +9108,18 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
           description: `${grinder?.name || "Unknown"} completed this order but no payout request exists.`,
           orderId: assignment.orderId,
           linkUrl: "/payouts",
+        });
+      }
+
+      const allBusinessPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator", status: "pending" });
+      for (const bp of allBusinessPayouts) {
+        items.push({
+          key: `creator-payout-${bp.id}`,
+          category: "Creator Payouts",
+          priority: "high",
+          title: `Creator payout request — ${bp.recipientName} ($${Number(bp.amount).toFixed(2)})`,
+          description: `${bp.description || "Creator commission payout"}. Review and process on the Business Wallets page.`,
+          linkUrl: "/wallets",
         });
       }
 
