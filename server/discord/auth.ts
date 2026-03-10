@@ -174,6 +174,12 @@ export function setupDiscordAuth(app: Express) {
         ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=128`
         : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(discordUser.id) >> BigInt(22)) % 6}.png`;
 
+      const existingUser = await authStorage.getUserByDiscordId(discordUser.id);
+      if (existingUser?.role === "creator" && role === "none") {
+        role = "creator";
+        console.log(`[discord-auth] Preserving creator role for ${discordUser.username} (${discordUser.id})`);
+      }
+
       const user = await authStorage.upsertUser({
         id: discordUser.id,
         email: discordUser.email || null,
@@ -218,7 +224,7 @@ export function setupDiscordAuth(app: Express) {
 
       const lastRoleCheck = (req.session as any).lastRoleCheck || 0;
       const now = Date.now();
-      if (user.discordId && now - lastRoleCheck > 60_000) {
+      if (user.discordId && user.role !== "creator" && now - lastRoleCheck > 60_000) {
         const botClient = getDiscordBotClient();
         if (botClient) {
           const guilds = Array.from(botClient.guilds.cache.values());
