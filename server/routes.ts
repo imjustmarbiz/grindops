@@ -4022,7 +4022,7 @@ export async function registerRoutes(
     const commissionPercent = Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
     const completedWithCode = allOrders.filter(
-      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
+      (o: any) => (o.status === "Completed" || o.status === "Paid Out") && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
     );
     const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
@@ -4138,7 +4138,7 @@ export async function registerRoutes(
     const commissionPercent = Number(config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
     const completedWithCode = allOrders.filter(
-      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
+      (o: any) => (o.status === "Completed" || o.status === "Paid Out") && o.creatorCode && String(o.creatorCode).toUpperCase() === creator!.code.toUpperCase()
     );
     const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
@@ -4342,7 +4342,7 @@ export async function registerRoutes(
     const commissionPercent = Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
     const completedWithCode = allOrders.filter(
-      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
+      (o: any) => (o.status === "Completed" || o.status === "Paid Out") && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
     );
     const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
@@ -4692,7 +4692,7 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
     const commissionPercent = Number(creator.commissionPercent ?? config?.creatorCommissionPercent ?? 10) / 100;
     const allOrders = await storage.getOrders();
     const completedWithCode = allOrders.filter(
-      (o: any) => o.status === "Completed" && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
+      (o: any) => (o.status === "Completed" || o.status === "Paid Out") && o.creatorCode && String(o.creatorCode).toUpperCase() === creator.code.toUpperCase()
     );
     const totalEarned = completedWithCode.reduce((sum: number, o: any) => sum + Number(o.customerPrice || 0) * commissionPercent, 0);
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
