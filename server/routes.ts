@@ -4065,7 +4065,8 @@ export async function registerRoutes(
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
     const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator!.displayName);
     const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
-    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const pendingOrApproved = minePayouts.filter((p: any) => ["pending", "approved"].includes((p.status || "").toLowerCase())).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut - pendingOrApproved);
     const recentOrders = completedWithCode
       .slice(0, 5)
       .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
@@ -4181,7 +4182,8 @@ export async function registerRoutes(
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
     const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator!.displayName);
     const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
-    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const pendingOrApproved = minePayouts.filter((p: any) => ["pending", "approved"].includes((p.status || "").toLowerCase())).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut - pendingOrApproved);
     const recentOrders = completedWithCode
       .slice(0, 5)
       .map((o: any) => ({ id: o.id, displayId: o.displayId, customerPrice: o.customerPrice, completedAt: o.completedAt }));
@@ -4385,7 +4387,8 @@ export async function registerRoutes(
     const creatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
     const minePayouts = creatorPayouts.filter((p: any) => p.recipientName === creator.displayName);
     const paidOut = minePayouts.filter((p: any) => (p.status || "").toLowerCase() === "paid").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
-    const availableBalance = Math.max(0, totalEarned - paidOut);
+    const pendingOrApproved = minePayouts.filter((p: any) => ["pending", "approved"].includes((p.status || "").toLowerCase())).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const availableBalance = Math.max(0, totalEarned - paidOut - pendingOrApproved);
     const requestedAmount = req.body?.amount != null ? parseFloat(String(req.body.amount)) : availableBalance;
     if (Number.isNaN(requestedAmount) || requestedAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
