@@ -1769,6 +1769,11 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async deleteCreator(id: string): Promise<boolean> {
+    await db.delete(creators).where(eq(creators.id, id));
+    return true;
+  }
+
   async getCreators(): Promise<Creator[]> {
     return await db.select().from(creators).orderBy(creators.displayName);
   }

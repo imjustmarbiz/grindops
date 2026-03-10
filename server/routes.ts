@@ -4624,7 +4624,8 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
 
   app.patch("/api/staff/creators/:id", requireOwner, async (req, res) => {
     const id = req.params.id as string;
-    const { quoteDiscountPercent, commissionPercent, userId: bodyUserId } = req.body || {};
+    const { quoteDiscountPercent, commissionPercent, userId: bodyUserId, code, displayName } = req.body || {};
+
     if (quoteDiscountPercent !== undefined && quoteDiscountPercent !== null) {
       const pct = Number(quoteDiscountPercent);
       if (Number.isNaN(pct) || pct < 0 || pct > 100) {
@@ -4637,6 +4638,7 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         return res.status(400).json({ message: "commissionPercent must be a number between 0 and 100" });
       }
     }
+
     let userIdUpdate: string | undefined;
     if (bodyUserId !== undefined) {
       const trimmed = typeof bodyUserId === "string" ? bodyUserId.trim() : "";
@@ -4650,17 +4652,35 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         userIdUpdate = id;
       }
     }
-    const updated = await storage.updateCreator(id, {
-      ...(quoteDiscountPercent !== undefined && {
-        quoteDiscountPercent: quoteDiscountPercent === null ? null : String(Number(quoteDiscountPercent)),
-      }),
-      ...(commissionPercent !== undefined && {
-        commissionPercent: commissionPercent === null ? null : String(Number(commissionPercent)),
-      }),
-      ...(userIdUpdate !== undefined && { userId: userIdUpdate }),
-    });
-    if (!updated) return res.status(404).json({ message: "Creator not found" });
-    res.json(updated);
+
+    try {
+      const updated = await storage.updateCreator(id, {
+        ...(quoteDiscountPercent !== undefined && {
+          quoteDiscountPercent: quoteDiscountPercent === null ? null : String(Number(quoteDiscountPercent)),
+        }),
+        ...(commissionPercent !== undefined && {
+          commissionPercent: commissionPercent === null ? null : String(Number(commissionPercent)),
+        }),
+        ...(userIdUpdate !== undefined && { userId: userIdUpdate }),
+        ...(code !== undefined && { code: code.trim().toUpperCase() }),
+        ...(displayName !== undefined && { displayName: displayName.trim() }),
+      });
+
+      if (!updated) return res.status(404).json({ message: "Creator not found" });
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to update creator" });
+    }
+  });
+
+  app.delete("/api/staff/creators/:id", requireOwner, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      await storage.deleteCreator(id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ message: "Failed to delete creator" });
+    }
   });
 
   /** Staff view of a creator's dashboard data (same shape as /api/creator/dashboard). Used for Admin Creators → View dashboard. */

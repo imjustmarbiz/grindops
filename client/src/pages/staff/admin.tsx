@@ -55,7 +55,30 @@ function VenmoVerticalLogo({ className }: { className?: string }) {
   );
 }
 
-function CreatorRow({ c, isOwner, editingCreatorQuoteDiscountId, editingCreatorQuoteDiscountValue, setEditingCreatorQuoteDiscountId, setEditingCreatorQuoteDiscountValue, updateCreatorQuoteDiscountMutation, editingCreatorCommissionId, editingCreatorCommissionValue, setEditingCreatorCommissionId, setEditingCreatorCommissionValue, updateCreatorCommissionMutation, editingCreatorUserIdId, editingCreatorUserIdValue, setEditingCreatorUserIdId, setEditingCreatorUserIdValue, updateCreatorUserIdMutation, setAssignCreatorBadgeCreator, setAssignCreatorBadgeId, setAssignCreatorBadgeNote }: {
+function CreatorRow({ 
+  c, 
+  isOwner, 
+  editingCreatorQuoteDiscountId, 
+  editingCreatorQuoteDiscountValue, 
+  setEditingCreatorQuoteDiscountId, 
+  setEditingCreatorQuoteDiscountValue, 
+  updateCreatorQuoteDiscountMutation, 
+  editingCreatorCommissionId, 
+  editingCreatorCommissionValue, 
+  setEditingCreatorCommissionId, 
+  setEditingCreatorCommissionValue, 
+  updateCreatorCommissionMutation, 
+  editingCreatorUserIdId, 
+  editingCreatorUserIdValue, 
+  setEditingCreatorUserIdId, 
+  setEditingCreatorUserIdValue, 
+  updateCreatorUserIdMutation, 
+  setAssignCreatorBadgeCreator, 
+  setAssignCreatorBadgeId, 
+  setAssignCreatorBadgeNote,
+  onEdit,
+  onDelete
+}: {
   c: any;
   isOwner: boolean;
   editingCreatorQuoteDiscountId: string | null;
@@ -76,11 +99,18 @@ function CreatorRow({ c, isOwner, editingCreatorQuoteDiscountId, editingCreatorQ
   setAssignCreatorBadgeCreator: (c: any) => void;
   setAssignCreatorBadgeId: (id: string) => void;
   setAssignCreatorBadgeNote: (note: string) => void;
+  onEdit: (c: any) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
       <div className="flex-1 min-w-0">
-        <p className="font-medium">{c.displayName}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-medium">{c.displayName}</p>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => onEdit(c)}>
+            <Wrench className="h-3 w-3" />
+          </Button>
+        </div>
         <code className="text-sm text-emerald-400 font-mono">{c.code}</code>
       </div>
       <div className="flex flex-wrap items-center gap-3">
@@ -91,79 +121,93 @@ function CreatorRow({ c, isOwner, editingCreatorQuoteDiscountId, editingCreatorQ
           </Button>
         </Link>
         {isOwner && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Quote %</label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step={0.5}
-                placeholder="—"
-                className="w-20 h-8 text-sm"
-                value={editingCreatorQuoteDiscountId === c.id ? editingCreatorQuoteDiscountValue : (c.quoteDiscountPercent ?? "")}
-                onChange={(e) => { setEditingCreatorQuoteDiscountId(c.id); setEditingCreatorQuoteDiscountValue(e.target.value); }}
-                onFocus={() => { setEditingCreatorQuoteDiscountId(c.id); setEditingCreatorQuoteDiscountValue(String(c.quoteDiscountPercent ?? "")); }}
-                onBlur={() => {
-                  if (editingCreatorQuoteDiscountId !== c.id) return;
-                  const v = editingCreatorQuoteDiscountValue.trim();
-                  const num = v === "" ? null : parseFloat(v);
-                  if (v === "" || (num !== null && !Number.isNaN(num) && num >= 0 && num <= 100)) {
-                    updateCreatorQuoteDiscountMutation.mutate({ creatorId: c.id, quoteDiscountPercent: num });
-                    setEditingCreatorQuoteDiscountId(null);
-                    setEditingCreatorQuoteDiscountValue("");
-                  }
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Commission %</label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step={0.5}
-                placeholder="Default"
-                className="w-20 h-8 text-sm"
-                value={editingCreatorCommissionId === c.id ? editingCreatorCommissionValue : (c.commissionPercent ?? "")}
-                onChange={(e) => { setEditingCreatorCommissionId(c.id); setEditingCreatorCommissionValue(e.target.value); }}
-                onFocus={() => { setEditingCreatorCommissionId(c.id); setEditingCreatorCommissionValue(String(c.commissionPercent ?? "")); }}
-                onBlur={() => {
-                  if (editingCreatorCommissionId !== c.id) return;
-                  const v = editingCreatorCommissionValue.trim();
-                  const num = v === "" ? null : parseFloat(v);
-                  if (v === "" || (num !== null && !Number.isNaN(num) && num >= 0 && num <= 100)) {
-                    updateCreatorCommissionMutation.mutate({ creatorId: c.id, commissionPercent: num });
-                    setEditingCreatorCommissionId(null);
-                    setEditingCreatorCommissionValue("");
-                  }
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              />
-            </div>
+          <>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Discord ID</label>
-              <Input
-                placeholder="Not linked"
-                className="w-36 h-8 text-sm font-mono"
-                value={editingCreatorUserIdId === c.id ? editingCreatorUserIdValue : (c.userId && c.userId !== c.id ? c.userId : "")}
-                onChange={(e) => { setEditingCreatorUserIdId(c.id); setEditingCreatorUserIdValue(e.target.value); }}
-                onFocus={() => { setEditingCreatorUserIdId(c.id); setEditingCreatorUserIdValue(c.userId && c.userId !== c.id ? c.userId : ""); }}
-                onBlur={() => {
-                  if (editingCreatorUserIdId !== c.id) return;
-                  const v = editingCreatorUserIdValue.trim();
-                  const current = c.userId && c.userId !== c.id ? c.userId : "";
-                  if (v !== current) {
-                    updateCreatorUserIdMutation.mutate({ creatorId: c.id, userId: v });
-                    setEditingCreatorUserIdId(null);
-                    setEditingCreatorUserIdValue("");
-                  }
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              />
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Quote %</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  placeholder="—"
+                  className="w-20 h-8 text-sm"
+                  value={editingCreatorQuoteDiscountId === c.id ? editingCreatorQuoteDiscountValue : (c.quoteDiscountPercent ?? "")}
+                  onChange={(e) => { setEditingCreatorQuoteDiscountId(c.id); setEditingCreatorQuoteDiscountValue(e.target.value); }}
+                  onFocus={() => { setEditingCreatorQuoteDiscountId(c.id); setEditingCreatorQuoteDiscountValue(String(c.quoteDiscountPercent ?? "")); }}
+                  onBlur={() => {
+                    if (editingCreatorQuoteDiscountId !== c.id) return;
+                    const v = editingCreatorQuoteDiscountValue.trim();
+                    const num = v === "" ? null : parseFloat(v);
+                    if (v === "" || (num !== null && !Number.isNaN(num) && num >= 0 && num <= 100)) {
+                      updateCreatorQuoteDiscountMutation.mutate({ creatorId: c.id, quoteDiscountPercent: num });
+                      setEditingCreatorQuoteDiscountId(null);
+                      setEditingCreatorQuoteDiscountValue("");
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Commission %</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  placeholder="Default"
+                  className="w-20 h-8 text-sm"
+                  value={editingCreatorCommissionId === c.id ? editingCreatorCommissionValue : (c.commissionPercent ?? "")}
+                  onChange={(e) => { setEditingCreatorCommissionId(c.id); setEditingCreatorCommissionValue(e.target.value); }}
+                  onFocus={() => { setEditingCreatorCommissionId(c.id); setEditingCreatorCommissionValue(String(c.commissionPercent ?? "")); }}
+                  onBlur={() => {
+                    if (editingCreatorCommissionId !== c.id) return;
+                    const v = editingCreatorCommissionValue.trim();
+                    const num = v === "" ? null : parseFloat(v);
+                    if (v === "" || (num !== null && !Number.isNaN(num) && num >= 0 && num <= 100)) {
+                      updateCreatorCommissionMutation.mutate({ creatorId: c.id, commissionPercent: num });
+                      setEditingCreatorCommissionId(null);
+                      setEditingCreatorCommissionValue("");
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Discord ID</label>
+                <Input
+                  placeholder="Not linked"
+                  className="w-36 h-8 text-sm font-mono"
+                  value={editingCreatorUserIdId === c.id ? editingCreatorUserIdValue : (c.userId && c.userId !== c.id ? c.userId : "")}
+                  onChange={(e) => { setEditingCreatorUserIdId(c.id); setEditingCreatorUserIdValue(e.target.value); }}
+                  onFocus={() => { setEditingCreatorUserIdId(c.id); setEditingCreatorUserIdValue(c.userId && c.userId !== c.id ? c.userId : ""); }}
+                  onBlur={() => {
+                    if (editingCreatorUserIdId !== c.id) return;
+                    const v = editingCreatorUserIdValue.trim();
+                    const current = c.userId && c.userId !== c.id ? c.userId : "";
+                    if (v !== current) {
+                      updateCreatorUserIdMutation.mutate({ creatorId: c.id, userId: v });
+                      setEditingCreatorUserIdId(null);
+                      setEditingCreatorUserIdValue("");
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                />
+              </div>
             </div>
-          </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete creator ${c.displayName}? This cannot be undone.`)) {
+                  onDelete(c.id);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
         )}
         <div className="flex flex-wrap gap-2 items-center">
           {c.youtubeUrl && <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-red-400 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> YouTube</a>}
@@ -350,6 +394,32 @@ export default function StaffAdmin() {
       toast({ title: "Task removed" });
     },
   });
+
+  const deleteCreatorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/staff/creators/${id}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      toast({ title: "Creator deleted" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateCreatorMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/staff/creators/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff/creators"] });
+      toast({ title: "Creator updated" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const [editingCreator, setEditingCreator] = useState<any>(null);
 
   const { data: finePayments = [] } = useQuery<any[]>({
     queryKey: ["/api/staff/fine-payments"],
@@ -1150,14 +1220,16 @@ export default function StaffAdmin() {
                         updateCreatorUserIdMutation={updateCreatorUserIdMutation}
                         setAssignCreatorBadgeCreator={setAssignCreatorBadgeCreator}
                         setAssignCreatorBadgeId={setAssignCreatorBadgeId}
-                        setAssignCreatorBadgeNote={setAssignCreatorBadgeNote}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </FadeInUp>
+                      setAssignCreatorBadgeNote={setAssignCreatorBadgeNote}
+                      onEdit={(creator) => setEditingCreator({ ...creator })}
+                      onDelete={(id) => deleteCreatorMutation.mutate(id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </FadeInUp>
 
           {/* Add Creator dialog - must live inside Creators tab so it's mounted when button is clicked */}
           <Dialog open={addCreatorOpen} onOpenChange={(open) => { if (!open) { setAddCreatorOpen(false); setAddCreatorCode(""); setAddCreatorDisplayName(""); setAddCreatorDiscordUserId(""); } }}>
