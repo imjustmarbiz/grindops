@@ -3997,11 +3997,24 @@ export async function registerRoutes(
     } catch { return null; }
   }
 
+  async function findCreatorForUser(req: any) {
+    const userId = req.userId;
+    const sessionUser = req.user;
+    let creator = await storage.getCreatorByUserId(userId);
+    if (!creator && sessionUser?.discordId && sessionUser.discordId !== userId) {
+      creator = await storage.getCreatorByUserId(sessionUser.discordId);
+      if (creator) {
+        await storage.updateCreator(creator.id, { userId });
+      }
+    }
+    return creator;
+  }
+
   app.get("/api/creator/me", isAuthenticated, async (req, res) => {
     const userRole = (req as any).userRole;
     const userId = (req as any).userId;
     const sessionUser = (req as any).user;
-    let creator = await storage.getCreatorByUserId(userId);
+    let creator = await findCreatorForUser(req);
     if (!creator && userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
     if (!creator) {
       const code = "CR" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -4032,7 +4045,7 @@ export async function registerRoutes(
     const userRole = (req as any).userRole;
     const userId = (req as any).userId;
     const sessionUser = (req as any).user;
-    let creator = await storage.getCreatorByUserId(userId);
+    let creator = await findCreatorForUser(req);
     if (!creator && userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
     if (!creator) {
       const code = "CR" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -4149,7 +4162,7 @@ export async function registerRoutes(
     const userRole = (req as any).userRole;
     const userId = (req as any).userId;
     const sessionUser = (req as any).user;
-    let creator = await storage.getCreatorByUserId(userId);
+    let creator = await findCreatorForUser(req);
     if (!creator && userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
     if (!creator) {
       const code = "CR" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -4271,7 +4284,7 @@ export async function registerRoutes(
   app.get("/api/creator/me/badges", isAuthenticated, async (req, res) => {
     const userRole = (req as any).userRole;
     if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
-    const creator = await storage.getCreatorByUserId((req as any).userId);
+    const creator = await findCreatorForUser(req);
     if (!creator) return res.status(404).json({ message: "Creator profile not found" });
     const badges = await storage.getCreatorBadges(creator.id);
     res.json(badges);
@@ -4312,7 +4325,7 @@ export async function registerRoutes(
   app.get("/api/creator/payouts", isAuthenticated, async (req, res) => {
     const userRole = (req as any).userRole;
     if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
-    const creator = await storage.getCreatorByUserId((req as any).userId);
+    const creator = await findCreatorForUser(req);
     if (!creator) return res.status(404).json({ message: "Creator profile not found" });
     const allCreatorPayouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
     const mine = allCreatorPayouts.filter((p: any) => p.recipientName === creator.displayName).map((p: any) => ({
@@ -4328,7 +4341,7 @@ export async function registerRoutes(
     const userRole = (req as any).userRole;
     if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
     const userId = (req as any).userId;
-    const creator = await storage.getCreatorByUserId(userId);
+    const creator = await findCreatorForUser(req);
     if (!creator) return res.status(404).json({ message: "Creator profile not found" });
     const body = req.body || {};
     const updates: Record<string, string | null> = {};
@@ -4372,7 +4385,7 @@ export async function registerRoutes(
     const userRole = (req as any).userRole;
     if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
     const userId = (req as any).userId;
-    const creator = await storage.getCreatorByUserId(userId);
+    const creator = await findCreatorForUser(req);
     if (!creator) return res.status(404).json({ message: "Creator profile not found" });
     if (!creator.payoutMethod || !creator.payoutDetail) {
       return res.status(400).json({ message: "Add your payout details (e.g. PayPal email) before requesting a payout." });
@@ -4430,7 +4443,7 @@ export async function registerRoutes(
     const userRole = (req as any).userRole;
     if (userRole !== "creator") return res.status(403).json({ message: "Creator access only" });
     const userId = (req as any).userId;
-    const creator = await storage.getCreatorByUserId(userId);
+    const creator = await findCreatorForUser(req);
     if (!creator) return res.status(404).json({ message: "Creator profile not found" });
     const config = await storage.getQueueConfig();
     const allowedMethods: string[] = Array.isArray((config as any)?.creatorPayoutMethods) ? (config as any).creatorPayoutMethods : ["paypal"];

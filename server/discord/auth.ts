@@ -347,6 +347,7 @@ export function setupDiscordAuth(app: Express) {
       if (!user) {
         const role = (req.query.role as string) || "grinder";
         user = await authStorage.upsertUser({
+          id: targetId,
           discordId: targetId,
           discordUsername,
           firstName,
