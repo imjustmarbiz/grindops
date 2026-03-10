@@ -463,12 +463,24 @@ export default function CreatorOverview() {
                 </p>
               ) : (
                 <ul className="space-y-2">
-                  {filteredPayoutRequests.slice(0, 5).map((p) => (
-                    <li key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.04] border border-white/10">
-                      <span className="text-sm font-medium text-white/90">{formatCurrency(p.amount)}</span>
-                      <span className="text-xs capitalize text-white/50">{p.status}</span>
-                    </li>
-                  ))}
+                  {filteredPayoutRequests.slice(0, 5).map((p) => {
+                    const isPaid = (p.status || "").toLowerCase() === "paid";
+                    return (
+                      <li key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.04] border border-white/10" data-testid={`payout-row-${p.id}`}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`text-sm font-medium ${isPaid ? "text-emerald-400" : "text-white/90"}`}>{formatCurrency(p.amount)}</span>
+                          <span className="text-xs text-white/30">
+                            {p.paidAt
+                              ? `Paid ${new Date(p.paidAt).toLocaleDateString()}`
+                              : p.createdAt
+                                ? `Requested ${new Date(p.createdAt).toLocaleDateString()}`
+                                : ""}
+                          </span>
+                        </div>
+                        <span className={`text-xs capitalize ${isPaid ? "text-emerald-400" : "text-white/50"}`}>{p.status}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               {Number(availableBalance) > 0 && (
