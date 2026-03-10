@@ -255,6 +255,7 @@ export interface IStorage {
   getCreatorPayoutDetailRequest(id: string): Promise<CreatorPayoutDetailRequest | undefined>;
   createCreatorPayoutDetailRequest(data: InsertCreatorPayoutDetailRequest): Promise<CreatorPayoutDetailRequest>;
   updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined>;
+  deleteCreatorPayoutDetailRequest(id: string): Promise<boolean>;
 
   getQuotes(limit?: number): Promise<Quote[]>;
   getQuote(id: string): Promise<Quote | undefined>;
@@ -1803,6 +1804,11 @@ export class DatabaseStorage implements IStorage {
   async updateCreatorPayoutDetailRequest(id: string, data: Partial<CreatorPayoutDetailRequest>): Promise<CreatorPayoutDetailRequest | undefined> {
     const [updated] = await db.update(creatorPayoutDetailRequests).set(data).where(eq(creatorPayoutDetailRequests.id, id)).returning();
     return updated;
+  }
+
+  async deleteCreatorPayoutDetailRequest(id: string): Promise<boolean> {
+    await db.delete(creatorPayoutDetailRequests).where(eq(creatorPayoutDetailRequests.id, id));
+    return true;
   }
 
   async getQuotes(limit = 100): Promise<Quote[]> {

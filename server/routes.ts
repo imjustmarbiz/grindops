@@ -4738,9 +4738,18 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
   app.delete("/api/staff/creators/:id", requireOwner, async (req, res) => {
     try {
       const id = req.params.id as string;
+      const badges = await storage.getCreatorBadges(id);
+      for (const badge of badges) {
+        await storage.deleteCreatorBadge(badge.id);
+      }
+      const detailRequests = await storage.getCreatorPayoutDetailRequests(id);
+      for (const dr of detailRequests) {
+        await storage.deleteCreatorPayoutDetailRequest(dr.id);
+      }
       await storage.deleteCreator(id);
       res.json({ success: true });
-    } catch (e) {
+    } catch (e: any) {
+      console.error("[delete-creator] Error:", e?.message || e);
       res.status(500).json({ message: "Failed to delete creator" });
     }
   });
