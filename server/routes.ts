@@ -6606,6 +6606,21 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
     res.json({ success: true });
   });
 
+  // Cleanup orphaned private notifications on startup
+  try {
+    const titlesToRemove = ["Completed Order Backlogged", "Missing Order Claimed"];
+    await db.delete(notifications).where(
+      and(
+        or(
+          ...titlesToRemove.map(t => eq(notifications.title, t))
+        ),
+        isNull(notifications.userId)
+      )
+    );
+  } catch (err) {
+    console.error("[cleanup] Error removing orphaned notifications:", err);
+  }
+
   app.get('/api/notifications', async (req, res) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Not authenticated" });
