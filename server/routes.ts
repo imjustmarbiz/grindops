@@ -4412,7 +4412,7 @@ export async function registerRoutes(
       type: "creator_payout_request",
       title: "Creator Payout Request",
       body: `${creator.displayName} requested a payout of $${requestedAmount.toFixed(2)} (${description}).`,
-      linkUrl: "/wallets",
+      linkUrl: "/creator-payouts",
       icon: "dollar-sign",
       severity: "info",
     });
@@ -9151,8 +9151,8 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
           category: "Creator Payouts",
           priority: "high",
           title: `Creator payout request — ${bp.recipientName} ($${Number(bp.amount).toFixed(2)})`,
-          description: `${bp.description || "Creator commission payout"}. Review and process on the Business Wallets page.`,
-          linkUrl: "/wallets",
+          description: `${bp.description || "Creator commission payout"}. Review and process on the Creator Payouts page.`,
+          linkUrl: "/creator-payouts",
         });
       }
 
@@ -9709,6 +9709,159 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       res.status(201).json(payout);
     } catch (error) {
       res.status(500).json({ message: "Failed to create business payout" });
+    }
+  });
+
+  app.get("/api/staff/creator-payouts", requireStaff, async (req, res) => {
+    try {
+      const payouts = await storage.getBusinessPayouts({ recipientRole: "Creator" });
+      res.json(payouts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch creator payouts" });
+    }
+  });
+
+  app.patch("/api/staff/creator-payouts/:id/approve", requireStaff, async (req, res) => {
+    try {
+      const payout = (await storage.getBusinessPayouts({ recipientRole: "Creator" })).find(p => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Creator payout not found" });
+      if (payout.status !== "pending") return res.status(400).json({ message: "Payout is not pending" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      await storage.updateBusinessPayout(req.params.id, {
+        status: "approved",
+        approvedBy: actorId,
+        approvedByName: actorName,
+        approvedAt: new Date(),
+      });
+      if (payout.requestedBy) {
+        createSystemNotification({
+          userId: payout.requestedBy,
+          roleScope: "user",
+          type: "creator_payout_approved",
+          title: "Payout Approved",
+          body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} has been approved.`,
+          linkUrl: "/creator/payouts",
+          icon: "check-circle",
+        });
+      }
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "creator_payout",
+        entityId: req.params.id,
+        action: "creator_payout_approved",
+        actor: actorName,
+        details: JSON.stringify({ amount: payout.amount, recipientName: payout.recipientName }),
+      });
+      res.json({ message: "Creator payout approved" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to approve creator payout" });
+    }
+  });
+
+  app.patch("/api/staff/creator-payouts/:id/reject", requireStaff, async (req, res) => {
+    try {
+      const payout = (await storage.getBusinessPayouts({ recipientRole: "Creator" })).find(p => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Creator payout not found" });
+      if (payout.status !== "pending") return res.status(400).json({ message: "Payout is not pending" });
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      await storage.updateBusinessPayout(req.params.id, {
+        status: "rejected",
+        rejectedBy: actorId,
+        rejectedByName: actorName,
+        rejectedAt: new Date(),
+        rejectionReason: req.body.reason || null,
+      });
+      if (payout.requestedBy) {
+        createSystemNotification({
+          userId: payout.requestedBy,
+          roleScope: "user",
+          type: "creator_payout_rejected",
+          title: "Payout Rejected",
+          body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} was rejected.${req.body.reason ? ` Reason: ${req.body.reason}` : ""}`,
+          linkUrl: "/creator/payouts",
+          icon: "x-circle",
+          severity: "warning",
+        });
+      }
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "creator_payout",
+        entityId: req.params.id,
+        action: "creator_payout_rejected",
+        actor: actorName,
+        details: JSON.stringify({ amount: payout.amount, recipientName: payout.recipientName, reason: req.body.reason }),
+      });
+      res.json({ message: "Creator payout rejected" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reject creator payout" });
+    }
+  });
+
+  app.patch("/api/staff/creator-payouts/:id/pay", requireOwner, async (req, res) => {
+    try {
+      const payout = (await storage.getBusinessPayouts({ recipientRole: "Creator" })).find(p => p.id === req.params.id);
+      if (!payout) return res.status(404).json({ message: "Creator payout not found" });
+      if (payout.status !== "approved") return res.status(400).json({ message: "Payout must be approved before paying" });
+      const numAmount = parseFloat(payout.amount?.toString() || "0");
+      const actorId = (req.user as any)?.discordId || (req.user as any)?.id || "";
+      const actorName = getActorName(req);
+      const walletId = req.body.walletId;
+      if (walletId) {
+        const wallet = await storage.getWallet(walletId);
+        if (wallet) {
+          const currentBal = parseFloat(wallet.balance?.toString() || "0");
+          const newBal = currentBal - numAmount;
+          await storage.createWalletTransaction({
+            id: `WTX-${Date.now().toString(36)}-crp`,
+            walletId: wallet.id,
+            type: "business_payout",
+            amount: numAmount.toFixed(2),
+            balanceBefore: currentBal.toFixed(2),
+            balanceAfter: newBal.toFixed(2),
+            category: "Creator Commission",
+            description: `Creator payout to ${payout.recipientName}: ${payout.description || "Commission"}`,
+            relatedPayoutId: payout.id,
+            relatedOrderId: null,
+            performedBy: actorId,
+            performedByName: actorName,
+            performedByRole: "staff",
+          });
+          await storage.updateWallet(wallet.id, { balance: newBal.toFixed(2), updatedAt: new Date() });
+        }
+      }
+      await storage.updateBusinessPayout(req.params.id, {
+        status: "paid",
+        paidAt: new Date(),
+        walletId: walletId || payout.walletId,
+        proofUrl: req.body.proofUrl || payout.proofUrl,
+        approvedBy: payout.approvedBy || actorId,
+        approvedByName: payout.approvedByName || actorName,
+        approvedAt: payout.approvedAt || new Date(),
+      });
+      if (payout.requestedBy) {
+        createSystemNotification({
+          userId: payout.requestedBy,
+          roleScope: "user",
+          type: "creator_payout_paid",
+          title: "Payout Sent",
+          body: `Your payout of ${formatUSD(numAmount)} has been sent.`,
+          linkUrl: "/creator/payouts",
+          icon: "dollar-sign",
+        });
+      }
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        entityType: "creator_payout",
+        entityId: req.params.id,
+        action: "creator_payout_paid",
+        actor: actorName,
+        details: JSON.stringify({ amount: numAmount, recipientName: payout.recipientName, walletId }),
+      });
+      res.json({ message: "Creator payout marked as paid" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark creator payout as paid" });
     }
   });
 

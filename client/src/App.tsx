@@ -64,6 +64,7 @@ import StaffBadges from "@/pages/staff/badges";
 import QuoteGeneratorPage from "@/pages/staff/quote-generator";
 import StaffCreatorProfile from "@/pages/staff/creator-profile";
 import StaffOverviewPage from "@/pages/staff/staff-overview";
+import StaffCreatorPayouts from "@/pages/staff/creator-payouts";
 import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
 import StaffOrderUpdates from "@/pages/staff/order-updates";
@@ -242,6 +243,7 @@ function Router() {
       <Route path="/operations" component={() => <Redirect to="/admin" />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={StaffAnalytics} ownerOnly />} />
       <Route path="/payouts" component={() => <ProtectedRoute component={StaffPayouts} staffOnly />} />
+      <Route path="/creator-payouts" component={() => <ProtectedRoute component={StaffCreatorPayouts} staffOnly />} />
       <Route path="/admin" component={() => <ProtectedRoute component={StaffAdmin} staffOnly />} />
       <Route path="/queue" component={() => <ProtectedRoute component={Queue} staffOnly />} />
       <Route path="/orders" component={() => <ProtectedRoute component={Orders} staffOnly />} />

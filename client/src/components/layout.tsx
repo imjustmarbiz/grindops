@@ -49,6 +49,7 @@ export const staffNavItems = [
   { title: "Order Updates", url: "/order-updates", icon: MessageSquare },
   { title: "Order Repairs", url: "/order-claims", icon: Wrench },
   { title: "Grinder Payouts", url: "/payouts", icon: DollarSign },
+  { title: "Creator Payouts", url: "/creator-payouts", icon: Banknote },
   { title: "AI Queue", url: "/queue", icon: Brain },
   { title: "Scorecard & Queue Info", url: "/scorecard-guide", icon: Brain },
   { title: "Customer Reviews", url: "/reviews", icon: Star },
