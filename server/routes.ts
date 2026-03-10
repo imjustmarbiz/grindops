@@ -861,6 +861,21 @@ export async function registerRoutes(
         icon: input.isEmergency ? "alert-triangle" : "package",
         severity: input.isEmergency ? "urgent" : "info",
       });
+      if (result.creatorCode) {
+        const allCreators = await storage.getCreators();
+        const linkedCreator = allCreators.find(c => c.code.toUpperCase() === String(result.creatorCode).toUpperCase());
+        if (linkedCreator?.userId) {
+          createSystemNotification({
+            userId: linkedCreator.userId,
+            roleScope: "user",
+            type: "creator_order_linked",
+            title: "New Order Linked",
+            body: `Order #${result.mgtOrderNumber || result.id} was placed using your creator code.`,
+            linkUrl: "/creator",
+            icon: "package",
+          });
+        }
+      }
       res.status(201).json(result);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -1022,6 +1037,24 @@ export async function registerRoutes(
               reviewedBy: null,
             });
           }
+        }
+      }
+
+      if (status === "Completed" && order.creatorCode) {
+        const allCreators = await storage.getCreators();
+        const linkedCreator = allCreators.find(c => c.code.toUpperCase() === String(order.creatorCode).toUpperCase());
+        if (linkedCreator?.userId) {
+          const orderLabel = order.mgtOrderNumber ? `MGT-${order.mgtOrderNumber}` : order.id.slice(0, 10);
+          const commission = linkedCreator.commissionRate ? `${linkedCreator.commissionRate}%` : "default";
+          createSystemNotification({
+            userId: linkedCreator.userId,
+            roleScope: "user",
+            type: "creator_order_completed",
+            title: "Order Completed — Commission Earned",
+            body: `Order #${orderLabel} linked to your code has been completed. Your ${commission} commission will be available for payout.`,
+            linkUrl: "/creator/payouts",
+            icon: "check-circle",
+          });
         }
       }
 
@@ -4374,7 +4407,7 @@ export async function registerRoutes(
       requestedBy: userId,
       requestedByName: creator.displayName,
     });
-    await createNotification({
+    await createSystemNotification({
       roleScope: "owner",
       type: "creator_payout_request",
       title: "Creator Payout Request",
@@ -9699,6 +9732,17 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         body: `Payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} to ${payout.recipientName} has been approved by ${actorName}.`,
         linkUrl: "/wallets",
       });
+      if (payout.recipientRole === "Creator" && payout.requestedBy) {
+        createSystemNotification({
+          userId: payout.requestedBy,
+          roleScope: "user",
+          type: "creator_payout_approved",
+          title: "Payout Approved",
+          body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} has been approved.`,
+          linkUrl: "/creator/payouts",
+          icon: "check-circle",
+        });
+      }
       res.json({ message: "Payout approved" });
     } catch (error) {
       res.status(500).json({ message: "Failed to approve payout" });
@@ -9727,6 +9771,18 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         linkUrl: "/wallets",
         severity: "warning",
       });
+      if (payout.recipientRole === "Creator" && payout.requestedBy) {
+        createSystemNotification({
+          userId: payout.requestedBy,
+          roleScope: "user",
+          type: "creator_payout_rejected",
+          title: "Payout Rejected",
+          body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} was rejected.${req.body.reason ? ` Reason: ${req.body.reason}` : ""}`,
+          linkUrl: "/creator/payouts",
+          icon: "x-circle",
+          severity: "warning",
+        });
+      }
       res.json({ message: "Payout rejected" });
     } catch (error) {
       res.status(500).json({ message: "Failed to reject payout" });
@@ -9777,6 +9833,17 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         body: `Payout of ${formatUSD(numAmount)} to ${payout.recipientName} has been marked as paid by ${actorName}.`,
         linkUrl: "/wallets",
       });
+      if (payout.recipientRole === "Creator" && payout.requestedBy) {
+        createSystemNotification({
+          userId: payout.requestedBy,
+          roleScope: "user",
+          type: "creator_payout_paid",
+          title: "Payout Sent",
+          body: `Your payout of ${formatUSD(numAmount)} has been sent.`,
+          linkUrl: "/creator/payouts",
+          icon: "dollar-sign",
+        });
+      }
       res.json({ message: "Payout marked as paid" });
     } catch (error) {
       res.status(500).json({ message: "Failed to mark payout as paid" });

@@ -187,7 +187,8 @@ export default function StaffTodo() {
 
   const categoryOrder = [
     "Urgent Actions", "Disputes", "Customer Issues", "Overdue Orders", "Stalled Orders",
-    "Pending Payouts", "Order Assignment", "Order Setup", "Missing Payouts", "Discord Setup"
+    "Pending Payouts", "Creator Payouts", "Order Assignment", "Order Setup", "Missing Payouts",
+    "Deletion Requests", "Discord Setup"
   ];
 
   const sortedCategories = Object.keys(groupedActions).sort((a, b) => {

@@ -1301,6 +1301,12 @@ export class DatabaseStorage implements IStorage {
     if (role === "owner" || role === "staff") {
       conditions.push(and(eq(notifications.roleScope, "staff"), sql`${notifications.userId} IS NULL`));
     }
+    if (role === "owner") {
+      conditions.push(and(eq(notifications.roleScope, "owner"), sql`${notifications.userId} IS NULL`));
+    }
+    if (role === "creator") {
+      conditions.push(and(eq(notifications.roleScope, "creator"), sql`${notifications.userId} IS NULL`));
+    }
     return await db.select().from(notifications)
       .where(or(...conditions))
       .orderBy(desc(notifications.createdAt));
