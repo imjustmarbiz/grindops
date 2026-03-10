@@ -344,16 +344,29 @@ export function setupDiscordAuth(app: Express) {
           role,
         });
         console.log(`[impersonate] Auto-created user for Discord ID ${targetId} with role=${role}`);
-      } else if (user.discordUsername === `user-${targetId}` && discordUsername !== `user-${targetId}`) {
-        // Update existing stub user with real info
-        user = await authStorage.upsertUser({
-          ...user,
-          discordUsername,
-          firstName,
-          profileImageUrl,
-          discordAvatar,
-        });
-        console.log(`[impersonate] Updated existing stub user ${targetId} with real Discord info`);
+      } else {
+        const role = (req.query.role as string);
+        if (role && role !== user.role) {
+          user = await authStorage.upsertUser({
+            ...user,
+            role,
+            discordUsername: discordUsername !== `user-${targetId}` ? discordUsername : user.discordUsername,
+            firstName: firstName !== `User` ? firstName : user.firstName,
+            profileImageUrl: profileImageUrl || user.profileImageUrl,
+            discordAvatar: discordAvatar || user.discordAvatar,
+          });
+          console.log(`[impersonate] Updated existing user ${targetId} with role=${role}`);
+        } else if (user.discordUsername === `user-${targetId}` && discordUsername !== `user-${targetId}`) {
+          // Update existing stub user with real info
+          user = await authStorage.upsertUser({
+            ...user,
+            discordUsername,
+            firstName,
+            profileImageUrl,
+            discordAvatar,
+          });
+          console.log(`[impersonate] Updated existing stub user ${targetId} with real Discord info`);
+        }
       }
 
       (req.session as any).userId = user.id;
