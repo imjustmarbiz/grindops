@@ -7769,7 +7769,6 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
               : `Missing order claimed via repair request and linked to profile.`,
           });
 
-          const repairGrinder = await storage.getGrinder(claim.grinderId);
           if (repairGrinder?.discordUserId) {
             await storage.createNotification({
               id: `NOTIF-${Date.now().toString(36)}`,
