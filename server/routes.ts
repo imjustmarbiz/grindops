@@ -3414,7 +3414,9 @@ export async function registerRoutes(
   app.post("/api/staff/upload-payment-proof", requireStaff, paymentProofUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const fileUrl = await uploadToObjectStorage(req.file.buffer, req.file.originalname, "payment-proofs", req.file.mimetype);
+      const source = req.file.path || req.file.buffer;
+      if (!source) return res.status(500).json({ message: "File data unavailable" });
+      const fileUrl = await uploadToObjectStorage(source, req.file.originalname, "payment-proofs", req.file.mimetype);
       res.json({ url: fileUrl });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Upload failed" });
@@ -3879,7 +3881,9 @@ export async function registerRoutes(
       const hasPending = existingPayments.some((p: any) => p.status === "pending");
       if (hasPending) return res.status(400).json({ message: "You already have a pending fine payment submission. Please wait for staff review." });
 
-      const proofUrl = await uploadToObjectStorage(req.file.buffer, req.file.originalname, "fine-proofs", req.file.mimetype);
+      const fineSource = req.file.path || req.file.buffer;
+      if (!fineSource) return res.status(500).json({ message: "File data unavailable" });
+      const proofUrl = await uploadToObjectStorage(fineSource, req.file.originalname, "fine-proofs", req.file.mimetype);
 
       const finDisplay = await generateFineDisplayId();
       const payment = await storage.createFinePayment({
