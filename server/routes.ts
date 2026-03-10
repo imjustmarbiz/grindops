@@ -4096,6 +4096,8 @@ export async function registerRoutes(
       amount: p.amount,
       status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
       createdAt: p.createdAt,
+      paidAt: p.paidAt || null,
+      proofUrl: p.proofUrl || null,
     }));
     const creatorBadgesList = await storage.getCreatorBadges(creator.id);
     const hasBadge = (id: string) => creatorBadgesList.some((b: any) => b.badgeId === id);
@@ -4213,6 +4215,8 @@ export async function registerRoutes(
       amount: p.amount,
       status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
       createdAt: p.createdAt,
+      paidAt: p.paidAt || null,
+      proofUrl: p.proofUrl || null,
     }));
     const allDetailRequests = await storage.getCreatorPayoutDetailRequests(creator!.id);
     const pendingPayoutDetailRequest = allDetailRequests.find((r: any) => r.status === "pending") || null;
@@ -4786,6 +4790,8 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       amount: p.amount,
       status: (p.status || "").toLowerCase() === "paid" ? "paid" : (p.status || "").toLowerCase(),
       createdAt: p.createdAt,
+      paidAt: p.paidAt || null,
+      proofUrl: p.proofUrl || null,
     }));
     const badges = await storage.getCreatorBadges(creator.id);
     res.json({
@@ -9877,13 +9883,19 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         approvedByName: payout.approvedByName || actorName,
         approvedAt: payout.approvedAt || new Date(),
       });
-      if (payout.requestedBy) {
+      let creatorUserId = payout.requestedBy;
+      if (!creatorUserId || creatorUserId === actorId) {
+        const allCreators = await storage.getCreators();
+        const matchedCreator = allCreators.find((c: any) => c.displayName === payout.recipientName);
+        if (matchedCreator?.userId) creatorUserId = matchedCreator.userId;
+      }
+      if (creatorUserId) {
         createSystemNotification({
-          userId: payout.requestedBy,
+          userId: creatorUserId,
           roleScope: "user",
           type: "creator_payout_paid",
           title: "Payout Sent",
-          body: `Your payout of ${formatUSD(numAmount)} has been sent.`,
+          body: `Your payout of ${formatUSD(numAmount)} has been sent.${req.body.proofUrl ? " A payment receipt is available." : ""}`,
           linkUrl: "/creator/payouts",
           icon: "dollar-sign",
         });
@@ -9922,16 +9934,24 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         body: `Payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} to ${payout.recipientName} has been approved by ${actorName}.`,
         linkUrl: "/wallets",
       });
-      if (payout.recipientRole === "Creator" && payout.requestedBy) {
-        createSystemNotification({
-          userId: payout.requestedBy,
-          roleScope: "user",
-          type: "creator_payout_approved",
-          title: "Payout Approved",
-          body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} has been approved.`,
-          linkUrl: "/creator/payouts",
-          icon: "check-circle",
-        });
+      if (payout.recipientRole === "Creator") {
+        let creatorUserId = payout.requestedBy;
+        if (!creatorUserId || creatorUserId === actorId) {
+          const allCreators = await storage.getCreators();
+          const mc = allCreators.find((c: any) => c.displayName === payout.recipientName);
+          if (mc?.userId) creatorUserId = mc.userId;
+        }
+        if (creatorUserId) {
+          createSystemNotification({
+            userId: creatorUserId,
+            roleScope: "user",
+            type: "creator_payout_approved",
+            title: "Payout Approved",
+            body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} has been approved.`,
+            linkUrl: "/creator/payouts",
+            icon: "check-circle",
+          });
+        }
       }
       res.json({ message: "Payout approved" });
     } catch (error) {
@@ -9961,17 +9981,25 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         linkUrl: "/wallets",
         severity: "warning",
       });
-      if (payout.recipientRole === "Creator" && payout.requestedBy) {
-        createSystemNotification({
-          userId: payout.requestedBy,
-          roleScope: "user",
-          type: "creator_payout_rejected",
-          title: "Payout Rejected",
-          body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} was rejected.${req.body.reason ? ` Reason: ${req.body.reason}` : ""}`,
-          linkUrl: "/creator/payouts",
-          icon: "x-circle",
-          severity: "warning",
-        });
+      if (payout.recipientRole === "Creator") {
+        let creatorUserId = payout.requestedBy;
+        if (!creatorUserId || creatorUserId === actorId) {
+          const allCreators = await storage.getCreators();
+          const mc = allCreators.find((c: any) => c.displayName === payout.recipientName);
+          if (mc?.userId) creatorUserId = mc.userId;
+        }
+        if (creatorUserId) {
+          createSystemNotification({
+            userId: creatorUserId,
+            roleScope: "user",
+            type: "creator_payout_rejected",
+            title: "Payout Rejected",
+            body: `Your payout of ${formatUSD(parseFloat(payout.amount?.toString() || "0"))} was rejected.${req.body.reason ? ` Reason: ${req.body.reason}` : ""}`,
+            linkUrl: "/creator/payouts",
+            icon: "x-circle",
+            severity: "warning",
+          });
+        }
       }
       res.json({ message: "Payout rejected" });
     } catch (error) {
@@ -10023,16 +10051,24 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
         body: `Payout of ${formatUSD(numAmount)} to ${payout.recipientName} has been marked as paid by ${actorName}.`,
         linkUrl: "/wallets",
       });
-      if (payout.recipientRole === "Creator" && payout.requestedBy) {
-        createSystemNotification({
-          userId: payout.requestedBy,
-          roleScope: "user",
-          type: "creator_payout_paid",
-          title: "Payout Sent",
-          body: `Your payout of ${formatUSD(numAmount)} has been sent.`,
-          linkUrl: "/creator/payouts",
-          icon: "dollar-sign",
-        });
+      if (payout.recipientRole === "Creator") {
+        let creatorUserId = payout.requestedBy;
+        if (!creatorUserId || creatorUserId === actorId) {
+          const allCreators = await storage.getCreators();
+          const mc = allCreators.find((c: any) => c.displayName === payout.recipientName);
+          if (mc?.userId) creatorUserId = mc.userId;
+        }
+        if (creatorUserId) {
+          createSystemNotification({
+            userId: creatorUserId,
+            roleScope: "user",
+            type: "creator_payout_paid",
+            title: "Payout Sent",
+            body: `Your payout of ${formatUSD(numAmount)} has been sent.`,
+            linkUrl: "/creator/payouts",
+            icon: "dollar-sign",
+          });
+        }
       }
       res.json({ message: "Payout marked as paid" });
     } catch (error) {

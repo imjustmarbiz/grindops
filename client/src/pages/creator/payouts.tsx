@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Banknote, Loader2, CreditCard, Send, Clock, CheckCircle, BarChart3, Wallet } from "lucide-react";
+import { Banknote, Loader2, CreditCard, Send, Clock, CheckCircle, BarChart3, Wallet, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,7 +36,7 @@ type Dashboard = {
   creator: { code: string; displayName: string; payoutMethod?: string | null; payoutDetail?: string | null };
   availableBalance: string;
   creatorPayoutMethods?: string[];
-  payoutRequests: Array<{ id: string; amount: string; status: string; createdAt: string }>;
+  payoutRequests: Array<{ id: string; amount: string; status: string; createdAt: string; paidAt?: string | null; proofUrl?: string | null }>;
   pendingPayoutDetailRequest?: {
     id: string;
     requestedMethod: string;
@@ -444,8 +444,24 @@ export default function CreatorPayouts() {
                 {payouts.map((p: any) => {
                   const isPaid = (p.status || "").toLowerCase() === "paid";
                   return (
-                    <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg border ${isPaid ? "bg-emerald-500/5 border-emerald-500/20" : "bg-white/[0.04] border-white/10"}`}>
-                      <span className={`font-medium ${isPaid ? "text-emerald-400" : "text-white/90"}`}>{formatCurrency(Number(p.amount || 0))}</span>
+                    <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg border ${isPaid ? "bg-emerald-500/5 border-emerald-500/20" : "bg-white/[0.04] border-white/10"}`} data-testid={`payout-row-${p.id}`}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`font-medium ${isPaid ? "text-emerald-400" : "text-white/90"}`}>{formatCurrency(Number(p.amount || 0))}</span>
+                        <div className="flex items-center gap-2">
+                          {p.paidAt && (
+                            <span className="text-xs text-white/30">Paid {new Date(p.paidAt).toLocaleDateString()}</span>
+                          )}
+                          {!p.paidAt && p.createdAt && (
+                            <span className="text-xs text-white/30">Requested {new Date(p.createdAt).toLocaleDateString()}</span>
+                          )}
+                          {isPaid && p.proofUrl && (
+                            <a href={p.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors" data-testid={`link-receipt-${p.id}`}>
+                              <ExternalLink className="w-3 h-3" />
+                              Receipt
+                            </a>
+                          )}
+                        </div>
+                      </div>
                       <Badge variant="outline" className={`text-xs capitalize ${isPaid ? "border-emerald-500/30 text-emerald-400" : "border-white/20 text-white/80"}`}>{p.status}</Badge>
                     </div>
                   );

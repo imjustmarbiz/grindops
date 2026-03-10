@@ -49,7 +49,7 @@ type Dashboard = {
   totalOrdersCount: number;
   paidOut: string;
   recentOrders: Array<{ id: string; displayId?: string | null; customerPrice: string; commission?: string; serviceType?: string | null; completedAt?: string | null }>;
-  payoutRequests: Array<{ id: string; amount: string; status: string; createdAt: string }>;
+  payoutRequests: Array<{ id: string; amount: string; status: string; createdAt: string; paidAt?: string | null; proofUrl?: string | null }>;
   badges?: Array<{ badgeId: string; [key: string]: unknown }>;
 };
 
