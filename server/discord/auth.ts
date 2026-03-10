@@ -302,15 +302,58 @@ export function setupDiscordAuth(app: Express) {
       if (!user) {
         user = await authStorage.getUser(targetId);
       }
+
+      let discordUsername = user?.discordUsername || `user-${targetId}`;
+      let firstName = user?.firstName || `User`;
+      let profileImageUrl = user?.profileImageUrl || null;
+      let discordAvatar = user?.discordAvatar || null;
+
+      // Try to fetch real info from Discord Bot if not already in DB
+      const botClient = getDiscordBotClient();
+      if (botClient) {
+        try {
+          const guilds = Array.from(botClient.guilds.cache.values());
+          for (const guild of guilds) {
+            try {
+              const member = await guild.members.fetch({ user: targetId, force: true });
+              if (member) {
+                discordUsername = member.user.username;
+                firstName = member.displayName || member.user.globalName || member.user.username;
+                discordAvatar = member.user.avatar;
+                profileImageUrl = member.user.displayAvatarURL({ size: 128 });
+                console.log(`[impersonate] Fetched Discord info for ${targetId}: ${discordUsername} (${firstName})`);
+                break;
+              }
+            } catch (memberErr) {
+              // Not in this guild, try next
+            }
+          }
+        } catch (botErr) {
+          console.error("[impersonate] Bot fetch error:", botErr);
+        }
+      }
+
       if (!user) {
         const role = (req.query.role as string) || "grinder";
         user = await authStorage.upsertUser({
           discordId: targetId,
-          discordUsername: `user-${targetId}`,
-          firstName: `User`,
+          discordUsername,
+          firstName,
+          profileImageUrl,
+          discordAvatar,
           role,
         });
         console.log(`[impersonate] Auto-created user for Discord ID ${targetId} with role=${role}`);
+      } else if (user.discordUsername === `user-${targetId}` && discordUsername !== `user-${targetId}`) {
+        // Update existing stub user with real info
+        user = await authStorage.upsertUser({
+          ...user,
+          discordUsername,
+          firstName,
+          profileImageUrl,
+          discordAvatar,
+        });
+        console.log(`[impersonate] Updated existing stub user ${targetId} with real Discord info`);
       }
 
       (req.session as any).userId = user.id;
