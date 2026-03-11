@@ -29,7 +29,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    const res = await fetch(url, {
       credentials: "include",
     });
 
@@ -38,6 +39,17 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
+
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      const preview = text.slice(0, 80);
+      throw new Error(
+        `API returned non-JSON (got ${contentType}). ` +
+        `Request: ${url}. ` +
+        `Response starts with: ${preview.includes("<") ? "HTML" : preview}`
+      );
+    }
     return await res.json();
   };
 

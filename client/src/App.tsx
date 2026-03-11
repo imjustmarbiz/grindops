@@ -68,6 +68,12 @@ import StaffCreatorPayouts from "@/pages/staff/creator-payouts";
 import StaffWallets from "@/pages/staff/wallets";
 import TierProgress from "@/pages/staff/tier-progress";
 import StaffOrderUpdates from "@/pages/staff/order-updates";
+import StaffCustomers from "@/pages/staff/customers";
+import CustomerOverview from "@/pages/customer/overview";
+import CustomerOrders from "@/pages/customer/orders";
+import CustomerOrderDetail from "@/pages/customer/order-detail";
+import CustomerVipPerks from "@/pages/customer/vip-perks";
+import CustomerNotifications from "@/pages/customer/notifications";
 import MyPerformance from "@/pages/staff/my-performance";
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
@@ -85,13 +91,15 @@ function MaintenancePage() {
   );
 }
 
-function EarlyAccessDeniedPage() {
+function AccessRestrictedPage({ allowedRoles }: { allowedRoles: string[] }) {
+  const roleLabels: Record<string, string> = { owner: "Owner", staff: "Staff", grinder: "Grinder", elite: "Elite Grinder", creator: "Creator", customer: "Customer" };
+  const allowedList = allowedRoles.map((r) => roleLabels[r] || r).join(", ");
   return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6 text-center" data-testid="page-early-access-denied">
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6 text-center" data-testid="page-access-restricted">
       <ShieldAlert className="w-16 h-16 text-amber-500" />
-      <h1 className="text-2xl font-bold">Elite Grinders Only Access</h1>
+      <h1 className="text-2xl font-bold">Access Restricted</h1>
       <p className="text-muted-foreground max-w-md">
-        The dashboard is currently in elite access mode and only available to Elite Grinders, Staff, and Owners.
+        The dashboard is currently restricted to: {allowedList || "No roles"}.
       </p>
       <p className="text-sm text-muted-foreground max-w-sm">
         If you believe you should have access, please contact staff in the Discord server.
@@ -106,9 +114,19 @@ function hasEliteRole(user: any): boolean {
   return discordRoles.includes(GRINDER_ROLES.ELITE);
 }
 
-function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, creatorOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; creatorOnly?: boolean; blockedDiscordIds?: string[] }) {
+function getUserEffectiveRole(user: any): string | null {
+  const role = user?.role;
+  if (role === "owner") return "owner";
+  if (role === "staff") return "staff";
+  if (role === "creator") return "creator";
+  if (role === "customer") return "customer";
+  if (role === "grinder") return hasEliteRole(user) ? "elite" : "grinder";
+  return null;
+}
+
+function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = false, creatorOnly = false, customerOnly = false, blockedDiscordIds }: { component: React.ComponentType; staffOnly?: boolean; ownerOnly?: boolean; creatorOnly?: boolean; customerOnly?: boolean; blockedDiscordIds?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
+  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean; allowedAccessRoles?: string[] }>({
     queryKey: ["/api/config/maintenance"],
     enabled: isAuthenticated,
     refetchInterval: 30000,
@@ -133,9 +151,13 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
     return <MaintenancePage />;
   }
 
-  const isStaffOrOwner = user?.role === "staff" || user?.role === "owner";
-  if (maintenanceData?.earlyAccessMode && !isStaffOrOwner && !hasEliteRole(user)) {
-    return <EarlyAccessDeniedPage />;
+  const allowedRoles = maintenanceData?.allowedAccessRoles ?? (maintenanceData?.earlyAccessMode ? ["owner", "staff", "elite"] : ["owner", "staff", "grinder", "elite", "creator", "customer"]);
+  const effectiveRole = getUserEffectiveRole(user);
+  if (!effectiveRole) {
+    return <AccessDeniedPageFullScreen />;
+  }
+  if (!allowedRoles.includes(effectiveRole)) {
+    return <AccessRestrictedPage allowedRoles={allowedRoles} />;
   }
 
   if (blockedDiscordIds) {
@@ -150,6 +172,10 @@ function ProtectedRoute({ component: Component, staffOnly = false, ownerOnly = f
   }
 
   if (creatorOnly && user?.role !== "creator") {
+    return <Redirect to="/" />;
+  }
+
+  if (customerOnly && user?.role !== "customer") {
     return <Redirect to="/" />;
   }
 
@@ -175,9 +201,22 @@ function AccessDeniedPage() {
   );
 }
 
+function AccessDeniedPageFullScreen() {
+  return (
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6 text-center" data-testid="page-access-denied">
+      <ShieldAlert className="w-16 h-16 text-amber-500" />
+      <h1 className="text-2xl font-bold">Access Denied</h1>
+      <p className="text-muted-foreground max-w-md">
+        You don't have the required Discord role to access this application. You need either a Staff or Grinder role in the Discord server.
+      </p>
+      <a href="/api/logout" className="text-primary underline text-sm mt-2">Sign out</a>
+    </div>
+  );
+}
+
 function HomeRedirect() {
   const { user, isLoading, isAuthenticated } = useAuth();
-  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean }>({
+  const { data: maintenanceData } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean; allowedAccessRoles?: string[] }>({
     queryKey: ["/api/config/maintenance"],
     enabled: isAuthenticated,
     refetchInterval: 30000,
@@ -196,18 +235,19 @@ function HomeRedirect() {
   }
 
   if (user?.role === "none") {
-    return (
-      <AppLayout>
-        <AccessDeniedPage />
-      </AppLayout>
-    );
+    return <AccessDeniedPageFullScreen />;
+  }
+
+  const allowedRoles = maintenanceData?.allowedAccessRoles ?? (maintenanceData?.earlyAccessMode ? ["owner", "staff", "elite"] : ["owner", "staff", "grinder", "elite", "creator", "customer"]);
+  const effectiveRole = getUserEffectiveRole(user);
+  if (!effectiveRole) {
+    return <AccessDeniedPageFullScreen />;
+  }
+  if (!allowedRoles.includes(effectiveRole)) {
+    return <AccessRestrictedPage allowedRoles={allowedRoles} />;
   }
 
   const isStaffOrOwner = user?.role === "staff" || user?.role === "owner";
-  if (maintenanceData?.earlyAccessMode && !isStaffOrOwner && !hasEliteRole(user)) {
-    return <EarlyAccessDeniedPage />;
-  }
-
   if (isStaffOrOwner) {
     return (
       <AppLayout>
@@ -218,6 +258,10 @@ function HomeRedirect() {
 
   if (user?.role === "creator") {
     return <Redirect to="/creator" />;
+  }
+
+  if (user?.role === "customer") {
+    return <Redirect to="/customer" />;
   }
 
   return (
@@ -247,6 +291,7 @@ function Router() {
       <Route path="/admin" component={() => <ProtectedRoute component={StaffAdmin} staffOnly />} />
       <Route path="/queue" component={() => <ProtectedRoute component={Queue} staffOnly />} />
       <Route path="/orders" component={() => <ProtectedRoute component={Orders} staffOnly />} />
+      <Route path="/customers" component={() => <ProtectedRoute component={StaffCustomers} staffOnly />} />
       <Route path="/grinders" component={() => <ProtectedRoute component={Grinders} staffOnly />} />
       <Route path="/tier-progress" component={() => <ProtectedRoute component={TierProgress} staffOnly />} />
       <Route path="/bids" component={() => <ProtectedRoute component={Bids} staffOnly />} />
@@ -286,6 +331,11 @@ function Router() {
       <Route path="/scorecard-guide" component={() => <ProtectedRoute component={ScorecardGuide} />} />
 
       <Route path="/creator" component={() => <ProtectedRoute component={CreatorOverview} creatorOnly />} />
+      <Route path="/customer" component={() => <ProtectedRoute component={CustomerOverview} customerOnly />} />
+      <Route path="/customer/orders" component={() => <ProtectedRoute component={CustomerOrders} customerOnly />} />
+      <Route path="/customer/orders/:orderId" component={() => <ProtectedRoute component={CustomerOrderDetail} customerOnly />} />
+      <Route path="/customer/vip-perks" component={() => <ProtectedRoute component={CustomerVipPerks} customerOnly />} />
+      <Route path="/customer/notifications" component={() => <ProtectedRoute component={CustomerNotifications} customerOnly />} />
       <Route path="/creator/promote" component={() => <ProtectedRoute component={CreatorPromote} creatorOnly />} />
       <Route path="/creator/payouts" component={() => <ProtectedRoute component={CreatorPayouts} creatorOnly />} />
       <Route path="/creator/rules" component={() => <ProtectedRoute component={CreatorRules} creatorOnly />} />

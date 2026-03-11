@@ -49,8 +49,8 @@ const DEFAULT_QUEUE_CONFIG: QueueConfig = {
   creatorPayoutMethods: ['paypal'],
   quoteGeneratorCompanyPct: '70',
   quoteGeneratorGrinderPct: '30',
-  dailyCheckupsEnabled: true, mgtBotEnabled: true, maintenanceMode: false, maintenanceModeSetBy: null,
-  customerUpdatesEnabled: true, embedThumbnailUrl: null, earlyAccessMode: false,
+  dailyCheckupsEnabled: true, mgtBotEnabled: true, maintenanceMode: false, maintenanceModeSetBy: null, allowedAccessRoles: ["owner", "staff", "grinder", "elite", "creator", "customer"],
+  customerUpdatesEnabled: true, bidWarNotificationsEnabled: true, embedThumbnailUrl: null, earlyAccessMode: false,
   customPayoutRoles: null, customPayoutCategories: null, platforms: ['Xbox', 'PS5'],
   holidayTheme: 'none', gameTheme: 'none',
 };
@@ -69,6 +69,23 @@ const ZERO_DASHBOARD: DashboardStats = {
 const devOrders = new Map<string, Order>();
 const devBids = new Map<string, Bid>();
 const devAssignments = new Map<string, Assignment>();
+
+// Seed test orders for DemoCustomer (dev-user-customer) so customer dashboard has sample data
+const DEMO_CUSTOMER_ID = "dev-user-customer";
+function seedDemoCustomerOrders() {
+  const existing = Array.from(devOrders.values()).some((o: any) => o.customerDiscordId === DEMO_CUSTOMER_ID);
+  if (existing) return;
+  const baseDate = new Date();
+  const orders: Partial<Order>[] = [
+    { id: "DEMO-ORD-1", mgtOrderNumber: 9001, displayId: "MGT-9001", serviceId: "S1", customerPrice: "125.00", orderDueDate: baseDate, status: "Completed", customerDiscordId: DEMO_CUSTOMER_ID, completedAt: new Date(Date.now() - 86400000 * 3), createdAt: new Date(Date.now() - 86400000 * 10) },
+    { id: "DEMO-ORD-2", mgtOrderNumber: 9002, displayId: "MGT-9002", serviceId: "S2", customerPrice: "89.99", orderDueDate: baseDate, status: "Completed", customerDiscordId: DEMO_CUSTOMER_ID, completedAt: new Date(Date.now() - 86400000 * 7), createdAt: new Date(Date.now() - 86400000 * 14) },
+    { id: "DEMO-ORD-3", mgtOrderNumber: 9003, displayId: "MGT-9003", serviceId: "S3", customerPrice: "199.00", orderDueDate: baseDate, status: "Assigned", customerDiscordId: DEMO_CUSTOMER_ID, createdAt: new Date(Date.now() - 86400000 * 1) },
+  ];
+  for (const o of orders) {
+    devOrders.set(o.id!, o as Order);
+  }
+}
+seedDemoCustomerOrders();
 
 export class DevStorage implements IStorage {
   async getServices() { return DEV_SERVICES; }

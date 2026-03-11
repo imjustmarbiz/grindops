@@ -10,6 +10,7 @@ import { GRINDER_ROLES } from "@shared/schema";
 const DISCORD_API = "https://discord.com/api/v10";
 const OWNER_ROLE = "1466369177043599514";
 const STAFF_ROLE = "1466369178729578663";
+const CUSTOMER_ROLE = "1140032856253542460";
 const GRINDER_ROLE = "1466369179648004224";
 const ELITE_GRINDER_ROLE = "1466370965016412316";
 const ALL_GRINDER_ROLES = [
@@ -160,6 +161,8 @@ export function setupDiscordAuth(app: Express) {
                 role = STAFF_OVERRIDE_IDS.includes(discordUser.id) ? "staff" : "owner";
               } else if (guildRoleIds.includes(STAFF_ROLE)) {
                 role = "staff";
+              } else if (guildRoleIds.includes(CUSTOMER_ROLE)) {
+                role = "customer";
               } else if (guildRoleIds.includes(ELITE_GRINDER_ROLE)) {
                 role = "elite";
               } else if (guildRoleIds.some((r: string) => ALL_GRINDER_ROLES.includes(r))) {
@@ -243,6 +246,8 @@ export function setupDiscordAuth(app: Express) {
                   newRole = STAFF_OVERRIDE_IDS.includes(user.discordId!) ? "staff" : "owner";
                 } else if (guildRoleIds.includes(STAFF_ROLE)) {
                   newRole = "staff";
+                } else if (guildRoleIds.includes(CUSTOMER_ROLE)) {
+                  newRole = "customer";
                 } else if (guildRoleIds.includes(ELITE_GRINDER_ROLE)) {
                   newRole = "elite";
                 } else if (guildRoleIds.some((r) => ALL_GRINDER_ROLES.includes(r))) {
@@ -413,6 +418,7 @@ export function setupDiscordAuth(app: Express) {
       grinder: { firstName: "DemoGrinder", discordUsername: "demogrinder" },
       elite: { firstName: "DemoElite", discordUsername: "demoelite" },
       creator: { firstName: "DemoCreator", discordUsername: "democreator" },
+      customer: { firstName: "DemoCustomer", discordUsername: "democustomer" },
     };
     app.get("/api/auth/dev/login", async (req, res) => {
       const role = (req.query.role as string) || "owner";
@@ -491,6 +497,14 @@ export const requireGrinderOrStaff: RequestHandler = async (req, res, next) => {
   const userRole = (req as any).userRole;
   if (userRole !== "staff" && userRole !== "grinder" && userRole !== "owner" && userRole !== "elite") {
     return res.status(403).json({ message: "Access denied. You need a Staff or Grinder role in Discord." });
+  }
+  next();
+};
+
+export const requireCustomer: RequestHandler = async (req, res, next) => {
+  const userRole = (req as any).userRole;
+  if (userRole !== "customer") {
+    return res.status(403).json({ message: "Customer access required" });
   }
   next();
 };

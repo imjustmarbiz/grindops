@@ -38,10 +38,12 @@ export interface QuoteDiscordOptions {
   originalPrice?: number;
   /** Discount percentage 0–100. When > 0, shows original price and discount lines. */
   discountPercent?: number;
+  /** MyPlayer Type for badge grinding (e.g. "Non-Rebirth", "Rebirth"). Shown when serviceLabel is badge. */
+  myPlayerType?: string;
 }
 
 export function buildQuoteDiscordMessage(options: QuoteDiscordOptions): string {
-  const { customerPrice, estimatedTimeframe, timeframeText, customerIdentifier, route, urgency, creatorCode, startTier, startLvl, startPct, targetTier, targetLvl, targetPct, originalPrice, discountPercent, serviceLabel } = options;
+  const { customerPrice, estimatedTimeframe, timeframeText, customerIdentifier, route, urgency, creatorCode, startTier, startLvl, startPct, targetTier, targetLvl, targetPct, originalPrice, discountPercent, serviceLabel, myPlayerType } = options;
 
   const displayTimeframe =
     timeframeText && timeframeText !== estimatedTimeframe
@@ -63,6 +65,9 @@ export function buildQuoteDiscordMessage(options: QuoteDiscordOptions): string {
     lines.push("");
   }
   lines.push(`**Route:** ${displayRoute}`);
+  if (myPlayerType) {
+    lines.push(`**MyPlayer Type:** ${myPlayerType}`);
+  }
   lines.push(`**Urgency:** ${URGENCY_LABELS[urgency] ?? urgency}`);
   if (creatorCode) {
     lines.push(`**Creator Code:** ${creatorCode}`);

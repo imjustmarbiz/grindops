@@ -1,9 +1,13 @@
-import { Shield, Crown, Wrench, Gamepad2, Star } from "lucide-react";
+import { Shield, Crown, Wrench, Gamepad2, Star, UserCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 function isDevEnvironment(): boolean {
   const hostname = window.location.hostname;
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".replit.dev");
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".replit.dev")) return true;
+  // Local network IPs (e.g. 192.168.1.253 when opening dev server from phone) — dev only, not production
+  if (hostname.startsWith("192.168.") || hostname.startsWith("10.")) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+  return false;
 }
 
 export default function DevProfilesPanel() {
@@ -21,13 +25,14 @@ export default function DevProfilesPanel() {
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dev Profiles</span>
         <div className="flex-1 h-px bg-border/50" />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         {[
           { role: "owner", label: "Owner", icon: Crown, color: "from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/15 border-primary/30 text-primary" },
           { role: "staff", label: "Staff", icon: Wrench, color: "from-blue-500/20 to-blue-600/10 hover:from-blue-500/30 hover:to-blue-600/20 border-blue-500/30 text-blue-400" },
           { role: "grinder", label: "Grinder", icon: Gamepad2, color: "from-[#5865F2]/20 to-[#5865F2]/10 hover:from-[#5865F2]/30 hover:to-[#5865F2]/20 border-[#5865F2]/30 text-[#5865F2]" },
           { role: "elite", label: "Elite Grinder", icon: Shield, color: "from-cyan-500/20 to-teal-500/10 hover:from-cyan-500/30 hover:to-teal-500/20 border-cyan-500/30 text-cyan-400" },
           { role: "creator", label: "Creator", icon: Star, color: "from-emerald-500/20 to-green-600/10 hover:from-emerald-500/30 hover:to-green-600/20 border-emerald-500/30 text-emerald-400" },
+          { role: "customer", label: "Customer", icon: UserCircle, color: "from-pink-500/20 to-purple-600/10 hover:from-pink-500/30 hover:to-purple-600/20 border-pink-500/30 text-pink-400" },
         ].map((dev) => (
           <a
             key={dev.role}

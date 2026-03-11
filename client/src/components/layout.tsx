@@ -2,8 +2,8 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Megaphone, Calculator } from "lucide-react";
-import grindopsLogo from "@assets/grindops-sp-logo.png";
+import { LayoutDashboard, ListOrdered, Users, Gavel, FileCheck, LogOut, Brain, ScrollText, UserCircle, Shield, Crown, Banknote, Wrench, BarChart3, Wallet, Settings, Zap, Bell, BookOpen, ClipboardCheck, ClipboardList, FileBarChart, MessageCircle, MessageSquare, Tv, Calendar, CalendarDays, Newspaper, Star, LinkIcon, Package, DollarSign, AlertOctagon, Award, UserCheck, TrendingUp, Megaphone, Calculator, UserCircle2, Gem } from "lucide-react";
+import { GrindOpsLogo } from "@/components/grindops-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChatDrawer } from "@/components/chat-drawer";
@@ -38,6 +38,7 @@ export const staffNavItems = [
   { title: "Business Wallet", url: "/wallets", icon: Wallet },
   { title: "Business Performance", url: "/business", icon: DollarSign },
   { title: "Services", url: "/services", icon: Package },
+  { title: "Customers", url: "/customers", icon: UserCircle2 },
   { title: "Grinders", url: "/grinders", icon: Users },
   { title: "Grinders Performance", url: "/tier-progress", icon: TrendingUp },
   { title: "Badges", url: "/badges", icon: Award },
@@ -99,17 +100,25 @@ export const creatorNavItems = [
   { title: "Rules & Policy", url: "/creator/rules", icon: ScrollText },
 ];
 
+export const customerNavItems = [
+  { title: "Overview", url: "/customer", icon: LayoutDashboard },
+  { title: "My Orders", url: "/customer/orders", icon: Package },
+  { title: "VIP Perks", url: "/customer/vip-perks", icon: Gem },
+  { title: "Notifications", url: "/customer/notifications", icon: Bell },
+];
+
 function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const isCreator = user?.role === "creator";
+  const isCustomer = user?.role === "customer";
   const isOwner = user?.role === "owner";
   const userId = (user as any)?.discordId || user?.id || "";
   const { data: grinderProfile } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
-    enabled: !isStaff && !isCreator,
+    enabled: !isStaff && !isCreator && !isCustomer,
   });
   const { data: creatorProfile } = useQuery<{ creator: { displayName: string; code: string } }>({
     queryKey: ["/api/creator/me"],
@@ -174,25 +183,27 @@ function AppSidebar() {
       })
     : isCreator
     ? creatorNavItems
+    : isCustomer
+    ? customerNavItems
     : grinderNavItems;
-  const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isCreator ? "Creator" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
-  const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || undefined;
+  const roleBadge = isOwner ? "Owner" : user?.role === "staff" ? "Staff" : isCreator ? "Creator" : isCustomer ? "Customer" : isElite ? "Elite Grinder" : user?.role === "grinder" ? "Grinder" : "Member";
+  const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || (isCustomer ? user?.profileImageUrl : undefined) || undefined;
 
   return (
     <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
       <SidebarContent>
-        <div className="p-4 sm:p-5 flex items-center shrink-0 isolate rounded-none [box-shadow:0_0_28px_rgba(0,0,0,0.45)]" style={{ background: 'hsl(var(--sidebar-background))' }}>
-          <img src={grindopsLogo} alt="GrindOps" className="h-[3.78rem] w-auto max-w-full object-contain object-left sm:h-[4.32rem] border-0 bg-transparent [filter:contrast(1.15)] [mix-blend-mode:lighten]" />
+        <div className="p-4 sm:p-5 flex items-center shrink-0 pt-4 sm:pt-5 pb-2 sm:pb-3">
+          <GrindOpsLogo className="h-[3.78rem] w-auto max-w-full sm:h-[4.32rem] text-sidebar-foreground" />
         </div>
         
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground font-medium">
-            {isStaff ? "Management" : isCreator ? "Creator Dashboard" : "Navigation"}
+            {isStaff ? "Management" : isCreator ? "Creator Dashboard" : isCustomer ? "Customer Dashboard" : "Navigation"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = location === item.url;
+                const isActive = location === item.url || (item.url === "/customer/orders" && location.startsWith("/customer/orders/"));
                 const unreadAlerts = !isStaff && !isCreator && item.url === "/grinder/notifications" ? (grinderProfile?.unreadAlertCount || 0) : 0;
                 const staffUnreadNotifs = isStaff && item.url === "/notifications" ? unreadNotifCount : 0;
                 const creatorUnreadNotifs = isCreator && item.url === "/creator/notifications" ? creatorUnreadNotifCount : 0;
@@ -210,7 +221,7 @@ function AppSidebar() {
                         data-nav-url={item.url}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           isActive 
-                            ? (isCreator ? "bg-primary/20 text-primary font-medium" : "font-medium")
+                            ? (isCreator ? "bg-primary/20 text-primary font-medium" : isCustomer ? "bg-pink-500/20 text-pink-400 font-medium" : "font-medium")
                             : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
                         }`}
                       >
@@ -219,6 +230,7 @@ function AppSidebar() {
                         {badgeCount > 0 && (
                           <Badge className={`border-0 text-[10px] px-1.5 py-0 min-w-[20px] text-center ${
                             isCreator ? "animate-badge-flash bg-primary/25 text-primary" :
+                            isCustomer ? "animate-pulse bg-pink-500/20 text-pink-400" :
                             todoCount > 0 ? "animate-pulse bg-amber-500/20 text-amber-400" : "animate-pulse bg-blue-500/20 text-blue-400"
                           }`}>{badgeCount}</Badge>
                         )}
@@ -234,9 +246,11 @@ function AppSidebar() {
         <div className="mt-auto p-3 sm:p-4 shrink-0">
           <div className="p-3.5 rounded-xl bg-[#141414] border border-white/10 flex flex-col gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border border-emerald-500/30 shrink-0">
+              <Avatar className={`h-10 w-10 border shrink-0 ${
+                isCustomer ? "border-pink-500/30" : "border-emerald-500/30"
+              }`}>
                 <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="bg-emerald-500/20 text-emerald-400">
+                <AvatarFallback className={isCustomer ? "bg-pink-500/20 text-pink-400" : "bg-emerald-500/20 text-emerald-400"}>
                   {user?.firstName?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
@@ -244,9 +258,13 @@ function AppSidebar() {
                 <span className="text-sm font-medium truncate" data-testid="text-user-name">
                   {isCreator
                     ? (creatorProfile?.creator?.displayName || user?.firstName || user?.discordUsername || "Creator")
+                    : isCustomer
+                    ? (user?.firstName || user?.discordUsername || "Customer")
                     : (grinderProfile?.grinder?.name || user?.firstName || user?.discordUsername || "User")}
                   {(isCreator
                     ? (creatorProfile?.creator?.code && ` (${creatorProfile.creator.code})`)
+                    : isCustomer
+                    ? user?.discordUsername
                     : (grinderProfile?.grinder?.discordUsername || user?.discordUsername)) && (
                     <span className="text-[11px] font-normal text-muted-foreground ml-1">@{isCreator ? user?.discordUsername : (grinderProfile?.grinder?.discordUsername || user?.discordUsername)}</span>
                   )}
@@ -257,12 +275,13 @@ function AppSidebar() {
                     isOwner ? "bg-primary/20 text-primary border-primary/30" :
                     user?.role === "staff" ? "bg-[#4cadd0]/20 text-[#4cadd0] border-[#4cadd0]/30" :
                     isCreator ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                    isCustomer ? "bg-pink-500/20 text-pink-400 border-pink-500/30" :
                     isElite ? "bg-cyan-950 text-cyan-300 border-cyan-500/40" :
                     "bg-[#1a1a3e] text-[#8b9aff] border-[#5865F2]/40"
                   }`}
                   data-testid="text-user-role"
                 >
-                  {isOwner ? <Crown className="w-3 h-3 mr-1" /> : isCreator ? <Star className="w-3 h-3 mr-1" /> : isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
+                  {isOwner ? <Crown className="w-3 h-3 mr-1" /> : isCreator ? <Star className="w-3 h-3 mr-1" /> : isCustomer ? <UserCircle className="w-3 h-3 mr-1" /> : isElite ? <Crown className="w-3 h-3 mr-1" /> : <Shield className="w-3 h-3 mr-1" />}
                   {roleBadge}
                 </Badge>
               </div>
@@ -270,7 +289,9 @@ function AppSidebar() {
             <Button 
               variant="outline" 
               data-testid="button-logout"
-              className="w-full justify-start gap-2 !border-black/40 bg-black/50 hover:bg-primary hover:!border-primary hover:text-primary-foreground text-white transition-all" 
+              className={`w-full justify-start gap-2 !border-black/40 bg-black/50 text-white transition-all ${
+                isCustomer ? "hover:bg-pink-500 hover:!border-pink-500 hover:text-white" : "hover:bg-primary hover:!border-primary hover:text-primary-foreground"
+              }`} 
               onClick={() => logout()}
             >
               <LogOut className="w-4 h-4" />
@@ -292,10 +313,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useLoginTracker();
   const { data: grinderProfileForTheme } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
-    enabled: !isStaffOrOwner && user?.role !== "creator",
+    enabled: !isStaffOrOwner && user?.role !== "creator" && user?.role !== "customer",
   });
   const isEliteGrinder = !isStaffOrOwner && user?.role !== "creator" && (grinderProfileForTheme?.isElite || (user as any)?.discordRoles?.includes?.("1466370965016412316"));
-  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : user?.role === "creator" ? "theme-creator" : isEliteGrinder ? "theme-elite" : "theme-grinder";
+  const themeClass = user?.role === "owner" ? "theme-owner" : user?.role === "staff" ? "theme-staff" : user?.role === "creator" ? "theme-creator" : user?.role === "customer" ? "theme-customer" : isEliteGrinder ? "theme-elite" : "theme-grinder";
 
   const { data: siteConfig } = useQuery<{ holidayTheme?: string; gameTheme?: string }>({
     queryKey: ["/api/config/maintenance"],
@@ -309,7 +330,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("theme-owner", "theme-staff", "theme-grinder", "theme-elite", "theme-creator");
+    root.classList.remove("theme-owner", "theme-staff", "theme-grinder", "theme-elite", "theme-creator", "theme-customer");
     root.classList.add(themeClass);
     return () => root.classList.remove(themeClass);
   }, [themeClass]);
@@ -356,16 +377,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
           
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-5 md:px-6 backdrop-blur-md bg-background/50 relative z-10">
-            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors size-9 flex items-center justify-center shrink-0" />
-            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <header className="flex h-14 min-h-[56px] shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-5 md:px-6 backdrop-blur-md bg-background/50 relative z-10 pt-safe">
+            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 touch-manipulation" />
+            {/* Desktop: logo centered in header */}
+            <Link
+              href={user?.role === "customer" ? "/customer" : user?.role === "creator" ? "/creator" : "/"}
+              className="hidden md:flex flex-1 justify-center min-w-0 shrink"
+            >
+              <GrindOpsLogo className="h-7 w-auto text-foreground" />
+            </Link>
+            <div className="flex items-center gap-2 sm:gap-3 md:ml-0 ml-auto">
               {user?.role !== "creator" && <SoundAlertsHelper />}
               <TutorialTrigger variant="inline" />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setChatOpen(true)}
-                className="relative size-9 shrink-0 hover-elevate hover:bg-white/10"
+                className="relative min-w-[44px] min-h-[44px] shrink-0 hover-elevate hover:bg-white/10 touch-manipulation"
                 data-testid="button-open-chat"
               >
                 <MessageCircle className="w-5 h-5" />
@@ -378,8 +406,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative size-9"
-                onClick={() => setLocation(user?.role === "staff" || user?.role === "owner" ? "/notifications" : user?.role === "creator" ? "/creator/notifications" : "/grinder/notifications")}
+                className="relative min-w-[44px] min-h-[44px] touch-manipulation"
+                onClick={() => setLocation(user?.role === "staff" || user?.role === "owner" ? "/notifications" : user?.role === "creator" ? "/creator/notifications" : user?.role === "customer" ? "/customer/notifications" : "/grinder/notifications")}
                 data-testid="button-notifications"
               >
                 <Bell className="w-5 h-5 text-muted-foreground" />
@@ -389,9 +417,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </span>
                 )}
               </Button>
+              {/* Mobile: console logo top right */}
+              <Link
+                href={user?.role === "customer" ? "/customer" : user?.role === "creator" ? "/creator" : "/"}
+                className="md:hidden shrink-0 py-1 -mr-1"
+              >
+                <GrindOpsLogo className="h-6 w-auto text-foreground" />
+              </Link>
             </div>
           </header>
-          <main className="flex-1 min-h-0 overflow-auto p-3 sm:p-5 md:p-6 relative z-10">
+          <main className="flex-1 min-h-0 overflow-auto p-3 sm:p-5 md:p-6 pb-safe relative z-10">
             <div className="max-w-7xl mx-auto w-full min-w-0">
               {children}
             </div>

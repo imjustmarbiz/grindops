@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ALL_BADGES, BADGE_CATEGORIES, BADGES_BY_CATEGORY } from "@shared/badge-data";
+import { ALL_BADGES, BADGE_CATEGORIES, BADGES_BY_CATEGORY, formatBadgeRouteForDiscord, formatBadgeRouteFromIds } from "@shared/badge-data";
 import type { MyPlayerType } from "@shared/my-player-type-settings";
 import { calculateBadgeQuote, type BadgeQuoteInputs, type BadgeQuoteResults } from "@shared/badge-quote-calc";
 
@@ -534,17 +534,17 @@ function EditQuoteDialog({
 function PricingPlaybookDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-amber-500/20 bg-card">
-        <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.08] via-background to-violet-900/[0.04] overflow-hidden">
-          <div className="bg-amber-500/20 border-b border-amber-500/20 px-6 py-4">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-amber-400">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-primary/20 bg-card">
+        <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] via-background to-primary/5 overflow-hidden">
+          <div className="bg-primary/20 border-b border-primary/20 px-6 py-4">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-primary">
               <BookOpen className="w-5 h-5" />
               Pricing Playbook (AI vs Market)
             </DialogTitle>
           </div>
           <div className="p-6 space-y-6 text-sm">
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-2">How to read AI vs Market</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary/90 mb-2">How to read AI vs Market</h3>
               <ul className="space-y-1.5 text-muted-foreground list-disc list-inside">
                 <li>Market Quote = &quot;street price&quot; (no efficiency/volume/AI bands).</li>
                 <li>AI Suggested Offer = your internal valuation (difficulty, efficiency, volume, urgency).</li>
@@ -552,7 +552,7 @@ function PricingPlaybookDialog({ open, onClose }: { open: boolean; onClose: () =
               </ul>
             </section>
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-2">What it means</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary/90 mb-2">What it means</h3>
               <ul className="space-y-1.5 text-muted-foreground list-disc list-inside">
                 <li>AI &gt; Market: order is riskier/harder for you than market assumes (cap with Market).</li>
                 <li>AI &lt; Market: you can execute efficiently (price at Market and keep upside).</li>
@@ -560,7 +560,7 @@ function PricingPlaybookDialog({ open, onClose }: { open: boolean; onClose: () =
               </ul>
             </section>
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-2">Which price to lean toward (rules)</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary/90 mb-2">Which price to lean toward (rules)</h3>
               <ul className="space-y-1.5 text-muted-foreground list-disc list-inside">
                 <li>If |AI − Market| ≤ 10% → Lean AI (Suggested Offer).</li>
                 <li>If AI &gt; Market by &gt;10% → Lean Market (cap).</li>
@@ -569,7 +569,7 @@ function PricingPlaybookDialog({ open, onClose }: { open: boolean; onClose: () =
               </ul>
             </section>
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-2">Examples</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary/90 mb-2">Examples</h3>
               <ul className="space-y-1.5 text-muted-foreground list-disc list-inside">
                 <li>Final Quote $550, Grinder agrees $350 → Grinder gets $350; Company gets $200 (30% base + extra).</li>
                 <li>If Market is $500 and AI Suggested is $600 → quote near $500 (or small premium) unless Rush/VIP.</li>
@@ -577,11 +577,11 @@ function PricingPlaybookDialog({ open, onClose }: { open: boolean; onClose: () =
               </ul>
             </section>
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-3">Decision Table</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary/90 mb-3">Decision Table</h3>
               <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="bg-amber-500/15 text-amber-400 border-b border-amber-500/20">
+                    <tr className="bg-primary/15 text-primary border-b border-primary/20">
                       <th className="px-4 py-2.5 font-semibold">Condition</th>
                       <th className="px-4 py-2.5 font-semibold">Meaning</th>
                       <th className="px-4 py-2.5 font-semibold">Lean Toward</th>
@@ -708,6 +708,8 @@ export default function QuoteGeneratorPage() {
   const [filterStartPctMin, setFilterStartPctMin] = useState("");
   const [filterTargetPctMin, setFilterTargetPctMin] = useState("");
   const [filterDiscountPctMin, setFilterDiscountPctMin] = useState("");
+  const [filterBadgeCountMin, setFilterBadgeCountMin] = useState("");
+  const [filterBadgeCountMax, setFilterBadgeCountMax] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [editQuoteId, setEditQuoteId] = useState<string | null>(null);
   const [copiedQuoteId, setCopiedQuoteId] = useState<string | null>(null);
@@ -726,7 +728,7 @@ export default function QuoteGeneratorPage() {
   const { data: queueConfig } = useQuery<{ quoteGeneratorCompanyPct?: string | number; quoteGeneratorGrinderPct?: string | number; repQuoteSettings?: { roundBy?: number }; badgeQuoteSettings?: { roundBy?: number }; myPlayerTypeSettings?: { nonRebirthAdd?: number; rebirthAdd?: number } }>({
     queryKey: ["/api/config"],
   });
-  const { data: savedQuotesList = [] } = useQuery<Array<{ id: string; customerIdentifier?: string | null; createdByName: string; createdAt: string; inputs?: Record<string, unknown>; results?: { recommendedQuote?: number; estimatedTimeframe?: string } }>>({
+  const { data: savedQuotesList = [] } = useQuery<Array<{ id: string; serviceType?: string; customerIdentifier?: string | null; createdByName: string; createdAt: string; inputs?: Record<string, unknown>; results?: { recommendedQuote?: number; estimatedTimeframe?: string } }>>({
     queryKey: ["/api/staff/quotes"],
   });
   const defaultCompanyPct = queueConfig?.quoteGeneratorCompanyPct != null
@@ -776,9 +778,11 @@ export default function QuoteGeneratorPage() {
           estimatedTimeframe: `${badgeResults.minDays}–${badgeResults.maxDays} days`,
           timeframeText: badgeResults.timeframeText,
           customerIdentifier: customerIdentifier.trim() || undefined,
-          route: `Badge Grinding: ${badgeIds.length} badge${badgeIds.length !== 1 ? "s" : ""}`,
+          route: `${badgeResults.badgeBreakdown.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(badgeResults.badgeBreakdown)}`,
+          serviceLabel: "Badge Grinding Quote",
           urgency,
           creatorCode: creatorCode || undefined,
+          myPlayerType,
           ...((badgeResults.discountUsed ?? 0) > 0 && { discountPercent: (badgeResults.discountUsed ?? 0) * 100 }),
         });
         const badgeInputs: BadgeQuoteInputs = {
@@ -912,7 +916,6 @@ export default function QuoteGeneratorPage() {
   ]);
 
   const badgeResults = useMemo((): BadgeQuoteResults | null => {
-    if (badgeIds.length === 0) return null;
     try {
       const badgeInputs: BadgeQuoteInputs = {
         badgeIds,
@@ -953,7 +956,8 @@ export default function QuoteGeneratorPage() {
   }, [quoteSource, chosenFinalQuote]);
 
   const filteredSavedQuotes = useMemo(() => {
-    let list = savedQuotesList;
+    const targetService = quoteGeneratorTab === "rep" ? "rep_grinding" : "badge_grinding";
+    let list = savedQuotesList.filter((q2) => (q2.serviceType || "rep_grinding") === targetService);
 
     // Text search
     if (quoteFilter.trim()) {
@@ -963,7 +967,9 @@ export default function QuoteGeneratorPage() {
         const created = (q2.createdByName || "").toLowerCase();
         const price = String(Number(q2.results?.recommendedQuote ?? 0));
         const id = (q2.id || "").toLowerCase();
-        const route = formatQuoteRoute(q2.inputs as { startTier?: string; startLvl?: number; startPct?: number; targetTier?: string; targetLvl?: number; targetPct?: number } | undefined);
+        const route = targetService === "rep_grinding"
+          ? formatQuoteRoute(q2.inputs as { startTier?: string; startLvl?: number; startPct?: number; targetTier?: string; targetLvl?: number; targetPct?: number } | undefined)
+          : (() => { const ids = Array.isArray(q2.inputs?.badgeIds) ? q2.inputs.badgeIds : []; return `${ids.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteFromIds(ids)}`; })();
         return cust.includes(q) || created.includes(q) || price.includes(q) || id.includes(q) || route.toLowerCase().includes(q);
       });
     }
@@ -998,14 +1004,26 @@ export default function QuoteGeneratorPage() {
       list = list.filter((q2) => q2.createdAt && new Date(q2.createdAt).getTime() >= cutoff);
     }
 
-    // Start tier
-    if (filterStartTier) {
-      list = list.filter((q2) => String(q2.inputs?.startTier ?? "").toLowerCase() === filterStartTier.toLowerCase());
+    // Rep-only: Start tier, Target tier
+    if (targetService === "rep_grinding") {
+      if (filterStartTier) {
+        list = list.filter((q2) => String(q2.inputs?.startTier ?? "").toLowerCase() === filterStartTier.toLowerCase());
+      }
+      if (filterTargetTier) {
+        list = list.filter((q2) => String(q2.inputs?.targetTier ?? "").toLowerCase() === filterTargetTier.toLowerCase());
+      }
     }
 
-    // Target tier
-    if (filterTargetTier) {
-      list = list.filter((q2) => String(q2.inputs?.targetTier ?? "").toLowerCase() === filterTargetTier.toLowerCase());
+    // Badge-only: Badge count
+    if (targetService === "badge_grinding") {
+      if (filterBadgeCountMin !== "") {
+        const min = Number(filterBadgeCountMin) || 0;
+        list = list.filter((q2) => (Array.isArray(q2.inputs?.badgeIds) ? q2.inputs.badgeIds.length : 0) >= min);
+      }
+      if (filterBadgeCountMax !== "") {
+        const max = Number(filterBadgeCountMax) || Infinity;
+        list = list.filter((q2) => (Array.isArray(q2.inputs?.badgeIds) ? q2.inputs.badgeIds.length : 0) <= max);
+      }
     }
 
     // Urgency
@@ -1029,16 +1047,16 @@ export default function QuoteGeneratorPage() {
       list = list.filter((q2) => (q2.results?.estimatedTimeframe ?? "").toLowerCase().includes(tf) || (String(q2.results?.timeframeText ?? "")).toLowerCase().includes(tf));
     }
 
-    // Start %
-    if (filterStartPctMin !== "") {
-      const min = Number(filterStartPctMin) || 0;
-      list = list.filter((q2) => (Number(q2.inputs?.startPct ?? 0) ?? 0) >= min);
-    }
-
-    // Target %
-    if (filterTargetPctMin !== "") {
-      const min = Number(filterTargetPctMin) || 0;
-      list = list.filter((q2) => (Number(q2.inputs?.targetPct ?? 0) ?? 0) >= min);
+    // Rep-only: Start %, Target %
+    if (targetService === "rep_grinding") {
+      if (filterStartPctMin !== "") {
+        const min = Number(filterStartPctMin) || 0;
+        list = list.filter((q2) => (Number(q2.inputs?.startPct ?? 0) ?? 0) >= min);
+      }
+      if (filterTargetPctMin !== "") {
+        const min = Number(filterTargetPctMin) || 0;
+        list = list.filter((q2) => (Number(q2.inputs?.targetPct ?? 0) ?? 0) >= min);
+      }
     }
 
     // Discount %
@@ -1052,7 +1070,7 @@ export default function QuoteGeneratorPage() {
     }
 
     return list;
-  }, [savedQuotesList, quoteFilter, filterDateRange, filterDateFrom, filterDateTo, filterStartTier, filterTargetTier, filterUrgency, filterAmountMin, filterAmountMax, filterTimeframe, filterStartPctMin, filterTargetPctMin, filterDiscountPctMin]);
+  }, [savedQuotesList, quoteGeneratorTab, quoteFilter, filterDateRange, filterDateFrom, filterDateTo, filterStartTier, filterTargetTier, filterBadgeCountMin, filterBadgeCountMax, filterUrgency, filterAmountMin, filterAmountMax, filterTimeframe, filterStartPctMin, filterTargetPctMin, filterDiscountPctMin]);
 
   return (
     <AnimatedPage>
@@ -1379,7 +1397,7 @@ export default function QuoteGeneratorPage() {
                 <Medal className="w-4 h-4 text-primary" />
                 BADGE GRINDING
               </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground font-normal">Get a quote for Badge Grinding — Select badges from NBA 2K26 and configure pricing. <a href="https://www.nba2klab.com/badge-descriptions" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">View badge list</a></p>
+              <p className="text-xs sm:text-sm text-muted-foreground font-normal">Get a quote for Badge Grinding — Select badges from NBA 2K26 and configure pricing.</p>
             </CardHeader>
             <CardContent className="pt-2 sm:pt-4 space-y-5 sm:space-y-8">
               <div className="space-y-4">
@@ -1609,8 +1627,8 @@ export default function QuoteGeneratorPage() {
                   </>
                 ) : badgeResults ? (
                   <>
-                    <QuoteKpiCard label="Base Cost" value={`$${badgeResults.baseCost.toLocaleString()}`} subtitle={`${badgeIds.length} badge${badgeIds.length !== 1 ? "s" : ""}`} icon={DollarSign} gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10" iconBg="bg-pink-500/20" textColor="text-pink-400" />
-                    <QuoteKpiCard label="Recommended Quote" value={`$${badgeResults.recommendedQuote.toLocaleString()}`} subtitle={urgency !== "Normal" ? `${URGENCY_LABELS[urgency]} applied` : "After discount"} icon={Calculator} gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10" iconBg="bg-primary/20" textColor="text-primary" borderFlash />
+                    <QuoteKpiCard label="Base Cost" value={`$${badgeResults.baseCost.toLocaleString()}`} subtitle={`${badgeIds.length} badge${badgeIds.length !== 1 ? "s" : ""} · ${myPlayerType}`} icon={DollarSign} gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10" iconBg="bg-pink-500/20" textColor="text-pink-400" />
+                    <QuoteKpiCard label="Recommended Quote" value={`$${badgeResults.recommendedQuote.toLocaleString()}`} subtitle={urgency !== "Normal" ? `${URGENCY_LABELS[urgency]} applied` : (badgeResults.discountUsed > 0 || badgeResults.creatorDiscount > 0) ? "After discount" : "Base price"} icon={Calculator} gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10" iconBg="bg-primary/20" textColor="text-primary" borderFlash />
                     <QuoteKpiCard label="Delivery" value={badgeResults.timeframeText} subtitle={`${badgeResults.minDays}–${badgeResults.maxDays} days`} icon={Clock} gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/10" iconBg="bg-blue-500/20" textColor="text-blue-400" />
                   </>
                 ) : null}
@@ -1842,32 +1860,38 @@ export default function QuoteGeneratorPage() {
                       <div className="flex flex-wrap items-baseline gap-4">
                         <p className="text-2xl font-bold text-cyan-400">{badgeResults.timeframeText}</p>
                       </div>
-                      <div className="pt-2 border-t border-white/[0.06] space-y-2">
-                        <p className="font-medium text-white/80 text-xs">BADGE BREAKDOWN</p>
-                        <div className="overflow-x-auto -mx-1">
-                          <table className="w-full text-[11px] border-collapse">
-                            <thead>
-                              <tr className="border-b border-white/10">
-                                <th className="text-left py-1 px-1 font-medium">Badge</th>
-                                <th className="text-right py-1 px-1 font-medium">Price</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {badgeResults.badgeBreakdown.map((row, i) => (
-                                <tr key={i} className="border-b border-white/5">
-                                  <td className="py-1 px-1">{row.badgeName}</td>
-                                  <td className="text-right py-1 px-1">${row.price.toFixed(0)}</td>
+                      <button type="button" onClick={() => setShowDetails((d) => !d)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        <ChevronDown className={cn("w-4 h-4 transition-transform", showDetails && "rotate-180")} />
+                        {showDetails ? "Hide" : "Show"} badge breakdown and pricing
+                      </button>
+                      {showDetails && (
+                        <div className="pt-2 border-t border-white/[0.06] space-y-2">
+                          <p className="font-medium text-white/80 text-xs">BADGE BREAKDOWN</p>
+                          <div className="overflow-x-auto -mx-1">
+                            <table className="w-full text-[11px] border-collapse">
+                              <thead>
+                                <tr className="border-b border-white/10">
+                                  <th className="text-left py-1 px-1 font-medium">Badge</th>
+                                  <th className="text-right py-1 px-1 font-medium">Price</th>
                                 </tr>
-                              ))}
-                              <tr className="border-t border-white/20 font-medium bg-white/[0.03]">
-                                <td className="py-1.5 px-1 text-right">Σ Total</td>
-                                <td className="text-right py-1.5 px-1">${badgeResults.baseCost.toFixed(0)}</td>
-                              </tr>
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {badgeResults.badgeBreakdown.map((row, i) => (
+                                  <tr key={i} className="border-b border-white/5">
+                                    <td className="py-1 px-1">{row.badgeName}</td>
+                                    <td className="text-right py-1 px-1">${row.price.toFixed(0)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="border-t border-white/20 font-medium bg-white/[0.03]">
+                                  <td className="py-1.5 px-1 text-right">Σ Total</td>
+                                  <td className="text-right py-1.5 px-1">${badgeResults.baseCost.toFixed(0)}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">Base ${badgeResults.baseCost.toFixed(0)} × urgency {badgeResults.urgencyMultiplier} = ${badgeResults.afterUrgency.toFixed(0)} → Discount {(badgeResults.discountUsed * 100).toFixed(0)}% → Rounded: ${badgeResults.recommendedQuote.toFixed(0)}</p>
                         </div>
-                        <p className="text-[11px] text-muted-foreground">Base ${badgeResults.baseCost.toFixed(0)} × urgency {badgeResults.urgencyMultiplier} = ${badgeResults.afterUrgency.toFixed(0)} → Discount {(badgeResults.discountUsed * 100).toFixed(0)}% → Rounded: ${badgeResults.recommendedQuote.toFixed(0)}</p>
-                      </div>
+                      )}
                     </>
                   ) : null}
                 </CardContent>
@@ -1930,10 +1954,11 @@ export default function QuoteGeneratorPage() {
                         estimatedTimeframe: quoteGeneratorTab === "rep" && results ? results.estimatedTimeframe : (badgeResults?.timeframeText ?? ""),
                         timeframeText: (quoteGeneratorTab === "rep" ? results : badgeResults)!.timeframeText,
                         customerIdentifier: customerIdentifier.trim() || undefined,
-                        route: quoteGeneratorTab === "rep" ? `${startTier} ${startLvl} → ${targetTier} ${targetLvl}` : `Badge Grinding: ${badgeIds.length} badge${badgeIds.length !== 1 ? "s" : ""}`,
+                        route: quoteGeneratorTab === "rep" ? `${startTier} ${startLvl} → ${targetTier} ${targetLvl}` : (() => { const bb = badgeResults?.badgeBreakdown ?? []; return `${bb.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(bb)}`; })(),
                         serviceLabel: quoteGeneratorTab === "badge" ? "Badge Grinding Quote" : undefined,
                         urgency,
                         creatorCode: creatorCode || undefined,
+                        myPlayerType: quoteGeneratorTab === "badge" ? myPlayerType : undefined,
                         startTier: quoteGeneratorTab === "rep" ? startTier : undefined,
                         startLvl: quoteGeneratorTab === "rep" ? startLvl : undefined,
                         startPct: quoteGeneratorTab === "rep" ? (startPct ?? 0) : undefined,
@@ -1956,10 +1981,11 @@ export default function QuoteGeneratorPage() {
                           estimatedTimeframe: quoteGeneratorTab === "rep" && results ? results.estimatedTimeframe : (badgeResults?.timeframeText ?? ""),
                           timeframeText: r2!.timeframeText,
                           customerIdentifier: customerIdentifier.trim() || undefined,
-                          route: quoteGeneratorTab === "rep" ? `${startTier} ${startLvl} → ${targetTier} ${targetLvl}` : `Badge Grinding: ${badgeIds.length} badge${badgeIds.length !== 1 ? "s" : ""}`,
+                          route: quoteGeneratorTab === "rep" ? `${startTier} ${startLvl} → ${targetTier} ${targetLvl}` : (() => { const bb = badgeResults?.badgeBreakdown ?? []; return `${bb.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(bb)}`; })(),
                           serviceLabel: quoteGeneratorTab === "badge" ? "Badge Grinding Quote" : undefined,
                           urgency,
                           creatorCode: creatorCode || undefined,
+                          myPlayerType: quoteGeneratorTab === "badge" ? myPlayerType : undefined,
                           startTier: quoteGeneratorTab === "rep" ? startTier : undefined,
                           startLvl: quoteGeneratorTab === "rep" ? startLvl : undefined,
                           startPct: quoteGeneratorTab === "rep" ? (startPct ?? 0) : undefined,
@@ -2040,7 +2066,7 @@ export default function QuoteGeneratorPage() {
                     <div className="relative flex-1 min-w-0">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                       <Input
-                        placeholder="Search by customer, staff, price, or tag…"
+                        placeholder={quoteGeneratorTab === "rep" ? "Search rep quotes by customer, staff, price, route…" : "Search badge quotes by customer, staff, price, badge count…"}
                         value={quoteFilter}
                         onChange={(e) => setQuoteFilter(e.target.value)}
                         className="pl-9 h-11 min-h-11 sm:h-9 bg-white/[0.04] border-white/10"
@@ -2058,6 +2084,7 @@ export default function QuoteGeneratorPage() {
                   </div>
                   {showFilters && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06] overflow-x-auto">
+                      {/* Common filters */}
                       <div className="space-y-1 col-span-2 sm:col-span-1">
                         <Label className="text-[10px]">Date</Label>
                         <Select value={filterDateRange || "_all"} onValueChange={(v) => setFilterDateRange(v === "_all" ? "" : v)}>
@@ -2094,30 +2121,80 @@ export default function QuoteGeneratorPage() {
                           </div>
                         )}
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px]">Start tier</Label>
-                        <Select value={filterStartTier} onValueChange={setFilterStartTier}>
-                          <SelectTrigger className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10">
-                            <SelectValue placeholder="Any" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="_any">Any</SelectItem>
-                            {TIERS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px]">Target tier</Label>
-                        <Select value={filterTargetTier || "_any"} onValueChange={(v) => setFilterTargetTier(v === "_any" ? "" : v)}>
-                          <SelectTrigger className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10">
-                            <SelectValue placeholder="Any" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="_any">Any</SelectItem>
-                            {TIERS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {quoteGeneratorTab === "rep" ? (
+                        <>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Start tier</Label>
+                            <Select value={filterStartTier} onValueChange={setFilterStartTier}>
+                              <SelectTrigger className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10">
+                                <SelectValue placeholder="Any" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_any">Any</SelectItem>
+                                {TIERS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Target tier</Label>
+                            <Select value={filterTargetTier || "_any"} onValueChange={(v) => setFilterTargetTier(v === "_any" ? "" : v)}>
+                              <SelectTrigger className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10">
+                                <SelectValue placeholder="Any" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_any">Any</SelectItem>
+                                {TIERS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Start % ≥</Label>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="Min %"
+                              value={filterStartPctMin}
+                              onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setFilterStartPctMin(v); }}
+                              className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Target % ≥</Label>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="Min %"
+                              value={filterTargetPctMin}
+                              onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setFilterTargetPctMin(v); }}
+                              className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Badge count</Label>
+                            <div className="flex gap-1">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Min"
+                                value={filterBadgeCountMin}
+                                onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*$/.test(v)) setFilterBadgeCountMin(v); }}
+                                className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
+                              />
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Max"
+                                value={filterBadgeCountMax}
+                                onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*$/.test(v)) setFilterBadgeCountMax(v); }}
+                                className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
                       <div className="space-y-1">
                         <Label className="text-[10px]">Urgency</Label>
                         <Select value={filterUrgency || "_any"} onValueChange={(v) => setFilterUrgency(v === "_any" ? "" : v)}>
@@ -2157,28 +2234,8 @@ export default function QuoteGeneratorPage() {
                         <Label className="text-[10px]">Timeframe</Label>
                         <Input
                           placeholder="e.g. Months, Days"
-                              className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px]">Start % ≥</Label>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="Min %"
-                          value={filterStartPctMin}
-                          onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setFilterStartPctMin(v); }}
-                          className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px]">Target % ≥</Label>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="Min %"
-                          value={filterTargetPctMin}
-                          onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setFilterTargetPctMin(v); }}
+                          value={filterTimeframe}
+                          onChange={(e) => setFilterTimeframe(e.target.value)}
                           className="h-11 min-h-11 sm:h-8 text-xs bg-white/[0.04] border-white/10"
                         />
                       </div>
@@ -2200,7 +2257,11 @@ export default function QuoteGeneratorPage() {
               <CardContent>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {filteredSavedQuotes.slice(0, 20).map((q) => {
-                    const route = formatQuoteRoute(q.inputs as { startTier?: string; startLvl?: number; startPct?: number; targetTier?: string; targetLvl?: number; targetPct?: number } | undefined);
+                    const isBadge = (q.serviceType || "rep_grinding") === "badge_grinding";
+                    const badgeIdsArr = Array.isArray(q.inputs?.badgeIds) ? q.inputs.badgeIds : [];
+                    const route = isBadge
+                      ? `${badgeIdsArr.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteFromIds(badgeIdsArr)}`
+                      : formatQuoteRoute(q.inputs as { startTier?: string; startLvl?: number; startPct?: number; targetTier?: string; targetLvl?: number; targetPct?: number } | undefined);
                     const urgency = q.inputs?.urgency ? (URGENCY_LABELS[String(q.inputs.urgency)] ?? String(q.inputs.urgency)) : null;
                     const timeframe = q.results?.estimatedTimeframe ?? null;
                     const parts = [route, urgency, timeframe].filter(Boolean);
@@ -2265,8 +2326,10 @@ export default function QuoteGeneratorPage() {
                                     timeframeText: (q.results as { timeframeText?: string })?.timeframeText,
                                     customerIdentifier: q.customerIdentifier ?? undefined,
                                     route: route || "—",
+                                    serviceLabel: isBadge ? "Badge Grinding Quote" : undefined,
                                     urgency: String(q.inputs?.urgency ?? "Normal"),
                                     creatorCode: (q.inputs as { creatorCode?: string })?.creatorCode ?? undefined,
+                                    myPlayerType: isBadge ? (q.inputs as { myPlayerType?: string })?.myPlayerType : undefined,
                                     startTier: (q.inputs as { startTier?: string })?.startTier,
                                     startLvl: (q.inputs as { startLvl?: number })?.startLvl,
                                     startPct: (q.inputs as { startPct?: number })?.startPct ?? undefined,

@@ -118,6 +118,15 @@
     --sidebar-accent-foreground: 142 71% 45%;
   }
 
+  .theme-customer {
+    --primary: 330 81% 60%;
+    --ring: 330 81% 60%;
+    --sidebar-primary: 330 81% 60%;
+    --sidebar-ring: 330 81% 60%;
+    --sidebar-accent: 330 40% 12%;
+    --sidebar-accent-foreground: 330 81% 60%;
+  }
+
   .holiday-christmas {
     --background: 150 15% 4%;
     --card: 150 15% 6%;
@@ -482,4 +491,23 @@
 }
 .input-quote-split::-webkit-outer-spin-button {
   margin-left: 0;
+}
+
+/* Mobile: touch targets & safe areas */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
+.touch-manipulation {
+  touch-action: manipulation;
+}
+/* Reduce tap highlight on mobile for cleaner feedback */
+@media (hover: none) {
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

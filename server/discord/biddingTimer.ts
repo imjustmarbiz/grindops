@@ -1,6 +1,7 @@
 import { EmbedBuilder, TextChannel } from "discord.js";
 import { getDiscordBotClient } from "./bot";
 import { db } from "../db";
+import { storage } from "../storage";
 import { orders, bids, grinders } from "@shared/schema";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
 
@@ -25,7 +26,17 @@ async function markStageNotified(orderId: string, stage: NotificationStage, curr
   await db.update(orders).set({ biddingNotifiedStages: updated }).where(eq(orders.id, orderId));
 }
 
+async function isBidWarNotificationsEnabled(): Promise<boolean> {
+  try {
+    const config = await storage.getQueueConfig();
+    return (config as any)?.bidWarNotificationsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
 async function sendBiddingNotification(orderId: string, mgtOrderNumber: number | null, stage: NotificationStage, closesAt: Date | null): Promise<void> {
+  if (!(await isBidWarNotificationsEnabled())) return;
   const client = getDiscordBotClient();
   if (!client) return;
 

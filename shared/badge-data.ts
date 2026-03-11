@@ -73,3 +73,41 @@ export const ALL_BADGES: BadgeInfo[] = BADGE_CATEGORIES.flatMap((cat) => BADGES_
 /** Badge levels in NBA 2K26 (Bronze through Legend). */
 export const BADGE_LEVELS = ["Bronze", "Silver", "Gold", "Hall of Fame", "Legend"] as const;
 export type BadgeLevel = (typeof BADGE_LEVELS)[number];
+
+/** Map badge ID to BadgeInfo for lookup. */
+const BADGE_BY_ID = new Map<string, BadgeInfo>(ALL_BADGES.map((b) => [b.id, b]));
+
+/**
+ * Format badge list for Discord quote route.
+ * 5+ badges: group by category with count (e.g. "Shooting: 3; Playmaking: 2").
+ * <5 badges: list individually, grouped by category (e.g. "Shooting: Deadeye, Limitless Range; Playmaking: Dimer").
+ */
+export function formatBadgeRouteForDiscord(
+  badgeBreakdown: Array<{ badgeId: string; badgeName: string }>
+): string {
+  if (badgeBreakdown.length === 0) return "0 badges";
+  const byCategory = new Map<BadgeCategory, string[]>();
+  for (const row of badgeBreakdown) {
+    const info = BADGE_BY_ID.get(row.badgeId);
+    const cat = info?.category ?? "General";
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(row.badgeName);
+  }
+  if (badgeBreakdown.length >= 5) {
+    return BADGE_CATEGORIES.filter((c) => byCategory.has(c))
+      .map((c) => `${c}: **${byCategory.get(c)!.length}**`)
+      .join(" · ");
+  }
+  return BADGE_CATEGORIES.filter((c) => byCategory.has(c))
+    .map((c) => `${c}: ${byCategory.get(c)!.join(", ")}`)
+    .join(" · ");
+}
+
+/** Format badge route from badge IDs (e.g. from saved quote inputs). */
+export function formatBadgeRouteFromIds(badgeIds: string[]): string {
+  const breakdown = badgeIds.map((id) => ({
+    badgeId: id,
+    badgeName: BADGE_BY_ID.get(id)?.name ?? id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+  }));
+  return formatBadgeRouteForDiscord(breakdown);
+}

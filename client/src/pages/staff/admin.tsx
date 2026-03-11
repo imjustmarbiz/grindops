@@ -550,7 +550,7 @@ export default function StaffAdmin() {
     enabled: isOwner,
   });
 
-  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean; holidayTheme?: string }>({
+  const { data: maintenanceConfig } = useQuery<{ maintenanceMode: boolean; maintenanceModeSetBy: string | null; earlyAccessMode: boolean; allowedAccessRoles?: string[]; holidayTheme?: string }>({
     queryKey: ["/api/config/maintenance"],
   });
 
@@ -578,6 +578,18 @@ export default function StaffAdmin() {
     onError: () => toast({ title: "Failed to update", variant: "destructive" }),
   });
 
+  const toggleBidWarNotificationsMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("PATCH", "/api/config/bid-war-notifications", { enabled });
+      return res.json();
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: enabled ? "Bid War channel notifications enabled" : "Bid War channel notifications disabled" });
+    },
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
   const toggleMaintenanceMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
       const res = await apiRequest("PATCH", "/api/config/maintenance", { enabled });
@@ -590,41 +602,26 @@ export default function StaffAdmin() {
     onError: (e: any) => toast({ title: "Failed to update", description: e.message, variant: "destructive" }),
   });
 
-  const toggleEarlyAccessMutation = useMutation({
-    mutationFn: async (enabled: boolean) => {
-      const res = await apiRequest("PATCH", "/api/config/early-access", { enabled });
-      return res.json();
-    },
-    onSuccess: (_, enabled) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
-      toast({ title: enabled ? "Elite access mode enabled — only Elite Grinders can access" : "Elite access mode disabled — all grinders can access" });
-    },
-    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
-  });
-
-  const HOLIDAY_THEMES = [
-    { value: "none", label: "Default (No Holiday)", color: "text-muted-foreground", emoji: "" },
-    { value: "christmas", label: "Christmas", color: "text-red-400", emoji: "🎄" },
-    { value: "thanksgiving", label: "Thanksgiving", color: "text-amber-400", emoji: "🦃" },
-    { value: "4th-of-july", label: "4th of July", color: "text-blue-400", emoji: "🇺🇸" },
-    { value: "halloween", label: "Halloween", color: "text-orange-400", emoji: "🎃" },
-    { value: "valentines", label: "Valentine's Day", color: "text-pink-400", emoji: "💝" },
-    { value: "new-years", label: "New Year's Eve", color: "text-purple-400", emoji: "🎆" },
-    { value: "st-patricks", label: "St. Patrick's Day", color: "text-emerald-400", emoji: "☘️" },
+  const ACCESS_ROLE_OPTIONS = [
+    { id: "owner" as const, label: "Owner", icon: Crown },
+    { id: "staff" as const, label: "Staff", icon: Wrench },
+    { id: "grinder" as const, label: "Grinder", icon: Gamepad2 },
+    { id: "elite" as const, label: "Elite Grinder", icon: Shield },
+    { id: "creator" as const, label: "Creator", icon: Star },
   ];
 
-  const setHolidayThemeMutation = useMutation({
-    mutationFn: async (theme: string) => {
-      const res = await apiRequest("PATCH", "/api/config/holiday-theme", { theme });
+  const allowedAccessRoles = maintenanceConfig?.allowedAccessRoles ?? (maintenanceConfig?.earlyAccessMode ? ["owner", "staff", "elite"] : ["owner", "staff", "grinder", "elite", "creator"]);
+
+  const setAllowedAccessRolesMutation = useMutation({
+    mutationFn: async (roles: string[]) => {
+      const res = await apiRequest("PATCH", "/api/config/allowed-access-roles", { roles });
       return res.json();
     },
-    onSuccess: (_, theme) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/config/maintenance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
-      const label = HOLIDAY_THEMES.find(t => t.value === theme)?.label || theme;
-      toast({ title: theme === "none" ? "Holiday theme disabled" : `Holiday theme set to ${label}` });
+      toast({ title: "Allowed access roles updated" });
     },
-    onError: () => toast({ title: "Failed to update holiday theme", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
   });
 
   const setCreatorCommissionMutation = useMutation({
@@ -925,19 +922,27 @@ export default function StaffAdmin() {
         </FadeInUp>
       )}
 
-      {maintenanceConfig?.earlyAccessMode && !maintenanceConfig?.maintenanceMode && (
-        <FadeInUp>
-          <Card className="border border-cyan-500/30 bg-cyan-500/10">
-            <CardContent className="p-4 flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-cyan-400">Elite Grinders Only Access Active</p>
-                <p className="text-xs text-muted-foreground">Only Elite Grinders can access the dashboard. Regular grinders are denied.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </FadeInUp>
-      )}
+      {(() => {
+        const roles = allowedAccessRoles;
+        const allRoles = ["owner", "staff", "grinder", "elite", "creator"];
+        const isRestricted = roles.length < allRoles.length;
+        if (!isRestricted || maintenanceConfig?.maintenanceMode) return null;
+        const labels: Record<string, string> = { owner: "Owner", staff: "Staff", grinder: "Grinder", elite: "Elite Grinder", creator: "Creator" };
+        const roleLabels = roles.map(r => labels[r] ?? r).join(", ");
+        return (
+          <FadeInUp>
+            <Card className="border border-cyan-500/30 bg-cyan-500/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-cyan-400">Role-Based Access Restriction Active</p>
+                  <p className="text-xs text-muted-foreground">Only {roleLabels} can access the dashboard.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeInUp>
+        );
+      })()}
 
       <FadeInUp>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -3247,90 +3252,92 @@ export default function StaffAdmin() {
             </FadeInUp>
 
             <FadeInUp>
-              <Card className="border-0 bg-gradient-to-br from-pink-500/[0.08] via-background to-purple-900/[0.04] overflow-hidden relative" data-testid="card-holiday-theme">
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-pink-500/[0.04] -translate-y-12 translate-x-12" />
+              <Card className="border-0 bg-gradient-to-br from-amber-500/[0.08] via-background to-amber-900/[0.04] overflow-hidden relative" data-testid="card-bid-war-notifications">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-amber-500/[0.04] -translate-y-12 translate-x-12" />
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-pink-500/15 flex items-center justify-center">
-                      <Palette className="w-4 h-4 text-pink-400" />
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                      <Megaphone className="w-4 h-4 text-amber-400" />
                     </div>
-                    Holiday Theme
-                    <Badge className={`ml-auto text-xs ${maintenanceConfig?.holidayTheme && maintenanceConfig.holidayTheme !== "none" ? "bg-pink-500/15 text-pink-400 border border-pink-500/20" : "bg-white/[0.06] text-muted-foreground border border-white/[0.08]"}`}>
-                      {maintenanceConfig?.holidayTheme && maintenanceConfig.holidayTheme !== "none"
-                        ? HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.label || maintenanceConfig.holidayTheme
-                        : "Off"}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="relative space-y-3">
-                  <p className="text-xs text-muted-foreground">Apply a seasonal dark theme variation for US holidays. This changes the site's background tones and accent colors for all users.</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {HOLIDAY_THEMES.map((theme) => {
-                      const isActive = (maintenanceConfig?.holidayTheme || "none") === theme.value;
-                      return (
-                        <button
-                          key={theme.value}
-                          onClick={() => setHolidayThemeMutation.mutate(theme.value)}
-                          disabled={setHolidayThemeMutation.isPending}
-                          className={`p-3 rounded-xl border text-left transition-all ${
-                            isActive
-                              ? "border-pink-500/40 bg-pink-500/10 ring-1 ring-pink-500/20"
-                              : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
-                          }`}
-                          data-testid={`button-holiday-${theme.value}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {theme.emoji && <span className="text-lg">{theme.emoji}</span>}
-                            <span className={`text-xs font-medium ${isActive ? theme.color : "text-white/70"}`}>
-                              {theme.label}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {maintenanceConfig?.holidayTheme && maintenanceConfig.holidayTheme !== "none" && (
-                    <p className="text-[10px] text-muted-foreground px-1">
-                      Currently active: {HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.emoji}{" "}
-                      {HOLIDAY_THEMES.find(t => t.value === maintenanceConfig.holidayTheme)?.label}. All users will see this theme.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </FadeInUp>
-
-            <FadeInUp>
-              <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-early-access">
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-                      <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                    </div>
-                    Elite Grinders Only Access
-                    <Badge className={`ml-auto text-xs ${maintenanceConfig?.earlyAccessMode ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"}`}>
-                      {maintenanceConfig?.earlyAccessMode ? "Active" : "Off"}
+                    Bid War Channel Notifications
+                    <Badge className={`ml-auto text-xs ${queueConfig?.bidWarNotificationsEnabled !== false ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
+                      {queueConfig?.bidWarNotificationsEnabled !== false ? "Active" : "Disabled"}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="relative space-y-3">
                   <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <div>
-                      <p className="text-sm font-medium">Elite Grinders Only Access</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">When enabled, only Elite Grinders, Staff, and Owners can access the dashboard. Regular grinders and other roles are denied.</p>
+                      <p className="text-sm font-medium">Bid War Channel Messages</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">When enabled, the GrindOps bot sends bidding notifications to the bid war channel (open, first bid, countdown warnings, closed). When disabled, no notifications are sent.</p>
                     </div>
                     <Switch
-                      checked={maintenanceConfig?.earlyAccessMode || false}
-                      onCheckedChange={(checked) => toggleEarlyAccessMutation.mutate(checked)}
-                      disabled={toggleEarlyAccessMutation.isPending}
-                      data-testid="switch-early-access"
+                      checked={queueConfig?.bidWarNotificationsEnabled !== false}
+                      onCheckedChange={(checked) => toggleBidWarNotificationsMutation.mutate(checked)}
+                      disabled={toggleBidWarNotificationsMutation.isPending}
+                      data-testid="switch-bid-war-notifications"
                     />
                   </div>
-                  {maintenanceConfig?.earlyAccessMode && (
-                    <p className="text-[10px] text-cyan-400 px-1">
-                      Elite access is ON. Only grinders with the Elite Grinder Discord role can log in. Staff and owners bypass this restriction.
-                    </p>
-                  )}
+                  <p className="text-[10px] text-muted-foreground px-1">
+                    {queueConfig?.bidWarNotificationsEnabled !== false
+                      ? "Bid war notifications are active. Grinders receive countdown alerts in Discord."
+                      : "Bid war notifications are disabled. No bidding alerts will be sent to the channel."}
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeInUp>
+
+            <FadeInUp>
+              <Card className="border-0 bg-gradient-to-br from-cyan-500/[0.08] via-background to-cyan-900/[0.04] overflow-hidden relative" data-testid="card-allowed-access-roles">
+                <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-cyan-500/[0.04] -translate-y-12 translate-x-12" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    Role-Based Access
+                    <Badge className="ml-auto text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                      {allowedAccessRoles.length} role{allowedAccessRoles.length !== 1 ? "s" : ""} allowed
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative space-y-3">
+                  <p className="text-xs text-muted-foreground">Choose which roles can access the dashboard. Only selected roles will be able to sign in. At least one role must be allowed.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {ACCESS_ROLE_OPTIONS.map((opt) => {
+                      const isAllowed = allowedAccessRoles.includes(opt.id);
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            const next = isAllowed
+                              ? allowedAccessRoles.filter((r) => r !== opt.id)
+                              : [...allowedAccessRoles, opt.id];
+                            if (next.length === 0) {
+                              toast({ title: "At least one role must be allowed", variant: "destructive" });
+                              return;
+                            }
+                            setAllowedAccessRolesMutation.mutate(next);
+                          }}
+                          disabled={setAllowedAccessRolesMutation.isPending}
+                          className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
+                            isAllowed
+                              ? "border-cyan-500/40 bg-cyan-500/10 ring-1 ring-cyan-500/20"
+                              : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04] opacity-60"
+                          }`}
+                          data-testid={`button-access-role-${opt.id}`}
+                        >
+                          <opt.icon className={`w-4 h-4 shrink-0 ${isAllowed ? "text-cyan-400" : "text-muted-foreground"}`} />
+                          <span className={`text-xs font-medium ${isAllowed ? "text-cyan-400" : "text-muted-foreground"}`}>
+                            {opt.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground px-1">
+                    Click a role to toggle access. Owners can always access the admin panel.
+                  </p>
                 </CardContent>
               </Card>
             </FadeInUp>

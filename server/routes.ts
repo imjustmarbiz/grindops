@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireGrinderOrStaff } from "./discord/auth";
+import { setupDiscordAuth, isAuthenticated, requireStaff, requireOwner, requireGrinderOrStaff, requireCustomer } from "./discord/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import { recalcGrinderStats, TIER_THRESHOLDS } from "./recalcStats";
 import { sendCustomerUpdate, sendCompletionApprovalRequest } from "./discord/customerUpdates";
@@ -14,6 +14,7 @@ import { siteAlerts, notifications, GRINDER_ROLES, ALL_CREATOR_BADGE_IDS, CREATO
 import { or, eq, sql, desc, and, isNull } from "drizzle-orm";
 import multer from "multer";
 import { buildQuoteDiscordMessage } from "@shared/quote-discord-message";
+import { getVipTierForSpend } from "@shared/customer-vip";
 import { mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-settings";
 import { mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
 import { mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
@@ -269,6 +270,206 @@ export async function registerRoutes(
     if (!served) res.status(404).json({ error: "File not found" });
   });
 
+  // Dev-only: seed demo orders for DemoCustomer (visit /api/seed-demo-customer-orders to trigger)
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/seed-demo-customer-orders", async (_req, res) => {
+      try {
+        const allOrders = await storage.getOrders();
+        const hasDemoCustomerOrders = allOrders.some((o: any) => o.customerDiscordId === "dev-user-customer");
+        if (hasDemoCustomerOrders) {
+          return res.json({ ok: true, message: "DemoCustomer already has orders", count: allOrders.filter((o: any) => o.customerDiscordId === "dev-user-customer").length });
+        }
+        const baseDate = new Date();
+        const demoOrders = [
+          { id: "DEMO-ORD-1", mgtOrderNumber: 9001, displayId: "MGT-9001", serviceId: "S1", customerPrice: "125.00", orderDueDate: baseDate, status: "Completed" as const, customerDiscordId: "dev-user-customer", completedAt: new Date(Date.now() - 86400000 * 3) },
+          { id: "DEMO-ORD-2", mgtOrderNumber: 9002, displayId: "MGT-9002", serviceId: "S2", customerPrice: "89.99", orderDueDate: baseDate, status: "Completed" as const, customerDiscordId: "dev-user-customer", completedAt: new Date(Date.now() - 86400000 * 7) },
+          { id: "DEMO-ORD-3", mgtOrderNumber: 9003, displayId: "MGT-9003", serviceId: "S3", customerPrice: "199.00", orderDueDate: baseDate, status: "Assigned" as const, customerDiscordId: "dev-user-customer" },
+        ];
+        for (const o of demoOrders) {
+          await storage.createOrder(o as any);
+        }
+        res.json({ ok: true, message: "Added 3 demo orders for DemoCustomer. Refresh My Orders." });
+      } catch (e: any) {
+        console.error("[seed-demo] Error:", e);
+        res.status(500).json({ ok: false, error: e?.message || "Failed to seed" });
+      }
+    });
+  }
+
+  // Register customer dashboard route BEFORE app.use('/api') so it's matched first and never falls through to Vite SPA
+  app.get("/api/customer/dashboard", isAuthenticated, requireCustomer, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = (req as any).user;
+      const discordId = user?.discordId || user?.id || userId;
+      const allOrders = await storage.getOrders();
+      const completedOrPaidOut = allOrders.filter((o: any) => (o.status === "Completed" || o.status === "Paid Out") && o.customerDiscordId === discordId);
+      const lifetimeSpend = completedOrPaidOut.reduce((s: number, o: any) => s + (Number(o.customerPrice) || 0), 0);
+      const tier = getVipTierForSpend(lifetimeSpend);
+      const recentOrders = completedOrPaidOut
+        .sort((a: any, b: any) => (new Date(b.completedAt || b.updatedAt || 0).getTime()) - (new Date(a.completedAt || a.updatedAt || 0).getTime()))
+        .slice(0, 10)
+        .map((o: any) => ({
+          id: o.id,
+          mgtOrderNumber: o.mgtOrderNumber,
+          displayId: o.displayId,
+          customerPrice: o.customerPrice,
+          status: o.status,
+          completedAt: o.completedAt,
+          serviceId: o.serviceId,
+        }));
+      res.json({
+        lifetimeSpend,
+        orderCount: completedOrPaidOut.length,
+        vipTier: tier.id,
+        vipTierLabel: tier.label,
+        vipDiscountPct: tier.discountPct,
+        perks: tier.perks,
+        recentOrders,
+      });
+    } catch (err) {
+      console.error("Error fetching customer dashboard:", err);
+      res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
+  // Customer orders list
+  app.get("/api/customer/orders", isAuthenticated, requireCustomer, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const discordId = user?.discordId || user?.id || (req as any).userId;
+      const allOrders = await storage.getOrders();
+      const customerOrders = allOrders.filter((o: any) => o.customerDiscordId === discordId);
+      const allAssignments = await storage.getAssignments();
+      const allGrinders = await storage.getGrinders();
+      const allServices = await storage.getServices();
+      const ordersWithAssignments = customerOrders.map((o: any) => {
+        const asns = allAssignments.filter((a: any) => a.orderId === o.id);
+        const activeAsn = asns.find((a: any) => a.status === "Active");
+        const grinder = activeAsn ? allGrinders.find((g: any) => g.id === activeAsn.grinderId) : null;
+        const service = allServices.find((s: any) => s.id === o.serviceId);
+        const startDate = o.startDate || (activeAsn?.assignedDateTime) || o.createdAt;
+        return {
+          id: o.id,
+          mgtOrderNumber: o.mgtOrderNumber,
+          displayId: o.displayId,
+          status: o.status,
+          customerPrice: o.customerPrice,
+          serviceId: o.serviceId,
+          serviceName: service?.name || null,
+          platform: o.platform || null,
+          orderDueDate: o.orderDueDate,
+          completedAt: o.completedAt,
+          createdAt: o.createdAt,
+          startDate: startDate ? new Date(startDate).toISOString() : null,
+          assignedGrinderName: grinder?.name || null,
+          hasActiveAssignment: !!activeAsn,
+        };
+      });
+      ordersWithAssignments.sort((a: any, b: any) => new Date(b.createdAt || b.orderDueDate || 0).getTime() - new Date(a.createdAt || a.orderDueDate || 0).getTime());
+      res.json({ orders: ordersWithAssignments });
+    } catch (err) {
+      console.error("Error fetching customer orders:", err);
+      res.status(500).json({ error: "Failed to load orders" });
+    }
+  });
+
+  // Customer order detail with timeline (assignments, checkpoints, updates)
+  app.get("/api/customer/orders/:orderId", isAuthenticated, requireCustomer, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const discordId = user?.discordId || user?.id || (req as any).userId;
+      const order = await storage.getOrder(req.params.orderId);
+      if (!order || (order as any).customerDiscordId !== discordId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      const orderAssignments = (await storage.getAssignments()).filter((a: any) => a.orderId === req.params.orderId);
+      const allGrinders = await storage.getGrinders();
+      const log: Array<{ id: string; type: string; source: string; grinderName?: string; note?: string; createdAt: string; [k: string]: any }> = [];
+
+      for (const a of orderAssignments) {
+        const grinder = allGrinders.find((g: any) => g.id === a.grinderId);
+        const grinderName = grinder?.name || a.grinderId || "Unknown";
+        log.push({
+          id: `asn-${a.id}`,
+          type: a.wasReassigned ? "grinder_reassigned" : "grinder_assigned",
+          source: "assignment",
+          grinderName,
+          grinderId: a.grinderId,
+          note: a.wasReassigned ? a.replacementReason || "Grinder reassigned" : "Grinder assigned to your order",
+          replacedAt: a.replacedAt,
+          assignedDateTime: a.assignedDateTime,
+          createdAt: a.assignedDateTime || a.replacedAt || new Date().toISOString(),
+        });
+      }
+
+      const checkpoints = await storage.getActivityCheckpoints();
+      const orderCheckpoints = checkpoints.filter((c: any) => c.orderId === req.params.orderId);
+      for (const cp of orderCheckpoints) {
+        const grinder = allGrinders.find((g: any) => g.id === cp.grinderId);
+        log.push({
+          id: cp.id,
+          type: cp.type || "checkpoint",
+          source: "checkpoint",
+          grinderName: grinder?.name || cp.grinderId,
+          note: cp.note || cp.response || "Activity update",
+          createdAt: cp.createdAt,
+        });
+      }
+
+      const allUpdates = await storage.getOrderUpdates();
+      const orderUpdates = allUpdates.filter((u: any) => u.orderId === req.params.orderId);
+      for (const u of orderUpdates) {
+        const grinder = allGrinders.find((g: any) => g.id === u.grinderId);
+        log.push({
+          id: u.id,
+          type: u.updateType || "order_update",
+          source: "update",
+          grinderName: grinder?.name || u.grinderId,
+          note: u.message,
+          newDeadline: u.newDeadline,
+          proofUrls: u.proofUrls || [],
+          createdAt: u.createdAt,
+        });
+      }
+
+      const completedAsn = orderAssignments.find((a: any) => a.status === "Completed" || a.deliveredDateTime);
+      if (order.status === "Completed" || order.status === "Paid Out" || completedAsn?.deliveredDateTime) {
+        log.push({
+          id: "completed",
+          type: "order_completed",
+          source: "system",
+          note: "Order marked as completed",
+          createdAt: (order as any).completedAt || completedAsn?.deliveredDateTime || new Date().toISOString(),
+        });
+      }
+
+      log.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const activeAsn = orderAssignments.find((a: any) => a.status === "Active");
+      const activeGrinder = activeAsn ? allGrinders.find((g: any) => g.id === activeAsn.grinderId) : null;
+
+      res.json({
+        order: {
+          id: order.id,
+          mgtOrderNumber: (order as any).mgtOrderNumber,
+          displayId: (order as any).displayId,
+          status: (order as any).status,
+          customerPrice: (order as any).customerPrice,
+          serviceId: (order as any).serviceId,
+          orderDueDate: (order as any).orderDueDate,
+          completedAt: (order as any).completedAt,
+          orderBrief: (order as any).orderBrief,
+        },
+        timeline: log,
+        assignedGrinder: activeGrinder ? { name: activeGrinder.name, discordUsername: (activeGrinder as any).discordUsername } : null,
+      });
+    } catch (err) {
+      console.error("Error fetching customer order detail:", err);
+      res.status(500).json({ error: "Failed to load order" });
+    }
+  });
+
   app.get('/uploads/{*splat}', async (req, res) => {
     // 1. Try standard /storage/uploads/ path (Object Storage)
     const objectPath = req.path.replace(/^\/uploads\//, '/storage/uploads/');
@@ -299,19 +500,18 @@ export async function registerRoutes(
     }
     return isAuthenticated(req, res, async () => {
       const userRole = (req as any).userRole;
-      if (userRole === "grinder") {
-        if (req.path === '/config/maintenance') return next();
-        try {
-          const config = await storage.getQueueConfig();
-          if (config?.earlyAccessMode) {
-            const discordRoles: string[] = ((req as any).user?.discordRoles as string[]) || [];
-            const hasElite = discordRoles.includes(GRINDER_ROLES.ELITE);
-            if (!hasElite) {
-              return res.status(403).json({ message: "Early access mode is active. Only Elite Grinders can access the dashboard." });
-            }
-          }
-        } catch {}
-      }
+      if (req.path === "/config/maintenance") return next();
+      try {
+        const config = await storage.getQueueConfig();
+        let allowedRoles: string[] | undefined = Array.isArray((config as any)?.allowedAccessRoles) ? (config as any).allowedAccessRoles : undefined;
+        if (!allowedRoles && config?.earlyAccessMode) allowedRoles = ["owner", "staff", "elite"];
+        if (!allowedRoles) allowedRoles = ["owner", "staff", "grinder", "elite", "creator", "customer"];
+        const effectiveRole = userRole === "owner" ? "owner" : userRole === "staff" ? "staff" : userRole === "creator" ? "creator" : userRole === "customer" ? "customer" : userRole === "grinder" ? (((req as any).user?.discordRoles as string[] || []).includes(GRINDER_ROLES.ELITE) ? "elite" : "grinder") : null;
+        if (effectiveRole === "owner") return next();
+        if (effectiveRole && !allowedRoles.includes(effectiveRole)) {
+          return res.status(403).json({ message: "Access is restricted. Your role does not have access to the dashboard." });
+        }
+      } catch {}
       next();
     });
   });
@@ -797,6 +997,76 @@ export async function registerRoutes(
       return { ...o, customerDiscordDisplayName: info?.displayName, customerDiscordUsername: info?.username };
     });
     res.json(enriched);
+  });
+
+  app.get("/api/staff/customers", requireStaff, async (req, res) => {
+    try {
+      const allOrders = await storage.getOrders();
+      const completedOrPaidOut = allOrders.filter((o: any) => o.status === "Completed" || o.status === "Paid Out");
+      const byCustomer = new Map<string, { lifetimeSpend: number; orderCount: number }>();
+      for (const o of completedOrPaidOut) {
+        const cid = o.customerDiscordId;
+        if (!cid || typeof cid !== "string") continue;
+        const price = Number(o.customerPrice) || 0;
+        const existing = byCustomer.get(cid);
+        if (existing) {
+          existing.lifetimeSpend += price;
+          existing.orderCount += 1;
+        } else {
+          byCustomer.set(cid, { lifetimeSpend: price, orderCount: 1 });
+        }
+      }
+      const customerIds = [...byCustomer.keys()];
+      const customerInfoMap: Record<string, { displayName: string; username: string }> = {};
+      if (customerIds.length > 0) {
+        try {
+          const { getDiscordBotClient } = await import("./discord/bot");
+          const botClient = getDiscordBotClient();
+          if (botClient) {
+            for (const cId of customerIds) {
+              try {
+                const user = await botClient.users.fetch(cId);
+                if (user) {
+                  customerInfoMap[cId] = {
+                    displayName: user.global_name || user.username || cId,
+                    username: user.username,
+                  };
+                }
+              } catch {}
+            }
+          }
+        } catch {}
+      }
+      const customers = [...byCustomer.entries()].map(([discordId, data]) => {
+        const tier = getVipTierForSpend(data.lifetimeSpend);
+        const info = customerInfoMap[discordId];
+        return {
+          discordId,
+          displayName: info?.displayName || discordId,
+          username: info?.username,
+          lifetimeSpend: data.lifetimeSpend,
+          orderCount: data.orderCount,
+          vipTier: tier.id,
+          vipTierLabel: tier.label,
+          vipDiscountPct: tier.discountPct,
+        };
+      });
+      customers.sort((a, b) => b.lifetimeSpend - a.lifetimeSpend);
+      const byTier = { member: 0, bronze: 0, silver: 0, gold: 0, platinum: 0 };
+      for (const c of customers) {
+        byTier[c.vipTier as keyof typeof byTier] = (byTier[c.vipTier as keyof typeof byTier] || 0) + 1;
+      }
+      const totalLifetimeRevenue = customers.reduce((s, c) => s + c.lifetimeSpend, 0);
+      res.json({
+        customers,
+        totalCustomers: customers.length,
+        byTier,
+        totalLifetimeRevenue,
+      });
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+      res.status(500).json({ error: "Failed to fetch customers" });
+    }
   });
 
   app.get(api.orders.get.path, requireStaff, async (req, res) => {
@@ -8474,10 +8744,18 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
   app.get("/api/config/maintenance", isAuthenticated, async (req, res) => {
     try {
       const config = await storage.getQueueConfig();
+      let allowedAccessRoles: string[] | undefined = Array.isArray((config as any)?.allowedAccessRoles) ? (config as any).allowedAccessRoles : undefined;
+      if (!allowedAccessRoles && config?.earlyAccessMode) {
+        allowedAccessRoles = ["owner", "staff", "elite"];
+      }
+      if (!allowedAccessRoles) {
+        allowedAccessRoles = ["owner", "staff", "grinder", "elite", "creator"];
+      }
       res.json({
         maintenanceMode: config?.maintenanceMode || false,
         maintenanceModeSetBy: config?.maintenanceModeSetBy || null,
         earlyAccessMode: config?.earlyAccessMode || false,
+        allowedAccessRoles,
         holidayTheme: config?.holidayTheme || "none",
         gameTheme: config?.gameTheme || "none",
       });
@@ -8541,6 +8819,28 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
     }
   });
 
+  app.patch("/api/config/bid-war-notifications", requireOwner, async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled must be a boolean" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, bidWarNotificationsEnabled: enabled });
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: enabled ? "bid_war_notifications_enabled" : "bid_war_notifications_disabled",
+        entityType: "config",
+        entityId: "bid-war-notifications",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: `Bid War channel notifications ${enabled ? "enabled" : "disabled"} by ${actorName}`,
+      });
+      res.json({ success: true, enabled });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update bid war notifications config" });
+    }
+  });
 
   app.patch("/api/orders/:id/customer-discord", requireStaff, async (req, res) => {
     try {
@@ -8643,6 +8943,33 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       res.json({ success: true, enabled });
     } catch (error) {
       res.status(500).json({ error: "Failed to update early access config" });
+    }
+  });
+
+  const ALLOWED_ACCESS_ROLE_IDS = ["owner", "staff", "grinder", "elite", "creator"];
+  app.patch("/api/config/allowed-access-roles", requireOwner, async (req, res) => {
+    try {
+      const { roles } = req.body;
+      if (!Array.isArray(roles)) return res.status(400).json({ error: "roles must be an array" });
+      const valid = roles.filter((r: string) => typeof r === "string" && ALLOWED_ACCESS_ROLE_IDS.includes(r));
+      const unique = [...new Set(valid)];
+      if (unique.length === 0) return res.status(400).json({ error: "At least one role must be allowed" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      await storage.upsertQueueConfig({ ...config, allowedAccessRoles: unique } as any);
+      const actorName = getActorName(req);
+      await storage.createAuditLog({
+        id: `AL-${Date.now().toString(36)}`,
+        action: "allowed_access_roles_updated",
+        entityType: "config",
+        entityId: "allowed-access-roles",
+        performedBy: (req.user as any)?.discordId || (req.user as any)?.id || "",
+        performedByName: actorName,
+        details: `Allowed access roles set to: ${unique.join(", ")} by ${actorName}`,
+      });
+      res.json({ success: true, allowedAccessRoles: unique });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update allowed access roles" });
     }
   });
 
@@ -10299,4 +10626,26 @@ export async function seedDatabase() {
     }
   }
   await storage.getQueueConfig();
+
+  // Seed demo customer orders in development so DemoCustomer can see sample data
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const allOrders = await storage.getOrders();
+      const hasDemoCustomerOrders = allOrders.some((o: any) => o.customerDiscordId === "dev-user-customer");
+      if (!hasDemoCustomerOrders) {
+        const baseDate = new Date();
+        const demoOrders = [
+          { id: "DEMO-ORD-1", mgtOrderNumber: 9001, displayId: "MGT-9001", serviceId: "S1", customerPrice: "125.00", orderDueDate: baseDate, status: "Completed" as const, customerDiscordId: "dev-user-customer", completedAt: new Date(Date.now() - 86400000 * 3), createdAt: baseDate },
+          { id: "DEMO-ORD-2", mgtOrderNumber: 9002, displayId: "MGT-9002", serviceId: "S2", customerPrice: "89.99", orderDueDate: baseDate, status: "Completed" as const, customerDiscordId: "dev-user-customer", completedAt: new Date(Date.now() - 86400000 * 7), createdAt: baseDate },
+          { id: "DEMO-ORD-3", mgtOrderNumber: 9003, displayId: "MGT-9003", serviceId: "S3", customerPrice: "199.00", orderDueDate: baseDate, status: "Assigned" as const, customerDiscordId: "dev-user-customer", createdAt: baseDate },
+        ];
+        for (const o of demoOrders) {
+          await storage.createOrder(o as any);
+        }
+        console.log("[seed] Added 3 demo orders for DemoCustomer (dev-user-customer)");
+      }
+    } catch (e) {
+      console.warn("[seed] Could not seed demo customer orders:", (e as Error).message);
+    }
+  }
 }
