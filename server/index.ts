@@ -123,7 +123,7 @@ async function initializeBackgroundServices() {
   logMemory("before background services");
 
   try {
-    const { ensureCreatorPayoutDetailRequestsTable, ensureQuoteGeneratorSplitColumns, ensureCreatorCommissionPercentColumn, ensureCreatorQuoteDiscountPercentColumn, ensureQuotesLastEditedColumns, ensureRepQuoteSettingsColumn, ensureBadgeQuoteSettingsColumn, ensureMyPlayerTypeSettingsColumn } = await import("./ensure-tables");
+    const { ensureCreatorPayoutDetailRequestsTable, ensureQuoteGeneratorSplitColumns, ensureCreatorCommissionPercentColumn, ensureCreatorQuoteDiscountPercentColumn, ensureQuotesLastEditedColumns, ensureRepQuoteSettingsColumn, ensureBadgeQuoteSettingsColumn, ensureMyPlayerTypeSettingsColumn, ensureBundleQuoteSettingsColumn, ensureAllowedAccessRolesColumn } = await import("./ensure-tables");
     await ensureCreatorPayoutDetailRequestsTable();
     await ensureQuoteGeneratorSplitColumns();
     await ensureCreatorCommissionPercentColumn();
@@ -132,6 +132,8 @@ async function initializeBackgroundServices() {
     await ensureRepQuoteSettingsColumn();
     await ensureBadgeQuoteSettingsColumn();
     await ensureMyPlayerTypeSettingsColumn();
+    await ensureBundleQuoteSettingsColumn();
+    await ensureAllowedAccessRolesColumn();
   } catch (e) {
     console.error("Failed to ensure tables:", e);
   }

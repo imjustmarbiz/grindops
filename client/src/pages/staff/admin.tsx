@@ -7,6 +7,7 @@ import { ROLE_LABELS } from "@shared/schema";
 import { getDefaultRepQuoteSettings, mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-settings";
 import { getDefaultBadgeQuoteSettings, mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
 import { getDefaultMyPlayerTypeSettings, mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
+import { getDefaultBundleQuoteSettings, mergeBundleQuoteSettings, type BundleQuoteSettings } from "@shared/bundle-quote-settings";
 import { ALL_BADGES } from "@shared/badge-data";
 import { formatCurrency, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -676,7 +677,8 @@ export default function StaffAdmin() {
   const [repQuoteSettingsLocal, setRepQuoteSettingsLocal] = useState<RepQuoteSettings | null>(null);
   const [badgeQuoteSettingsLocal, setBadgeQuoteSettingsLocal] = useState<BadgeQuoteSettings | null>(null);
   const [myPlayerTypeSettingsLocal, setMyPlayerTypeSettingsLocal] = useState<MyPlayerTypeSettings | null>(null);
-  const [adminQuoteGenTab, setAdminQuoteGenTab] = useState<"rep" | "badge">("rep");
+  const [bundleQuoteSettingsLocal, setBundleQuoteSettingsLocal] = useState<BundleQuoteSettings | null>(null);
+  const [adminQuoteGenTab, setAdminQuoteGenTab] = useState<"rep" | "badge" | "bundle">("rep");
 
   const saveRepQuoteSettingsMutation = useMutation({
     mutationFn: async (payload: RepQuoteSettings) => {
@@ -743,6 +745,29 @@ export default function StaffAdmin() {
   useEffect(() => {
     if (queueConfig?.myPlayerTypeSettings != null && myPlayerTypeSettingsLocal === null) setMyPlayerTypeSettingsLocal(mergeMyPlayerTypeSettings(queueConfig.myPlayerTypeSettings));
   }, [queueConfig?.myPlayerTypeSettings, myPlayerTypeSettingsLocal]);
+
+  const saveBundleQuoteSettingsMutation = useMutation({
+    mutationFn: async (s: BundleQuoteSettings) => {
+      const res = await apiRequest("PATCH", "/api/config/bundle-quote-settings", s);
+      const data = await res.json();
+      if (!data.success) throw new Error("Failed to save");
+      return data;
+    },
+    onSuccess: (data) => {
+      const saved = data?.bundleQuoteSettings ? mergeBundleQuoteSettings(data.bundleQuoteSettings) : null;
+      if (saved) setBundleQuoteSettingsLocal(saved);
+      queryClient.setQueryData(["/api/config"], (prev: Record<string, unknown> | undefined) =>
+        prev && saved ? { ...prev, bundleQuoteSettings: saved } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Bundle quote settings saved" });
+    },
+    onError: (e: any) => toast({ title: "Failed to save bundle quote settings", description: e?.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (queueConfig?.bundleQuoteSettings != null && bundleQuoteSettingsLocal === null) setBundleQuoteSettingsLocal(mergeBundleQuoteSettings(queueConfig.bundleQuoteSettings));
+  }, [queueConfig?.bundleQuoteSettings, bundleQuoteSettingsLocal]);
 
   const updateCreatorQuoteDiscountMutation = useMutation({
     mutationFn: async ({ creatorId, quoteDiscountPercent }: { creatorId: string; quoteDiscountPercent: number | null }) => {
@@ -1372,8 +1397,8 @@ export default function StaffAdmin() {
                   </Link>
                 </div>
               </FadeInUp>
-              <Tabs value={adminQuoteGenTab} onValueChange={(v) => setAdminQuoteGenTab(v as "rep" | "badge")} className="space-y-4">
-                <TabsList className="w-full sm:w-auto grid grid-cols-2 bg-white/[0.04] border border-white/10 p-1 h-auto">
+              <Tabs value={adminQuoteGenTab} onValueChange={(v) => setAdminQuoteGenTab(v as "rep" | "badge" | "bundle")} className="space-y-4">
+                <TabsList className="w-full sm:w-auto grid grid-cols-3 bg-white/[0.04] border border-white/10 p-1 h-auto">
                   <TabsTrigger value="rep" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
                     <Zap className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                     Rep Grinding
@@ -1381,6 +1406,10 @@ export default function StaffAdmin() {
                   <TabsTrigger value="badge" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
                     <span className="mr-1.5 shrink-0" aria-hidden>🎖️</span>
                     Badge Grinding
+                  </TabsTrigger>
+                  <TabsTrigger value="bundle" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
+                    <LayoutDashboard className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    Bundle
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="rep" className="mt-0">
@@ -1795,8 +1824,68 @@ export default function StaffAdmin() {
                     <p className="text-xs text-muted-foreground">Configure pricing per badge, max total, urgency multipliers, and delivery for the Badge Grinding tab on the Quote Generator. <a href="https://www.nba2klab.com/badge-descriptions" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">NBA 2K26 badge list</a></p>
                     {(() => {
                       const s = badgeQuoteSettingsLocal ?? mergeBadgeQuoteSettings(queueConfig?.badgeQuoteSettings ?? null);
+                      const globalCompany = queueConfig?.quoteGeneratorCompanyPct != null ? Number(queueConfig.quoteGeneratorCompanyPct) : 70;
+                      const globalGrinder = queueConfig?.quoteGeneratorGrinderPct != null ? Number(queueConfig.quoteGeneratorGrinderPct) : 30;
                       return (
                         <>
+                          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                            <p className="text-xs font-medium text-primary">Badge Grinding Profit Split</p>
+                            <p className="text-[11px] text-muted-foreground leading-tight">When no grinder bid is entered on the Badge tab, payouts use this split. Leave blank to use the Rep Grinding split above.</p>
+                            <div className="flex flex-wrap items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm text-muted-foreground">Company</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  className="w-16 bg-white/[0.04] border-white/10 text-foreground"
+                                  placeholder={String(globalCompany)}
+                                  value={s.companyPct != null ? s.companyPct : ""}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    const v = raw === "" ? null : parseFloat(raw);
+                                    if (raw === "" || (!Number.isNaN(v) && v >= 0 && v <= 100)) setBadgeQuoteSettingsLocal((prev) => {
+                                      const p = prev ?? mergeBadgeQuoteSettings(queueConfig?.badgeQuoteSettings ?? null);
+                                      if (raw === "") return { ...p, companyPct: null, grinderPct: null };
+                                      return { ...p, companyPct: raw === "" ? null : v!, grinderPct: raw === "" ? null : (p.grinderPct != null ? 100 - v! : 100 - v!) };
+                                    });
+                                  }}
+                                />
+                                <span className="text-sm text-muted-foreground">%</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm text-muted-foreground">Grinder</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  className="w-16 bg-white/[0.04] border-white/10 text-foreground"
+                                  placeholder={String(globalGrinder)}
+                                  value={s.grinderPct != null ? s.grinderPct : ""}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    const v = raw === "" ? null : parseFloat(raw);
+                                    if (raw === "" || (!Number.isNaN(v) && v >= 0 && v <= 100)) setBadgeQuoteSettingsLocal((prev) => {
+                                      const p = prev ?? mergeBadgeQuoteSettings(queueConfig?.badgeQuoteSettings ?? null);
+                                      if (raw === "") return { ...p, companyPct: null, grinderPct: null };
+                                      return { ...p, grinderPct: raw === "" ? null : v!, companyPct: raw === "" ? null : (p.companyPct != null ? 100 - v! : 100 - v!) };
+                                    });
+                                  }}
+                                />
+                                <span className="text-sm text-muted-foreground">%</span>
+                              </div>
+                              <Button size="sm" variant="secondary" onClick={() => saveBadgeQuoteSettingsMutation.mutate(s)} disabled={saveBadgeQuoteSettingsMutation.isPending}>
+                                {saveBadgeQuoteSettingsMutation.isPending ? "Saving…" : "Save"}
+                              </Button>
+                              {(s.companyPct != null || s.grinderPct != null) && (
+                                <Button size="sm" variant="outline" className="border-white/10" onClick={() => { const next = { ...s, companyPct: null, grinderPct: null }; setBadgeQuoteSettingsLocal(next); saveBadgeQuoteSettingsMutation.mutate(next); }} disabled={saveBadgeQuoteSettingsMutation.isPending}>
+                                  Use Rep Grinding split
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
                               <p className="text-xs font-medium text-primary">Rounding ($)</p>
@@ -1885,6 +1974,117 @@ export default function StaffAdmin() {
                     </CardContent>
                   </Card>
                 </FadeInUp>
+                </TabsContent>
+                <TabsContent value="bundle" className="mt-0">
+                  <FadeInUp>
+                    <Card className="border-0 bg-white/[0.02] border border-white/[0.06] overflow-hidden relative" data-testid="card-bundle-quote-settings">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                            <LayoutDashboard className="w-4 h-4 text-primary" />
+                          </div>
+                          Bundle Quote Settings
+                          <Badge className="ml-auto text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20">Editable</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="relative space-y-3">
+                        <p className="text-xs text-muted-foreground">Configure how the combined Rep + Badge total is rounded and the default profit split for the Quote Generator Bundle tab. Rep and Badge settings above apply to the underlying calculations.</p>
+                        {(() => {
+                          const s = bundleQuoteSettingsLocal ?? mergeBundleQuoteSettings(queueConfig?.bundleQuoteSettings ?? null);
+                          const globalCompany = queueConfig?.quoteGeneratorCompanyPct != null ? Number(queueConfig.quoteGeneratorCompanyPct) : 70;
+                          const globalGrinder = queueConfig?.quoteGeneratorGrinderPct != null ? Number(queueConfig.quoteGeneratorGrinderPct) : 30;
+                          return (
+                            <div className="space-y-3">
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Bundle Profit Split</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">When using Custom Total or Custom Grinder Payout on the Bundle tab, payouts use this split. Leave blank to use the Rep Grinding split.</p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Company</label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      className="w-16 h-9 bg-white/[0.04] border-white/10 text-foreground"
+                                      placeholder={String(globalCompany)}
+                                      value={s.companyPct != null ? s.companyPct : ""}
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const v = raw === "" ? null : parseFloat(raw);
+                                        if (raw === "" || (!Number.isNaN(v) && v >= 0 && v <= 100)) setBundleQuoteSettingsLocal((prev) => {
+                                          const p = prev ?? mergeBundleQuoteSettings(queueConfig?.bundleQuoteSettings ?? null);
+                                          if (raw === "") return { ...p, companyPct: null, grinderPct: null };
+                                          return { ...p, companyPct: raw === "" ? null : v!, grinderPct: raw === "" ? null : 100 - v! };
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-sm text-muted-foreground">%</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Grinder</label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      className="w-16 h-9 bg-white/[0.04] border-white/10 text-foreground"
+                                      placeholder={String(globalGrinder)}
+                                      value={s.grinderPct != null ? s.grinderPct : ""}
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const v = raw === "" ? null : parseFloat(raw);
+                                        if (raw === "" || (!Number.isNaN(v) && v >= 0 && v <= 100)) setBundleQuoteSettingsLocal((prev) => {
+                                          const p = prev ?? mergeBundleQuoteSettings(queueConfig?.bundleQuoteSettings ?? null);
+                                          if (raw === "") return { ...p, companyPct: null, grinderPct: null };
+                                          return { ...p, grinderPct: raw === "" ? null : v!, companyPct: raw === "" ? null : 100 - v! };
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-sm text-muted-foreground">%</span>
+                                  </div>
+                                  <Button size="sm" variant="secondary" onClick={() => saveBundleQuoteSettingsMutation.mutate(s)} disabled={saveBundleQuoteSettingsMutation.isPending}>
+                                    {saveBundleQuoteSettingsMutation.isPending ? "Saving…" : "Save"}
+                                  </Button>
+                                  {(s.companyPct != null || s.grinderPct != null) && (
+                                    <Button size="sm" variant="outline" className="border-white/10" onClick={() => { const next = { ...s, companyPct: null, grinderPct: null }; setBundleQuoteSettingsLocal(next); saveBundleQuoteSettingsMutation.mutate(next); }} disabled={saveBundleQuoteSettingsMutation.isPending}>
+                                      Use Rep Grinding split
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                              <p className="text-xs font-medium text-primary">Bundle total rounding ($)</p>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Round the combined Rep + Badge total to the nearest $X (e.g. 5 → $3,655, $3,660). Set to 0 to use no extra rounding (sum of already-rounded rep and badge quotes).</p>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  className="w-20 h-9 bg-white/[0.04] border-white/10 text-foreground"
+                                  value={s.roundBy}
+                                  onChange={(e) => {
+                                    const v = parseInt(e.target.value, 10);
+                                    if (!Number.isNaN(v) && v >= 0) setBundleQuoteSettingsLocal((prev) => (prev ? { ...prev, roundBy: v } : getDefaultBundleQuoteSettings()));
+                                  }}
+                                />
+                                <span className="text-sm text-muted-foreground">$ (0 = no rounding)</span>
+                                <Button
+                                  size="sm"
+                                  className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30"
+                                  onClick={() => saveBundleQuoteSettingsMutation.mutate(s)}
+                                  disabled={saveBundleQuoteSettingsMutation.isPending}
+                                >
+                                  {saveBundleQuoteSettingsMutation.isPending ? "Saving…" : "Save"}
+                                </Button>
+                              </div>
+                            </div>
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </FadeInUp>
                 </TabsContent>
               </Tabs>
             </>

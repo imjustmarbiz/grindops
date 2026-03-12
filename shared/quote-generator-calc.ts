@@ -257,7 +257,7 @@ export function calculateQuote(inputs: QuoteInputs, settings?: RepQuoteSettings 
     Math.abs(marketVsAiDiff) <= 0.05 ? "STRONG" : Math.abs(marketVsAiDiff) <= 0.15 ? "ACCEPTABLE" : "RISKY";
   const recommendedQuote = Math.abs(marketVsAiDiff) > 0.1 ? marketQuote : aiSuggestedQuote;
 
-  const chosen = inputs.chosenFinalQuote || aiSuggestedQuote;
+  const chosen = inputs.chosenFinalQuote || recommendedQuote;
   const grinderBid = inputs.grinderBid || 0;
   const defaultCompany = Math.max(0, Math.min(1, inputs.defaultCompanyPct ?? 0.70));
   const defaultGrinder = Math.max(0, Math.min(1, inputs.defaultGrinderPct ?? 0.30));

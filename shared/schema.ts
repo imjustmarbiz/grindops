@@ -248,6 +248,8 @@ export const queueConfig = pgTable("queue_config", {
   badgeQuoteSettings: jsonb("badge_quote_settings").$type<unknown>(),
   /** Quote Generator: MyPlayer Type pricing (nonRebirthAdd, rebirthAdd). */
   myPlayerTypeSettings: jsonb("my_player_type_settings").$type<unknown>(),
+  /** Quote Generator: Bundle tab (roundBy for combined total). */
+  bundleQuoteSettings: jsonb("bundle_quote_settings").$type<unknown>(),
 });
 
 export const orderUpdates = pgTable("order_updates", {

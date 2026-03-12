@@ -63,6 +63,20 @@ export async function ensureMyPlayerTypeSettingsColumn(): Promise<void> {
   `);
 }
 
+/** Adds bundle_quote_settings to queue_config if missing (Bundle tab). */
+export async function ensureBundleQuoteSettingsColumn(): Promise<void> {
+  await pool.query(`
+    ALTER TABLE queue_config ADD COLUMN IF NOT EXISTS bundle_quote_settings jsonb;
+  `);
+}
+
+/** Adds allowed_access_roles to queue_config if missing. */
+export async function ensureAllowedAccessRolesColumn(): Promise<void> {
+  await pool.query(`
+    ALTER TABLE queue_config ADD COLUMN IF NOT EXISTS allowed_access_roles jsonb DEFAULT '["owner", "staff", "grinder", "elite", "creator"]'::jsonb;
+  `);
+}
+
 /** Adds last-edited columns to quotes if missing (migration 0005). */
 export async function ensureQuotesLastEditedColumns(): Promise<void> {
   await pool.query(`

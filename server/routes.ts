@@ -18,6 +18,7 @@ import { getVipTierForSpend } from "@shared/customer-vip";
 import { mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-settings";
 import { mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
 import { mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
+import { mergeBundleQuoteSettings, type BundleQuoteSettings } from "@shared/bundle-quote-settings";
 
 const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
 
@@ -5663,7 +5664,8 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
     const repQuoteSettings = mergeRepQuoteSettings(raw?.repQuoteSettings as Partial<RepQuoteSettings> | null | undefined);
     const badgeQuoteSettings = mergeBadgeQuoteSettings(raw?.badgeQuoteSettings as Partial<BadgeQuoteSettings> | null | undefined);
     const myPlayerTypeSettings = mergeMyPlayerTypeSettings(raw?.myPlayerTypeSettings as Partial<MyPlayerTypeSettings> | null | undefined);
-    res.json({ ...raw, repQuoteSettings, badgeQuoteSettings, myPlayerTypeSettings });
+    const bundleQuoteSettings = mergeBundleQuoteSettings(raw?.bundleQuoteSettings as Partial<BundleQuoteSettings> | null | undefined);
+    res.json({ ...raw, repQuoteSettings, badgeQuoteSettings, myPlayerTypeSettings, bundleQuoteSettings });
   });
 
   app.put(api.config.update.path, requireStaff, async (req, res) => {
@@ -9097,8 +9099,16 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       const config = await storage.getQueueConfig();
       if (!config) return res.status(404).json({ error: "Config not found" });
       const merged = mergeBadgeQuoteSettings((config as any).badgeQuoteSettings);
+      const parsePct = (v: unknown): number | null => {
+        if (v == null) return null;
+        if (typeof v === "number" && !Number.isNaN(v) && v >= 0 && v <= 100) return v;
+        if (typeof v === "string") { const n = parseFloat(v); return !Number.isNaN(n) && n >= 0 && n <= 100 ? n : null; }
+        return null;
+      };
       const updated: BadgeQuoteSettings = {
         roundBy: typeof payload.roundBy === "number" ? payload.roundBy : merged.roundBy,
+        companyPct: payload.companyPct !== undefined ? parsePct(payload.companyPct) : merged.companyPct,
+        grinderPct: payload.grinderPct !== undefined ? parsePct(payload.grinderPct) : merged.grinderPct,
         urgencyQuoteMultipliers: typeof payload.urgencyQuoteMultipliers === "object" && payload.urgencyQuoteMultipliers
           ? { ...merged.urgencyQuoteMultipliers, ...payload.urgencyQuoteMultipliers }
           : merged.urgencyQuoteMultipliers,
@@ -9117,6 +9127,32 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       res.json({ success: true, badgeQuoteSettings: updated });
     } catch (error) {
       res.status(500).json({ error: "Failed to update badge quote settings" });
+    }
+  });
+
+  app.patch("/api/config/bundle-quote-settings", requireOwner, async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== "object") return res.status(400).json({ error: "Body must be an object" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      const merged = mergeBundleQuoteSettings((config as any).bundleQuoteSettings);
+      const parsePct = (v: unknown): number | null => {
+        if (v == null) return null;
+        if (typeof v === "number" && !Number.isNaN(v) && v >= 0 && v <= 100) return v;
+        if (typeof v === "string") { const n = parseFloat(v); return !Number.isNaN(n) && n >= 0 && n <= 100 ? n : null; }
+        return null;
+      };
+      const roundBy = typeof payload.roundBy === "number" && payload.roundBy >= 0
+        ? payload.roundBy
+        : merged.roundBy;
+      const companyPct = payload.companyPct !== undefined ? parsePct(payload.companyPct) : merged.companyPct;
+      const grinderPct = payload.grinderPct !== undefined ? parsePct(payload.grinderPct) : merged.grinderPct;
+      const updated: BundleQuoteSettings = { roundBy, companyPct, grinderPct };
+      await storage.upsertQueueConfig({ ...config, bundleQuoteSettings: updated } as any);
+      res.json({ success: true, bundleQuoteSettings: updated });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update bundle quote settings" });
     }
   });
 

@@ -17,6 +17,10 @@ const DEFAULT_URGENCY_DELIVERY_FACTORS: Record<string, { min: number; max: numbe
 
 export interface BadgeQuoteSettings {
   roundBy: number;
+  /** Optional. When set, Badge tab uses this Company % instead of global. 0-100. */
+  companyPct: number | null;
+  /** Optional. When set, Badge tab uses this Grinder % instead of global. 0-100. */
+  grinderPct: number | null;
   urgencyQuoteMultipliers: Record<string, number>;
   urgencyDeliveryFactors: Record<string, { min: number; max: number }>;
   /** Price per badge (badge id -> $). Badges not listed use defaultBadgePrice. */
@@ -43,6 +47,8 @@ function defaultBadgePricing(): Record<string, number> {
 export function getDefaultBadgeQuoteSettings(): BadgeQuoteSettings {
   return {
     roundBy: ROUND_BY,
+    companyPct: null,
+    grinderPct: null,
     urgencyQuoteMultipliers: { ...DEFAULT_URGENCY_QUOTE_MULTIPLIERS },
     urgencyDeliveryFactors: JSON.parse(JSON.stringify(DEFAULT_URGENCY_DELIVERY_FACTORS)),
     badgePricing: defaultBadgePricing(),
@@ -57,8 +63,16 @@ export function getDefaultBadgeQuoteSettings(): BadgeQuoteSettings {
 export function mergeBadgeQuoteSettings(saved: Partial<BadgeQuoteSettings> | null | undefined): BadgeQuoteSettings {
   const def = getDefaultBadgeQuoteSettings();
   if (!saved || typeof saved !== "object") return def;
+  const parsePct = (v: unknown): number | null => {
+    if (v == null) return null;
+    if (typeof v === "number" && !Number.isNaN(v) && v >= 0 && v <= 100) return v;
+    if (typeof v === "string") { const n = parseFloat(v); return !Number.isNaN(n) && n >= 0 && n <= 100 ? n : null; }
+    return null;
+  };
   return {
     roundBy: typeof saved.roundBy === "number" ? saved.roundBy : def.roundBy,
+    companyPct: saved.companyPct !== undefined ? parsePct(saved.companyPct) : def.companyPct,
+    grinderPct: saved.grinderPct !== undefined ? parsePct(saved.grinderPct) : def.grinderPct,
     urgencyQuoteMultipliers:
       saved.urgencyQuoteMultipliers && typeof saved.urgencyQuoteMultipliers === "object"
         ? { ...def.urgencyQuoteMultipliers, ...saved.urgencyQuoteMultipliers }

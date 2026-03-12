@@ -379,14 +379,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           
           <header className="flex h-14 min-h-[56px] shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-5 md:px-6 backdrop-blur-md bg-background/50 relative z-10 pt-safe">
             <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 touch-manipulation" />
-            {/* Desktop: logo centered in header */}
-            <Link
-              href={user?.role === "customer" ? "/customer" : user?.role === "creator" ? "/creator" : "/"}
-              className="hidden md:flex flex-1 justify-center min-w-0 shrink"
-            >
-              <GrindOpsLogo className="h-7 w-auto text-foreground" />
-            </Link>
-            <div className="flex items-center gap-2 sm:gap-3 md:ml-0 ml-auto">
+            <div className="flex flex-1 items-center gap-2 sm:gap-3 md:ml-0 ml-auto justify-end">
               {user?.role !== "creator" && <SoundAlertsHelper />}
               <TutorialTrigger variant="inline" />
               <Button
@@ -417,13 +410,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </span>
                 )}
               </Button>
-              {/* Mobile: console logo top right */}
-              <Link
-                href={user?.role === "customer" ? "/customer" : user?.role === "creator" ? "/creator" : "/"}
-                className="md:hidden shrink-0 py-1 -mr-1"
-              >
-                <GrindOpsLogo className="h-6 w-auto text-foreground" />
-              </Link>
             </div>
           </header>
           <main className="flex-1 min-h-0 overflow-auto p-3 sm:p-5 md:p-6 pb-safe relative z-10">

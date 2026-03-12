@@ -55,7 +55,7 @@ export function calculateBadgeQuote(
   myPlayerTypeSettings?: MyPlayerTypeSettings | null
 ): BadgeQuoteResults {
   const s = settings ? mergeBadgeQuoteSettings(settings) : mergeBadgeQuoteSettings(null);
-  const mpt = myPlayerTypeSettings ? mergeMyPlayerTypeSettings(myPlayerTypeSettings) : null;
+  const mpt = mergeMyPlayerTypeSettings(myPlayerTypeSettings ?? null);
 
   const defaultCompanyPct = Math.max(0, Math.min(1, inputs.defaultCompanyPct ?? 0.7));
   const defaultGrinderPct = Math.max(0, Math.min(1, inputs.defaultGrinderPct ?? 0.3));
@@ -78,7 +78,7 @@ export function calculateBadgeQuote(
   }
 
   // MyPlayer Type adjustment (Badge Grinding only)
-  if (mpt && inputs.myPlayerType) {
+  if (inputs.myPlayerType) {
     if (inputs.myPlayerType === "Non-Rebirth") baseCost += mpt.nonRebirthAdd;
     else if (inputs.myPlayerType === "Rebirth") baseCost += mpt.rebirthAdd;
   }
