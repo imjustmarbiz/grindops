@@ -19,8 +19,23 @@ import { mergeRepQuoteSettings, type RepQuoteSettings } from "@shared/rep-quote-
 import { mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
 import { mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
 import { mergeBundleQuoteSettings, type BundleQuoteSettings } from "@shared/bundle-quote-settings";
+import { mergeHotZonesQuoteSettings, type HotZonesQuoteSettings } from "@shared/hot-zones-quote-settings";
 
-const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+const isDevNoDb = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  const databaseUrl = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || "";
+  return (
+    !databaseUrl ||
+    databaseUrl.includes("localhost:5432") ||
+    databaseUrl.includes("127.0.0.1:5432") ||
+    databaseUrl.includes("[::1]:5432")
+  );
+};
+
+function isDbConnectionRefused(error: unknown): boolean {
+  const err = error as { code?: string; errors?: Array<{ code?: string }> } | undefined;
+  return err?.code === "ECONNREFUSED" || err?.errors?.some((item) => item?.code === "ECONNREFUSED") === true;
+}
 
 const BUSINESS_BLOCKED_IDS = ["872820240139046952"];
 const WALLET_BLOCKED_IDS: string[] = [];
@@ -5665,7 +5680,8 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
     const badgeQuoteSettings = mergeBadgeQuoteSettings(raw?.badgeQuoteSettings as Partial<BadgeQuoteSettings> | null | undefined);
     const myPlayerTypeSettings = mergeMyPlayerTypeSettings(raw?.myPlayerTypeSettings as Partial<MyPlayerTypeSettings> | null | undefined);
     const bundleQuoteSettings = mergeBundleQuoteSettings(raw?.bundleQuoteSettings as Partial<BundleQuoteSettings> | null | undefined);
-    res.json({ ...raw, repQuoteSettings, badgeQuoteSettings, myPlayerTypeSettings, bundleQuoteSettings });
+    const hotZonesQuoteSettings = mergeHotZonesQuoteSettings(raw?.hotZonesQuoteSettings as Partial<HotZonesQuoteSettings> | null | undefined);
+    res.json({ ...raw, repQuoteSettings, badgeQuoteSettings, myPlayerTypeSettings, bundleQuoteSettings, hotZonesQuoteSettings });
   });
 
   app.put(api.config.update.path, requireStaff, async (req, res) => {
@@ -6995,7 +7011,11 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       )
     );
   } catch (err) {
-    console.error("[cleanup] Error removing orphaned notifications:", err);
+    if (process.env.NODE_ENV !== "production" && isDbConnectionRefused(err)) {
+      console.warn("[cleanup] Database unavailable in development; skipping orphaned notification cleanup");
+    } else {
+      console.error("[cleanup] Error removing orphaned notifications:", err);
+    }
   }
 
   app.get('/api/notifications', async (req, res) => {
@@ -9153,6 +9173,41 @@ Pick the most relevant tip. Be concise and casual. No emojis.`;
       res.json({ success: true, bundleQuoteSettings: updated });
     } catch (error) {
       res.status(500).json({ error: "Failed to update bundle quote settings" });
+    }
+  });
+
+  app.patch("/api/config/hot-zones-quote-settings", requireOwner, async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== "object") return res.status(400).json({ error: "Body must be an object" });
+      const config = await storage.getQueueConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+      const merged = mergeHotZonesQuoteSettings((config as any).hotZonesQuoteSettings);
+      const parsePct = (v: unknown): number | null => {
+        if (v == null) return null;
+        if (typeof v === "number" && !Number.isNaN(v) && v >= 0 && v <= 100) return v;
+        if (typeof v === "string") { const n = parseFloat(v); return !Number.isNaN(n) && n >= 0 && n <= 100 ? n : null; }
+        return null;
+      };
+      const updated: HotZonesQuoteSettings = {
+        zonePricing: typeof payload.zonePricing === "object" && payload.zonePricing
+          ? { ...merged.zonePricing, ...payload.zonePricing }
+          : merged.zonePricing,
+        defaultMidRangePrice: typeof payload.defaultMidRangePrice === "number" ? payload.defaultMidRangePrice : merged.defaultMidRangePrice,
+        default3ptPrice: typeof payload.default3ptPrice === "number" ? payload.default3ptPrice : merged.default3ptPrice,
+        baseMinDays: typeof payload.baseMinDays === "number" ? payload.baseMinDays : merged.baseMinDays,
+        baseMaxDays: typeof payload.baseMaxDays === "number" ? payload.baseMaxDays : merged.baseMaxDays,
+        roundBy: typeof payload.roundBy === "number" ? payload.roundBy : merged.roundBy,
+        urgencyDeliveryFactors: typeof payload.urgencyDeliveryFactors === "object" && payload.urgencyDeliveryFactors
+          ? { ...merged.urgencyDeliveryFactors, ...payload.urgencyDeliveryFactors }
+          : merged.urgencyDeliveryFactors,
+        companyPct: payload.companyPct !== undefined ? parsePct(payload.companyPct) : merged.companyPct,
+        grinderPct: payload.grinderPct !== undefined ? parsePct(payload.grinderPct) : merged.grinderPct,
+      };
+      await storage.upsertQueueConfig({ ...config, hotZonesQuoteSettings: updated } as any);
+      res.json({ success: true, hotZonesQuoteSettings: updated });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update hot zones quote settings" });
     }
   });
 

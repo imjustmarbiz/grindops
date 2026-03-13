@@ -250,6 +250,8 @@ export const queueConfig = pgTable("queue_config", {
   myPlayerTypeSettings: jsonb("my_player_type_settings").$type<unknown>(),
   /** Quote Generator: Bundle tab (roundBy for combined total). */
   bundleQuoteSettings: jsonb("bundle_quote_settings").$type<unknown>(),
+  /** Quote Generator: Hot Zones tab (zone prices, delivery days). */
+  hotZonesQuoteSettings: jsonb("hot_zones_quote_settings").$type<unknown>(),
 });
 
 export const orderUpdates = pgTable("order_updates", {

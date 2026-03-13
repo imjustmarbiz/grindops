@@ -26,7 +26,7 @@ const ALL_GRINDER_ROLES = [
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000;
-  const useMemoryStore = !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+  const useMemoryStore = process.env.NODE_ENV !== "production";
   const sessionStore = useMemoryStore
     ? new (MemoryStore(session))({ checkPeriod: 86400000 })
     : new (connectPg(session))({
@@ -36,7 +36,7 @@ export function getSession() {
         tableName: "sessions",
       });
   if (useMemoryStore) {
-    console.log("[session] Using MemoryStore (no DATABASE_URL)");
+    console.log("[session] Using MemoryStore in development");
   }
   return session({
     secret: process.env.SESSION_SECRET!,

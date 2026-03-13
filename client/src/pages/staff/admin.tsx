@@ -8,6 +8,7 @@ import { getDefaultRepQuoteSettings, mergeRepQuoteSettings, type RepQuoteSetting
 import { getDefaultBadgeQuoteSettings, mergeBadgeQuoteSettings, type BadgeQuoteSettings } from "@shared/badge-quote-settings";
 import { getDefaultMyPlayerTypeSettings, mergeMyPlayerTypeSettings, type MyPlayerTypeSettings } from "@shared/my-player-type-settings";
 import { getDefaultBundleQuoteSettings, mergeBundleQuoteSettings, type BundleQuoteSettings } from "@shared/bundle-quote-settings";
+import { getDefaultHotZonesQuoteSettings, mergeHotZonesQuoteSettings, HOT_ZONE_IDS_ORDER, type HotZonesQuoteSettings } from "@shared/hot-zones-quote-settings";
 import { ALL_BADGES } from "@shared/badge-data";
 import { formatCurrency, categoryIcon, pluralize } from "@/lib/staff-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Crown, AlertTriangle, Users, Shield, Ban, Gavel, Repeat, ClipboardList, Send, Trash2,
   ArrowRight, CheckCircle, Loader2, Zap, Medal, Clock, Search, Settings, UserPlus, Hash,
-  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette, Star, ExternalLink, Percent, CreditCard, Calculator, LayoutDashboard,
+  Bot, Construction, Wrench, Megaphone, Power, Eye, EyeOff, User, ShieldCheck, MessageSquare, Gamepad2, Plus, X, Palette, Star, ExternalLink, Percent, CreditCard, Calculator, LayoutDashboard, Flame,
 } from "lucide-react";
 import { useSearch, Link } from "wouter";
 import { BiddingCountdownPanel } from "@/components/bidding-countdown";
@@ -678,7 +679,8 @@ export default function StaffAdmin() {
   const [badgeQuoteSettingsLocal, setBadgeQuoteSettingsLocal] = useState<BadgeQuoteSettings | null>(null);
   const [myPlayerTypeSettingsLocal, setMyPlayerTypeSettingsLocal] = useState<MyPlayerTypeSettings | null>(null);
   const [bundleQuoteSettingsLocal, setBundleQuoteSettingsLocal] = useState<BundleQuoteSettings | null>(null);
-  const [adminQuoteGenTab, setAdminQuoteGenTab] = useState<"rep" | "badge" | "bundle">("rep");
+  const [hotZonesQuoteSettingsLocal, setHotZonesQuoteSettingsLocal] = useState<HotZonesQuoteSettings | null>(null);
+  const [adminQuoteGenTab, setAdminQuoteGenTab] = useState<"rep" | "badge" | "bundle" | "hotzones">("rep");
 
   const saveRepQuoteSettingsMutation = useMutation({
     mutationFn: async (payload: RepQuoteSettings) => {
@@ -768,6 +770,29 @@ export default function StaffAdmin() {
   useEffect(() => {
     if (queueConfig?.bundleQuoteSettings != null && bundleQuoteSettingsLocal === null) setBundleQuoteSettingsLocal(mergeBundleQuoteSettings(queueConfig.bundleQuoteSettings));
   }, [queueConfig?.bundleQuoteSettings, bundleQuoteSettingsLocal]);
+
+  const saveHotZonesQuoteSettingsMutation = useMutation({
+    mutationFn: async (s: HotZonesQuoteSettings) => {
+      const res = await apiRequest("PATCH", "/api/config/hot-zones-quote-settings", s);
+      const data = await res.json();
+      if (!data.success) throw new Error("Failed to save");
+      return data;
+    },
+    onSuccess: (data: { hotZonesQuoteSettings?: HotZonesQuoteSettings }) => {
+      const saved = data?.hotZonesQuoteSettings ? mergeHotZonesQuoteSettings(data.hotZonesQuoteSettings) : null;
+      if (saved) setHotZonesQuoteSettingsLocal(saved);
+      queryClient.setQueryData(["/api/config"], (prev: Record<string, unknown> | undefined) =>
+        prev && saved ? { ...prev, hotZonesQuoteSettings: saved } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/config"] });
+      toast({ title: "Hot Zones quote settings saved" });
+    },
+    onError: (e: any) => toast({ title: "Failed to save hot zones quote settings", description: e?.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (queueConfig?.hotZonesQuoteSettings != null && hotZonesQuoteSettingsLocal === null) setHotZonesQuoteSettingsLocal(mergeHotZonesQuoteSettings(queueConfig.hotZonesQuoteSettings));
+  }, [queueConfig?.hotZonesQuoteSettings, hotZonesQuoteSettingsLocal]);
 
   const updateCreatorQuoteDiscountMutation = useMutation({
     mutationFn: async ({ creatorId, quoteDiscountPercent }: { creatorId: string; quoteDiscountPercent: number | null }) => {
@@ -1397,8 +1422,8 @@ export default function StaffAdmin() {
                   </Link>
                 </div>
               </FadeInUp>
-              <Tabs value={adminQuoteGenTab} onValueChange={(v) => setAdminQuoteGenTab(v as "rep" | "badge" | "bundle")} className="space-y-4">
-                <TabsList className="w-full sm:w-auto grid grid-cols-3 bg-white/[0.04] border border-white/10 p-1 h-auto">
+              <Tabs value={adminQuoteGenTab} onValueChange={(v) => setAdminQuoteGenTab(v as "rep" | "badge" | "bundle" | "hotzones")} className="space-y-4">
+                <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:grid-cols-4 bg-white/[0.04] border border-white/10 p-1 h-auto">
                   <TabsTrigger value="rep" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
                     <Zap className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                     Rep Grinding
@@ -1410,6 +1435,10 @@ export default function StaffAdmin() {
                   <TabsTrigger value="bundle" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
                     <LayoutDashboard className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                     Bundle
+                  </TabsTrigger>
+                  <TabsTrigger value="hotzones" className="min-h-10 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30 border border-transparent">
+                    <Flame className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    Hot Zones
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="rep" className="mt-0">
@@ -2079,6 +2108,166 @@ export default function StaffAdmin() {
                                 </Button>
                               </div>
                             </div>
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </FadeInUp>
+                </TabsContent>
+                <TabsContent value="hotzones" className="mt-0">
+                  <FadeInUp>
+                    <Card className="border-0 bg-white/[0.02] border border-white/[0.06] overflow-hidden relative" data-testid="card-hot-zones-quote-settings">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                            <Flame className="w-4 h-4 text-orange-400" />
+                          </div>
+                          Hot Zones Quote Settings
+                          <Badge className="ml-auto text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20">Editable</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="relative space-y-3">
+                        <p className="text-xs text-muted-foreground">Configure zone prices, delivery days, rounding, and profit split for the Quote Generator Hot Zones tab.</p>
+                        {(() => {
+                          const s = hotZonesQuoteSettingsLocal ?? mergeHotZonesQuoteSettings(queueConfig?.hotZonesQuoteSettings ?? null);
+                          const globalCompany = queueConfig?.quoteGeneratorCompanyPct != null ? Number(queueConfig.quoteGeneratorCompanyPct) : 70;
+                          const globalGrinder = queueConfig?.quoteGeneratorGrinderPct != null ? Number(queueConfig.quoteGeneratorGrinderPct) : 30;
+                          return (
+                            <div className="space-y-3">
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Hot Zones Profit Split</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Company / grinder split when no custom grinder payout is entered on the Hot Zones tab. Leave blank to use the global Quote Generator split.</p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Company</label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      className="w-16 h-9 bg-white/[0.04] border-white/10 text-foreground"
+                                      placeholder={String(globalCompany)}
+                                      value={s.companyPct != null ? s.companyPct : ""}
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const v = raw === "" ? null : parseFloat(raw);
+                                        if (raw === "" || (!Number.isNaN(v) && v >= 0 && v <= 100)) setHotZonesQuoteSettingsLocal((prev) => {
+                                          const p = prev ?? mergeHotZonesQuoteSettings(queueConfig?.hotZonesQuoteSettings ?? null);
+                                          if (raw === "") return { ...p, companyPct: null, grinderPct: null };
+                                          return { ...p, companyPct: v!, grinderPct: raw === "" ? null : 100 - v! };
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-sm text-muted-foreground">%</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Grinder</label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      className="w-16 h-9 bg-white/[0.04] border-white/10 text-foreground"
+                                      placeholder={String(globalGrinder)}
+                                      value={s.grinderPct != null ? s.grinderPct : ""}
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const v = raw === "" ? null : parseFloat(raw);
+                                        if (raw === "" || (!Number.isNaN(v) && v >= 0 && v <= 100)) setHotZonesQuoteSettingsLocal((prev) => {
+                                          const p = prev ?? mergeHotZonesQuoteSettings(queueConfig?.hotZonesQuoteSettings ?? null);
+                                          if (raw === "") return { ...p, companyPct: null, grinderPct: null };
+                                          return { ...p, grinderPct: v!, companyPct: raw === "" ? null : 100 - v! };
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-sm text-muted-foreground">%</span>
+                                  </div>
+                                  <Button size="sm" variant="secondary" onClick={() => saveHotZonesQuoteSettingsMutation.mutate(s)} disabled={saveHotZonesQuoteSettingsMutation.isPending}>
+                                    {saveHotZonesQuoteSettingsMutation.isPending ? "Saving…" : "Save"}
+                                  </Button>
+                                  {(s.companyPct != null || s.grinderPct != null) && (
+                                    <Button size="sm" variant="outline" className="border-white/10" onClick={() => { const next = { ...s, companyPct: null, grinderPct: null }; setHotZonesQuoteSettingsLocal(next); saveHotZonesQuoteSettingsMutation.mutate(next); }} disabled={saveHotZonesQuoteSettingsMutation.isPending}>
+                                      Use global split
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Default zone prices ($)</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Used when a zone has no custom price below. Mid-range zones and 3PT zones can have different defaults.</p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Mid-range default</label>
+                                    <Input type="number" min={0} step={1} className="w-20 h-9 bg-white/[0.04] border-white/10" value={s.defaultMidRangePrice} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 0) setHotZonesQuoteSettingsLocal((prev) => (prev ? { ...prev, defaultMidRangePrice: v } : getDefaultHotZonesQuoteSettings())); }} />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">3PT default</label>
+                                    <Input type="number" min={0} step={1} className="w-20 h-9 bg-white/[0.04] border-white/10" value={s.default3ptPrice} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 0) setHotZonesQuoteSettingsLocal((prev) => (prev ? { ...prev, default3ptPrice: v } : getDefaultHotZonesQuoteSettings())); }} />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Base delivery (days)</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Min and max days before urgency multipliers (Rush / Normal / Slow) are applied.</p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Min</label>
+                                    <Input type="number" min={1} step={1} className="w-20 h-9 bg-white/[0.04] border-white/10" value={s.baseMinDays} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 1) setHotZonesQuoteSettingsLocal((prev) => (prev ? { ...prev, baseMinDays: v } : getDefaultHotZonesQuoteSettings())); }} />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground">Max</label>
+                                    <Input type="number" min={1} step={1} className="w-20 h-9 bg-white/[0.04] border-white/10" value={s.baseMaxDays} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 1) setHotZonesQuoteSettingsLocal((prev) => (prev ? { ...prev, baseMaxDays: v } : getDefaultHotZonesQuoteSettings())); }} />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Quote total rounding ($)</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Round the Hot Zones total to the nearest $X. Set to 0 to disable.</p>
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <Input type="number" min={0} step={1} className="w-20 h-9 bg-white/[0.04] border-white/10" value={s.roundBy} onChange={(e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v) && v >= 0) setHotZonesQuoteSettingsLocal((prev) => (prev ? { ...prev, roundBy: v } : getDefaultHotZonesQuoteSettings())); }} />
+                                  <span className="text-sm text-muted-foreground">$ (0 = no rounding)</span>
+                                </div>
+                              </div>
+                              <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+                                <p className="text-xs font-medium text-primary">Urgency delivery factors</p>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Multipliers applied to base min/max days. Rush shortens, Slow lengthens.</p>
+                                <div className="flex flex-wrap gap-4">
+                                  {["Rush", "Normal", "Slow"].map((u) => {
+                                    const f = s.urgencyDeliveryFactors[u] ?? { min: 1, max: 1 };
+                                    return (
+                                      <div key={u} className="flex items-center gap-2">
+                                        <span className="text-sm w-14">{u}</span>
+                                        <Input type="number" min={0.1} step={0.05} className="w-16 h-8 bg-white/[0.04] border-white/10 text-xs" placeholder="min" value={f.min} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v) && v > 0) setHotZonesQuoteSettingsLocal((prev) => { const p = prev ?? getDefaultHotZonesQuoteSettings(); const cur = p.urgencyDeliveryFactors[u] ?? { min: 1, max: 1 }; return { ...p, urgencyDeliveryFactors: { ...p.urgencyDeliveryFactors, [u]: { ...cur, min: v } } }; }); }} />
+                                        <Input type="number" min={0.1} step={0.05} className="w-16 h-8 bg-white/[0.04] border-white/10 text-xs" placeholder="max" value={f.max} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v) && v > 0) setHotZonesQuoteSettingsLocal((prev) => { const p = prev ?? getDefaultHotZonesQuoteSettings(); const cur = p.urgencyDeliveryFactors[u] ?? { min: 1, max: 1 }; return { ...p, urgencyDeliveryFactors: { ...p.urgencyDeliveryFactors, [u]: { ...cur, max: v } } }; }); }} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <details className="group">
+                                <summary className="text-xs font-medium text-primary cursor-pointer list-none">Per-zone pricing — click to expand</summary>
+                                <p className="text-[11px] text-muted-foreground mt-1">Override price for specific zones. Others use the default for mid-range or 3PT.</p>
+                                <div className="mt-2 overflow-x-auto max-h-48 overflow-y-auto flex flex-wrap gap-2 p-2">
+                                  {HOT_ZONE_IDS_ORDER.map((id) => {
+                                    const price = s.zonePricing[id] ?? (id.startsWith("3pt") ? s.default3ptPrice : s.defaultMidRangePrice);
+                                    return (
+                                      <div key={id} className="flex items-center gap-1.5 p-1.5 rounded bg-white/[0.03] border border-white/5">
+                                        <span className="text-xs w-28 truncate">{id}</span>
+                                        <Input type="number" min={0} step={1} className="h-7 w-14 bg-white/[0.04] border-white/10 text-xs" value={price} onChange={(e) => { const v = parseFloat(e.target.value); if (!Number.isNaN(v) && v >= 0) setHotZonesQuoteSettingsLocal((prev) => { const p = prev ?? getDefaultHotZonesQuoteSettings(); return { ...p, zonePricing: { ...p.zonePricing, [id]: v } }; }); }} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </details>
+                              <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
+                                <Button size="sm" className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30" onClick={() => saveHotZonesQuoteSettingsMutation.mutate(s)} disabled={saveHotZonesQuoteSettingsMutation.isPending}>
+                                  {saveHotZonesQuoteSettingsMutation.isPending ? "Saving…" : "Save all"}
+                                </Button>
+                                <Button size="sm" variant="outline" className="border-white/10" onClick={() => setHotZonesQuoteSettingsLocal(getDefaultHotZonesQuoteSettings())}>
+                                  Reset to defaults
+                                </Button>
+                              </div>
                             </div>
                           );
                         })()}

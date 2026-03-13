@@ -84,6 +84,18 @@ export interface QuoteResults {
   }>;
 }
 
+export interface RepBudgetSuggestion {
+  budget: number;
+  suggestedTier: string;
+  suggestedLvl: number;
+  suggestedPct: number;
+  suggestedQuote: number;
+  desiredQuote: number;
+  shortfallToDesired: number;
+  remainingBudget: number;
+  comparisonToDesired: "below" | "meets" | "above";
+}
+
 function deriveTierEndIdx(repPricing: RepPricingRowEditable[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const r of repPricing) {
@@ -103,6 +115,26 @@ function getTargetIdx(repPricing: RepPricingRowEditable[], targetTier: string, t
   const label = `${targetTier} ${targetLvl}`;
   const i = repPricing.findIndex((r) => r.toLabel === label);
   return i >= 0 ? repPricing[i].toIdx : 0;
+}
+
+function getIndexTierLevelMap(repPricing: RepPricingRowEditable[]): Array<{ idx: number; tier: string; lvl: number }> {
+  const ordered = [...repPricing].sort((a, b) => a.fromIdx - b.fromIdx);
+  const map = new Map<number, { idx: number; tier: string; lvl: number }>();
+  for (const row of ordered) {
+    if (!map.has(row.fromIdx)) map.set(row.fromIdx, { idx: row.fromIdx, tier: row.fromTier, lvl: row.fromLvl });
+    map.set(row.toIdx, { idx: row.toIdx, tier: row.toTier, lvl: row.toLvl });
+  }
+  return [...map.values()].sort((a, b) => a.idx - b.idx);
+}
+
+function compareTargetProgress(
+  aIdx: number,
+  aPct: number,
+  bIdx: number,
+  bPct: number
+): number {
+  if (aIdx !== bIdx) return aIdx - bIdx;
+  return aPct - bPct;
 }
 
 /** Compute weight for segment i (0-based) for the given start/target indices and percentages */
@@ -375,5 +407,78 @@ export function calculateQuote(inputs: QuoteInputs, settings?: RepQuoteSettings 
     timeframeText,
     estimatedTimeframe,
     repBreakdown,
+  };
+}
+
+export function suggestRepTargetForBudget(
+  inputs: QuoteInputs,
+  budget: number,
+  settings?: RepQuoteSettings | null
+): RepBudgetSuggestion | null {
+  if (!Number.isFinite(budget) || budget < 0) return null;
+
+  const merged = settings ? mergeRepQuoteSettings(settings) : null;
+  const repPricing = merged?.repPricing ?? (DEFAULT_REP_PRICING as RepPricingRowEditable[]);
+  const targets = getIndexTierLevelMap(repPricing);
+  if (targets.length === 0) return null;
+
+  const startIdx = getStartIdx(repPricing, inputs.startTier, inputs.startLvl);
+  const desiredIdx = getTargetIdx(repPricing, inputs.targetTier, inputs.targetLvl);
+  const desiredResults = calculateQuote(
+    { ...inputs, chosenFinalQuote: 0, grinderBid: 0 },
+    settings
+  );
+
+  let best = {
+    idx: startIdx,
+    tier: inputs.startTier,
+    lvl: inputs.startLvl,
+    pct: inputs.startPct,
+    quote: 0,
+  };
+
+  for (const target of targets) {
+    if (target.idx < startIdx) continue;
+
+    const minPct = target.idx === startIdx ? Math.ceil(inputs.startPct) : 0;
+    for (let pct = minPct; pct <= 100; pct += 1) {
+      const quote = calculateQuote(
+        {
+          ...inputs,
+          targetTier: target.tier,
+          targetLvl: target.lvl,
+          targetPct: pct,
+          chosenFinalQuote: 0,
+          grinderBid: 0,
+        },
+        settings
+      ).recommendedQuote;
+
+      if (quote > budget) break;
+
+      if (compareTargetProgress(target.idx, pct, best.idx, best.pct) >= 0) {
+        best = {
+          idx: target.idx,
+          tier: target.tier,
+          lvl: target.lvl,
+          pct,
+          quote,
+        };
+      }
+    }
+  }
+
+  const comparison = compareTargetProgress(best.idx, best.pct, desiredIdx, inputs.targetPct);
+
+  return {
+    budget,
+    suggestedTier: best.tier,
+    suggestedLvl: best.lvl,
+    suggestedPct: best.pct,
+    suggestedQuote: best.quote,
+    desiredQuote: desiredResults.recommendedQuote,
+    shortfallToDesired: Math.max(0, desiredResults.recommendedQuote - budget),
+    remainingBudget: Math.max(0, budget - best.quote),
+    comparisonToDesired: comparison < 0 ? "below" : comparison > 0 ? "above" : "meets",
   };
 }

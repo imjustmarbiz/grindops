@@ -2,7 +2,16 @@ import { db } from "../../db";
 import { conversations, messages } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
-const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+const isDevNoDb = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  const databaseUrl = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || "";
+  return (
+    !databaseUrl ||
+    databaseUrl.includes("localhost:5432") ||
+    databaseUrl.includes("127.0.0.1:5432") ||
+    databaseUrl.includes("[::1]:5432")
+  );
+};
 
 export interface IChatStorage {
   getConversation(id: number): Promise<typeof conversations.$inferSelect | undefined>;

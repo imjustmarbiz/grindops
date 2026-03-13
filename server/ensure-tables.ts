@@ -70,6 +70,13 @@ export async function ensureBundleQuoteSettingsColumn(): Promise<void> {
   `);
 }
 
+/** Adds hot_zones_quote_settings to queue_config if missing (Hot Zones tab). */
+export async function ensureHotZonesQuoteSettingsColumn(): Promise<void> {
+  await pool.query(`
+    ALTER TABLE queue_config ADD COLUMN IF NOT EXISTS hot_zones_quote_settings jsonb;
+  `);
+}
+
 /** Adds allowed_access_roles to queue_config if missing. */
 export async function ensureAllowedAccessRolesColumn(): Promise<void> {
   await pool.query(`

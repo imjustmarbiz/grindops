@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TIERS, ROUND_BY, CREATORS_DISCOUNTS } from "@shared/quote-generator-data";
-import { calculateQuote, type QuoteInputs, type QuoteResults } from "@shared/quote-generator-calc";
+import { calculateQuote, suggestRepTargetForBudget, type QuoteInputs, type QuoteResults } from "@shared/quote-generator-calc";
 import {
   Calculator,
   TrendingUp,
@@ -53,11 +53,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ALL_BADGES, BADGE_CATEGORIES, BADGES_BY_CATEGORY, formatBadgeRouteForDiscord, formatBadgeRouteFromIds } from "@shared/badge-data";
 import type { MyPlayerType } from "@shared/my-player-type-settings";
 import { calculateBadgeQuote, type BadgeQuoteInputs, type BadgeQuoteResults } from "@shared/badge-quote-calc";
+import { mergeHotZonesQuoteSettings, getHotZonePrice, getHotZonesDelivery } from "@shared/hot-zones-quote-settings";
 
 const URGENCY_OPTIONS_EDIT = ["Slow", "Normal", "Rush"] as const;
 type UrgencyEdit = (typeof URGENCY_OPTIONS_EDIT)[number];
@@ -824,9 +826,10 @@ export default function QuoteGeneratorPage() {
   const [creatorCode, setCreatorCode] = useState("");
   const [chosenFinalQuote, setChosenFinalQuote] = useState("");
   const [grinderBid, setGrinderBid] = useState("");
+  const [repBudgetAmount, setRepBudgetAmount] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const [customerIdentifier, setCustomerIdentifier] = useState("");
-  const [quoteSource, setQuoteSource] = useState<"ai" | "market" | "custom">("ai");
+  const [quoteSource, setQuoteSource] = useState<"recommended" | "market" | "ai" | "budget" | "custom">("recommended");
   const [quoteFilter, setQuoteFilter] = useState("");
   const [filterDateRange, setFilterDateRange] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
@@ -855,11 +858,71 @@ export default function QuoteGeneratorPage() {
   const [bundleCustomRepGrinder, setBundleCustomRepGrinder] = useState("");
   const [bundleCustomBadgeGrinder, setBundleCustomBadgeGrinder] = useState("");
   const [bundleCustomTotalGrinder, setBundleCustomTotalGrinder] = useState("");
+  const [bundleSelectedServices, setBundleSelectedServices] = useState<("rep" | "badge" | "hotzones")[]>(["rep", "badge"]);
+  const [bundleCustomHotZonesQuote, setBundleCustomHotZonesQuote] = useState("");
+  const [bundleCustomHotZonesGrinder, setBundleCustomHotZonesGrinder] = useState("");
   const [discordCopied, setDiscordCopied] = useState(false);
   const [saveDisabledTooltipOpen, setSaveDisabledTooltipOpen] = useState(false);
   const badgeScrollRef = useRef<HTMLDivElement>(null);
   const [badgeListShowScrollHint, setBadgeListShowScrollHint] = useState(false);
   const { toast } = useToast();
+
+  const resetRepTab = useCallback(() => {
+    setStartTier("Rookie");
+    setStartLvl(1);
+    setStartPct(0);
+    setStartPctInput("0");
+    setTargetTier("Legend");
+    setTargetLvl(5);
+    setTargetPct(0);
+    setTargetPctInput("0");
+    setUrgency("Normal");
+    setDiscountPct(0);
+    setCreatorCode("");
+    setChosenFinalQuote("");
+    setGrinderBid("");
+    setRepBudgetAmount("");
+    setCustomerIdentifier("");
+    setQuoteSource("recommended");
+    setShowDetails(false);
+    toast({ title: "Rep tab reset" });
+  }, [toast]);
+
+  const repTabIsDirty = useMemo(() => {
+    return (
+      startTier !== "Rookie" ||
+      startLvl !== 1 ||
+      startPct !== 0 ||
+      targetTier !== "Legend" ||
+      targetLvl !== 5 ||
+      targetPct !== 0 ||
+      urgency !== "Normal" ||
+      discountPct !== 0 ||
+      creatorCode !== "" ||
+      chosenFinalQuote !== "" ||
+      grinderBid !== "" ||
+      repBudgetAmount !== "" ||
+      customerIdentifier !== "" ||
+      quoteSource !== "recommended" ||
+      showDetails
+    );
+  }, [
+    startTier,
+    startLvl,
+    startPct,
+    targetTier,
+    targetLvl,
+    targetPct,
+    urgency,
+    discountPct,
+    creatorCode,
+    chosenFinalQuote,
+    grinderBid,
+    repBudgetAmount,
+    customerIdentifier,
+    quoteSource,
+    showDetails,
+  ]);
 
   const checkBadgeScrollHint = useCallback(() => {
     const el = badgeScrollRef.current;
@@ -892,7 +955,7 @@ export default function QuoteGeneratorPage() {
     queryKey: ["/api/staff/creators"],
   });
 
-  const { data: queueConfig } = useQuery<{ quoteGeneratorCompanyPct?: string | number; quoteGeneratorGrinderPct?: string | number; repQuoteSettings?: { roundBy?: number }; badgeQuoteSettings?: { roundBy?: number; companyPct?: number | null; grinderPct?: number | null }; bundleQuoteSettings?: { roundBy?: number; companyPct?: number | null; grinderPct?: number | null }; myPlayerTypeSettings?: { nonRebirthAdd?: number; rebirthAdd?: number } }>({
+  const { data: queueConfig } = useQuery<{ quoteGeneratorCompanyPct?: string | number; quoteGeneratorGrinderPct?: string | number; repQuoteSettings?: { roundBy?: number }; badgeQuoteSettings?: { roundBy?: number; companyPct?: number | null; grinderPct?: number | null }; bundleQuoteSettings?: { roundBy?: number; companyPct?: number | null; grinderPct?: number | null }; myPlayerTypeSettings?: { nonRebirthAdd?: number; rebirthAdd?: number }; hotZonesQuoteSettings?: Record<string, unknown> }>({
     queryKey: ["/api/config"],
   });
   const { data: savedQuotesList = [] } = useQuery<Array<{ id: string; serviceType?: string; customerIdentifier?: string | null; createdByName: string; createdAt: string; inputs?: Record<string, unknown>; results?: { recommendedQuote?: number; estimatedTimeframe?: string } }>>({
@@ -909,6 +972,7 @@ export default function QuoteGeneratorPage() {
   const { defaultCompanyPct, defaultGrinderPct } = useMemo(() => {
     const badge = queueConfig?.badgeQuoteSettings;
     const bundle = queueConfig?.bundleQuoteSettings;
+    const hotZones = queueConfig?.hotZonesQuoteSettings as { companyPct?: number | null; grinderPct?: number | null } | undefined;
     if (quoteGeneratorTab === "badge" && badge?.companyPct != null && badge?.grinderPct != null) {
       const c = Math.max(0, Math.min(1, Number(badge.companyPct) / 100));
       const g = Math.max(0, Math.min(1, Number(badge.grinderPct) / 100));
@@ -919,8 +983,13 @@ export default function QuoteGeneratorPage() {
       const g = Math.max(0, Math.min(1, Number(bundle.grinderPct) / 100));
       return { defaultCompanyPct: c, defaultGrinderPct: g };
     }
+    if (quoteGeneratorTab === "hotzones" && hotZones?.companyPct != null && hotZones?.grinderPct != null) {
+      const c = Math.max(0, Math.min(1, Number(hotZones.companyPct) / 100));
+      const g = Math.max(0, Math.min(1, Number(hotZones.grinderPct) / 100));
+      return { defaultCompanyPct: c, defaultGrinderPct: g };
+    }
     return { defaultCompanyPct: globalCompanyPct, defaultGrinderPct: globalGrinderPct };
-  }, [quoteGeneratorTab, queueConfig?.badgeQuoteSettings?.companyPct, queueConfig?.badgeQuoteSettings?.grinderPct, queueConfig?.bundleQuoteSettings?.companyPct, queueConfig?.bundleQuoteSettings?.grinderPct, globalCompanyPct, globalGrinderPct]);
+  }, [quoteGeneratorTab, queueConfig?.badgeQuoteSettings?.companyPct, queueConfig?.badgeQuoteSettings?.grinderPct, queueConfig?.bundleQuoteSettings?.companyPct, queueConfig?.bundleQuoteSettings?.grinderPct, queueConfig?.hotZonesQuoteSettings, globalCompanyPct, globalGrinderPct]);
 
   const creatorDiscountPercentForCode = useMemo((): number | undefined => {
     if (!creatorCode) return undefined;
@@ -956,33 +1025,51 @@ export default function QuoteGeneratorPage() {
     mutationFn: async () => {
       const price = customerPrice;
       if (quoteGeneratorTab === "bundle") {
-        if (!results || !badgeResults) throw new Error("Complete both rep and badge sections");
-        const totalQuote = results.recommendedQuote + badgeResults.recommendedQuote;
-        const bundleTimeframe = `${results.minDays + badgeResults.minDays}–${results.maxDays + badgeResults.maxDays} days`;
-        const repRoute = `${startTier} ${startLvl} → ${targetTier} ${targetLvl}`;
-        const badgeRoute = `${badgeResults.badgeBreakdown.length === 1 ? "Badge" : "Badges"} — ${formatBadgeRouteForDiscord(badgeResults.badgeBreakdown).replace(/\*\*/g, "")}`;
-        const discordMsg = `**📋 Bundle Quote (Rep + Badge)**
-*Customer:* ${customerIdentifier.trim() || "—"}
-
-**Rep:** ${repRoute}
-**Badges:** ${badRoute}
-**MyPlayer Type:** ${myPlayerType}
-**Urgency:** ${URGENCY_LABELS[urgency] ?? urgency}${creatorCode ? ` | **Creator:** ${creatorCode}` : ""}
-
-\`\`\`
-Your quote:  $${price.toLocaleString()}
-Estimated timeframe: ${bundleTimeframe}
-\`\`\``;
-        const repPriceUsed = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : results.recommendedQuote;
-        const badgePriceUsed = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : badgeResults.recommendedQuote;
+        if (bundleSelectedServices.length === 0) throw new Error("Add at least one service to the bundle");
+        if (bundleSelectedServices.includes("rep") && !results) throw new Error("Complete rep section or remove Rep from bundle");
+        if (bundleSelectedServices.includes("badge") && !badgeResults) throw new Error("Complete badge section or remove Badges from bundle");
+        const repPriceUsed = bundleSelectedServices.includes("rep") ? ((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0)) : 0;
+        const badgePriceUsed = bundleSelectedServices.includes("badge") ? ((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0)) : 0;
+        const hotZonesPriceUsed = bundleSelectedServices.includes("hotzones") ? ((Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice) : 0;
+        const totalQuote = repPriceUsed + badgePriceUsed + hotZonesPriceUsed;
+        const timeframeParts: string[] = [];
+        if (bundleSelectedServices.includes("rep") && results) timeframeParts.push("Rep: " + results.timeframeText);
+        if (bundleSelectedServices.includes("badge") && badgeResults) timeframeParts.push("Badges: " + badgeResults.timeframeText);
+        if (bundleSelectedServices.includes("hotzones")) timeframeParts.push("Hot Zones: " + hotZonesTimeframeText);
+        const bundleTimeframe = timeframeParts.join(" · ");
+        const routeParts: string[] = [];
+        if (bundleSelectedServices.includes("rep") && results) routeParts.push("**Rep:** " + startTier + " " + startLvl + " → " + targetTier + " " + targetLvl);
+        if (bundleSelectedServices.includes("badge") && badgeResults) routeParts.push("**Badges:** " + formatBadgeRouteForDiscord(badgeResults.badgeBreakdown).replace(/\*\*/g, ""));
+        if (bundleSelectedServices.includes("hotzones")) routeParts.push("**Hot Zones:** " + hotZoneIds.length + " zone" + (hotZoneIds.length !== 1 ? "s" : ""));
+        const discordMsg = "**📋 Bundle Quote**\n*Customer:* " + (customerIdentifier.trim() || "—") + "\n\n" + routeParts.join("\n") + "\n" + (bundleSelectedServices.some((s) => s === "rep" || s === "badge") ? "**MyPlayer Type:** " + myPlayerType + "\n" : "") + "**Urgency:** " + (URGENCY_LABELS[urgency] ?? urgency) + (creatorCode ? " | **Creator:** " + creatorCode : "") + "\n\n```\nYour quote:  $" + price.toLocaleString() + "\nEstimated timeframe: " + bundleTimeframe + "\n```";
         const payload = {
           serviceType: "bundle",
           customerIdentifier: customerIdentifier.trim() || null,
           customerPrice: price,
-          inputs: { ...inputs, badgeIds, myPlayerType, bundleCustomRepQuote: bundleCustomRepQuote || undefined, bundleCustomBadgeQuote: bundleCustomBadgeQuote || undefined, bundleCustomRepGrinder: bundleCustomRepGrinder || undefined, bundleCustomBadgeGrinder: bundleCustomBadgeGrinder || undefined, bundleCustomTotalGrinder: bundleCustomTotalGrinder || undefined },
+          inputs: {
+            ...inputs,
+            bundleSelectedServices,
+            ...(bundleSelectedServices.includes("badge") && { badgeIds, myPlayerType }),
+            bundleCustomRepQuote: bundleCustomRepQuote || undefined,
+            bundleCustomBadgeQuote: bundleCustomBadgeQuote || undefined,
+            bundleCustomHotZonesQuote: bundleCustomHotZonesQuote || undefined,
+            bundleCustomRepGrinder: bundleCustomRepGrinder || undefined,
+            bundleCustomBadgeGrinder: bundleCustomBadgeGrinder || undefined,
+            bundleCustomHotZonesGrinder: bundleCustomHotZonesGrinder || undefined,
+            bundleCustomTotalGrinder: bundleCustomTotalGrinder || undefined,
+            ...(bundleSelectedServices.includes("hotzones") && { hotZoneIds }),
+          },
           results: {
-            repResults: results,
-            badgeResults,
+            ...(bundleSelectedServices.includes("rep") && results && { repResults: results }),
+            ...(bundleSelectedServices.includes("badge") && badgeResults && { badgeResults }),
+            ...(bundleSelectedServices.includes("hotzones") && {
+              hotZonesResults: {
+                recommendedQuote: hotZonesPriceUsed,
+                timeframeText: hotZonesTimeframeText,
+                minDays: hotZonesMinDays,
+                maxDays: hotZonesMaxDays,
+              },
+            }),
             recommendedQuote: price,
             totalQuote,
             estimatedTimeframe: bundleTimeframe,
@@ -1044,29 +1131,46 @@ Estimated timeframe: ${bundleTimeframe}
         }
       }
       if (!results) throw new Error("No results");
-      const discordMsg = buildQuoteDiscordMessage({
-        customerPrice: price,
-        estimatedTimeframe: results.estimatedTimeframe,
-        timeframeText: results.timeframeText,
-        customerIdentifier: customerIdentifier.trim() || undefined,
-        route: `${inputs.startTier} ${inputs.startLvl} → ${inputs.targetTier} ${inputs.targetLvl}`,
-        urgency: inputs.urgency,
-        creatorCode: inputs.creatorCode || undefined,
-        startTier: inputs.startTier,
-        startLvl: inputs.startLvl,
-        startPct: inputs.startPct ?? 0,
-        targetTier: inputs.targetTier,
-        targetLvl: inputs.targetLvl,
-        targetPct: inputs.targetPct ?? 0,
-        ...((results.discountUsed ?? 0) > 0 && { discountPercent: (results.discountUsed ?? 0) * 100 }),
-      });
+      const repDiscordForSave = quoteSource === "budget" && repDiscordContext
+        ? buildQuoteDiscordMessage({
+            customerPrice: repDiscordContext.customerPrice,
+            estimatedTimeframe: repDiscordContext.estimatedTimeframe,
+            timeframeText: repDiscordContext.timeframeText,
+            customerIdentifier: customerIdentifier.trim() || undefined,
+            route: `${repDiscordContext.startTier} ${repDiscordContext.startLvl} → ${repDiscordContext.targetTier} ${repDiscordContext.targetLvl}`,
+            urgency: inputs.urgency,
+            creatorCode: inputs.creatorCode || undefined,
+            startTier: repDiscordContext.startTier,
+            startLvl: repDiscordContext.startLvl,
+            startPct: repDiscordContext.startPct ?? 0,
+            targetTier: repDiscordContext.targetTier,
+            targetLvl: repDiscordContext.targetLvl,
+            targetPct: repDiscordContext.targetPct ?? 0,
+            ...((results.discountUsed ?? 0) > 0 && { discountPercent: (results.discountUsed ?? 0) * 100 }),
+          })
+        : buildQuoteDiscordMessage({
+            customerPrice: price,
+            estimatedTimeframe: results.estimatedTimeframe,
+            timeframeText: results.timeframeText,
+            customerIdentifier: customerIdentifier.trim() || undefined,
+            route: `${inputs.startTier} ${inputs.startLvl} → ${inputs.targetTier} ${inputs.targetLvl}`,
+            urgency: inputs.urgency,
+            creatorCode: inputs.creatorCode || undefined,
+            startTier: inputs.startTier,
+            startLvl: inputs.startLvl,
+            startPct: inputs.startPct ?? 0,
+            targetTier: inputs.targetTier,
+            targetLvl: inputs.targetLvl,
+            targetPct: inputs.targetPct ?? 0,
+            ...((results.discountUsed ?? 0) > 0 && { discountPercent: (results.discountUsed ?? 0) * 100 }),
+          });
       const payload = {
         serviceType: "rep_grinding",
         customerIdentifier: customerIdentifier.trim() || null,
         customerPrice: price,
         inputs: { ...inputs },
         results: { ...results, recommendedQuote: price },
-        discordMessage: discordMsg,
+        discordMessage: repDiscordForSave,
         aiSuggestion: null,
       };
       const res = await apiRequest("POST", "/api/staff/quotes", payload);
@@ -1143,6 +1247,60 @@ Estimated timeframe: ${bundleTimeframe}
     queueConfig?.repQuoteSettings,
   ]);
 
+  const repBudgetSuggestion = useMemo(() => {
+    const budget = Number(repBudgetAmount) || 0;
+    if (quoteGeneratorTab !== "rep" || budget <= 0) return null;
+    return suggestRepTargetForBudget(
+      {
+        ...inputs,
+        chosenFinalQuote: 0,
+        grinderBid: 0,
+      },
+      budget,
+      (queueConfig as { repQuoteSettings?: unknown })?.repQuoteSettings as any
+    );
+  }, [quoteGeneratorTab, repBudgetAmount, inputs, queueConfig?.repQuoteSettings]);
+
+  const repBudgetSuggestionApplied = useMemo(() => {
+    if (!repBudgetSuggestion) return false;
+    return (
+      targetTier === repBudgetSuggestion.suggestedTier &&
+      targetLvl === repBudgetSuggestion.suggestedLvl &&
+      Math.round(targetPct) === repBudgetSuggestion.suggestedPct
+    );
+  }, [repBudgetSuggestion, targetTier, targetLvl, targetPct]);
+
+  const repBudgetExtraRevenue = useMemo(() => {
+    if (!repBudgetSuggestion) return 0;
+    return Math.max(0, repBudgetSuggestion.budget - repBudgetSuggestion.desiredQuote);
+  }, [repBudgetSuggestion]);
+
+  const repBudgetQuoteDelta = useMemo(() => {
+    if (!repBudgetSuggestion) return 0;
+    return Math.max(0, repBudgetSuggestion.suggestedQuote - repBudgetSuggestion.desiredQuote);
+  }, [repBudgetSuggestion]);
+
+  const repBudgetHigherTargetSameQuote = useMemo(() => {
+    return !!repBudgetSuggestion
+      && repBudgetSuggestion.comparisonToDesired === "above"
+      && repBudgetQuoteDelta === 0;
+  }, [repBudgetSuggestion, repBudgetQuoteDelta]);
+
+  const repBudgetQuoteResults = useMemo(() => {
+    if (quoteGeneratorTab !== "rep" || !results || !repBudgetSuggestion) return null;
+    return calculateQuote(
+      {
+        ...inputs,
+        targetTier: repBudgetSuggestion.suggestedTier,
+        targetLvl: repBudgetSuggestion.suggestedLvl,
+        targetPct: repBudgetSuggestion.suggestedPct,
+        chosenFinalQuote: 0,
+        grinderBid: 0,
+      },
+      (queueConfig as { repQuoteSettings?: unknown })?.repQuoteSettings as any
+    );
+  }, [quoteGeneratorTab, results, repBudgetSuggestion, inputs, queueConfig?.repQuoteSettings]);
+
   const badgeResults = useMemo((): BadgeQuoteResults | null => {
     try {
       const badgeInputs: BadgeQuoteInputs = {
@@ -1164,18 +1322,55 @@ Estimated timeframe: ${bundleTimeframe}
     }
   }, [badgeIds, urgency, discountPct, creatorCode, creatorDiscountPercentForCode, defaultCompanyPct, defaultGrinderPct, chosenFinalQuote, grinderBid, myPlayerType, quoteGeneratorTab, bundleCustomBadgeQuote, bundleCustomBadgeGrinder, queueConfig?.badgeQuoteSettings, queueConfig?.myPlayerTypeSettings]);
 
+  const hotZonesSettings = useMemo(
+    () => mergeHotZonesQuoteSettings(queueConfig?.hotZonesQuoteSettings),
+    [queueConfig?.hotZonesQuoteSettings]
+  );
+  const resolvedHotZones = useMemo(
+    () => HOT_ZONES_SELECTABLE.map((z) => ({ ...z, price: getHotZonePrice(hotZonesSettings, z.id) })),
+    [hotZonesSettings]
+  );
+  const hotZonesDelivery = useMemo(
+    () => getHotZonesDelivery(hotZonesSettings, urgency),
+    [hotZonesSettings, urgency]
+  );
+  const { minDays: hotZonesMinDays, maxDays: hotZonesMaxDays, timeframeText: hotZonesTimeframeText } = hotZonesDelivery;
+
+  const bundleHotZonesPrice = useMemo(() => {
+    const total = resolvedHotZones.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0);
+    const roundBy = hotZonesSettings.roundBy > 0 ? hotZonesSettings.roundBy : 5;
+    return roundBy > 0 ? Math.round(total / roundBy) * roundBy : total;
+  }, [resolvedHotZones, hotZoneIds, hotZonesSettings.roundBy]);
+
   const customerPrice = useMemo(() => {
+    if (quoteGeneratorTab === "hotzones") {
+      const total = resolvedHotZones.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0);
+      const custom = Number(chosenFinalQuote) || 0;
+      const roundBy = hotZonesSettings.roundBy > 0 ? hotZonesSettings.roundBy : 5;
+      const rounded = roundBy > 0 ? Math.round(total / roundBy) * roundBy : total;
+      return custom > 0 ? custom : rounded;
+    }
     if (quoteGeneratorTab === "badge") {
       if (!badgeResults) return 0;
       const custom = Number(chosenFinalQuote) || 0;
       return custom > 0 ? custom : badgeResults.recommendedQuote;
     }
     if (quoteGeneratorTab === "bundle") {
-      if (!results || !badgeResults) return 0;
       const customTotal = Number(chosenFinalQuote) || 0;
-      const repPrice = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : results.recommendedQuote;
-      const badgePrice = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : badgeResults.recommendedQuote;
-      let total = customTotal > 0 ? customTotal : repPrice + badgePrice;
+      let total = 0;
+      if (bundleSelectedServices.includes("rep")) {
+        const repPrice = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0);
+        total += repPrice;
+      }
+      if (bundleSelectedServices.includes("badge")) {
+        const badgePrice = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0);
+        total += badgePrice;
+      }
+      if (bundleSelectedServices.includes("hotzones")) {
+        const hotPrice = (Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice;
+        total += hotPrice;
+      }
+      if (customTotal > 0) total = customTotal;
       const bundleRoundBy = queueConfig?.bundleQuoteSettings?.roundBy;
       if (total > 0 && typeof bundleRoundBy === "number" && bundleRoundBy > 0) {
         total = Math.round(total / bundleRoundBy) * bundleRoundBy;
@@ -1183,29 +1378,155 @@ Estimated timeframe: ${bundleTimeframe}
       return total;
     }
     if (!results) return 0;
+    if (quoteSource === "recommended") return results.recommendedQuote;
+    if (quoteSource === "budget") return repBudgetSuggestion?.suggestedQuote ?? results.recommendedQuote;
     if (quoteSource === "ai") return results.aiSuggestedQuote;
     if (quoteSource === "market") return results.marketQuote;
     const custom = Number(chosenFinalQuote) || 0;
     return custom > 0 ? custom : results.recommendedQuote;
-  }, [quoteGeneratorTab, badgeResults, results, quoteSource, chosenFinalQuote, bundleCustomRepQuote, bundleCustomBadgeQuote, queueConfig?.bundleQuoteSettings?.roundBy]);
+  }, [quoteGeneratorTab, badgeResults, results, quoteSource, chosenFinalQuote, bundleCustomRepQuote, bundleCustomBadgeQuote, bundleCustomHotZonesQuote, bundleSelectedServices, bundleHotZonesPrice, queueConfig?.bundleQuoteSettings?.roundBy, hotZoneIds, resolvedHotZones, hotZonesSettings.roundBy, repBudgetSuggestion?.suggestedQuote]);
 
-  useEffect(() => {
-    if (quoteSource === "custom" && (!chosenFinalQuote || Number(chosenFinalQuote) <= 0)) {
-      setQuoteSource("ai");
-    }
-  }, [quoteSource, chosenFinalQuote]);
-
-  const effectiveQuoteForGrinder = useMemo(() => {
+  const payoutBaseQuote = useMemo(() => {
     const custom = Number(chosenFinalQuote) || 0;
     if (custom > 0) return custom;
+    if (quoteGeneratorTab === "hotzones") {
+      const total = resolvedHotZones.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0);
+      const roundBy = hotZonesSettings.roundBy > 0 ? hotZonesSettings.roundBy : 5;
+      return roundBy > 0 ? Math.round(total / roundBy) * roundBy : total;
+    }
     if (quoteGeneratorTab === "badge") return badgeResults?.recommendedQuote ?? 0;
     if (quoteGeneratorTab === "bundle") {
-      const rep = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0);
-      const badge = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0);
-      return custom > 0 ? custom : rep + badge;
+      let sum = 0;
+      if (bundleSelectedServices.includes("rep")) sum += (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0);
+      if (bundleSelectedServices.includes("badge")) sum += (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0);
+      if (bundleSelectedServices.includes("hotzones")) sum += (Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice;
+      const bundleRoundBy = queueConfig?.bundleQuoteSettings?.roundBy;
+      if (sum > 0 && typeof bundleRoundBy === "number" && bundleRoundBy > 0) {
+        sum = Math.round(sum / bundleRoundBy) * bundleRoundBy;
+      }
+      return sum;
     }
     return results?.recommendedQuote ?? 0;
-  }, [chosenFinalQuote, quoteGeneratorTab, results?.recommendedQuote, badgeResults?.recommendedQuote, bundleCustomRepQuote, bundleCustomBadgeQuote]);
+  }, [chosenFinalQuote, quoteGeneratorTab, resolvedHotZones, hotZoneIds, hotZonesSettings.roundBy, badgeResults?.recommendedQuote, bundleSelectedServices, bundleCustomRepQuote, results?.recommendedQuote, bundleCustomBadgeQuote, bundleCustomHotZonesQuote, bundleHotZonesPrice, queueConfig?.bundleQuoteSettings?.roundBy]);
+
+  useEffect(() => {
+    if (quoteGeneratorTab !== "rep") return;
+    const budgetModeActive = quoteSource === "budget" || repBudgetSuggestionApplied;
+    if (quoteSource === "custom" && (!chosenFinalQuote || Number(chosenFinalQuote) <= 0)) {
+      setQuoteSource("recommended");
+      return;
+    }
+    if (quoteSource === "budget" && !repBudgetSuggestion) {
+      setQuoteSource("recommended");
+      return;
+    }
+    if (!budgetModeActive && quoteSource === "market" && results && results.recommendedQuote === results.marketQuote) {
+      setQuoteSource("recommended");
+      return;
+    }
+    if (!budgetModeActive && quoteSource === "ai" && results && results.recommendedQuote === results.aiSuggestedQuote) {
+      setQuoteSource("recommended");
+    }
+  }, [quoteSource, chosenFinalQuote, quoteGeneratorTab, repBudgetSuggestion, results, repBudgetSuggestionApplied]);
+
+  const effectiveQuoteForGrinder = payoutBaseQuote;
+
+  const creatorRateForPayouts = (creatorCode && (creatorDiscountPercentForCode ?? 0) > 0)
+    ? (creatorDiscountPercentForCode ?? 0)
+    : 0;
+
+  const buildPayoutFromQuote = useCallback((quoteAmount: number, grinderOverride = 0) => {
+    let grinderPayout: number;
+    let companyPayout: number;
+    let creatorCommission: number;
+
+    if (grinderOverride > 0) {
+      grinderPayout = grinderOverride;
+      const maxCreator = Math.max(0, quoteAmount - grinderPayout);
+      const companyGross = Math.max(0, quoteAmount - grinderPayout);
+      creatorCommission = Math.min(companyGross * creatorRateForPayouts, maxCreator);
+      companyPayout = Math.max(0, companyGross - creatorCommission);
+    } else {
+      grinderPayout = quoteAmount * defaultGrinderPct;
+      const companyGross = quoteAmount * defaultCompanyPct;
+      creatorCommission = companyGross * creatorRateForPayouts;
+      companyPayout = Math.max(0, companyGross - creatorCommission);
+    }
+
+    const companyPct = quoteAmount > 0 ? companyPayout / quoteAmount : 0;
+    const grinderPct = quoteAmount > 0 ? grinderPayout / quoteAmount : 0;
+    const creatorPct = quoteAmount > 0 ? creatorCommission / quoteAmount : 0;
+    const grinderBidAboveDefault = grinderOverride > 0 && quoteAmount > 0 && grinderOverride > quoteAmount * defaultGrinderPct;
+    const profitMargin: "GREEN" | "YELLOW" | "RED" | null =
+      quoteAmount > 0
+        ? companyPct < 0.3
+          ? "RED"
+          : companyPct < 0.4
+            ? "YELLOW"
+            : "GREEN"
+        : null;
+
+    return {
+      companyPayout,
+      grinderPayout,
+      creatorCommission,
+      companyPct,
+      grinderPct,
+      creatorPct,
+      grinderBidAboveDefault,
+      profitMargin,
+    };
+  }, [creatorRateForPayouts, defaultCompanyPct, defaultGrinderPct]);
+
+  const repDiscordContext = useMemo(() => {
+    if (quoteGeneratorTab !== "rep" || !results) return null;
+
+    if (quoteSource === "budget" && repBudgetSuggestion && repBudgetQuoteResults) {
+      return {
+        customerPrice: repBudgetSuggestion.suggestedQuote,
+        estimatedTimeframe: repBudgetQuoteResults.estimatedTimeframe,
+        timeframeText: repBudgetQuoteResults.timeframeText,
+        startTier,
+        startLvl,
+        startPct,
+        targetTier: repBudgetSuggestion.suggestedTier,
+        targetLvl: repBudgetSuggestion.suggestedLvl,
+        targetPct: repBudgetSuggestion.suggestedPct,
+      };
+    }
+
+    return {
+      customerPrice,
+      estimatedTimeframe: results.estimatedTimeframe,
+      timeframeText: results.timeframeText,
+      startTier,
+      startLvl,
+      startPct,
+      targetTier,
+      targetLvl,
+      targetPct,
+    };
+  }, [quoteGeneratorTab, results, quoteSource, repBudgetSuggestion, repBudgetQuoteResults, startTier, startLvl, startPct, targetTier, targetLvl, targetPct, customerPrice]);
+
+  const repDiscordMessage = useMemo(() => {
+    if (!repDiscordContext) return "";
+    return buildQuoteDiscordMessage({
+      customerPrice: repDiscordContext.customerPrice,
+      estimatedTimeframe: repDiscordContext.estimatedTimeframe,
+      timeframeText: repDiscordContext.timeframeText,
+      customerIdentifier: customerIdentifier.trim() || undefined,
+      route: `${repDiscordContext.startTier} ${repDiscordContext.startLvl} → ${repDiscordContext.targetTier} ${repDiscordContext.targetLvl}`,
+      urgency,
+      creatorCode: creatorCode || undefined,
+      startTier: repDiscordContext.startTier,
+      startLvl: repDiscordContext.startLvl,
+      startPct: repDiscordContext.startPct ?? 0,
+      targetTier: repDiscordContext.targetTier,
+      targetLvl: repDiscordContext.targetLvl,
+      targetPct: repDiscordContext.targetPct ?? 0,
+      ...(results && (results.discountUsed ?? 0) > 0 && { discountPercent: (results.discountUsed ?? 0) * 100 }),
+    });
+  }, [repDiscordContext, customerIdentifier, urgency, creatorCode, results]);
 
   useEffect(() => {
     const gb = Number(grinderBid) || 0;
@@ -1220,13 +1541,18 @@ Estimated timeframe: ${bundleTimeframe}
     if (quoteGeneratorTab !== "bundle") return;
     const repGb = Number(bundleCustomRepGrinder) || 0;
     const badgeGb = Number(bundleCustomBadgeGrinder) || 0;
+    const hzGb = Number(bundleCustomHotZonesGrinder) || 0;
     if (repGb > 0 && bundleRepQuoteForGrinder > 0 && repGb > bundleRepQuoteForGrinder) {
       setBundleCustomRepGrinder(String(bundleRepQuoteForGrinder));
     }
     if (badgeGb > 0 && bundleBadgeQuoteForGrinder > 0 && badgeGb > bundleBadgeQuoteForGrinder) {
       setBundleCustomBadgeGrinder(String(bundleBadgeQuoteForGrinder));
     }
-  }, [quoteGeneratorTab, bundleRepQuoteForGrinder, bundleBadgeQuoteForGrinder, bundleCustomRepGrinder, bundleCustomBadgeGrinder]);
+    const bundleHotZonesQuoteForGrinder = (Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice;
+    if (bundleSelectedServices.includes("hotzones") && hzGb > 0 && bundleHotZonesQuoteForGrinder > 0 && hzGb > bundleHotZonesQuoteForGrinder) {
+      setBundleCustomHotZonesGrinder(String(bundleHotZonesQuoteForGrinder));
+    }
+  }, [quoteGeneratorTab, bundleRepQuoteForGrinder, bundleBadgeQuoteForGrinder, bundleCustomRepGrinder, bundleCustomBadgeGrinder, bundleCustomHotZonesGrinder, bundleCustomHotZonesQuote, bundleSelectedServices, bundleHotZonesPrice]);
 
   const filteredSavedQuotes = useMemo(() => {
     const targetService = quoteGeneratorTab === "rep" ? "rep_grinding" : quoteGeneratorTab === "badge" ? "badge_grinding" : "bundle";
@@ -1438,11 +1764,27 @@ Estimated timeframe: ${bundleTimeframe}
         <FadeInUp delay={0.04}>
           <Card className="border-0 bg-white/[0.02] border border-white/[0.06]">
             <CardHeader className="pb-4 sm:pb-6">
-              <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2 text-primary">
-                <Zap className="w-4 h-4 text-primary" />
-                REP GRINDING
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground font-normal">Get a quote for Rep Grinding — You define the tiers, set the urgency, and manage every attribution and payout detail with total oversight</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2 text-primary">
+                    <Zap className="w-4 h-4 text-primary" />
+                    REP GRINDING
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-normal mt-2">Get a quote for Rep Grinding — You define the tiers, set the urgency, and manage every attribution and payout detail with total oversight</p>
+                </div>
+                {repTabIsDirty && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto h-11 min-h-11 sm:h-9 sm:min-h-0 border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                    onClick={resetRepTab}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    Reset Rep Tab
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pt-2 sm:pt-4 space-y-5 sm:space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8">
@@ -1647,6 +1989,143 @@ Estimated timeframe: ${bundleTimeframe}
                         })}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1 pt-4 border-t border-white/[0.06]">
+                <p className="text-xs font-medium uppercase tracking-wider text-primary">Budget suggestion</p>
+                <p className="text-[11px] text-muted-foreground">Enter the customer's budget to see the highest rep target reachable using the recommended quote logic.</p>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,220px)_1fr] gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Budget ($)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Optional"
+                      value={repBudgetAmount}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\s/g, "");
+                        if (v === "" || /^\d*\.?\d*$/.test(v)) setRepBudgetAmount(v);
+                      }}
+                      className="bg-white/[0.04] border-white/10 h-11 min-h-11 sm:h-10"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                    {repBudgetSuggestion ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-white/70">Target within budget</p>
+                            <p className="mt-1 text-lg font-semibold text-white">
+                              {repBudgetSuggestion.suggestedTier} {repBudgetSuggestion.suggestedLvl} · {repBudgetSuggestion.suggestedPct}%
+                            </p>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              {repBudgetSuggestion.comparisonToDesired === "below"
+                                ? `Budget is short by $${formatUSD(repBudgetSuggestion.shortfallToDesired)} for the current target, so this is the highest reachable rep.`
+                                : repBudgetSuggestion.comparisonToDesired === "above"
+                                  ? repBudgetHigherTargetSameQuote
+                                    ? "Budget can push beyond the current target and reach this higher rep milestone without increasing the quoted amount."
+                                    : `Budget can push beyond the current target and reach this higher rep milestone.`
+                                  : repBudgetSuggestion.remainingBudget > 0
+                                    ? `Budget covers the current target and leaves $${formatUSD(repBudgetSuggestion.remainingBudget)} of headroom, but not enough to unlock the next rep milestone.`
+                                    : "Budget covers the current target exactly under recommended quote logic."}
+                            </p>
+                            {((repBudgetSuggestion.comparisonToDesired === "above" && !repBudgetHigherTargetSameQuote) || (repBudgetSuggestion.comparisonToDesired === "meets" && repBudgetExtraRevenue > 0)) && (
+                              <p className="mt-2 text-[11px] font-medium text-emerald-400">
+                                Additional revenue opportunity: +${formatUSD(
+                                  repBudgetSuggestion.comparisonToDesired === "above"
+                                    ? repBudgetQuoteDelta
+                                    : repBudgetExtraRevenue
+                                )} vs the desired quote.
+                              </p>
+                            )}
+                            {repBudgetHigherTargetSameQuote && (
+                              <p className="mt-2 text-[11px] font-medium text-cyan-400">
+                                Higher rep target unlocked at the same quoted amount.
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={repBudgetSuggestionApplied ? "secondary" : "default"}
+                              className="h-10 sm:h-8 shrink-0"
+                              disabled={repBudgetSuggestionApplied}
+                              onClick={() => {
+                                setTargetTier(repBudgetSuggestion.suggestedTier);
+                                setTargetLvl(repBudgetSuggestion.suggestedLvl);
+                                setTargetPct(repBudgetSuggestion.suggestedPct);
+                                setTargetPctInput(String(repBudgetSuggestion.suggestedPct));
+                              setQuoteSource("budget");
+                              }}
+                            >
+                              {repBudgetSuggestionApplied ? "Applied" : "Apply suggestion"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-10 sm:h-8 shrink-0"
+                              onClick={() => setRepBudgetAmount("")}
+                            >
+                              Re-adjust budget
+                            </Button>
+                          </div>
+                        </div>
+                        {repBudgetSuggestionApplied && (
+                          <p className="text-[11px] text-emerald-400">
+                            Suggestion applied. Adjust the budget field and apply again if the customer changes their amount.
+                          </p>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">Desired quote</p>
+                            <p className="mt-1 text-sm font-semibold text-white">${formatUSD(repBudgetSuggestion.desiredQuote)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">Budget quote</p>
+                            <p className="mt-1 text-sm font-semibold text-primary">${formatUSD(repBudgetSuggestion.suggestedQuote)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">
+                              {repBudgetSuggestion.comparisonToDesired === "below"
+                                ? "Need for desired"
+                                : repBudgetSuggestion.comparisonToDesired === "above"
+                                  ? repBudgetHigherTargetSameQuote
+                                    ? "Same quote upside"
+                                    : "Additional revenue"
+                                  : repBudgetExtraRevenue > 0
+                                    ? "Extra budget"
+                                    : "Difference"}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-white">
+                              ${formatUSD(
+                                repBudgetSuggestion.comparisonToDesired === "below"
+                                  ? repBudgetSuggestion.shortfallToDesired
+                                  : repBudgetSuggestion.comparisonToDesired === "above"
+                                    ? repBudgetHigherTargetSameQuote
+                                      ? 0
+                                      : repBudgetQuoteDelta
+                                    : repBudgetExtraRevenue > 0
+                                      ? repBudgetExtraRevenue
+                                      : 0
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-white">No budget entered</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Add a budget amount to see the best rep level and percentage the customer can afford from their current starting point.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1922,7 +2401,7 @@ Estimated timeframe: ${bundleTimeframe}
         </FadeInUp>
         </TabsContent>
 
-        {/* Bundle tab — Rep + Badge in one cart */}
+        {/* Bundle tab — cart-style: select services, then expand to configure each */}
         <TabsContent value="bundle" className="mt-0 space-y-4">
           <FadeInUp delay={0.04}>
             <Card className="border-0 bg-white/[0.02] border border-white/[0.06]">
@@ -1931,195 +2410,296 @@ Estimated timeframe: ${bundleTimeframe}
                   <Package className="w-4 h-4 text-primary" />
                   BUNDLE ORDER
                 </CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground font-normal">Combine Rep Grinding + Badge Grinding into one quote. Fill both sections to get a combined total.</p>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal">Add services to your bundle, then expand each to configure. Combine Rep, Badges, Hot Zones, and more into one quote.</p>
               </CardHeader>
               <CardContent className="pt-2 sm:pt-4 space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                  {/* Rep section - compact with sliders */}
-                  <div className="space-y-3 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-                    <p className="text-xs font-medium uppercase tracking-wider text-primary flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5" /> Rep Grinding
-                    </p>
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Start · {startTier} {startLvl}</Label>
-                        <div className="flex gap-2 items-center">
-                          <Select value={startTier} onValueChange={setStartTier}>
-                            <SelectTrigger className="bg-white/[0.04] border-white/10 h-9 w-24 shrink-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {TIERS.map((t) => (
-                                <SelectItem key={t} value={t}>{t}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Slider value={[startLvl]} onValueChange={([v]) => setStartLvl(v)} min={1} max={5} step={1} className="flex-1 py-2" />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Target · {targetTier} {targetLvl}</Label>
-                        <div className="flex gap-2 items-center">
-                          <Select value={targetTier} onValueChange={setTargetTier}>
-                            <SelectTrigger className="bg-white/[0.04] border-white/10 h-9 w-24 shrink-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {TIERS.map((t) => (
-                                <SelectItem key={t} value={t}>{t}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Slider value={[targetLvl]} onValueChange={([v]) => setTargetLvl(v)} min={1} max={5} step={1} className="flex-1 py-2" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Start % · {Math.round(startPct)}</Label>
-                      <div className="flex gap-2 items-center">
-                        <Slider
-                          value={[Math.round(startPct)]}
-                          onValueChange={([v]) => { setStartPct(v); setStartPctInput(String(v)); }}
-                          min={0}
-                          max={100}
-                          step={1}
-                          className="flex-1 py-2"
-                        />
-                        <Input type="number" min={0} max={100} value={startPctInput} onChange={(e) => setStartPctInput(e.target.value)} onBlur={() => { const v = parsePct(startPctInput); setStartPct(v); setStartPctInput(String(v)); }} className="w-14 h-9 bg-white/[0.04] border-white/10 text-right text-xs shrink-0" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Target % · {Math.round(targetPct)}</Label>
-                      <div className="flex gap-2 items-center">
-                        <Slider
-                          value={[Math.round(targetPct)]}
-                          onValueChange={([v]) => { setTargetPct(v); setTargetPctInput(String(v)); }}
-                          min={0}
-                          max={100}
-                          step={1}
-                          className="flex-1 py-2"
-                        />
-                        <Input type="number" min={0} max={100} value={targetPctInput} onChange={(e) => setTargetPctInput(e.target.value)} onBlur={() => { const v = parsePct(targetPctInput); setTargetPct(v); setTargetPctInput(String(v)); }} className="w-14 h-9 bg-white/[0.04] border-white/10 text-right text-xs shrink-0" />
-                      </div>
-                    </div>
-                    {results && (
-                      <div className="text-[11px] px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-red-500/15 border border-white/10 w-full flex flex-wrap items-center justify-center sm:justify-start gap-x-2 sm:gap-x-0 gap-y-0.5 sm:gap-y-1 pt-1">
-                        <span className="shrink-0 text-amber-400">AI LOW: <span className="text-amber-300/80">${formatUSD(results.aiLowQuote)}</span></span>
-                        <span className="flex-1 min-w-4 mx-1 h-px self-center hidden sm:block bg-gradient-to-r from-amber-400/60 via-emerald-400/60 to-transparent" aria-hidden />
-                        <span className="shrink-0 text-emerald-400">AI MID: <span className="text-emerald-300/80">${formatUSD(results.aiSuggestedQuote)}</span></span>
-                        <span className="flex-1 min-w-4 mx-1 h-px self-center hidden sm:block bg-gradient-to-r from-transparent via-emerald-400/60 to-red-400/60" aria-hidden />
-                        <span className="shrink-0 text-red-400">AI HIGH: <span className="text-red-300/80">${formatUSD(results.aiHighQuote)}</span></span>
-                      </div>
-                    )}
+                {/* Services in bundle — shopping cart toggles */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wider text-primary">Services in this bundle</p>
+                  <p className="text-[11px] text-muted-foreground">Select which services to include. At least one required.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { id: "rep" as const, label: "Rep Grinding", icon: Zap },
+                        { id: "badge" as const, label: "Badge Grinding", icon: Medal },
+                        { id: "hotzones" as const, label: "Hot Zones", icon: Flame },
+                      ] as const
+                    ).map(({ id, label, icon: Icon }) => {
+                      const included = bundleSelectedServices.includes(id);
+                      return (
+                        <Button
+                          key={id}
+                          type="button"
+                          variant={included ? "default" : "outline"}
+                          size="sm"
+                          className={cn(
+                            "gap-1.5",
+                            included ? "bg-primary text-primary-foreground" : "border-white/20 hover:border-primary/40 hover:bg-primary/10"
+                          )}
+                          onClick={() => {
+                            if (included && bundleSelectedServices.length <= 1) return;
+                            setBundleSelectedServices((prev) =>
+                              included ? prev.filter((s) => s !== id) : [...prev, id]
+                            );
+                          }}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {label}
+                        </Button>
+                      );
+                    })}
                   </div>
-                  {/* Badge section */}
-                  <div className="space-y-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06] min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-medium uppercase tracking-wider text-primary flex items-center gap-2">
-                        <Medal className="w-3.5 h-3.5" /> Badge Grinding
-                      </p>
-                      <Button
-                        type="button"
-                        variant={badgeIds.length === ALL_BADGES.length ? "default" : "outline"}
-                        size="sm"
-                        className={cn(
-                          "h-7 text-[10px] shrink-0",
-                          badgeIds.length === ALL_BADGES.length ? "bg-primary text-primary-foreground" : "border-primary/50 text-primary hover:bg-primary/20"
-                        )}
-                        onClick={() => {
-                          const allIds = ALL_BADGES.map((b) => b.id);
-                          setBadgeIds(badgeIds.length === allIds.length ? [] : allIds);
-                        }}
-                      >
-                        Max Badges
-                      </Button>
-                    </div>
-                    <div className="relative min-w-0">
-                      <div
-                        ref={badgeScrollRef}
-                        className="space-y-3 max-h-52 overflow-y-auto overflow-x-hidden overscroll-contain pr-1"
-                      >
-                        {BADGE_CATEGORIES.map((cat) => (
-                        <div key={cat} className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1">
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-white/80">{cat}</p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const catIds = BADGES_BY_CATEGORY[cat].map((b) => b.id);
-                                setBadgeIds((prev) => {
-                                  const hasAll = catIds.every((id) => prev.includes(id));
-                                  if (hasAll) return prev.filter((id) => !catIds.includes(id));
-                                  return [...new Set([...prev, ...catIds])];
-                                });
-                              }}
-                              className={cn(
-                                "text-[10px] font-medium rounded px-1.5 py-0.5 transition-colors",
-                                BADGES_BY_CATEGORY[cat].every((b) => badgeIds.includes(b.id))
-                                  ? "bg-primary text-primary-foreground"
-                                  : "text-primary hover:bg-primary/20 hover:underline"
+                </div>
+
+                {/* Cart summary + expandable config per service */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wider text-primary">Configure each service</p>
+                  <div className="space-y-2">
+                    {bundleSelectedServices.includes("rep") && (
+                      <Collapsible defaultOpen={bundleSelectedServices[0] === "rep"}>
+                        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-white/[0.04] transition-colors">
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                              Rep Grinding
+                            </span>
+                            <span className="text-sm text-primary font-semibold">
+                              ${((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0)).toLocaleString()}
+                            </span>
+                            <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="border-t border-white/[0.06] p-4 space-y-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Start · {startTier} {startLvl}</Label>
+                                <div className="flex gap-2 items-center">
+                                  <Select value={startTier} onValueChange={setStartTier}>
+                                    <SelectTrigger className="bg-white/[0.04] border-white/10 h-9 w-24 shrink-0">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {TIERS.map((t) => (
+                                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Slider value={[startLvl]} onValueChange={([v]) => setStartLvl(v)} min={1} max={5} step={1} className="flex-1 py-2" />
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Target · {targetTier} {targetLvl}</Label>
+                                <div className="flex gap-2 items-center">
+                                  <Select value={targetTier} onValueChange={setTargetTier}>
+                                    <SelectTrigger className="bg-white/[0.04] border-white/10 h-9 w-24 shrink-0">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {TIERS.map((t) => (
+                                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Slider value={[targetLvl]} onValueChange={([v]) => setTargetLvl(v)} min={1} max={5} step={1} className="flex-1 py-2" />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Start % · {Math.round(startPct)}</Label>
+                                  <div className="flex gap-2 items-center">
+                                    <Slider value={[Math.round(startPct)]} onValueChange={([v]) => { setStartPct(v); setStartPctInput(String(v)); }} min={0} max={100} step={1} className="flex-1 py-2" />
+                                    <Input type="number" min={0} max={100} value={startPctInput} onChange={(e) => setStartPctInput(e.target.value)} onBlur={() => { const v = parsePct(startPctInput); setStartPct(v); setStartPctInput(String(v)); }} className="w-14 h-9 bg-white/[0.04] border-white/10 text-right text-xs shrink-0" />
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Target % · {Math.round(targetPct)}</Label>
+                                  <div className="flex gap-2 items-center">
+                                    <Slider value={[Math.round(targetPct)]} onValueChange={([v]) => { setTargetPct(v); setTargetPctInput(String(v)); }} min={0} max={100} step={1} className="flex-1 py-2" />
+                                    <Input type="number" min={0} max={100} value={targetPctInput} onChange={(e) => setTargetPctInput(e.target.value)} onBlur={() => { const v = parsePct(targetPctInput); setTargetPct(v); setTargetPctInput(String(v)); }} className="w-14 h-9 bg-white/[0.04] border-white/10 text-right text-xs shrink-0" />
+                                  </div>
+                                </div>
+                              </div>
+                              {results && (
+                                <div className="text-[11px] px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-red-500/15 border border-white/10 w-full flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pt-1">
+                                  <span className="text-amber-400">AI LOW: <span className="text-amber-300/80">${formatUSD(results.aiLowQuote)}</span></span>
+                                  <span className="text-emerald-400">AI MID: <span className="text-emerald-300/80">${formatUSD(results.aiSuggestedQuote)}</span></span>
+                                  <span className="text-red-400">AI HIGH: <span className="text-red-300/80">${formatUSD(results.aiHighQuote)}</span></span>
+                                </div>
                               )}
-                            >
-                              All
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {BADGES_BY_CATEGORY[cat].map((b) => {
-                              const sel = badgeIds.includes(b.id);
-                              return (
-                                <button
-                                  key={b.id}
-                                  type="button"
-                                  onClick={() => setBadgeIds((prev) => sel ? prev.filter((id) => id !== b.id) : [...prev, b.id])}
-                                  className={cn(
-                                    "px-2 py-1 rounded text-[10px] font-medium border transition-colors",
-                                    sel ? (cat === "Shooting" ? "bg-[#1b5e20]/20 text-emerald-400 border-[#1b5e20]/40" : cat === "Playmaking" ? "bg-[#92400e]/20 text-amber-400 border-[#92400e]/40" : cat === "Finishing" ? "bg-[#1a237e]/20 text-indigo-400 border-[#1a237e]/40" : cat === "Defense" ? "bg-[#87050a]/20 text-red-400 border-[#87050a]/40" : cat === "Rebounding" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "bg-slate-500/20 text-slate-400 border-slate-500/40") : "bg-white/[0.04] border-white/10 text-muted-foreground hover:border-white/20"
-                                  )}
-                                >
-                                  {b.name}
-                                </button>
-                              );
-                            })}
-                          </div>
+                            </div>
+                          </CollapsibleContent>
                         </div>
-                      ))}
-                    </div>
-                        {/* Bottom fade and hint only when there's more content below */}
-                        {badgeListShowScrollHint && (
-                          <>
-                            <div className="absolute bottom-0 left-0 right-3 h-8 pointer-events-none bg-gradient-to-t from-white/[0.02] to-transparent rounded-b-lg" aria-hidden />
-                            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
-                              <ChevronDown className="w-3 h-3 shrink-0 opacity-70" />
-                              Scroll for more badge categories
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    {badgeIds.length > 0 && <p className="text-[10px] text-muted-foreground">{badgeIds.length} badge{badgeIds.length !== 1 ? "s" : ""} selected</p>}
-                    <div className="space-y-2 pt-1 border-t border-white/[0.06]">
-                      <Label className="text-xs">MyPlayer Type</Label>
-                      <div className="flex gap-2">
-                        {(["Non-Rebirth", "Rebirth"] as const).map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setMyPlayerType(opt)}
-                            className={cn(
-                              "px-3 py-2 rounded-lg text-xs font-medium border transition-colors",
-                              myPlayerType === opt ? "bg-primary/20 text-primary border-primary/40" : "bg-white/[0.04] border-white/10 hover:border-white/20"
-                            )}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      </Collapsible>
+                    )}
+                    {bundleSelectedServices.includes("badge") && (
+                      <Collapsible defaultOpen={bundleSelectedServices[0] === "badge" && !bundleSelectedServices.includes("rep")}>
+                        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-white/[0.04] transition-colors">
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              <Medal className="w-4 h-4 text-pink-400 shrink-0" />
+                              Badge Grinding
+                            </span>
+                            <span className="text-sm text-primary font-semibold">
+                              ${((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0)).toLocaleString()}
+                            </span>
+                            <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="border-t border-white/[0.06] p-4 space-y-4 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] font-medium uppercase tracking-wider text-white/80">Badges</p>
+                                <Button
+                                  type="button"
+                                  variant={badgeIds.length === ALL_BADGES.length ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-7 text-[10px] shrink-0"
+                                  onClick={() => setBadgeIds(badgeIds.length === ALL_BADGES.length ? [] : ALL_BADGES.map((b) => b.id))}
+                                >
+                                  Max Badges
+                                </Button>
+                              </div>
+                              <div ref={badgeScrollRef} className="space-y-3 max-h-52 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
+                                {BADGE_CATEGORIES.map((cat) => (
+                                  <div key={cat} className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-1">
+                                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/80">{cat}</p>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const catIds = BADGES_BY_CATEGORY[cat].map((b) => b.id);
+                                          setBadgeIds((prev) => {
+                                            const hasAll = catIds.every((id) => prev.includes(id));
+                                            if (hasAll) return prev.filter((id) => !catIds.includes(id));
+                                            return [...new Set([...prev, ...catIds])];
+                                          });
+                                        }}
+                                        className={cn(
+                                          "text-[10px] font-medium rounded px-1.5 py-0.5 transition-colors",
+                                          BADGES_BY_CATEGORY[cat].every((b) => badgeIds.includes(b.id))
+                                            ? "bg-primary text-primary-foreground"
+                                            : "text-primary hover:bg-primary/20 hover:underline"
+                                        )}
+                                      >
+                                        All
+                                      </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {BADGES_BY_CATEGORY[cat].map((b) => {
+                                        const sel = badgeIds.includes(b.id);
+                                        return (
+                                          <button
+                                            key={b.id}
+                                            type="button"
+                                            onClick={() => setBadgeIds((prev) => sel ? prev.filter((id) => id !== b.id) : [...prev, b.id])}
+                                            className={cn(
+                                              "px-2 py-1 rounded text-[10px] font-medium border transition-colors",
+                                              sel ? (cat === "Shooting" ? "bg-[#1b5e20]/20 text-emerald-400 border-[#1b5e20]/40" : cat === "Playmaking" ? "bg-[#92400e]/20 text-amber-400 border-[#92400e]/40" : cat === "Finishing" ? "bg-[#1a237e]/20 text-indigo-400 border-[#1a237e]/40" : cat === "Defense" ? "bg-[#87050a]/20 text-red-400 border-[#87050a]/40" : cat === "Rebounding" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "bg-slate-500/20 text-slate-400 border-slate-500/40") : "bg-white/[0.04] border-white/10 text-muted-foreground hover:border-white/20"
+                                            )}
+                                          >
+                                            {b.name}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {badgeIds.length > 0 && <p className="text-[10px] text-muted-foreground">{badgeIds.length} badge{badgeIds.length !== 1 ? "s" : ""} selected</p>}
+                              <div className="space-y-2 pt-1 border-t border-white/[0.06]">
+                                <Label className="text-xs">MyPlayer Type</Label>
+                                <div className="flex gap-2">
+                                  {(["Non-Rebirth", "Rebirth"] as const).map((opt) => (
+                                    <button
+                                      key={opt}
+                                      type="button"
+                                      onClick={() => setMyPlayerType(opt)}
+                                      className={cn(
+                                        "px-3 py-2 rounded-lg text-xs font-medium border transition-colors",
+                                        myPlayerType === opt ? "bg-primary/20 text-primary border-primary/40" : "bg-white/[0.04] border-white/10 hover:border-white/20"
+                                      )}
+                                    >
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    )}
+                    {bundleSelectedServices.includes("hotzones") && (
+                      <Collapsible defaultOpen={bundleSelectedServices[bundleSelectedServices.length - 1] === "hotzones" && !bundleSelectedServices.includes("rep") && !bundleSelectedServices.includes("badge")}>
+                        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-white/[0.04] transition-colors">
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              <Flame className="w-4 h-4 text-orange-400 shrink-0" />
+                              Hot Zones
+                            </span>
+                            <span className="text-sm text-primary font-semibold">
+                              ${((Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice).toLocaleString()}
+                              {hotZoneIds.length > 0 && <span className="text-muted-foreground font-normal text-xs ml-1">({hotZoneIds.length} zone{hotZoneIds.length !== 1 ? "s" : ""})</span>}
+                            </span>
+                            <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="border-t border-white/[0.06] p-4 space-y-4">
+                              <div className="flex flex-wrap gap-2">
+                                <Button type="button" variant="outline" size="sm" className={cn("border", hotZoneIds.length === HOT_ZONE_IDS_ALL.length && HOT_ZONE_IDS_ALL.every((id) => hotZoneIds.includes(id)) ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10")} onClick={() => { if (hotZoneIds.length === HOT_ZONE_IDS_ALL.length) setHotZoneIds([]); else setHotZoneIds([...HOT_ZONE_IDS_ALL]); }}>
+                                  All-Around Court
+                                </Button>
+                                <Button type="button" variant="outline" size="sm" className={cn("border", hotZoneIds.length === HOT_ZONE_IDS_3PT.length && HOT_ZONE_IDS_3PT.every((id) => hotZoneIds.includes(id)) ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10")} onClick={() => { if (hotZoneIds.length === HOT_ZONE_IDS_3PT.length && HOT_ZONE_IDS_3PT.every((id) => hotZoneIds.includes(id))) setHotZoneIds([]); else setHotZoneIds([...HOT_ZONE_IDS_3PT]); }}>
+                                  3PT Zones
+                                </Button>
+                                <Button type="button" variant="outline" size="sm" className={cn("border", hotZoneIds.length === HOT_ZONE_IDS_MIDRANGE.length && HOT_ZONE_IDS_MIDRANGE.every((id) => hotZoneIds.includes(id)) ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10")} onClick={() => { if (hotZoneIds.length === HOT_ZONE_IDS_MIDRANGE.length && HOT_ZONE_IDS_MIDRANGE.every((id) => hotZoneIds.includes(id))) setHotZoneIds([]); else setHotZoneIds([...HOT_ZONE_IDS_MIDRANGE]); }}>
+                                  Mid-Range Zones
+                                </Button>
+                                <Button type="button" variant="outline" size="sm" className={cn("border", hotZoneIds.length === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10")} onClick={() => setHotZoneIds([])}>
+                                  Clear
+                                </Button>
+                              </div>
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                                <div className="min-h-[200px] flex flex-col items-center">
+                                  <p className="text-xs text-muted-foreground mb-2">Click zones to select</p>
+                                  <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet" className="w-full max-w-sm aspect-[400/240] rounded border border-white/10 bg-white/[0.02] cursor-pointer select-none">
+                                    <rect x="0" y="0" width="400" height="240" fill={CHART_COURT_FILL} />
+                                    <rect x="0" y="0" width="400" height="240" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+                                    <path d={`M ${COURT_LEFT_X} ${COURT_CY} L ${COURT_CX - MID_R_OUTER} ${COURT_CY} A ${MID_R_OUTER} ${MID_R_OUTER} 0 0 1 ${COURT_CX + MID_R_OUTER} ${COURT_CY} L ${COURT_RIGHT_X} ${COURT_CY}`} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
+                                    <rect x={COURT_CX - PAINT_W / 2} y={0} width={PAINT_W} height={PAINT_H} fill="rgb(180,60,60)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                                    <circle cx={COURT_CX} cy={PAINT_H} r={PAINT_R} fill="rgb(180,60,60)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                                    {HOT_ZONE_SVG.map(({ id, pathD }) => (
+                                      <HotZonePath key={id} id={id} pathD={pathD} selected={hotZoneIds.includes(id)} onToggle={() => setHotZoneIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])} />
+                                    ))}
+                                  </svg>
+                                </div>
+                                <div className="space-y-2 min-w-0">
+                                  <p className="text-[10px] font-medium uppercase tracking-wider text-white/70">Selected zones</p>
+                                  <ul className="flex flex-wrap gap-1.5">
+                                    {resolvedHotZones.filter((z) => hotZoneIds.includes(z.id)).map((z) => (
+                                      <li key={z.id}>
+                                        <Badge variant="secondary" className="text-[10px] font-medium bg-white/10 border-white/10">
+                                          {z.label} — ${z.price}
+                                        </Badge>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {hotZoneIds.length > 0 && (
+                                    <p className="text-xs text-primary font-medium pt-1">
+                                      Total: ${resolvedHotZones.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-1 pt-4 border-t border-white/[0.06]">
                   <p className="text-xs font-medium uppercase tracking-wider text-primary">Shared options</p>
-                  <p className="text-[11px] text-muted-foreground">Urgency, discount, and customer apply to both services.</p>
+                  <p className="text-[11px] text-muted-foreground">Urgency, discount, and customer apply to all services in the bundle.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-2">
@@ -2169,132 +2749,69 @@ Estimated timeframe: ${bundleTimeframe}
 
                 <div className="space-y-1 pt-4 border-t border-white/[0.06]">
                   <p className="text-xs font-medium uppercase tracking-wider text-primary">Quote override (optional)</p>
-                  <p className="text-[11px] text-muted-foreground">These override all calculated values. Set custom quotes/payouts per service or use Custom Total and Custom Grinder Payout to override the bundle sum.</p>
+                  <p className="text-[11px] text-muted-foreground">Override calculated values per service or use Custom Total / Custom Grinder Payout for the whole bundle.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Custom Rep Quote ($)
-                      </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Optional"
-                      value={bundleCustomRepQuote}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\s/g, "");
-                        if (v === "" || /^\d*\.?\d*$/.test(v)) setBundleCustomRepQuote(v);
-                      }}
-                      className="bg-white/[0.04] border-white/10 h-10"
-                    />
+                  {bundleSelectedServices.includes("rep") && (
+                    <div className="flex flex-col gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Custom Rep Quote ($)
+                        </Label>
+                        <Input type="text" inputMode="decimal" placeholder="Optional" value={bundleCustomRepQuote} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setBundleCustomRepQuote(v); }} className="bg-white/[0.04] border-white/10 h-10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Custom Rep Grinder ($)
+                        </Label>
+                        <Input type="text" inputMode="decimal" placeholder="Optional" value={bundleCustomRepGrinder} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) { const num = parseFloat(v); const repQuote = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0); if (v !== "" && !Number.isNaN(num) && repQuote > 0 && num > repQuote) { setBundleCustomRepGrinder(String(repQuote)); return; } setBundleCustomRepGrinder(v); } }} className="bg-white/[0.04] border-white/10 h-10" />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Custom Rep Grinder Payout ($)
-                    </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Optional"
-                      value={bundleCustomRepGrinder}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\s/g, "");
-                        if (v === "" || /^\d*\.?\d*$/.test(v)) {
-                          const num = parseFloat(v);
-                          const repQuote = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0);
-                          if (v !== "" && !Number.isNaN(num) && repQuote > 0 && num > repQuote) {
-                            setBundleCustomRepGrinder(String(repQuote));
-                            return;
-                          }
-                          setBundleCustomRepGrinder(v);
-                        }
-                      }}
-                      className="bg-white/[0.04] border-white/10 h-10"
-                    />
+                  )}
+                  {bundleSelectedServices.includes("badge") && (
+                    <div className="flex flex-col gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1.5">
+                          <Medal className="w-3.5 h-3.5 text-pink-400 shrink-0" /> Custom Badge Quote ($)
+                        </Label>
+                        <Input type="text" inputMode="decimal" placeholder="Optional" value={bundleCustomBadgeQuote} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setBundleCustomBadgeQuote(v); }} className="bg-white/[0.04] border-white/10 h-10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1.5">
+                          <Medal className="w-3.5 h-3.5 text-pink-400 shrink-0" /> Custom Badge Grinder ($)
+                        </Label>
+                        <Input type="text" inputMode="decimal" placeholder="Optional" value={bundleCustomBadgeGrinder} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) { const num = parseFloat(v); const badgeQuote = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0); if (v !== "" && !Number.isNaN(num) && badgeQuote > 0 && num > badgeQuote) { setBundleCustomBadgeGrinder(String(badgeQuote)); return; } setBundleCustomBadgeGrinder(v); } }} className="bg-white/[0.04] border-white/10 h-10" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs flex items-center gap-1.5">
-                        <Medal className="w-3.5 h-3.5 text-pink-400 shrink-0" /> Custom Badge Quote ($)
-                    </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Optional"
-                      value={bundleCustomBadgeQuote}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\s/g, "");
-                        if (v === "" || /^\d*\.?\d*$/.test(v)) setBundleCustomBadgeQuote(v);
-                      }}
-                      className="bg-white/[0.04] border-white/10 h-10"
-                    />
+                  )}
+                  {bundleSelectedServices.includes("hotzones") && (
+                    <div className="flex flex-col gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1.5">
+                          <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" /> Custom Hot Zones Quote ($)
+                        </Label>
+                        <Input type="text" inputMode="decimal" placeholder="Optional" value={bundleCustomHotZonesQuote} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setBundleCustomHotZonesQuote(v); }} className="bg-white/[0.04] border-white/10 h-10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1.5">
+                          <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" /> Custom Hot Zones Grinder ($)
+                        </Label>
+                        <Input type="text" inputMode="decimal" placeholder="Optional" value={bundleCustomHotZonesGrinder} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) { const num = parseFloat(v); const hzQuote = (Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice; if (v !== "" && !Number.isNaN(num) && hzQuote > 0 && num > hzQuote) { setBundleCustomHotZonesGrinder(String(hzQuote)); return; } setBundleCustomHotZonesGrinder(v); } }} className="bg-white/[0.04] border-white/10 h-10" />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs flex items-center gap-1.5">
-                        <Medal className="w-3.5 h-3.5 text-pink-400 shrink-0" /> Custom Badge Grinder Payout ($)
-                    </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Optional"
-                      value={bundleCustomBadgeGrinder}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\s/g, "");
-                        if (v === "" || /^\d*\.?\d*$/.test(v)) {
-                          const num = parseFloat(v);
-                          const badgeQuote = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0);
-                          if (v !== "" && !Number.isNaN(num) && badgeQuote > 0 && num > badgeQuote) {
-                            setBundleCustomBadgeGrinder(String(badgeQuote));
-                            return;
-                          }
-                          setBundleCustomBadgeGrinder(v);
-                        }
-                      }}
-                      className="bg-white/[0.04] border-white/10 h-10"
-                    />
-                    </div>
-                  </div>
+                  )}
                   <div className="flex flex-col gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs flex items-center gap-1.5">
                         <Package className="w-3.5 h-3.5 text-primary shrink-0" /> Custom Total ($)
-                    </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Override sum"
-                      value={chosenFinalQuote}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\s/g, "");
-                        if (v === "" || /^\d*\.?\d*$/.test(v)) setChosenFinalQuote(v);
-                      }}
-                      className="bg-white/[0.04] border-white/10 h-10"
-                    />
+                      </Label>
+                      <Input type="text" inputMode="decimal" placeholder="Override sum" value={chosenFinalQuote} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) setChosenFinalQuote(v); }} className="bg-white/[0.04] border-white/10 h-10" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs flex items-center gap-1.5">
                         <Package className="w-3.5 h-3.5 text-primary shrink-0" /> Custom Grinder Payout ($)
-                    </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Override total grinder"
-                      value={bundleCustomTotalGrinder}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\s/g, "");
-                        if (v === "" || /^\d*\.?\d*$/.test(v)) {
-                          const num = parseFloat(v);
-                          if (v !== "" && !Number.isNaN(num) && customerPrice > 0 && num > customerPrice) {
-                            setBundleCustomTotalGrinder(String(customerPrice));
-                            return;
-                          }
-                          setBundleCustomTotalGrinder(v);
-                        }
-                      }}
-                      className="bg-white/[0.04] border-white/10 h-10"
-                    />
+                      </Label>
+                      <Input type="text" inputMode="decimal" placeholder="Override total grinder" value={bundleCustomTotalGrinder} onChange={(e) => { const v = e.target.value.replace(/\s/g, ""); if (v === "" || /^\d*\.?\d*$/.test(v)) { const num = parseFloat(v); if (v !== "" && !Number.isNaN(num) && customerPrice > 0 && num > customerPrice) { setBundleCustomTotalGrinder(String(customerPrice)); return; } setBundleCustomTotalGrinder(v); } }} className="bg-white/[0.04] border-white/10 h-10" />
                     </div>
                   </div>
                 </div>
@@ -2317,50 +2834,82 @@ Estimated timeframe: ${bundleTimeframe}
               <CardContent className="pt-2 sm:pt-4 space-y-6">
                 <div className="space-y-6">
                 {/* Quick select by category */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/[0.04] border-white/10"
-                    onClick={() => setHotZoneIds(HOT_ZONE_IDS_ALL)}
-                  >
-                    All-Around Court
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/[0.04] border-white/10"
-                    onClick={() => setHotZoneIds(HOT_ZONE_IDS_3PT)}
-                  >
-                    3PT Zones
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/[0.04] border-white/10"
-                    onClick={() => setHotZoneIds(HOT_ZONE_IDS_MIDRANGE)}
-                  >
-                    Mid-Range Zones
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/[0.04] border-white/10"
-                    onClick={() => setHotZoneIds([])}
-                  >
-                    Clear
-                  </Button>
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                  {(() => {
+                    const ids = hotZoneIds;
+                    const isAll = ids.length === HOT_ZONE_IDS_ALL.length && HOT_ZONE_IDS_ALL.every((id) => ids.includes(id));
+                    const is3pt = ids.length === HOT_ZONE_IDS_3PT.length && HOT_ZONE_IDS_3PT.every((id) => ids.includes(id));
+                    const isMid = ids.length === HOT_ZONE_IDS_MIDRANGE.length && HOT_ZONE_IDS_MIDRANGE.every((id) => ids.includes(id));
+                    const isClear = ids.length === 0;
+                    return (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "border",
+                            isAll ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10"
+                          )}
+                          onClick={() => {
+                            if (isAll) setHotZoneIds([]);
+                            else setHotZoneIds(HOT_ZONE_IDS_ALL);
+                          }}
+                        >
+                          All-Around Court
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "border",
+                            is3pt ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10"
+                          )}
+                          onClick={() => {
+                            if (is3pt) setHotZoneIds([]);
+                            else setHotZoneIds(HOT_ZONE_IDS_3PT);
+                          }}
+                        >
+                          3PT Zones
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "border",
+                            isMid ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10"
+                          )}
+                          onClick={() => {
+                            if (isMid) setHotZoneIds([]);
+                            else setHotZoneIds(HOT_ZONE_IDS_MIDRANGE);
+                          }}
+                        >
+                          Mid-Range Zones
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "border",
+                            isClear ? "bg-primary text-primary-foreground border-primary" : "bg-white/[0.04] border-white/10"
+                          )}
+                          onClick={() => setHotZoneIds([])}
+                        >
+                          Clear
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                   {/* Shot chart SVG */}
-                  <div className="flex flex-col items-center min-h-0 h-full">
+                  <div className="flex flex-col items-center min-h-0 h-full min-h-[min(320px,55vh)] lg:min-h-0">
                     <p className="text-xs text-muted-foreground mb-2 shrink-0">Click zones to select</p>
-                    <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center">
+                    <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center min-h-[260px] lg:min-h-0">
                       <svg
                         viewBox="0 0 400 240"
                         preserveAspectRatio="xMidYMid meet"
@@ -2416,7 +2965,7 @@ Estimated timeframe: ${bundleTimeframe}
                   <div className="space-y-3">
                     <p className="text-xs font-medium uppercase tracking-wider text-primary">Hot zones</p>
                     <div className="space-y-1 rounded-md border border-white/10 bg-white/[0.02] divide-y divide-white/5">
-                      {HOT_ZONES_SELECTABLE.map((zone) => (
+                      {resolvedHotZones.map((zone) => (
                         <HotZoneRow
                           key={zone.id}
                           zone={zone}
@@ -2430,38 +2979,108 @@ Estimated timeframe: ${bundleTimeframe}
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground pt-1">
-                      Total: ${HOT_ZONES_SELECTABLE.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0)}
+                      Total: ${resolvedHotZones.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0)}
                     </p>
                   </div>
                 </div>
                 </div>
+
+                {/* Pricing & options — shared customer/urgency/discount for hot zones quote */}
+                <FadeInUp>
+                  <Card className="border-0 bg-white/[0.02] border border-white/[0.06]">
+                    <CardContent className="pt-4 pb-4 sm:pt-6 sm:pb-6 space-y-4">
+                      <p className="text-xs font-medium uppercase tracking-wider text-primary">Pricing & options</p>
+                      <p className="text-[11px] text-muted-foreground">Customer and options for this Hot Zones quote.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Urgency</Label>
+                          <div className="flex gap-2 flex-wrap">
+                            {URGENCY_OPTIONS.map((u) => (
+                              <button
+                                key={u}
+                                type="button"
+                                onClick={() => setUrgency(u)}
+                                className={cn(
+                                  "px-4 py-3 min-h-11 rounded-lg text-sm font-medium border transition-colors touch-manipulation",
+                                  urgency === u && u === "Slow" && "bg-amber-500/20 text-amber-400 border-amber-500/40",
+                                  urgency === u && u === "Normal" && "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
+                                  urgency === u && u === "Rush" && "bg-red-500/20 text-red-400 border-red-500/40",
+                                  urgency !== u && "bg-white/[0.04] border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground"
+                                )}
+                              >
+                                {URGENCY_LABELS[u]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Discount % · {discountPct}</Label>
+                          <Slider value={[discountPct]} onValueChange={([v]) => setDiscountPct(v)} min={0} max={100} step={1} className="py-3" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Customer <span className="text-destructive">*</span></Label>
+                          <Input placeholder="Discord, Gamertag, or Name" value={customerIdentifier} onChange={(e) => setCustomerIdentifier(e.target.value)} className="bg-white/[0.04] border-white/10 h-9" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Creator Code</Label>
+                          <Select value={creatorCode || "_none"} onValueChange={(v) => setCreatorCode(v === "_none" ? "" : v)}>
+                            <SelectTrigger className="bg-white/[0.04] border-white/10 h-9">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">None</SelectItem>
+                              {[...creatorsList].sort((a, b) => (a.code || "").localeCompare(b.code || "")).map((c) => (
+                                <SelectItem key={c.id} value={(c.code || "").toUpperCase()}>{(c.code || "").toUpperCase()}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 pt-4 border-t border-white/[0.06]">
+                        <p className="text-xs font-medium uppercase tracking-wider text-primary">Quote override (optional)</p>
+                        <p className="text-[11px] text-muted-foreground">Override the total and grinder payout for this Hot Zones quote.</p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Custom Quote ($)</Label>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Optional"
+                            value={chosenFinalQuote}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\s/g, "");
+                              if (v === "" || /^\d*\.?\d*$/.test(v)) setChosenFinalQuote(v);
+                            }}
+                            className="bg-white/[0.04] border-white/10 h-10"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Custom Grinder Payout ($)</Label>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Optional"
+                            value={grinderBid}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\s/g, "");
+                              if (v === "" || /^\d*\.?\d*$/.test(v)) setGrinderBid(v);
+                            }}
+                            className="bg-white/[0.04] border-white/10 h-10"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </FadeInUp>
               </CardContent>
             </Card>
           </FadeInUp>
         </TabsContent>
         </Tabs>
 
-        {quoteGeneratorTab === "hotzones" && (
-          <FadeInUp delay={0.06}>
-            <Card className="border-0 bg-white/[0.02] border border-white/[0.06]">
-              <CardContent className="pt-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Hot Zones total</p>
-                    <p className="text-2xl font-bold text-primary">
-                      ${HOT_ZONES_SELECTABLE.filter((z) => hotZoneIds.includes(z.id)).reduce((sum, z) => sum + z.price, 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {hotZoneIds.length} zone{hotZoneIds.length !== 1 ? "s" : ""} selected
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </FadeInUp>
-        )}
-
-        {((quoteGeneratorTab === "rep" && results) || (quoteGeneratorTab === "badge" && badgeResults) || (quoteGeneratorTab === "bundle" && results && badgeResults)) && (
+        {((quoteGeneratorTab === "rep" && results) || (quoteGeneratorTab === "badge" && badgeResults) || (quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults)) || quoteGeneratorTab === "hotzones") && (
           <>
             {/* KPI row — quotes */}
             <FadeInUp delay={0.06}>
@@ -2471,10 +3090,11 @@ Estimated timeframe: ${bundleTimeframe}
                   quoteGeneratorTab === "rep" && "sm:grid-cols-2 lg:grid-cols-4",
                   quoteGeneratorTab === "badge" && "sm:grid-cols-2 lg:grid-cols-3",
                   quoteGeneratorTab === "bundle" && "grid-cols-1",
-                  ((chosenFinalQuote && Number(chosenFinalQuote) > 0 && quoteGeneratorTab !== "bundle") || (quoteGeneratorTab === "bundle" && ((Number(bundleCustomRepQuote) || 0) > 0 || (Number(bundleCustomBadgeQuote) || 0) > 0))) && "opacity-40"
+                  quoteGeneratorTab === "hotzones" && "grid-cols-1 sm:grid-cols-3",
+                  ((chosenFinalQuote && Number(chosenFinalQuote) > 0 && quoteGeneratorTab !== "bundle") || (quoteGeneratorTab === "bundle" && ((Number(bundleCustomRepQuote) || 0) > 0 || (Number(bundleCustomBadgeQuote) || 0) > 0 || (Number(bundleCustomHotZonesQuote) || 0) > 0))) && "opacity-40"
                 )}
               >
-                {quoteGeneratorTab === "bundle" && results && badgeResults ? (
+                {quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults) ? (
                   <Card className="border-0 overflow-hidden col-span-2 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10">
                     <CardContent className="p-3 sm:p-4 relative z-10 min-w-0 overflow-hidden">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 min-w-0">
@@ -2486,49 +3106,98 @@ Estimated timeframe: ${bundleTimeframe}
                               <>Custom Total (${Number(chosenFinalQuote).toLocaleString()})</>
                             ) : (
                               <>
-                                Rep ${((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : results.recommendedQuote).toLocaleString()}
-                                <span className="text-muted-foreground/60 mx-1">+</span>
-                                Badges ${((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : badgeResults.recommendedQuote).toLocaleString()}
-                                {bundleCustomRepQuote || bundleCustomBadgeQuote ? (
+                                {bundleSelectedServices.includes("rep") && (
+                                  <>Rep ${((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0)).toLocaleString()}</>
+                                )}
+                                {bundleSelectedServices.includes("rep") && bundleSelectedServices.includes("badge") && <span className="text-muted-foreground/60 mx-1">+</span>}
+                                {bundleSelectedServices.includes("badge") && (
+                                  <>Badges ${((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0)).toLocaleString()}</>
+                                )}
+                                {(bundleSelectedServices.includes("rep") || bundleSelectedServices.includes("badge")) && bundleSelectedServices.includes("hotzones") && <span className="text-muted-foreground/60 mx-1">+</span>}
+                                {bundleSelectedServices.includes("hotzones") && (
+                                  <>Hot Zones ${((Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice).toLocaleString()}</>
+                                )}
+                                {(bundleCustomRepQuote || bundleCustomBadgeQuote || bundleCustomHotZonesQuote) ? (
                                   <span className="text-primary/70 ml-1">(Custom)</span>
                                 ) : null}
                               </>
                             )}
                           </p>
                         </div>
-                        <div className="shrink-0 min-w-0">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-white/70 mb-1">Rep benchmarks</p>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
-                            <span className="text-pink-400/90">Mkt ${results.marketQuote.toLocaleString()}</span>
-                            <span className="text-white/40">·</span>
-                            <span className="text-blue-400/90">AI ${results.aiSuggestedQuote.toLocaleString()}</span>
-                            <span className="text-white/40">·</span>
-                            <Badge className={cn("text-sm font-semibold border shrink-0 px-3 py-1", results.marketVsAiGrade === "STRONG" && "border-emerald-500/50 text-emerald-400 bg-emerald-500/20", results.marketVsAiGrade === "ACCEPTABLE" && "border-amber-500/50 text-amber-400 bg-amber-500/20", results.marketVsAiGrade === "RISKY" && "border-red-500/50 text-red-400 bg-red-500/20")}>
-                              Mkt vs AI: {results.marketVsAiGrade}
-                            </Badge>
+                        {bundleSelectedServices.includes("rep") && results && (
+                          <div className="shrink-0 min-w-0">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-white/70 mb-1">Rep benchmarks</p>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
+                              <span className="text-pink-400/90">Mkt ${results.marketQuote.toLocaleString()}</span>
+                              <span className="text-white/40">·</span>
+                              <span className="text-blue-400/90">AI ${results.aiSuggestedQuote.toLocaleString()}</span>
+                              <span className="text-white/40">·</span>
+                              <Badge className={cn("text-sm font-semibold border shrink-0 px-3 py-1", results.marketVsAiGrade === "STRONG" && "border-emerald-500/50 text-emerald-400 bg-emerald-500/20", results.marketVsAiGrade === "ACCEPTABLE" && "border-amber-500/50 text-amber-400 bg-amber-500/20", results.marketVsAiGrade === "RISKY" && "border-red-500/50 text-red-400 bg-red-500/20")}>
+                                Mkt vs AI: {results.marketVsAiGrade}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 ) : quoteGeneratorTab === "rep" && results ? (
                   <>
-                    <QuoteKpiCard label="Market Suggestion" value={`$${results.marketQuote.toLocaleString()}`} subtitle="Community value" icon={BarChart2} gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10" iconBg="bg-pink-500/20" textColor="text-pink-400" />
-                    <QuoteKpiCard label="AI Suggestion" value={`$${results.aiSuggestedQuote.toLocaleString()}`} subtitle={urgency !== "Normal" ? `${URGENCY_LABELS[urgency]} applied` : "Our value applied"} icon={Bot} gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/10" iconBg="bg-blue-500/20" textColor="text-blue-400" />
-                    <QuoteKpiCard label="Recommended Quote" value={`$${results.recommendedQuote.toLocaleString()}`} subtitle={results.recommendedQuote === results.marketQuote ? "Market suggestion" : results.recommendedQuote === results.aiSuggestedQuote ? "AI suggestion" : "Use this quote"} icon={Calculator} gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10" iconBg="bg-primary/20" textColor="text-primary" borderFlash />
+                    <QuoteKpiCard
+                      label="Market Suggestion"
+                      value={`$${((quoteSource === "budget" || repBudgetSuggestionApplied) && repBudgetQuoteResults ? repBudgetQuoteResults.marketQuote : results.marketQuote).toLocaleString()}`}
+                      subtitle={(quoteSource === "budget" || repBudgetSuggestionApplied) && repBudgetQuoteResults ? "Budget target market" : "Community value"}
+                      icon={BarChart2}
+                      gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10"
+                      iconBg="bg-pink-500/20"
+                      textColor="text-pink-400"
+                    />
+                    <QuoteKpiCard
+                      label="AI Suggestion"
+                      value={`$${((quoteSource === "budget" || repBudgetSuggestionApplied) && repBudgetQuoteResults ? repBudgetQuoteResults.aiSuggestedQuote : results.aiSuggestedQuote).toLocaleString()}`}
+                      subtitle={(quoteSource === "budget" || repBudgetSuggestionApplied) && repBudgetQuoteResults ? "Budget target AI" : (urgency !== "Normal" ? `${URGENCY_LABELS[urgency]} applied` : "Our value applied")}
+                      icon={Bot}
+                      gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/10"
+                      iconBg="bg-blue-500/20"
+                      textColor="text-blue-400"
+                    />
+                    <QuoteKpiCard
+                      label={quoteSource === "budget" && repBudgetSuggestion ? "Budget Quote" : "Recommended Quote"}
+                      value={`$${((quoteSource === "budget" && repBudgetSuggestion) ? repBudgetSuggestion.suggestedQuote : results.recommendedQuote).toLocaleString()}`}
+                      subtitle={
+                        quoteSource === "budget" && repBudgetSuggestion
+                          ? `${repBudgetSuggestion.suggestedTier} ${repBudgetSuggestion.suggestedLvl} · ${repBudgetSuggestion.suggestedPct}%`
+                          : results.recommendedQuote === results.marketQuote
+                            ? "Market suggestion"
+                            : results.recommendedQuote === results.aiSuggestedQuote
+                              ? "AI suggestion"
+                              : "Use this quote"
+                      }
+                      icon={Calculator}
+                      gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10"
+                      iconBg="bg-primary/20"
+                      textColor="text-primary"
+                      borderFlash
+                    />
                     <Card className={cn("border-0 overflow-hidden relative group sm:hover:scale-[1.02] transition-transform duration-300 shrink-0", results.marketVsAiGrade === "STRONG" && "bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/20", results.marketVsAiGrade === "ACCEPTABLE" && "bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/20", results.marketVsAiGrade === "RISKY" && "bg-gradient-to-br from-red-500/15 via-red-500/5 to-transparent border border-red-500/20")}>
                       <CardContent className="p-3 sm:p-4 relative z-10">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-white/70">Market vs AI</p>
                         <Badge className={cn("text-sm font-semibold border shrink-0 w-fit mt-1", results.marketVsAiGrade === "STRONG" && "border-emerald-500/50 text-emerald-400 bg-emerald-500/20", results.marketVsAiGrade === "ACCEPTABLE" && "border-amber-500/50 text-amber-400 bg-amber-500/20", results.marketVsAiGrade === "RISKY" && "border-red-500/50 text-red-400 bg-red-500/20")}>{results.marketVsAiGrade}</Badge>
-                        <p className="text-[10px] text-white/40 mt-0.5">{(results.marketVsAiDiff * 100).toFixed(1)}% difference</p>
+                        <p className="text-[10px] text-white/40 mt-0.5">{Math.abs(results.marketVsAiDiff * 100).toFixed(1)}% {results.marketVsAiDiff >= 0 ? "AI above market" : "AI below market"}</p>
                       </CardContent>
                     </Card>
                   </>
+                ) : quoteGeneratorTab === "hotzones" ? (
+                  <>
+                    <QuoteKpiCard label="Hot Zones Total" value={`$${customerPrice.toLocaleString()}`} subtitle={(Number(chosenFinalQuote) || 0) > 0 ? "Custom quote" : `${hotZoneIds.length} zone${hotZoneIds.length !== 1 ? "s" : ""} selected`} icon={Flame} gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10" iconBg="bg-primary/20" textColor="text-primary" borderFlash />
+                    <QuoteKpiCard label="Zones" value={String(hotZoneIds.length)} subtitle="Hot zones in quote" icon={DollarSign} gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10" iconBg="bg-pink-500/20" textColor="text-pink-400" />
+                    <QuoteKpiCard label="Delivery" value={hotZonesTimeframeText} subtitle={`${hotZonesMinDays}–${hotZonesMaxDays} days`} icon={Clock} gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/10" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+                  </>
                 ) : badgeResults ? (
                   <>
-                    <QuoteKpiCard label="Base Cost" value={`$${badgeResults.baseCost.toLocaleString()}`} subtitle={`${badgeIds.length} badge${badgeIds.length !== 1 ? "s" : ""} · ${myPlayerType}`} icon={DollarSign} gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10" iconBg="bg-pink-500/20" textColor="text-pink-400" />
-                    <QuoteKpiCard label="Recommended Quote" value={`$${badgeResults.recommendedQuote.toLocaleString()}`} subtitle={urgency !== "Normal" ? `${URGENCY_LABELS[urgency]} applied` : (badgeResults.discountUsed > 0 || badgeResults.creatorDiscount > 0) ? "After discount" : "Base price"} icon={Calculator} gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10" iconBg="bg-primary/20" textColor="text-primary" borderFlash />
-                    <QuoteKpiCard label="Delivery" value={badgeResults.timeframeText} subtitle={`${badgeResults.minDays}–${badgeResults.maxDays} days`} icon={Clock} gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/10" iconBg="bg-blue-500/20" textColor="text-blue-400" />
+                    <QuoteKpiCard label="Recommended Quote" value={`$${badgeResults.recommendedQuote.toLocaleString()}`} subtitle="Badge total" icon={Calculator} gradient="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/10" iconBg="bg-primary/20" textColor="text-primary" borderFlash />
+                    <QuoteKpiCard label="Badges" value={String(badgeIds.length)} subtitle="In quote" icon={Medal} gradient="bg-gradient-to-br from-pink-500/15 via-pink-500/5 to-transparent border border-pink-500/10" iconBg="bg-pink-500/20" textColor="text-pink-400" />
+                    <QuoteKpiCard label="Delivery" value={badgeResults.timeframeText} subtitle="Estimated days" icon={Clock} gradient="bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/10" iconBg="bg-blue-500/20" textColor="text-blue-400" />
                   </>
                 ) : null}
               </div>
@@ -2539,63 +3208,71 @@ Estimated timeframe: ${bundleTimeframe}
               {(() => {
                 const bundleRepPrice = (Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0);
                 const bundleBadgePrice = (Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0);
-                const bundleTotalQuote = bundleRepPrice + bundleBadgePrice;
+                const bundleHotZonesPriceLine = (Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice;
+                const bundleTotalQuote = (bundleSelectedServices.includes("rep") ? bundleRepPrice : 0) + (bundleSelectedServices.includes("badge") ? bundleBadgePrice : 0) + (bundleSelectedServices.includes("hotzones") ? bundleHotZonesPriceLine : 0);
                 const bundleTotalGrinderOverride = Number(bundleCustomTotalGrinder) || 0;
                 const bundleUsingQuoteOverride = quoteGeneratorTab === "bundle" && (Number(chosenFinalQuote) || 0) > 0;
                 const bundleUsingGrinderOverride = quoteGeneratorTab === "bundle" && bundleTotalGrinderOverride > 0;
-                const bundlePayoutFromOverrides = quoteGeneratorTab === "bundle" && results && badgeResults && (bundleUsingQuoteOverride || bundleUsingGrinderOverride);
-                const r = quoteGeneratorTab === "bundle" && results && badgeResults
+                const bundleHasData = quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults);
+                const bundlePayoutFromOverrides = bundleHasData && (bundleUsingQuoteOverride || bundleUsingGrinderOverride);
+                const r = bundleHasData
                   ? (() => {
-                      const creatorTotal = results.creatorCommission + badgeResults.creatorCommission;
-                      const grinderFromCalc = results.grinderPayout + badgeResults.grinderPayout;
+                      const creatorRate = (creatorCode && (creatorDiscountPercentForCode ?? 0) > 0) ? (creatorDiscountPercentForCode ?? 0) : 0;
+                      const creatorTotal = (bundleSelectedServices.includes("rep") ? (results?.creatorCommission ?? 0) : 0)
+                        + (bundleSelectedServices.includes("badge") ? (badgeResults?.creatorCommission ?? 0) : 0)
+                        + (bundleSelectedServices.includes("hotzones") ? bundleHotZonesPriceLine * defaultCompanyPct * creatorRate : 0);
+                      const grinderFromCalc = (bundleSelectedServices.includes("rep") ? (results?.grinderPayout ?? 0) : 0)
+                        + (bundleSelectedServices.includes("badge") ? (badgeResults?.grinderPayout ?? 0) : 0)
+                        + (bundleSelectedServices.includes("hotzones") ? (Number(bundleCustomHotZonesGrinder) || 0) > 0 ? Number(bundleCustomHotZonesGrinder) : bundleHotZonesPriceLine * defaultGrinderPct : 0);
                       const grinderTotal = bundleTotalGrinderOverride > 0 ? bundleTotalGrinderOverride : grinderFromCalc;
-                      const companyFromCalc = results.companyPayout + badgeResults.companyPayout;
+                      const companyFromCalc = (bundleSelectedServices.includes("rep") ? (results?.companyPayout ?? 0) : 0)
+                        + (bundleSelectedServices.includes("badge") ? (badgeResults?.companyPayout ?? 0) : 0)
+                        + (bundleSelectedServices.includes("hotzones") ? Math.max(0, bundleHotZonesPriceLine * defaultCompanyPct * (1 - creatorRate)) : 0);
                       let companyPayout: number;
                       let grinderPayout: number;
                       let creatorCommission: number;
                       let companyPct: number;
                       let grinderPct: number;
                       let creatorPct: number;
-                      if (bundlePayoutFromOverrides && customerPrice > 0) {
+                      if (bundlePayoutFromOverrides && payoutBaseQuote > 0) {
                         if (bundleTotalGrinderOverride > 0) {
                           const effectiveGrinder = bundleTotalGrinderOverride;
                           grinderPayout = effectiveGrinder;
-                          const maxCreator = Math.max(0, customerPrice - grinderPayout);
+                          const maxCreator = Math.max(0, payoutBaseQuote - grinderPayout);
                           creatorCommission = Math.min(creatorTotal, maxCreator);
-                          companyPayout = Math.max(0, customerPrice - grinderPayout - creatorCommission);
-                          companyPct = companyPayout / customerPrice;
-                          grinderPct = grinderPayout / customerPrice;
-                          creatorPct = creatorCommission / customerPrice;
+                          companyPayout = Math.max(0, payoutBaseQuote - grinderPayout - creatorCommission);
+                          companyPct = companyPayout / payoutBaseQuote;
+                          grinderPct = grinderPayout / payoutBaseQuote;
+                          creatorPct = creatorCommission / payoutBaseQuote;
                         } else {
-                          grinderPayout = customerPrice * defaultGrinderPct;
-                          const companyGross = customerPrice * defaultCompanyPct;
-                          const creatorRate = (creatorCode && (creatorDiscountPercentForCode ?? 0) > 0) ? (creatorDiscountPercentForCode ?? 0) : 0;
+                          grinderPayout = payoutBaseQuote * defaultGrinderPct;
+                          const companyGross = payoutBaseQuote * defaultCompanyPct;
                           creatorCommission = companyGross * creatorRate;
                           companyPayout = Math.max(0, companyGross - creatorCommission);
-                          creatorPct = customerPrice > 0 ? creatorCommission / customerPrice : 0;
-                          companyPct = companyPayout / customerPrice;
-                          grinderPct = grinderPayout / customerPrice;
+                          creatorPct = payoutBaseQuote > 0 ? creatorCommission / payoutBaseQuote : 0;
+                          companyPct = companyPayout / payoutBaseQuote;
+                          grinderPct = grinderPayout / payoutBaseQuote;
                         }
                       } else {
                         companyPayout = companyFromCalc;
                         grinderPayout = grinderTotal;
                         creatorCommission = creatorTotal;
-                        companyPct = customerPrice > 0 ? companyFromCalc / customerPrice : 0;
-                        grinderPct = customerPrice > 0 ? grinderTotal / customerPrice : 0;
-                        creatorPct = customerPrice > 0 ? creatorTotal / customerPrice : 0;
+                        companyPct = payoutBaseQuote > 0 ? companyFromCalc / payoutBaseQuote : 0;
+                        grinderPct = payoutBaseQuote > 0 ? grinderTotal / payoutBaseQuote : 0;
+                        creatorPct = payoutBaseQuote > 0 ? creatorTotal / payoutBaseQuote : 0;
                       }
                       const profitMarginFromPct: "GREEN" | "YELLOW" | "RED" | null =
-                        customerPrice > 0
+                        payoutBaseQuote > 0
                           ? companyPct < 0.3
                             ? "RED"
                             : companyPct < 0.4
                               ? "YELLOW"
                               : "GREEN"
-                          : (results.profitMargin === "RED" || badgeResults.profitMargin === "RED")
+                          : (results?.profitMargin === "RED" || badgeResults?.profitMargin === "RED")
                             ? "RED"
-                            : (results.profitMargin === "YELLOW" || badgeResults.profitMargin === "YELLOW")
+                            : (results?.profitMargin === "YELLOW" || badgeResults?.profitMargin === "YELLOW")
                               ? "YELLOW"
-                              : results.profitMargin ?? badgeResults.profitMargin;
+                              : results?.profitMargin ?? badgeResults?.profitMargin ?? null;
                       return {
                         companyPayout,
                         grinderPayout,
@@ -2603,26 +3280,34 @@ Estimated timeframe: ${bundleTimeframe}
                         companyPct,
                         grinderPct,
                         creatorPct,
-                        grinderBidAboveDefault: results.grinderBidAboveDefault || badgeResults.grinderBidAboveDefault,
+                        grinderBidAboveDefault: (results?.grinderBidAboveDefault ?? false) || (badgeResults?.grinderBidAboveDefault ?? false),
                         profitMargin: profitMarginFromPct,
                       };
                     })()
-                  : (quoteGeneratorTab === "rep" ? results : badgeResults)!;
+                  : quoteGeneratorTab === "hotzones"
+                    ? buildPayoutFromQuote(payoutBaseQuote, Number(grinderBid) || 0)
+                  : quoteGeneratorTab === "rep" || quoteGeneratorTab === "badge"
+                    ? buildPayoutFromQuote(payoutBaseQuote, Number(grinderBid) || 0)
+                    : (quoteGeneratorTab === "rep" ? results : badgeResults)!;
                 const chosenNum = Number(chosenFinalQuote) || 0;
                 const grinderNum = Number(grinderBid) || 0;
                 const bundleRepCustom = quoteGeneratorTab === "bundle" && (Number(bundleCustomRepQuote) || 0) > 0;
                 const bundleBadgeCustom = quoteGeneratorTab === "bundle" && (Number(bundleCustomBadgeQuote) || 0) > 0;
+                const bundleHotZonesCustom = quoteGeneratorTab === "bundle" && bundleSelectedServices.includes("hotzones") && (Number(bundleCustomHotZonesQuote) || 0) > 0;
                 const bundleRepGrinderCustom = quoteGeneratorTab === "bundle" && (Number(bundleCustomRepGrinder) || 0) > 0;
                 const bundleBadgeGrinderCustom = quoteGeneratorTab === "bundle" && (Number(bundleCustomBadgeGrinder) || 0) > 0;
+                const bundleHotZonesGrinderCustom = quoteGeneratorTab === "bundle" && bundleSelectedServices.includes("hotzones") && (Number(bundleCustomHotZonesGrinder) || 0) > 0;
                 const bundleTotalGrinderCustom = quoteGeneratorTab === "bundle" && bundleTotalGrinderOverride > 0;
-                const hasOverride = chosenNum > 0 || grinderNum > 0 || bundleRepCustom || bundleBadgeCustom || bundleRepGrinderCustom || bundleBadgeGrinderCustom || bundleTotalGrinderCustom;
+                const hasOverride = chosenNum > 0 || grinderNum > 0 || bundleRepCustom || bundleBadgeCustom || bundleHotZonesCustom || bundleRepGrinderCustom || bundleBadgeGrinderCustom || bundleHotZonesGrinderCustom || bundleTotalGrinderCustom;
                 const overrideParts = [
                   chosenNum > 0 ? (quoteGeneratorTab === "bundle" ? `Custom Total ($${formatUSD(chosenNum)})` : `Custom Quote ($${formatUSD(chosenNum)})`) : null,
                   bundleTotalGrinderCustom ? `Custom Grinder Payout ($${formatUSD(bundleTotalGrinderOverride)})` : null,
                   bundleRepCustom ? `Custom Rep ($${formatUSD(Number(bundleCustomRepQuote))})` : null,
                   bundleBadgeCustom ? `Custom Badge ($${formatUSD(Number(bundleCustomBadgeQuote))})` : null,
+                  bundleHotZonesCustom ? `Custom Hot Zones ($${formatUSD(Number(bundleCustomHotZonesQuote))})` : null,
                   bundleRepGrinderCustom ? `Rep Grinder ($${formatUSD(Number(bundleCustomRepGrinder))})` : null,
                   bundleBadgeGrinderCustom ? `Badge Grinder ($${formatUSD(Number(bundleCustomBadgeGrinder))})` : null,
+                  bundleHotZonesGrinderCustom ? `Hot Zones Grinder ($${formatUSD(Number(bundleCustomHotZonesGrinder))})` : null,
                   grinderNum > 0 && quoteGeneratorTab !== "bundle" ? `Grinder Payout ($${formatUSD(grinderNum)})` : null,
                 ].filter(Boolean);
                 const allFourBundle = quoteGeneratorTab === "bundle" && bundleRepCustom && bundleBadgeCustom && bundleRepGrinderCustom && bundleBadgeGrinderCustom && !chosenNum;
@@ -2915,11 +3600,32 @@ Estimated timeframe: ${bundleTimeframe}
                         </div>
                       )}
                     </>
-                  ) : quoteGeneratorTab === "bundle" && results && badgeResults ? (
+                  ) : quoteGeneratorTab === "hotzones" ? (
                     <>
                       <div className="flex flex-wrap items-baseline gap-4">
-                        <p className="text-2xl font-bold text-cyan-400">{results.minDays + badgeResults.minDays}–{results.maxDays + badgeResults.maxDays} days</p>
-                        <p className="text-sm text-muted-foreground">Rep: {results.timeframeText} + Badges: {badgeResults.timeframeText}</p>
+                        <p className="text-2xl font-bold text-cyan-400">{hotZonesTimeframeText}</p>
+                        <p className="text-sm text-muted-foreground">{hotZonesMinDays}–{hotZonesMaxDays} days (base) · urgency applied</p>
+                      </div>
+                    </>
+                  ) : quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults) ? (
+                    <>
+                      <div className="flex flex-wrap items-baseline gap-4">
+                        <p className="text-2xl font-bold text-cyan-400">
+                          {(() => {
+                            const parts: string[] = [];
+                            if (bundleSelectedServices.includes("rep") && results) parts.push(`Rep: ${results.timeframeText}`);
+                            if (bundleSelectedServices.includes("badge") && badgeResults) parts.push(`Badges: ${badgeResults.timeframeText}`);
+                            if (bundleSelectedServices.includes("hotzones")) parts.push(`Hot Zones: ${hotZonesTimeframeText}`);
+                            return parts.join(" · ");
+                          })()}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {bundleSelectedServices.includes("rep") && results && `Rep: ${results.timeframeText}`}
+                          {bundleSelectedServices.includes("rep") && results && bundleSelectedServices.includes("badge") && " · "}
+                          {bundleSelectedServices.includes("badge") && badgeResults && `Badges: ${badgeResults.timeframeText}`}
+                          {(bundleSelectedServices.includes("rep") || bundleSelectedServices.includes("badge")) && bundleSelectedServices.includes("hotzones") && " · "}
+                          {bundleSelectedServices.includes("hotzones") && `Hot Zones: ${hotZonesTimeframeText}`}
+                        </p>
                       </div>
                       <button type="button" onClick={() => setShowDetails((d) => !d)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
                         <ChevronDown className={cn("w-4 h-4 transition-transform", showDetails && "rotate-180")} />
@@ -2930,20 +3636,33 @@ Estimated timeframe: ${bundleTimeframe}
                           {(Number(chosenFinalQuote) || 0) > 0 && (
                             <p className="text-[11px] text-muted-foreground">Custom Total overrides the calculated sum below.</p>
                           )}
-                          <div>
-                            <p className="font-medium text-white/80 text-xs mb-2">
-                              REP: ${((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : results.recommendedQuote).toLocaleString()} — {results.timeframeText}
-                              {(Number(chosenFinalQuote) || 0) > 0 && <span className="text-muted-foreground font-normal ml-1">(calculated)</span>}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground">{startTier} {startLvl} → {targetTier} {targetLvl}</p>
-                          </div>
-                          <div>
-                            <p className="font-medium text-white/80 text-xs mb-2">
-                              BADGES: ${((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : badgeResults.recommendedQuote).toLocaleString()} — {badgeResults.timeframeText}
-                              {(Number(chosenFinalQuote) || 0) > 0 && <span className="text-muted-foreground font-normal ml-1">(calculated)</span>}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground">{badgeResults.badgeBreakdown.length} badge(s) · {myPlayerType}</p>
-                          </div>
+                          {bundleSelectedServices.includes("rep") && results && (
+                            <div>
+                              <p className="font-medium text-white/80 text-xs mb-2">
+                                REP: ${((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : results.recommendedQuote).toLocaleString()} — {results.timeframeText}
+                                {(Number(chosenFinalQuote) || 0) > 0 && <span className="text-muted-foreground font-normal ml-1">(calculated)</span>}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">{startTier} {startLvl} → {targetTier} {targetLvl}</p>
+                            </div>
+                          )}
+                          {bundleSelectedServices.includes("badge") && badgeResults && (
+                            <div>
+                              <p className="font-medium text-white/80 text-xs mb-2">
+                                BADGES: ${((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : badgeResults.recommendedQuote).toLocaleString()} — {badgeResults.timeframeText}
+                                {(Number(chosenFinalQuote) || 0) > 0 && <span className="text-muted-foreground font-normal ml-1">(calculated)</span>}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">{badgeResults.badgeBreakdown.length} badge(s) · {myPlayerType}</p>
+                            </div>
+                          )}
+                          {bundleSelectedServices.includes("hotzones") && (
+                            <div>
+                              <p className="font-medium text-white/80 text-xs mb-2">
+                                HOT ZONES: ${((Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice).toLocaleString()} — {hotZonesTimeframeText}
+                                {(Number(chosenFinalQuote) || 0) > 0 && <span className="text-muted-foreground font-normal ml-1">(calculated)</span>}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">{hotZoneIds.length} zone{hotZoneIds.length !== 1 ? "s" : ""} selected</p>
+                            </div>
+                          )}
                           <p className="text-xs font-medium">
                             Total: ${(customerPrice).toLocaleString()}
                             {(Number(chosenFinalQuote) || 0) > 0 && <span className="text-muted-foreground ml-1">(Custom Total)</span>}
@@ -3009,23 +3728,48 @@ Estimated timeframe: ${bundleTimeframe}
                     {quoteGeneratorTab === "rep" && results ? (
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { id: "market" as const, label: "Market", value: results.marketQuote, disabled: false },
-                        { id: "ai" as const, label: "AI", value: results.aiSuggestedQuote, disabled: false },
+                        ...((quoteSource === "budget" || repBudgetSuggestionApplied)
+                          ? [
+                              { id: "market" as const, label: "Market", disabled: false },
+                              { id: "ai" as const, label: "AI", disabled: false },
+                            ]
+                          : [
+                              {
+                                id: "recommended" as const,
+                                label: `Recommended${results.recommendedQuote === results.marketQuote ? " (Market)" : results.recommendedQuote === results.aiSuggestedQuote ? " (AI)" : ""}`,
+                                disabled: false,
+                              },
+                              ...(results.recommendedQuote === results.marketQuote
+                                ? []
+                                : [{ id: "market" as const, label: "Market", disabled: false }]),
+                              ...(results.recommendedQuote === results.aiSuggestedQuote
+                                ? []
+                                : [{ id: "ai" as const, label: "AI", disabled: false }]),
+                            ]),
+                        {
+                          id: "budget" as const,
+                          label: repBudgetSuggestion ? `Budget: $${formatUSD(repBudgetSuggestion.budget)}` : "Budget: Enter amount above",
+                          disabled: !repBudgetSuggestion,
+                        },
                         {
                           id: "custom" as const,
                           label: Number(chosenFinalQuote) > 0 ? `Custom: $${formatUSD(Number(chosenFinalQuote))}` : "Custom: Enter at Custom Quote ($)",
-                          value: Number(chosenFinalQuote) || results.recommendedQuote,
                           disabled: !chosenFinalQuote || Number(chosenFinalQuote) <= 0,
                         },
                       ].map(({ id, label, disabled }) => {
                         const selected = quoteSource === id;
                         const btnClasses = cn(
                           "px-4 py-3 min-h-11 rounded-lg text-sm font-medium border transition-colors touch-manipulation",
+                          selected && id === "recommended" && "bg-primary/20 text-white border-primary/40",
                           selected && id === "market" && "bg-pink-500/20 text-white border-pink-500/40",
                           selected && id === "ai" && "bg-blue-500/20 text-white border-blue-500/40",
+                          selected && id === "budget" && "bg-emerald-500/20 text-white border-emerald-500/40",
                           selected && id === "custom" && "bg-white/10 text-white border-white/20",
                           !selected && disabled && "bg-white/[0.02] border-white/5 text-muted-foreground/50 cursor-not-allowed",
-                          !selected && !disabled && "bg-white/[0.04] border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground"
+                          !selected && !disabled && id === "market" && "bg-white/[0.04] border-pink-500/20 text-pink-300 hover:bg-pink-500/10 hover:border-pink-500/35 hover:text-white",
+                          !selected && !disabled && id === "ai" && "bg-white/[0.04] border-blue-500/20 text-blue-300 hover:bg-blue-500/10 hover:border-blue-500/35 hover:text-white",
+                          !selected && !disabled && id === "budget" && "bg-white/[0.04] border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/35 hover:text-white",
+                          !selected && !disabled && !["market", "ai", "budget"].includes(id) && "bg-white/[0.04] border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground"
                         );
                         return (
                           <button
@@ -3040,48 +3784,64 @@ Estimated timeframe: ${bundleTimeframe}
                         );
                       })}
                     </div>
-                    ) : quoteGeneratorTab === "bundle" && results && badgeResults ? (
+                    ) : quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults) ? (
                       <p className="text-sm text-muted-foreground">
                         {(Number(chosenFinalQuote) || 0) > 0
                           ? `Total: ${formatUSD(customerPrice)} (Custom Total)`
-                          : `Total: ${formatUSD(customerPrice)} (Rep ${formatUSD((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : results.recommendedQuote)} + Badge ${formatUSD((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : badgeResults.recommendedQuote)})`
+                          : `Total: ${formatUSD(customerPrice)} (${[
+                              bundleSelectedServices.includes("rep") && `Rep ${formatUSD((Number(bundleCustomRepQuote) || 0) > 0 ? Number(bundleCustomRepQuote) : (results?.recommendedQuote ?? 0))}`,
+                              bundleSelectedServices.includes("badge") && `Badge ${formatUSD((Number(bundleCustomBadgeQuote) || 0) > 0 ? Number(bundleCustomBadgeQuote) : (badgeResults?.recommendedQuote ?? 0))}`,
+                              bundleSelectedServices.includes("hotzones") && `Hot Zones ${formatUSD((Number(bundleCustomHotZonesQuote) || 0) > 0 ? Number(bundleCustomHotZonesQuote) : bundleHotZonesPrice)}`,
+                            ].filter(Boolean).join(" + ")})`
                         }
+                      </p>
+                    ) : quoteGeneratorTab === "hotzones" ? (
+                      <p className="text-sm text-muted-foreground">
+                        Total: ${formatUSD(customerPrice)}
+                        {(Number(chosenFinalQuote) || 0) > 0 ? " (Custom)" : ` (${hotZoneIds.length} zone${hotZoneIds.length !== 1 ? "s" : ""})`}
                       </p>
                     ) : badgeResults ? (
                       <p className="text-sm text-muted-foreground">Quote: ${formatUSD(customerPrice)}</p>
                     ) : null}
                     <p className="text-xs font-medium text-muted-foreground mt-2">Discord preview:</p>
                     <pre className="text-[11px] text-muted-foreground bg-black/20 rounded-lg p-3 mt-1 overflow-x-auto overflow-y-auto max-h-40 sm:max-h-none whitespace-pre-wrap break-words font-mono border border-white/5">
-                      {quoteGeneratorTab === "bundle" && results && badgeResults
-                        ? `**📋 Bundle Quote (Rep + Badge)**
-*Customer:* ${customerIdentifier.trim() || "—"}
-
-**Rep:** ${startTier} ${startLvl} → ${targetTier} ${targetLvl}
-**Badges:** ${formatBadgeRouteForDiscord(badgeResults.badgeBreakdown).replace(/\*\*/g, "")}
-**MyPlayer Type:** ${myPlayerType}
-**Urgency:** ${URGENCY_LABELS[urgency] ?? urgency}${creatorCode ? ` | **Creator:** ${creatorCode}` : ""}
-
-\`\`\`
-Your quote:  $${customerPrice.toLocaleString()}
-Estimated timeframe: ${results.minDays + badgeResults.minDays}–${results.maxDays + badgeResults.maxDays} days
-\`\`\``
-                        : buildQuoteDiscordMessage({
+                      {quoteGeneratorTab === "hotzones"
+                        ? buildQuoteDiscordMessage({
                             customerPrice,
-                            estimatedTimeframe: quoteGeneratorTab === "rep" && results ? results.estimatedTimeframe : (badgeResults?.timeframeText ?? ""),
-                            timeframeText: (quoteGeneratorTab === "rep" ? results : badgeResults)!.timeframeText,
+                            estimatedTimeframe: hotZonesTimeframeText,
                             customerIdentifier: customerIdentifier.trim() || undefined,
-                            route: quoteGeneratorTab === "rep" ? `${startTier} ${startLvl} → ${targetTier} ${targetLvl}` : (() => { const bb = badgeResults?.badgeBreakdown ?? []; return `${bb.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(bb)}`; })(),
-                            serviceLabel: quoteGeneratorTab === "badge" ? "Badge Grinding Quote" : undefined,
+                            route: `Hot Zones — ${hotZoneIds.length} zone${hotZoneIds.length !== 1 ? "s" : ""}`,
+                            serviceLabel: "Hot Zones Quote",
                             urgency,
                             creatorCode: creatorCode || undefined,
-                            myPlayerType: quoteGeneratorTab === "badge" ? myPlayerType : undefined,
-                            startTier: quoteGeneratorTab === "rep" ? startTier : undefined,
-                            startLvl: quoteGeneratorTab === "rep" ? startLvl : undefined,
-                            startPct: quoteGeneratorTab === "rep" ? (startPct ?? 0) : undefined,
-                            targetTier: quoteGeneratorTab === "rep" ? targetTier : undefined,
-                            targetLvl: quoteGeneratorTab === "rep" ? targetLvl : undefined,
-                            targetPct: quoteGeneratorTab === "rep" ? (targetPct ?? 0) : undefined,
-                            ...(((quoteGeneratorTab === "rep" ? results : badgeResults)!.discountUsed ?? 0) > 0 && { discountPercent: ((quoteGeneratorTab === "rep" ? results : badgeResults)!.discountUsed ?? 0) * 100 }),
+                            ...(discountPct > 0 && { discountPercent: discountPct }),
+                          })
+                        : quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults)
+                        ? (() => {
+                            const routeParts: string[] = [];
+                            if (bundleSelectedServices.includes("rep") && results) routeParts.push("**Rep:** " + startTier + " " + startLvl + " → " + targetTier + " " + targetLvl);
+                            if (bundleSelectedServices.includes("badge") && badgeResults) routeParts.push("**Badges:** " + formatBadgeRouteForDiscord(badgeResults.badgeBreakdown).replace(/\*\*/g, ""));
+                            if (bundleSelectedServices.includes("hotzones")) routeParts.push("**Hot Zones:** " + hotZoneIds.length + " zone" + (hotZoneIds.length !== 1 ? "s" : ""));
+                            const tfParts: string[] = [];
+                            if (bundleSelectedServices.includes("rep") && results) tfParts.push("Rep: " + results.timeframeText);
+                            if (bundleSelectedServices.includes("badge") && badgeResults) tfParts.push("Badges: " + badgeResults.timeframeText);
+                            if (bundleSelectedServices.includes("hotzones")) tfParts.push("Hot Zones: " + hotZonesTimeframeText);
+                            const bundleTf = tfParts.join(" · ");
+                            return "**📋 Bundle Quote**\n*Customer:* " + (customerIdentifier.trim() || "—") + "\n\n" + routeParts.join("\n") + "\n" + (bundleSelectedServices.some((s) => s === "rep" || s === "badge") ? "**MyPlayer Type:** " + myPlayerType + "\n" : "") + "**Urgency:** " + (URGENCY_LABELS[urgency] ?? urgency) + (creatorCode ? " | **Creator:** " + creatorCode : "") + "\n\n```\nYour quote:  $" + customerPrice.toLocaleString() + "\nEstimated timeframe: " + bundleTf + "\n```";
+                          })()
+                        : quoteGeneratorTab === "rep" && repDiscordMessage
+                        ? repDiscordMessage
+                        : buildQuoteDiscordMessage({
+                            customerPrice,
+                            estimatedTimeframe: badgeResults?.timeframeText ?? "",
+                            timeframeText: badgeResults!.timeframeText,
+                            customerIdentifier: customerIdentifier.trim() || undefined,
+                            route: (() => { const bb = badgeResults?.badgeBreakdown ?? []; return `${bb.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(bb)}`; })(),
+                            serviceLabel: "Badge Grinding Quote",
+                            urgency,
+                            creatorCode: creatorCode || undefined,
+                            myPlayerType,
+                            ...((badgeResults!.discountUsed ?? 0) > 0 && { discountPercent: (badgeResults!.discountUsed ?? 0) * 100 }),
                           })}
                     </pre>
                   </div>
@@ -3091,36 +3851,42 @@ Estimated timeframe: ${results.minDays + badgeResults.minDays}–${results.maxDa
                       variant="outline"
                       className="border-white/10 min-h-11 w-full sm:w-auto touch-manipulation"
                       onClick={() => {
-                        const msg = quoteGeneratorTab === "bundle" && results && badgeResults
-                          ? `**📋 Bundle Quote (Rep + Badge)**
-*Customer:* ${customerIdentifier.trim() || "—"}
-
-**Rep:** ${startTier} ${startLvl} → ${targetTier} ${targetLvl}
-**Badges:** ${formatBadgeRouteForDiscord(badgeResults.badgeBreakdown).replace(/\*\*/g, "")}
-**MyPlayer Type:** ${myPlayerType}
-**Urgency:** ${URGENCY_LABELS[urgency] ?? urgency}${creatorCode ? ` | **Creator:** ${creatorCode}` : ""}
-
-\`\`\`
-Your quote:  $${customerPrice.toLocaleString()}
-Estimated timeframe: ${results.minDays + badgeResults.minDays}–${results.maxDays + badgeResults.maxDays} days
-\`\`\``
+                        const msg = quoteGeneratorTab === "hotzones"
+                          ? buildQuoteDiscordMessage({
+                              customerPrice,
+                              estimatedTimeframe: hotZonesTimeframeText,
+                              customerIdentifier: customerIdentifier.trim() || undefined,
+                              route: `Hot Zones — ${hotZoneIds.length} zone${hotZoneIds.length !== 1 ? "s" : ""}`,
+                              serviceLabel: "Hot Zones Quote",
+                              urgency,
+                              creatorCode: creatorCode || undefined,
+                              ...(discountPct > 0 && { discountPercent: discountPct }),
+                            })
+                          : quoteGeneratorTab === "bundle" && bundleSelectedServices.length > 0 && (!bundleSelectedServices.includes("rep") || results) && (!bundleSelectedServices.includes("badge") || badgeResults)
+                          ? (() => {
+                              const routeParts: string[] = [];
+                              if (bundleSelectedServices.includes("rep") && results) routeParts.push("**Rep:** " + startTier + " " + startLvl + " → " + targetTier + " " + targetLvl);
+                              if (bundleSelectedServices.includes("badge") && badgeResults) routeParts.push("**Badges:** " + formatBadgeRouteForDiscord(badgeResults.badgeBreakdown).replace(/\*\*/g, ""));
+                              if (bundleSelectedServices.includes("hotzones")) routeParts.push("**Hot Zones:** " + hotZoneIds.length + " zone" + (hotZoneIds.length !== 1 ? "s" : ""));
+                              const tfParts: string[] = [];
+                              if (bundleSelectedServices.includes("rep") && results) tfParts.push("Rep: " + results.timeframeText);
+                              if (bundleSelectedServices.includes("badge") && badgeResults) tfParts.push("Badges: " + badgeResults.timeframeText);
+                              if (bundleSelectedServices.includes("hotzones")) tfParts.push("Hot Zones: " + hotZonesTimeframeText);
+                              return "**📋 Bundle Quote**\n*Customer:* " + (customerIdentifier.trim() || "—") + "\n\n" + routeParts.join("\n") + "\n" + (bundleSelectedServices.some((s) => s === "rep" || s === "badge") ? "**MyPlayer Type:** " + myPlayerType + "\n" : "") + "**Urgency:** " + (URGENCY_LABELS[urgency] ?? urgency) + (creatorCode ? " | **Creator:** " + creatorCode : "") + "\n\n```\nYour quote:  $" + customerPrice.toLocaleString() + "\nEstimated timeframe: " + tfParts.join(" · ") + "\n```";
+                            })()
+                          : quoteGeneratorTab === "rep" && repDiscordMessage
+                          ? repDiscordMessage
                           : buildQuoteDiscordMessage({
                             customerPrice,
-                            estimatedTimeframe: quoteGeneratorTab === "rep" && results ? results.estimatedTimeframe : (badgeResults?.timeframeText ?? ""),
-                            timeframeText: (quoteGeneratorTab === "rep" ? results : badgeResults)!.timeframeText,
+                            estimatedTimeframe: badgeResults?.timeframeText ?? "",
+                            timeframeText: badgeResults!.timeframeText,
                             customerIdentifier: customerIdentifier.trim() || undefined,
-                            route: quoteGeneratorTab === "rep" ? `${startTier} ${startLvl} → ${targetTier} ${targetLvl}` : (() => { const bb = badgeResults?.badgeBreakdown ?? []; return `${bb.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(bb)}`; })(),
-                            serviceLabel: quoteGeneratorTab === "badge" ? "Badge Grinding Quote" : undefined,
+                            route: (() => { const bb = badgeResults?.badgeBreakdown ?? []; return `${bb.length === 1 ? "**Badge** — " : "**Badges** — "}${formatBadgeRouteForDiscord(bb)}`; })(),
+                            serviceLabel: "Badge Grinding Quote",
                             urgency,
                             creatorCode: creatorCode || undefined,
-                            myPlayerType: quoteGeneratorTab === "badge" ? myPlayerType : undefined,
-                            startTier: quoteGeneratorTab === "rep" ? startTier : undefined,
-                            startLvl: quoteGeneratorTab === "rep" ? startLvl : undefined,
-                            startPct: quoteGeneratorTab === "rep" ? (startPct ?? 0) : undefined,
-                            targetTier: quoteGeneratorTab === "rep" ? targetTier : undefined,
-                            targetLvl: quoteGeneratorTab === "rep" ? targetLvl : undefined,
-                            targetPct: quoteGeneratorTab === "rep" ? (targetPct ?? 0) : undefined,
-                            ...(((quoteGeneratorTab === "rep" ? results : badgeResults)!.discountUsed ?? 0) > 0 && { discountPercent: ((quoteGeneratorTab === "rep" ? results : badgeResults)!.discountUsed ?? 0) * 100 }),
+                            myPlayerType,
+                            ...((badgeResults!.discountUsed ?? 0) > 0 && { discountPercent: (badgeResults!.discountUsed ?? 0) * 100 }),
                           });
                         copyToClipboard(msg).then((ok) => {
                           if (ok) {
@@ -3194,7 +3960,7 @@ Estimated timeframe: ${results.minDays + badgeResults.minDays}–${results.maxDa
                     <div className="relative flex-1 min-w-0">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                       <Input
-                        placeholder={quoteGeneratorTab === "rep" ? "Search rep quotes…" : quoteGeneratorTab === "badge" ? "Search badge quotes…" : "Search bundle quotes…"}
+                        placeholder={quoteGeneratorTab === "rep" ? "Search rep quotes…" : quoteGeneratorTab === "badge" ? "Search badge quotes…" : quoteGeneratorTab === "hotzones" ? "Search hot zone quotes…" : "Search bundle quotes…"}
                         value={quoteFilter}
                         onChange={(e) => setQuoteFilter(e.target.value)}
                         className="pl-9 h-11 min-h-11 sm:h-9 bg-white/[0.04] border-white/10"
@@ -3211,7 +3977,7 @@ Estimated timeframe: ${results.minDays + badgeResults.minDays}–${results.maxDa
                     </Button>
                   </div>
                   {showFilters && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06] overflow-x-auto">
+                    <div className="flex flex-wrap gap-x-3 gap-y-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
                       {/* Common filters */}
                       <div className="space-y-1 col-span-2 sm:col-span-1">
                         <Label className="text-[10px]">Date</Label>

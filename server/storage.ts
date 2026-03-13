@@ -1840,11 +1840,19 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage: IStorage =
-  !process.env.DATABASE_URL && process.env.NODE_ENV !== "production"
-    ? new DevStorage()
-    : new DatabaseStorage();
+const useDevStorage = (() => {
+  if (process.env.NODE_ENV === "production") return false;
+  const databaseUrl = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || "";
+  return (
+    !databaseUrl ||
+    databaseUrl.includes("localhost:5432") ||
+    databaseUrl.includes("127.0.0.1:5432") ||
+    databaseUrl.includes("[::1]:5432")
+  );
+})();
+
+export const storage: IStorage = useDevStorage ? new DevStorage() : new DatabaseStorage();
 
 if (storage instanceof DevStorage) {
-  console.log("[storage] Using DevStorage (no DATABASE_URL)");
+  console.log("[storage] Using DevStorage in development");
 }

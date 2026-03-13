@@ -5,7 +5,16 @@ import { storage } from "../storage";
 import { orders, bids, grinders } from "@shared/schema";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
 
-const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+const isDevNoDb = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  const databaseUrl = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || "";
+  return (
+    !databaseUrl ||
+    databaseUrl.includes("localhost:5432") ||
+    databaseUrl.includes("127.0.0.1:5432") ||
+    databaseUrl.includes("[::1]:5432")
+  );
+};
 
 const BID_WAR_CHANNEL_ID = "1467912681670447140";
 const GRINDERS_ROLE_ID = "1466369179648004224";

@@ -119,11 +119,16 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isDbConnectionRefused(error: unknown): boolean {
+  const err = error as { code?: string; errors?: Array<{ code?: string }> } | undefined;
+  return err?.code === "ECONNREFUSED" || err?.errors?.some((item) => item?.code === "ECONNREFUSED") === true;
+}
+
 async function initializeBackgroundServices() {
   logMemory("before background services");
 
   try {
-    const { ensureCreatorPayoutDetailRequestsTable, ensureQuoteGeneratorSplitColumns, ensureCreatorCommissionPercentColumn, ensureCreatorQuoteDiscountPercentColumn, ensureQuotesLastEditedColumns, ensureRepQuoteSettingsColumn, ensureBadgeQuoteSettingsColumn, ensureMyPlayerTypeSettingsColumn, ensureBundleQuoteSettingsColumn, ensureAllowedAccessRolesColumn } = await import("./ensure-tables");
+    const { ensureCreatorPayoutDetailRequestsTable, ensureQuoteGeneratorSplitColumns, ensureCreatorCommissionPercentColumn, ensureCreatorQuoteDiscountPercentColumn, ensureQuotesLastEditedColumns, ensureRepQuoteSettingsColumn, ensureBadgeQuoteSettingsColumn, ensureMyPlayerTypeSettingsColumn, ensureBundleQuoteSettingsColumn, ensureHotZonesQuoteSettingsColumn, ensureAllowedAccessRolesColumn } = await import("./ensure-tables");
     await ensureCreatorPayoutDetailRequestsTable();
     await ensureQuoteGeneratorSplitColumns();
     await ensureCreatorCommissionPercentColumn();
@@ -133,9 +138,14 @@ async function initializeBackgroundServices() {
     await ensureBadgeQuoteSettingsColumn();
     await ensureMyPlayerTypeSettingsColumn();
     await ensureBundleQuoteSettingsColumn();
+    await ensureHotZonesQuoteSettingsColumn();
     await ensureAllowedAccessRolesColumn();
   } catch (e) {
-    console.error("Failed to ensure tables:", e);
+    if (process.env.NODE_ENV !== "production" && isDbConnectionRefused(e)) {
+      log("Database unavailable in development; skipping ensure-tables", "system");
+    } else {
+      console.error("Failed to ensure tables:", e);
+    }
   }
 
   try {
@@ -143,7 +153,11 @@ async function initializeBackgroundServices() {
     await seedDatabase();
     log("Database seeded successfully");
   } catch (error) {
-    console.error("Failed to seed database:", error);
+    if (process.env.NODE_ENV !== "production" && isDbConnectionRefused(error)) {
+      log("Database unavailable in development; skipping database seed", "system");
+    } else {
+      console.error("Failed to seed database:", error);
+    }
   }
 
   try {
@@ -173,7 +187,11 @@ async function initializeBackgroundServices() {
       }
     }
   } catch (e) {
-    console.error("[cleanup] Error during duplicate user cleanup:", e);
+    if (process.env.NODE_ENV !== "production" && isDbConnectionRefused(e)) {
+      log("Database unavailable in development; skipping duplicate-user cleanup", "system");
+    } else {
+      console.error("[cleanup] Error during duplicate user cleanup:", e);
+    }
   }
 
   logMemory("after database seed");

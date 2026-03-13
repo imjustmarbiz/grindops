@@ -190,14 +190,20 @@ function AppSidebar() {
   const avatarUrl = grinderProfile?.grinder?.discordAvatarUrl || user?.profileImageUrl || (isCustomer ? user?.profileImageUrl : undefined) || undefined;
 
   return (
-    <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-xl">
+    <Sidebar
+      className={`border-r backdrop-blur-xl ${
+        isCustomer
+          ? "border-black/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01)),linear-gradient(180deg,rgba(236,72,153,0.08),rgba(0,0,0,0))] text-white"
+          : "border-border/50 bg-card/50"
+      }`}
+    >
       <SidebarContent>
         <div className="p-4 sm:p-5 flex items-center shrink-0 pt-4 sm:pt-5 pb-2 sm:pb-3">
           <GrindOpsLogo className="h-[3.78rem] w-auto max-w-full sm:h-[4.32rem] text-sidebar-foreground" />
         </div>
         
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground font-medium">
+          <SidebarGroupLabel className={`font-medium ${isCustomer ? "text-white/38" : "text-muted-foreground"}`}>
             {isStaff ? "Management" : isCreator ? "Creator Dashboard" : isCustomer ? "Customer Dashboard" : "Navigation"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -219,10 +225,12 @@ function AppSidebar() {
                         href={item.url} 
                         data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                         data-nav-url={item.url}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 ${
                           isActive 
-                            ? (isCreator ? "bg-primary/20 text-primary font-medium" : isCustomer ? "bg-pink-500/20 text-pink-400 font-medium" : "font-medium")
-                            : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
+                            ? (isCreator ? "bg-primary/20 text-primary font-medium" : isCustomer ? "border border-pink-500/30 bg-pink-500/18 text-pink-200 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_0_30px_rgba(236,72,153,0.08)]" : "font-medium")
+                            : isCustomer
+                              ? "border border-transparent text-white/65 hover:border-pink-500/18 hover:bg-pink-500/[0.08] hover:text-white"
+                              : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover-elevate"
                         }`}
                       >
                         <item.icon className="w-5 h-5 shrink-0" />
@@ -244,7 +252,11 @@ function AppSidebar() {
         </SidebarGroup>
 
         <div className="mt-auto p-3 sm:p-4 shrink-0">
-          <div className="p-3.5 rounded-xl bg-[#141414] border border-white/10 flex flex-col gap-3 sm:gap-4">
+          <div
+            className={`flex flex-col gap-3 rounded-xl border p-3.5 sm:gap-4 ${
+              isCustomer ? "border-black/55 bg-[linear-gradient(180deg,rgba(236,72,153,0.09),rgba(255,255,255,0.02))]" : "border-white/10 bg-[#141414]"
+            }`}
+          >
             <div className="flex items-center gap-3">
               <Avatar className={`h-10 w-10 border shrink-0 ${
                 isCustomer ? "border-pink-500/30" : "border-emerald-500/30"
@@ -290,7 +302,7 @@ function AppSidebar() {
               variant="outline" 
               data-testid="button-logout"
               className={`w-full justify-start gap-2 !border-black/40 bg-black/50 text-white transition-all ${
-                isCustomer ? "hover:bg-pink-500 hover:!border-pink-500 hover:text-white" : "hover:bg-primary hover:!border-primary hover:text-primary-foreground"
+                isCustomer ? "hover:bg-pink-500/90 hover:!border-pink-400 hover:text-white" : "hover:bg-primary hover:!border-primary hover:text-primary-foreground"
               }`} 
               onClick={() => logout()}
             >
@@ -310,6 +322,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
   const userId = (user as any)?.discordId || user?.id || "";
   const isStaffOrOwner = user?.role === "owner" || user?.role === "staff";
+  const isCustomer = user?.role === "customer";
   useLoginTracker();
   const { data: grinderProfileForTheme } = useQuery<any>({
     queryKey: ["/api/grinder/me"],
@@ -371,22 +384,38 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-dvh min-h-dvh max-h-dvh w-full bg-background overflow-hidden selection:bg-primary/30 text-foreground">
+      <div
+        className={`flex h-dvh min-h-dvh max-h-dvh w-full overflow-hidden text-foreground ${
+          isCustomer ? "bg-[#050505] selection:bg-pink-500/30" : "bg-background selection:bg-primary/30"
+        }`}
+      >
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+          <div className={`absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full blur-[120px] pointer-events-none ${isCustomer ? "bg-pink-500/12" : "bg-primary/5"}`} />
+          <div className={`absolute bottom-0 right-1/4 h-[440px] w-[440px] rounded-full blur-[110px] pointer-events-none ${isCustomer ? "bg-fuchsia-500/10" : "bg-accent/5"}`} />
           
-          <header className="flex h-14 min-h-[56px] shrink-0 items-center gap-2 border-b border-border/50 px-4 sm:px-5 md:px-6 backdrop-blur-md bg-background/50 relative z-10 pt-safe">
-            <SidebarTrigger className="hover-elevate hover:bg-white/10 p-2 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 touch-manipulation" />
-            <div className="flex flex-1 items-center gap-2 sm:gap-3 md:ml-0 ml-auto justify-end">
+          <header
+            className={`relative z-10 flex h-14 min-h-[56px] shrink-0 items-center gap-2 border-b px-3 pt-safe backdrop-blur-md sm:px-5 md:px-6 ${
+              isCustomer ? "border-black/55 bg-[linear-gradient(180deg,rgba(236,72,153,0.08),rgba(0,0,0,0.2))]" : "border-border/50 bg-background/50"
+            }`}
+          >
+            <SidebarTrigger
+              className={`min-h-[44px] min-w-[44px] shrink-0 rounded-md p-2 transition-colors touch-manipulation ${
+                isCustomer ? "hover:bg-white/[0.05]" : "hover-elevate hover:bg-white/10"
+              }`}
+            />
+            <div className="ml-auto flex flex-1 items-center justify-end gap-1.5 sm:gap-3 md:ml-0">
               {user?.role !== "creator" && <SoundAlertsHelper />}
-              <TutorialTrigger variant="inline" />
+              <div className={isCustomer ? "hidden sm:flex" : "flex"}>
+                <TutorialTrigger variant="inline" />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setChatOpen(true)}
-                className="relative min-w-[44px] min-h-[44px] shrink-0 hover-elevate hover:bg-white/10 touch-manipulation"
+                className={`relative min-h-[44px] min-w-[44px] shrink-0 touch-manipulation ${
+                  isCustomer ? "hover:bg-pink-500/[0.12]" : "hover-elevate hover:bg-white/10"
+                }`}
                 data-testid="button-open-chat"
               >
                 <MessageCircle className="w-5 h-5" />
@@ -399,7 +428,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative min-w-[44px] min-h-[44px] touch-manipulation"
+                className={`relative min-h-[44px] min-w-[44px] touch-manipulation ${
+                  isCustomer ? "hover:bg-pink-500/[0.12]" : ""
+                }`}
                 onClick={() => setLocation(user?.role === "staff" || user?.role === "owner" ? "/notifications" : user?.role === "creator" ? "/creator/notifications" : user?.role === "customer" ? "/customer/notifications" : "/grinder/notifications")}
                 data-testid="button-notifications"
               >
@@ -412,7 +443,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Button>
             </div>
           </header>
-          <main className="flex-1 min-h-0 overflow-auto p-3 sm:p-5 md:p-6 pb-safe relative z-10">
+          <main className="relative z-10 flex-1 min-h-0 overflow-auto p-2.5 pb-safe sm:p-5 md:p-6">
             <div className="max-w-7xl mx-auto w-full min-w-0">
               {children}
             </div>

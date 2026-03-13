@@ -3,7 +3,16 @@ import { orders, bids, assignments, orderUpdates, payoutRequests, strikeLogs, fi
 import { eq, sql, count } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
-const isDevNoDb = () => !process.env.DATABASE_URL && process.env.NODE_ENV !== "production";
+const isDevNoDb = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  const databaseUrl = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || "";
+  return (
+    !databaseUrl ||
+    databaseUrl.includes("localhost:5432") ||
+    databaseUrl.includes("127.0.0.1:5432") ||
+    databaseUrl.includes("[::1]:5432")
+  );
+};
 
 function pad(n: number, width = 2): string {
   return String(n).padStart(width, "0");

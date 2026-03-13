@@ -1,20 +1,24 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Loader2, Package, Search, ArrowRight, UserCircle, PlayCircle, Calendar, Gamepad2,
+  ArrowRight,
+  Calendar,
+  Gamepad2,
+  Loader2,
+  Package,
+  PlayCircle,
+  Search,
+  UserCircle,
 } from "lucide-react";
 import { FaXbox } from "react-icons/fa6";
-import { SiPlaystation, SiSteam, SiNintendoswitch } from "react-icons/si";
+import { SiNintendoswitch, SiPlaystation, SiSteam } from "react-icons/si";
 import { AnimatedPage, FadeInUp } from "@/lib/animations";
 
-const ACCENT_PINK = "text-pink-400";
-const ACCENT_PURPLE = "text-purple-400";
-const GRADIENT = "bg-gradient-to-br from-pink-500/15 via-purple-500/10 to-transparent";
-const BORDER = "border-pink-500/20 border-purple-500/20";
+const PANEL =
+  "relative overflow-hidden rounded-[28px] border border-black/45 bg-[linear-gradient(180deg,rgba(236,72,153,0.08),rgba(255,255,255,0.02)),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.012))] shadow-[0_18px_60px_rgba(0,0,0,0.34)]";
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -84,85 +88,109 @@ export default function CustomerOrders() {
     : orders;
 
   return (
-    <AnimatedPage className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
+    <AnimatedPage className="space-y-4 pb-6 sm:space-y-6 sm:pb-8">
       <FadeInUp>
-        <div className={`relative overflow-hidden rounded-2xl border ${BORDER} p-4 sm:p-6 ${GRADIENT}`}>
-          <div className="absolute top-0 right-0 w-64 h-64 -translate-y-12 translate-x-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 [mask-image:linear-gradient(to_bottom,black_45%,transparent_100%)]" />
-          <div className="relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center border border-pink-500/30">
-                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-pink-400" />
+        <section className={`${PANEL} p-4 sm:p-7 lg:p-8`}>
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-300/40 to-transparent" />
+          <div className="absolute right-0 top-0 hidden h-full w-[42%] bg-gradient-to-l from-pink-500/22 via-fuchsia-500/12 to-transparent sm:block" />
+          <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-pink-300/90">
+                Order Archive
+              </p>
+              <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-pink-400/25 bg-pink-500/12 sm:h-14 sm:w-14">
+                  <Package className="h-6 w-6 text-pink-300 sm:h-7 sm:w-7" />
+                </div>
+                <div>
+                  <h1 className="text-[2rem] font-semibold leading-none tracking-[-0.03em] text-white sm:text-5xl">
+                    My Orders
+                  </h1>
+                  <p className="mt-1 text-sm text-white/58">
+                    A cleaner, more premium view of every order attached to your account.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-3xl font-bold font-display tracking-tight text-white">
-                  My Orders
-                </h1>
-                <p className="text-sm text-white/60 mt-0.5">
-                  Orders linked to your Discord account
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/68 sm:mt-5 sm:text-[15px] sm:leading-7">
+                Search by order number, open any job, and track its current service, assignment, and timeline at a glance.
+              </p>
+            </div>
+
+            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+              <div className="rounded-[22px] border border-black/45 bg-pink-500/[0.12] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Visible Orders</p>
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-white">{filtered.length}</p>
+              </div>
+              <div className="rounded-[22px] border border-black/45 bg-black/20 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Search Ready</p>
+                <p className="mt-3 text-sm leading-6 text-white/66">
+                  Filter instantly by order number or display id.
                 </p>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </FadeInUp>
 
       <FadeInUp>
-        <Card className={`border-0 overflow-hidden relative ${GRADIENT} border ${BORDER} shadow-xl shadow-pink-500/5`}>
-          <div className="absolute top-0 right-0 w-48 h-48 -translate-y-12 translate-x-12 rounded-full bg-gradient-to-br from-pink-500/10 to-purple-500/10 [mask-image:linear-gradient(to_bottom,transparent,black_70%)]" />
-          <CardHeader className="relative pb-2 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center border border-pink-500/30 shadow-inner">
-                <Package className="w-6 h-6 text-pink-400" />
-              </div>
+        <section className={`${PANEL} p-4 sm:p-7`}>
+          <div className="absolute right-0 top-0 hidden h-full w-1/3 bg-gradient-to-l from-pink-500/16 via-fuchsia-500/8 to-transparent md:block" />
+          <div className="relative z-10 border-b border-black/45 pb-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <CardTitle className="text-lg font-bold text-white tracking-tight">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/45">
+                  Order Feed
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
                   Order List
-                </CardTitle>
-                <p className="text-sm text-pink-400/90 mt-0.5">
-                  {filtered.length} order{filtered.length !== 1 ? "s" : ""}
+                </h2>
+                <p className="mt-2 text-sm leading-7 text-white/60">
+                  Open an order to view activity updates, grinder assignments, and completion progress.
                 </p>
               </div>
+
+              <div className="self-start rounded-full border border-pink-500/20 bg-pink-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-pink-300">
+                {filtered.length} order{filtered.length !== 1 ? "s" : ""}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-              Click an order to see activity updates, grinder assignments, and completion status.
-            </p>
-            <div className="relative mt-4">
+            <div className="relative mt-5 max-w-xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by order number..."
-                className="pl-9 h-11 min-h-[44px] bg-white/[0.04] border-white/10 rounded-xl focus-visible:ring-pink-500/30 text-base"
+                className="h-11 min-h-[44px] rounded-full border-black/45 bg-pink-500/[0.08] pl-9 text-base focus-visible:ring-pink-500/30"
               />
             </div>
-          </CardHeader>
-          <CardContent className="relative space-y-2 pt-2 px-4 sm:px-6 pb-4 sm:pb-6">
+          </div>
+
+          <div className="relative z-10 space-y-3 pt-5">
             {filtered.length === 0 ? (
-              <div className="py-16 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-3 border border-white/10">
+              <div className="rounded-[24px] border border-black/45 bg-white/[0.02] py-16 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-pink-500/15 bg-pink-500/8">
                   <Package className="w-7 h-7 text-muted-foreground/60" />
                 </div>
-                <p className="text-muted-foreground font-medium">No orders found</p>
-                <p className="text-xs text-muted-foreground/80 mt-1">Orders linked to your account will appear here</p>
+                <p className="font-medium text-white/74">No orders found</p>
+                <p className="mt-1 text-xs text-white/42">Orders linked to your account will appear here</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {filtered.map((o) => (
                   <Link key={o.id} href={`/customer/orders/${o.id}`} className="block min-h-[44px] active:scale-[0.99] transition-transform">
                     <div
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-pink-500/20 transition-all duration-200 cursor-pointer group"
+                      className="group flex flex-col gap-3 rounded-[24px] border border-black/45 bg-pink-500/[0.05] p-4 transition-all duration-200 hover:border-pink-500/28 hover:bg-pink-500/[0.09] sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-pink-500/15 to-purple-500/10 flex items-center justify-center shrink-0 border border-pink-500/20">
-                          <Package className="w-5 h-5 text-pink-400" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-pink-500/20 bg-pink-500/10 sm:h-11 sm:w-11">
+                          <Package className="w-5 h-5 text-pink-300" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate text-sm sm:text-base">
+                          <p className="truncate text-sm font-semibold text-white sm:text-base">
                             Order #{o.mgtOrderNumber ?? o.displayId ?? o.id}
                           </p>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                             {o.serviceName && <span className="truncate">{o.serviceName}</span>}
-                            <span className="font-medium text-pink-400/90">{formatCurrency(Number(o.customerPrice) || 0)}</span>
+                            <span className="font-medium text-pink-300">{formatCurrency(Number(o.customerPrice) || 0)}</span>
                             {o.assignedGrinderName && (
                               <span className="flex items-center gap-1 shrink-0">
                                 <UserCircle className="w-3 h-3 shrink-0" />
@@ -170,7 +198,7 @@ export default function CustomerOrders() {
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-[11px] sm:text-xs text-muted-foreground/90">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground/90 sm:text-xs">
                             {o.startDate && (
                               <span className="flex items-center gap-1 shrink-0">
                                 <PlayCircle className="w-3 h-3 shrink-0" />
@@ -186,23 +214,23 @@ export default function CustomerOrders() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 border-t border-white/[0.04] pt-3 sm:pt-0 sm:border-t-0">
+                      <div className="flex flex-wrap items-center justify-start gap-2 border-t border-black/35 pt-3 sm:shrink-0 sm:justify-end sm:border-t-0 sm:pt-0">
                         <div
-                          className="shrink-0 p-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-muted-foreground flex items-center justify-center"
+                          className="flex shrink-0 items-center justify-center rounded-full border border-black/45 bg-pink-500/[0.08] p-2 text-pink-100/75"
                           title={o.platform ? `${o.platform} order` : "Platform"}
                         >
                           <ConsoleIcon platform={o.platform ?? null} className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                         {statusBadge(o.status)}
-                        <ArrowRight className="w-5 h-5 text-pink-400/60 group-hover:text-pink-400 group-hover:translate-x-1 transition-all shrink-0" />
+                        <ArrowRight className="w-5 h-5 shrink-0 text-pink-300/65 transition-all group-hover:translate-x-1 group-hover:text-pink-300" />
                       </div>
                     </div>
                   </Link>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </FadeInUp>
     </AnimatedPage>
   );
